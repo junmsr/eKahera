@@ -1,0 +1,60 @@
+@import "tailwindcss";
+
+html, body{
+  margin: 0;
+  padding: 0;
+  font-family: "Space Grotesk", sans-serif;
+  background: #dcdcdc;
+  color: #000000;
+  overflow-x: hidden ;
+  scroll-behavior: smooth;
+}
+
+nav {
+  display: flex;
+  align-items: center;
+  background-color: rgb(240, 239, 239);
+  border-radius: 30px;
+  color: #ffffff;
+  width: 70%;
+    margin: 1rem auto 0 auto;
+    transition: 
+    width 0.3s cubic-bezier(.4,0,.2,1),
+    margin-top 0.3s cubic-bezier(.4,0,.2,1),
+    border-radius 0.3s cubic-bezier(.4,0,.2,1),
+    top 0.3s cubic-bezier(.4,0,.2,1);
+  /* margin-left: 8%; */
+  /* padding: 1rem;
+  width: 70rem;
+  border-radius: 30px;
+  margin-top: 20px; */
+}
+
+button{
+  cursor: pointer;
+}
+
+.navbar-scrolled {
+  width: 100% !important;
+  margin-top: 0 !important;
+  border-top-left-radius: 0 !important;
+  border-top-right-radius: 0 !important;
+  top: 0 !important;
+}
+
+section {
+  scroll-margin-top: 5rem;
+}
+
+img{
+  width: 40px;
+  height: 30px;
+  border-radius: 50%;
+}
+
+@media screen and (max-width: 768px){
+  nav {
+    width: 100%;
+    margin-left: 0;
+  }
+}
