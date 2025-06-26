@@ -8,6 +8,7 @@ import GetStarted from './pages/GetStarted.jsx';
 import AboutUs from './pages/AboutUs.jsx';
 import Contact from './pages/Contact.jsx';
 import Login from './pages/Login.jsx';
+import Dashboard from './pages/Dashboard.jsx';
 import {createBrowserRouter, RouterProvider} from 'react-router-dom';
 
 const router = createBrowserRouter([
@@ -20,6 +21,7 @@ const router = createBrowserRouter([
     { path: 'about', element: <AboutUs /> },
     { path: 'contact', element: <Contact /> },
     { path: 'login', element: <Login /> },
+    { path: 'dashboard', element: <Dashboard /> },
   ],
   }   
 ]);
