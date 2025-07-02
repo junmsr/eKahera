@@ -2,8 +2,8 @@ import React from 'react';
 
 function Footer() {
   return (
-    <footer className="w-full bg-white shadow-inner py-6 mt-8">
-      <div className="max-w-6xl mx-auto px-4 flex flex-col md:flex-row items-center justify-between">
+    <footer className="w-full bg-gradient-to-t from-white to-purple-50 border-t border-purple-100 shadow-inner py-6 mt-8">
+      <div className="max-w-6xl mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-2">
         <span className="text-gray-600 text-sm text-center md:text-left">
           &copy; {new Date().getFullYear()} eKahera. All rights reserved.
         </span>

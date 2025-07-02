@@ -4,6 +4,7 @@ import '../index.css'
 import MobileMenu from './MobileMenu';
 import menuBar from '../assets/images/menu-bar.png';
 import { useEffect, useState } from 'react';
+import Logo from './Logo';
 
 
 function Navbar() {
@@ -31,9 +32,7 @@ function Navbar() {
       <nav id="main-navbar" className="items-center left-1/2 transform -translate-x-1/2 justify-between px-6 py-4 bg-white shadow-lg fixed top-3 left-0 w-full z-50">
         {/* Logo */}
         <div className="flex items-center space-x-2">
-          <div className="w-8 h-8 bg-purple-500 rounded flex items-center justify-center">
-            <span className="text-white font-bold text-sm">eK</span>
-          </div>
+          <Logo size={32} />
           <span className="text-xl font-semibold text-gray-800">eKahera</span>
         </div>
 
