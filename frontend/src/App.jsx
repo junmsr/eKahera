@@ -1,14 +1,14 @@
-import Navbar from './components/Navbar';
-import Footer from './components/Footer';
 import { Outlet } from 'react-router-dom';
 
+/**
+ * Main App Component
+ * Serves as the root layout for the application
+ */
 function App() {
   return (
-    <>
-      <Navbar />
+    <div className="app">
       <Outlet />
-      <Footer />
-    </>
+    </div>
   );
 }
 

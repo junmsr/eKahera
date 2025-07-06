@@ -1,13 +1,40 @@
 import React from 'react';
 
-function Card({ children, className = '', variant = 'shadow' }) {
-  const variants = {
-    shadow: 'bg-white rounded-2xl shadow-xl p-6 md:p-8',
-    bordered: 'bg-white rounded-2xl border border-gray-200 p-6 md:p-8',
-    flat: 'bg-white rounded-2xl p-6 md:p-8'
+/**
+ * Card Component
+ * A versatile container component with multiple styling variants
+ */
+function Card({ 
+  children, 
+  className = '', 
+  variant = 'shadow',
+  padding = 'default'
+}) {
+  // Base styles
+  const baseStyles = "bg-white rounded-2xl transition-all duration-200";
+  
+  // Variant styles
+  const variantStyles = {
+    shadow: 'shadow-xl hover:shadow-2xl',
+    bordered: 'border-2 border-gray-200 hover:border-purple-200',
+    flat: '',
+    glass: 'bg-white/80 backdrop-blur-sm border border-white/20',
+    gradient: 'bg-gradient-to-br from-white via-purple-50 to-purple-100 border border-purple-200'
   };
+  
+  // Padding variants
+  const paddingStyles = {
+    none: '',
+    sm: 'p-4',
+    default: 'p-6 md:p-8',
+    lg: 'p-8 md:p-12'
+  };
+  
+  // Combine all styles
+  const combinedStyles = `${baseStyles} ${variantStyles[variant]} ${paddingStyles[padding]} ${className}`;
+  
   return (
-    <div className={`${variants[variant]} ${className}`}>
+    <div className={combinedStyles}>
       {children}
     </div>
   );
