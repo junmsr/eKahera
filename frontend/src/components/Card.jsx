@@ -1,8 +1,13 @@
-import '../index.css';
+import React from 'react';
 
-function Card({ children, className = '' }) {
+function Card({ children, className = '', variant = 'shadow' }) {
+  const variants = {
+    shadow: 'bg-white rounded-2xl shadow-xl p-6 md:p-8',
+    bordered: 'bg-white rounded-2xl border border-gray-200 p-6 md:p-8',
+    flat: 'bg-white rounded-2xl p-6 md:p-8'
+  };
   return (
-    <div className={`bg-white rounded-xl shadow-lg p-6 ${className}`}>
+    <div className={`${variants[variant]} ${className}`}>
       {children}
     </div>
   );

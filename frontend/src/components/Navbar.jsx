@@ -4,6 +4,7 @@ import '../index.css'
 import MobileMenu from './MobileMenu';
 import menuBar from '../assets/images/menu-bar.png';
 import { useEffect, useState } from 'react';
+import Logo from './Logo';
 
 
 function Navbar() {
@@ -31,9 +32,7 @@ function Navbar() {
       <nav id="main-navbar" className="items-center left-1/2 transform -translate-x-1/2 justify-between px-6 py-4 bg-white shadow-lg fixed top-3 left-0 w-full z-50">
         {/* Logo */}
         <div className="flex items-center space-x-2">
-          <div className="w-8 h-8 bg-purple-500 rounded flex items-center justify-center">
-            <span className="text-white font-bold text-sm">eK</span>
-          </div>
+          <Logo size={32} />
           <span className="text-xl font-semibold text-gray-800">eKahera</span>
         </div>
 
@@ -58,7 +57,9 @@ function Navbar() {
         {/* <img className="size-full cursor-pointer" src= {menuBar }alt="menu" /> */}
 
         <div className="hidden md:flex items-center space-x-4">
-          <Button label="Get Started" className = "bg-purple-500 hover:bg-purple-600 text-white px-6 py-2 rounded-full font-medium cursor-pointer"/>
+          <Link to="/get-started">
+            <Button label="Get Started" className = "bg-purple-500 hover:bg-purple-600 text-white px-6 py-2 rounded-full font-medium cursor-pointer"/>
+          </Link>
         </div>
         
         <div className = "md:hidden" onClick={toggleMenu}>
@@ -94,12 +95,9 @@ function Navbar() {
             <a href="#contact" className="text-gray-700 hover:text-purple-500 font-medium w-full" onClick={() => setIsMenuOpen(false)}>
               Contact
             </a>
-            <Button
-              className="bg-purple-500 hover:bg-purple-600 text-white px-6 py-2 rounded-full font-medium cursor-pointer w-full"
-              onClick={() => setIsMenuOpen(false)}
-            >
-              Get Started
-            </Button>
+            <Link to="/get-started" className="w-full" onClick={() => setIsMenuOpen(false)}>
+              <Button label="Get Started" className="bg-purple-500 hover:bg-purple-600 text-white px-6 py-2 rounded-full font-medium cursor-pointer w-full" />
+            </Link>
           </div>
         )}
       </nav>
