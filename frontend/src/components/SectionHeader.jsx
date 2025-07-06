@@ -12,7 +12,7 @@ function SectionHeader({
   align = 'center'
 }) {
   // Base styles
-  const baseStyles = "font-extrabold tracking-tight text-purple-700 drop-shadow-sm";
+  const baseStyles = "font-extrabold tracking-tight text-blue-700 drop-shadow-sm";
   
   // Size variants
   const sizeStyles = {
@@ -31,9 +31,9 @@ function SectionHeader({
   
   // Variant styles
   const variantStyles = {
-    default: "text-purple-700",
-    light: "text-purple-600",
-    dark: "text-purple-800",
+    default: "text-blue-700",
+    light: "text-blue-600",
+    dark: "text-blue-800",
     white: "text-white"
   };
   

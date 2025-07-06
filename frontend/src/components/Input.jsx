@@ -18,7 +18,7 @@ function Input({
   ...props 
 }) {
   // Base styles
-  const baseStyles = "w-full border rounded-lg text-base transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-purple-400 placeholder-gray-400";
+  const baseStyles = "w-full border rounded-lg text-base transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 placeholder-gray-400";
   
   // Size variants
   const sizeStyles = {
@@ -29,9 +29,9 @@ function Input({
   
   // Variant styles
   const variantStyles = {
-    default: error ? 'border-red-400 ring-red-200' : 'border-gray-300 hover:border-purple-300',
-    bordered: error ? 'border-red-400 ring-red-200' : 'border-2 border-purple-400',
-    underline: error ? 'border-red-400 ring-red-200' : 'border-b-2 border-purple-400 rounded-none'
+    default: error ? 'border-red-400 ring-red-200' : 'border-gray-300 hover:border-blue-300',
+    bordered: error ? 'border-red-400 ring-red-200' : 'border-2 border-blue-400',
+    underline: error ? 'border-red-400 ring-red-200' : 'border-b-2 border-blue-400 rounded-none'
   };
   
   // Combine all styles

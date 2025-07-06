@@ -57,8 +57,8 @@ function Footer({
   
   // Variant styles
   const variantStyles = {
-    default: "bg-gradient-to-t from-white to-purple-50 border-purple-100",
-    dark: "bg-purple-900 text-white border-purple-800",
+    default: "bg-gradient-to-t from-white to-blue-50 border-blue-100",
+    dark: "bg-blue-900 text-white border-blue-800",
     minimal: "bg-white border-gray-200"
   };
 
@@ -74,7 +74,7 @@ function Footer({
           <div className="lg:col-span-2">
             <div className="flex items-center space-x-2 mb-4">
               <Logo size={32} />
-              <span className="text-xl font-semibold text-purple-700">
+              <span className="text-xl font-semibold text-blue-700">
                 eKahera
               </span>
             </div>
@@ -88,7 +88,7 @@ function Footer({
                   <a
                     key={social.label}
                     href={social.url}
-                    className="text-gray-500 hover:text-purple-600 transition-colors"
+                    className="text-gray-500 hover:text-blue-600 transition-colors"
                     aria-label={social.label}
                   >
                     <span className="text-xl">{social.icon}</span>
@@ -101,7 +101,7 @@ function Footer({
           {/* Footer Links */}
           {footerSections.map((section) => (
             <div key={section.title}>
-              <h3 className="font-semibold text-purple-700 mb-4">
+              <h3 className="font-semibold text-blue-700 mb-4">
                 {section.title}
               </h3>
               <ul className="space-y-2">
@@ -109,7 +109,7 @@ function Footer({
                   <li key={link.label}>
                     <Link
                       to={link.path}
-                      className="text-gray-600 hover:text-purple-600 transition-colors text-sm"
+                      className="text-gray-600 hover:text-blue-600 transition-colors text-sm"
                     >
                       {link.label}
                     </Link>
@@ -121,16 +121,16 @@ function Footer({
         </div>
 
         {/* Bottom Bar */}
-        <div className="border-t border-purple-200 pt-6 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="border-t border-blue-200 pt-6 flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="text-gray-600 text-sm text-center md:text-left">
             &copy; {new Date().getFullYear()} eKahera. All rights reserved.
           </div>
           
           <div className="flex items-center space-x-6 text-sm">
-            <Link to="/privacy" className="text-gray-600 hover:text-purple-600 transition-colors">
+            <Link to="/privacy" className="text-gray-600 hover:text-blue-600 transition-colors">
               Privacy Policy
             </Link>
-            <Link to="/terms" className="text-gray-600 hover:text-purple-600 transition-colors">
+            <Link to="/terms" className="text-gray-600 hover:text-blue-600 transition-colors">
               Terms of Service
             </Link>
             <span className="text-gray-400">|</span>

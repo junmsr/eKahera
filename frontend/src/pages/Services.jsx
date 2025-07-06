@@ -5,7 +5,7 @@ function Services () {
   return (
     <section id="services">
         <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
-        <h1 className="text-4xl font-bold text-purple-600 mb-6">Our Services</h1>
+        <h1 className="text-4xl font-bold text-blue-600 mb-6">Our Services</h1>
         <p className="text-lg text-gray-700 mb-4">
             We offer a wide range of services to help you achieve your goals.
         </p>

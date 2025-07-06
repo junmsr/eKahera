@@ -20,7 +20,7 @@ export default function FormField({
   return (
     <div className={`mb-5 ${className}`}>
       {/* Label */}
-      <label className="block mb-1 font-medium text-purple-800">
+      <label className="block mb-1 font-medium text-blue-800">
         {label}
         {required && <span className="text-red-500 ml-1">*</span>}
       </label>

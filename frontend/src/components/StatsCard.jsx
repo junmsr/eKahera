@@ -11,7 +11,7 @@ export default function StatsCard({
   change, 
   icon, 
   sub, 
-  color = "text-purple-800",
+  color = "text-blue-800",
   loading = false,
   className = "",
   formatValue = null
@@ -26,7 +26,7 @@ export default function StatsCard({
   };
 
   // Change indicator styles
-  const changeColor = change < 0 ? 'text-red-500' : 'text-purple-800';
+  const changeColor = change < 0 ? 'text-red-500' : 'text-blue-800';
   const changePrefix = change > 0 ? '+' : '';
 
   return (
@@ -36,16 +36,16 @@ export default function StatsCard({
     >
       <div className="flex items-center gap-3">
         {/* Icon */}
-        <div className="bg-gradient-to-br from-purple-200 to-purple-400 rounded-full p-2 text-purple-800 shadow">
+        <div className="bg-gradient-to-br from-blue-200 to-blue-400 rounded-full p-2 text-blue-800 shadow">
           {icon}
         </div>
         
         {/* Content */}
         <div>
-          <div className="text-xs font-bold text-purple-800 uppercase tracking-wide">
+          <div className="text-xs font-bold text-blue-800 uppercase tracking-wide">
             {label}
           </div>
-          <div className="text-2xl font-extrabold text-purple-900 drop-shadow">
+          <div className="text-2xl font-extrabold text-blue-900 drop-shadow">
             {formatDisplayValue()}
           </div>
         </div>
@@ -56,7 +56,7 @@ export default function StatsCard({
         <span className={`text-xs font-bold ${changeColor}`}>
           {changePrefix}{change}%
         </span>
-        <span className="text-xs text-purple-500">{sub}</span>
+        <span className="text-xs text-blue-500">{sub}</span>
       </div>
     </Card>
   );

@@ -16,10 +16,10 @@ function Card({
   // Variant styles
   const variantStyles = {
     shadow: 'shadow-xl hover:shadow-2xl',
-    bordered: 'border-2 border-gray-200 hover:border-purple-200',
+    bordered: 'border-2 border-gray-200 hover:border-blue-200',
     flat: '',
     glass: 'bg-white/80 backdrop-blur-sm border border-white/20',
-    gradient: 'bg-gradient-to-br from-white via-purple-50 to-purple-100 border border-purple-200'
+    gradient: 'bg-gradient-to-br from-white via-blue-50 to-blue-100 border border-blue-200'
   };
   
   // Padding variants

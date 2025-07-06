@@ -17,7 +17,7 @@ function Modal({ isOpen, onClose, title, children, size = 'md', variant = 'defau
         {title && <h3 className="text-xl font-semibold mb-4">{title}</h3>}
         <button
           onClick={onClose}
-          className="absolute top-3 right-3 text-gray-400 hover:text-purple-600 text-2xl font-bold focus:outline-none focus:ring-2 focus:ring-purple-400 rounded-full"
+          className="absolute top-3 right-3 text-gray-400 hover:text-blue-600 text-2xl font-bold focus:outline-none focus:ring-2 focus:ring-blue-400 rounded-full"
           aria-label="Close"
         >
           &times;

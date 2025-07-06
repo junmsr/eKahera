@@ -8,7 +8,7 @@ function Loader({
   className = '', 
   size = 'md', 
   variant = 'spinner',
-  color = 'purple'
+  color = 'blue'
 }) {
   // Size variants
   const sizeStyles = {
@@ -21,10 +21,9 @@ function Loader({
   
   // Color variants
   const colorStyles = {
-    purple: 'border-t-purple-500',
+    blue: 'border-t-blue-500',
     white: 'border-t-white',
-    gray: 'border-t-gray-500',
-    blue: 'border-t-blue-500'
+    gray: 'border-t-gray-500'
   };
   
   // Variant styles

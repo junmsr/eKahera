@@ -29,8 +29,15 @@ function Navbar({
 
   // Handle scroll effect
   useEffect(() => {
+    const nav = document.getElementById('main-navbar');
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 10);
+      if (window.scrollY > 10) {
+        setIsScrolled(true);
+        nav.classList.add('navbar-scrolled');
+      } else {
+        setIsScrolled(false);
+        nav.classList.remove('navbar-scrolled');
+      }
     };
 
     window.addEventListener("scroll", handleScroll);
@@ -52,19 +59,19 @@ function Navbar({
   
   // Variant styles
   const variantStyles = {
-    default: "bg-gradient-to-r from-purple-600/80 via-purple-400/80 to-purple-300/80 border-purple-200/60",
+    default: "bg-gradient-to-r from-blue-600/80 via-blue-400/80 to-blue-300/80 border-blue-200/60",
     transparent: "bg-transparent border-transparent",
-    solid: "bg-purple-600 border-purple-200"
+    solid: "bg-blue-600 border-blue-200"
   };
 
   // Scrolled styles
-  const scrolledStyles = isScrolled ? "bg-purple-600/95 shadow-2xl" : "";
+  const scrolledStyles = isScrolled ? "bg-blue-600/95 shadow-2xl" : "";
 
   // Combine styles
   const combinedStyles = `${baseStyles} ${variantStyles[variant]} ${scrolledStyles} ${className}`;
 
   return (
-    <nav className={combinedStyles}>
+    <nav id="main-navbar" className={combinedStyles}>
       {/* Logo Section */}
       <div className="flex items-center space-x-2">
         <Logo size={32} />
@@ -79,8 +86,8 @@ function Navbar({
           <Link
             key={item.label}
             to={item.path}
-            className={`hover:text-yellow-200 font-medium transition-colors ${
-              location.pathname === item.path ? "text-yellow-200" : ""
+            className={`hover:text-blue-200 font-medium transition-colors ${
+              location.pathname === item.path ? "text-blue-200" : ""
             }`}
           >
             {item.label}
@@ -93,8 +100,7 @@ function Navbar({
         {showGetStarted && (
           <Link to="/get-started">
             <Button
-              variant="secondary"
-              className="bg-yellow-400 hover:bg-yellow-300 text-purple-900 px-6 py-2 rounded-full font-medium shadow-md transition-colors"
+              className="bg-gradient-to-r from-blue-500 to-blue-700 text-white font-bold px-8 py-3 rounded-full shadow-lg hover:from-blue-600 hover:to-blue-800 hover:scale-105 active:scale-95 transition-all duration-200 text-lg"
             >
               Get Started
             </Button>
@@ -107,7 +113,7 @@ function Navbar({
         <Button
           onClick={toggleMenu}
           variant="ghost"
-          className="bg-transparent hover:bg-yellow-200/20 text-white px-2 py-2 font-medium transition-colors border-2 border-white/20 rounded-xl"
+          className="bg-transparent hover:bg-blue-200/20 text-white px-2 py-2 font-medium transition-colors border-2 border-white/20 rounded-xl"
           aria-label="Toggle menu"
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -118,13 +124,13 @@ function Navbar({
 
       {/* Mobile Menu */}
       {isMenuOpen && (
-        <div className="md:hidden absolute top-full left-0 right-0 mt-2 bg-gradient-to-r from-purple-600/95 via-purple-400/95 to-purple-300/95 backdrop-blur-md border border-purple-200/60 shadow-xl z-50 flex flex-col items-start px-6 py-4 space-y-4 rounded-xl">
+        <div className="md:hidden absolute top-full left-0 right-0 mt-2 bg-gradient-to-r from-blue-600/95 via-blue-400/95 to-blue-300/95 backdrop-blur-md border border-blue-200/60 shadow-xl z-50 flex flex-col items-start px-6 py-4 space-y-4 rounded-xl">
           {navItems.map((item) => (
             <Link
               key={item.label}
               to={item.path}
-              className={`hover:text-yellow-200 font-medium w-full transition-colors ${
-                location.pathname === item.path ? "text-yellow-200" : ""
+              className={`hover:text-blue-200 font-medium w-full transition-colors ${
+                location.pathname === item.path ? "text-blue-200" : ""
               }`}
               onClick={closeMenu}
             >
@@ -135,8 +141,7 @@ function Navbar({
           {showGetStarted && (
             <Link to="/get-started" className="w-full" onClick={closeMenu}>
               <Button
-                variant="secondary"
-                className="bg-yellow-400 hover:bg-yellow-300 text-purple-900 px-6 py-2 rounded-full font-medium w-full shadow-md transition-colors"
+                className="bg-gradient-to-r from-blue-500 to-blue-700 text-white font-bold px-8 py-3 rounded-full shadow-lg hover:from-blue-600 hover:to-blue-800 hover:scale-105 active:scale-95 transition-all duration-200 text-lg w-full"
               >
                 Get Started
               </Button>

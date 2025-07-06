@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Background from './Background';
 import Logo from './Logo';
 import Navbar from './Navbar';
@@ -13,7 +13,7 @@ export default function PageLayout({
   title, 
   sidebar, 
   headerActions,
-  backgroundVariant = "gradientPurple",
+  backgroundVariant = "gradientBlue",
   showHeader = true,
   showNavbar = false,
   showFooter = false,
@@ -21,9 +21,11 @@ export default function PageLayout({
   footerVariant = "default",
   className = ""
 }) {
+  const [theme, setTheme] = useState('light');
+  const toggleTheme = () => setTheme(theme === 'light' ? 'dark' : 'light');
   return (
-    <Background variant={backgroundVariant} pattern="dots" overlay floatingElements>
-      <div className={`flex flex-col min-h-screen ${className}`}>
+    <Background variant={backgroundVariant} pattern="dots" overlay floatingElements className={theme}>
+      <div className={`flex flex-col min-h-screen ${className} ${theme}`} role="main" aria-label="Main content area">
         {/* Navbar */}
         {showNavbar && (
           <Navbar variant={navbarVariant} />
@@ -39,13 +41,13 @@ export default function PageLayout({
           )}
           
           {/* Main Content */}
-          <main className="flex-1 flex flex-col">
+          <main className={`flex-1 flex flex-col${sidebar ? ' ml-32' : ''}`}>
             {/* Header */}
             {showHeader && (
-              <header className="flex items-center justify-between px-8 py-6 border-b border-purple-200 bg-gradient-to-r from-purple-100 via-purple-50 to-white/80 shadow-md">
+              <header className="flex items-center justify-between px-9 py-6 border-b border-blue-200 bg-gradient-to-r from-blue-100 via-blue-50 to-white/80 shadow-md">
                 <div className="flex items-center gap-4">
                   <Logo size={40} />
-                  <h1 className="text-2xl font-extrabold text-purple-800 tracking-tight drop-shadow">
+                  <h1 className="text-2xl font-extrabold text-blue-800 tracking-tight drop-shadow">
                     {title}
                   </h1>
                 </div>

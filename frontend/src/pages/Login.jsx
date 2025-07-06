@@ -75,14 +75,14 @@ export default function Login() {
   const loginTitle = isAdminLogin ? "Admin Login" : "Cashier Login";
 
   return (
-    <Background variant="gradientPurple" pattern="dots" overlay floatingElements>
+    <Background variant="gradientBlue" pattern="dots" overlay floatingElements>
       <main className="flex flex-1 items-center justify-center py-16 px-2 relative z-10 mt-24">
         <Card 
           variant="glass" 
           className="w-full max-w-4xl flex flex-col md:flex-row overflow-hidden p-0 animate-fadeIn"
         >
           {/* Left: Branding Panel */}
-          <aside className="hidden md:flex flex-col justify-center items-center bg-gradient-to-br from-purple-600 via-purple-500 to-purple-400 w-1/2 p-12 gap-6 relative overflow-hidden">
+          <aside className="hidden md:flex flex-col justify-center items-center bg-gradient-to-br from-blue-600 via-blue-500 to-blue-400 w-1/2 p-12 gap-6 relative overflow-hidden">
             {/* Background pattern */}
             <div className="absolute inset-0 opacity-10 -z-10 pointer-events-none">
               <div className="w-full h-full bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.3)_1px,transparent_0)] bg-[length:20px_20px]" />

@@ -15,7 +15,7 @@ function Button({
   size = 'md'
 }) {
   // Base styles
-  const baseStyles = "inline-flex items-center justify-center font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-offset-2";
+  const baseStyles = "inline-flex items-center justify-center font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2";
   
   // Size variants
   const sizeStyles = {
@@ -26,10 +26,10 @@ function Button({
   
   // Color variants
   const variantStyles = {
-    primary: "bg-gradient-to-r from-purple-600 to-purple-700 text-white hover:from-purple-700 hover:to-purple-800 shadow-md hover:shadow-lg",
+    primary: "bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 shadow-md hover:shadow-lg",
     secondary: "bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-300",
-    outline: "border-2 border-purple-600 text-purple-600 bg-white hover:bg-purple-50 hover:border-purple-700",
-    ghost: "text-purple-600 hover:bg-purple-50"
+    outline: "border-2 border-blue-600 text-blue-600 bg-white hover:bg-blue-50 hover:border-blue-700",
+    ghost: "text-blue-600 hover:bg-blue-50"
   };
   
   // Disabled state

@@ -16,11 +16,11 @@ function Logo({
   const variantStyles = {
     default: "shadow-md hover:shadow-lg",
     flat: "shadow-none",
-    gradient: "bg-gradient-to-br from-purple-500 to-purple-700 shadow-lg"
+    gradient: "bg-gradient-to-br from-blue-500 to-blue-700 shadow-lg"
   };
   
   // Text color based on variant
-  const textColor = variant === 'gradient' ? 'text-white' : 'text-purple-600';
+  const textColor = variant === 'gradient' ? 'text-white' : 'text-blue-600';
   
   // Combine styles
   const combinedStyles = `${baseStyles} ${variantStyles[variant]} ${className}`;
