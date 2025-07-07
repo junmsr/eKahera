@@ -12,6 +12,8 @@ import AboutUs from './pages/AboutUs.jsx';
 import Contact from './pages/Contact.jsx';
 import Login from './pages/Login.jsx';
 import Dashboard from './pages/Dashboard.jsx';
+import POS from './pages/POS.jsx';
+import Inventory from './pages/Inventory.jsx';
 
 // Router Configuration
 const router = createBrowserRouter([
@@ -27,6 +29,8 @@ const router = createBrowserRouter([
       { path: 'contact', element: <Contact /> },
       { path: 'login', element: <Login /> },
       { path: 'dashboard', element: <Dashboard /> },
+      { path: 'pos', element: <POS /> },
+      { path: 'inventory', element: <Inventory /> },
     ],
   }
 ]);

@@ -1,6 +1,6 @@
 import React from 'react';
 
-function Modal({ isOpen, onClose, title, children, size = 'md', variant = 'default' }) {
+function Modal({ isOpen, onClose, title, children, size = 'md', variant = 'glass' }) {
   if (!isOpen) return null;
   const sizes = {
     sm: 'max-w-sm',
@@ -8,16 +8,17 @@ function Modal({ isOpen, onClose, title, children, size = 'md', variant = 'defau
     lg: 'max-w-2xl',
   };
   const variants = {
+    glass: 'bg-white/60 backdrop-blur-xl border border-white/30',
+    dark: 'bg-gray-900/90 text-white',
     default: 'bg-white',
-    dark: 'bg-gray-900 text-white',
   };
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 transition-opacity duration-200" role="dialog" aria-modal="true">
-      <div className={`${variants[variant]} rounded-2xl shadow-2xl p-8 w-full ${sizes[size]} relative animate-fadeIn`}>
-        {title && <h3 className="text-xl font-semibold mb-4">{title}</h3>}
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm transition-opacity duration-200" role="dialog" aria-modal="true">
+      <div className={`${variants[variant]} rounded-3xl shadow-2xl p-8 w-full ${sizes[size]} relative animate-fadeIn`}>
+        {title && <h3 className="text-2xl font-bold mb-4 tracking-tight text-blue-900 drop-shadow">{title}</h3>}
         <button
           onClick={onClose}
-          className="absolute top-3 right-3 text-gray-400 hover:text-blue-600 text-2xl font-bold focus:outline-none focus:ring-2 focus:ring-blue-400 rounded-full"
+          className="absolute top-3 right-3 text-blue-400 hover:text-blue-700 text-2xl font-bold focus:outline-none focus:ring-2 focus:ring-blue-400 rounded-full transition-colors duration-150"
           aria-label="Close"
         >
           &times;

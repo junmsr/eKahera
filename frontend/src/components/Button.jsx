@@ -2,7 +2,7 @@ import React from 'react';
 
 /**
  * Button Component
- * A reusable button component with multiple variants and states
+ * 2025: Glassy/soft backgrounds, animated shadow, microinteractions, bold typography
  */
 function Button({ 
   label, 
@@ -12,32 +12,30 @@ function Button({
   className = '', 
   variant = 'primary', 
   disabled = false,
-  size = 'md'
+  size = 'md',
+  microinteraction = true
 }) {
   // Base styles
-  const baseStyles = "inline-flex items-center justify-center font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2";
-  
+  const baseStyles = "inline-flex items-center justify-center font-sans font-semibold rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 select-none";
   // Size variants
   const sizeStyles = {
-    sm: "px-3 py-1.5 text-sm",
-    md: "px-4 py-2 text-base",
-    lg: "px-6 py-3 text-lg"
+    sm: "px-4 py-2 text-sm",
+    md: "px-6 py-2.5 text-base",
+    lg: "px-8 py-3 text-lg"
   };
-  
   // Color variants
   const variantStyles = {
-    primary: "bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 shadow-md hover:shadow-lg",
-    secondary: "bg-gray-100 text-gray-800 hover:bg-gray-200 border border-gray-300",
+    primary: "bg-gradient-to-r from-blue-500 to-blue-700 text-white shadow-md hover:from-blue-600 hover:to-blue-800 hover:shadow-lg",
+    secondary: "bg-white text-blue-700 border border-blue-200 shadow-sm hover:bg-blue-50 hover:text-blue-900",
     outline: "border-2 border-blue-600 text-blue-600 bg-white hover:bg-blue-50 hover:border-blue-700",
     ghost: "text-blue-600 hover:bg-blue-50"
   };
-  
   // Disabled state
   const disabledStyles = disabled ? "opacity-50 cursor-not-allowed pointer-events-none" : "";
-  
+  // Microinteraction (scale/glow on hover/focus)
+  const microClass = microinteraction ? 'hover:scale-[1.03] active:scale-[0.97] transition-transform focus:shadow-blue-300/40' : '';
   // Combine all styles
-  const combinedStyles = `${baseStyles} ${sizeStyles[size]} ${variantStyles[variant]} ${disabledStyles} ${className}`;
-  
+  const combinedStyles = `${baseStyles} ${sizeStyles[size]} ${variantStyles[variant]} ${disabledStyles} ${microClass} ${className}`;
   return (
     <button
       type={type}

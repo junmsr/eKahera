@@ -35,19 +35,20 @@ const Background = ({
   return (
     <div
       className={`${baseClasses} ${variants[variant]} ${patterns[pattern]} ${overlayClasses} ${className}`}
-      style={{ position: 'relative' }}
+      style={{ position: "relative" }}
     >
       {/* Blue radial glow effect */}
       <div
         style={{
-          position: 'absolute',
+          position: "absolute",
           top: 0,
           left: 0,
-          width: '100%',
-          height: '100%',
+          width: "100%",
+          height: "100%",
           zIndex: 0,
-          pointerEvents: 'none',
-          background: 'radial-gradient(circle at 50% 50%, rgba(37,99,235,0.55) 0%, rgba(59,130,246,0.25) 40%, transparent 80%)',
+          pointerEvents: "none",
+          background:
+            "radial-gradient(circle at 50% 50%, rgba(37,99,235,0.55) 0%, rgba(59,130,246,0.25) 40%, transparent 80%)",
         }}
       />
       {/* Floating decorative elements */}

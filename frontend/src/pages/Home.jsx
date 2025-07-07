@@ -9,7 +9,7 @@ function Home() {
   const navigate = useNavigate();
 
   // Navigation handlers
-  const handleCustomerPortal = () => navigate('/customer');
+  const handleCustomerPortal = () => navigate('/pos');
   const handleStaffPortal = () => navigate('/login');
 
   return (

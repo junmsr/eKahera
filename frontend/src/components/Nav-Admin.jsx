@@ -1,23 +1,95 @@
-import React from 'react';
-import Logo from './Logo';
-import { NavLink } from 'react-router-dom';
+import React from "react";
+import Logo from "./Logo";
+import { NavLink } from "react-router-dom";
 
 const navItems = [
-  { label: 'Dashboard', to: '/dashboard', icon: (
-      <svg width="28" height="28" fill="none" stroke="#2563eb" strokeWidth="2.2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/></svg>
-    ) },
-  { label: 'POS', to: '/pos', icon: (
-      <svg width="28" height="28" fill="none" stroke="#2563eb" strokeWidth="2.2" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M16 3v4M8 3v4"/></svg>
-    ) },
-  { label: 'Cashiers', to: '/cashiers', icon: (
-      <svg width="28" height="28" fill="none" stroke="#2563eb" strokeWidth="2.2" viewBox="0 0 24 24"><circle cx="12" cy="7" r="4"/><path d="M5.5 21a7.5 7.5 0 0 1 13 0"/></svg>
-    ) },
-  { label: 'Inventory', to: '/inventory', icon: (
-      <svg width="28" height="28" fill="none" stroke="#2563eb" strokeWidth="2.2" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M16 3v4M8 3v4"/></svg>
-    ) },
-  { label: 'Logs', to: '/logs', icon: (
-      <svg width="28" height="28" fill="none" stroke="#2563eb" strokeWidth="2.2" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 7h6M9 11h6M9 15h2"/></svg>
-    ) },
+  {
+    label: "Dashboard",
+    to: "/dashboard",
+    icon: (
+      <svg
+        width="28"
+        height="28"
+        fill="none"
+        stroke="#2563eb"
+        strokeWidth="2.2"
+        viewBox="0 0 24 24"
+      >
+        <rect x="3" y="3" width="7" height="7" rx="2" />
+        <rect x="14" y="3" width="7" height="7" rx="2" />
+        <rect x="14" y="14" width="7" height="7" rx="2" />
+        <rect x="3" y="14" width="7" height="7" rx="2" />
+      </svg>
+    ),
+  },
+  {
+    label: "POS",
+    to: "/pos",
+    icon: (
+      <svg
+        width="28"
+        height="28"
+        fill="none"
+        stroke="#2563eb"
+        strokeWidth="2.2"
+        viewBox="0 0 24 24"
+      >
+        <rect x="3" y="7" width="18" height="13" rx="2" />
+        <path d="M16 3v4M8 3v4" />
+      </svg>
+    ),
+  },
+  {
+    label: "Cashiers",
+    to: "/cashiers",
+    icon: (
+      <svg
+        width="28"
+        height="28"
+        fill="none"
+        stroke="#2563eb"
+        strokeWidth="2.2"
+        viewBox="0 0 24 24"
+      >
+        <circle cx="12" cy="7" r="4" />
+        <path d="M5.5 21a7.5 7.5 0 0 1 13 0" />
+      </svg>
+    ),
+  },
+  {
+    label: "Inventory",
+    to: "/inventory",
+    icon: (
+      <svg
+        width="28"
+        height="28"
+        fill="none"
+        stroke="#2563eb"
+        strokeWidth="2.2"
+        viewBox="0 0 24 24"
+      >
+        <rect x="3" y="7" width="18" height="13" rx="2" />
+        <path d="M16 3v4M8 3v4" />
+      </svg>
+    ),
+  },
+  {
+    label: "Logs",
+    to: "/logs",
+    icon: (
+      <svg
+        width="28"
+        height="28"
+        fill="none"
+        stroke="#2563eb"
+        strokeWidth="2.2"
+        viewBox="0 0 24 24"
+      >
+        <rect x="5" y="3" width="14" height="18" rx="2" />
+        <path d="M9 7h6M9 11h6M9 15h2" />
+      </svg>
+    ),
+  },
 ];
 
 function NavAdmin() {
@@ -32,7 +104,11 @@ function NavAdmin() {
             aria-label={item.label}
             className={({ isActive }) =>
               `group flex flex-col items-center w-full py-4 rounded-2xl transition-all font-semibold text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 relative
-              ${isActive ? 'bg-gradient-to-r from-blue-500/80 to-blue-700/90 text-white shadow-xl scale-105' : 'bg-white/60 text-blue-700 hover:bg-blue-100/80 hover:text-blue-900'}
+              ${
+                isActive
+                  ? "bg-gradient-to-r from-blue-500/80 to-blue-700/90 text-white shadow-xl scale-105"
+                  : "bg-white/60 text-blue-700 hover:bg-blue-100/80 hover:text-blue-900"
+              }
               `
             }
             tabIndex={0}
@@ -40,9 +116,17 @@ function NavAdmin() {
             <span className="mb-1 relative">
               {item.icon}
               {/* Animated active indicator */}
-              <span className={`absolute -right-3 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-blue-400 shadow-lg transition-all duration-300 ${window.location.pathname === item.to ? 'opacity-100 scale-100' : 'opacity-0 scale-0'}`}></span>
+              <span
+                className={`absolute -right-3 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-blue-400 shadow-lg transition-all duration-300 ${
+                  window.location.pathname === item.to
+                    ? "opacity-100 scale-100"
+                    : "opacity-0 scale-0"
+                }`}
+              ></span>
             </span>
-            <span className="mt-1" aria-hidden="true">{item.label}</span>
+            <span className="mt-1" aria-hidden="true">
+              {item.label}
+            </span>
             {/* Tooltip */}
             <span className="absolute left-full ml-3 top-1/2 -translate-y-1/2 bg-blue-700 text-white text-xs rounded-lg px-3 py-1 shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 z-50">
               {item.label}
@@ -54,4 +138,4 @@ function NavAdmin() {
   );
 }
 
-export default NavAdmin; 
+export default NavAdmin;
