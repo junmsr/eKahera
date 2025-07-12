@@ -3,10 +3,10 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 
 // Components
 import PageLayout from '../components/layout/PageLayout';
-import NavAdmin from '../components/ui/Nav-Admin';
-import StatsCard from '../components/ui/StatsCard';
-import ChartCard from '../components/ui/ChartCard';
-import Card from '../components/ui/Card';
+import NavAdmin from '../components/layout/Nav-Admin';
+import StatsCard from '../components/ui/Dashboard/StatsCard';
+import ChartCard from '../components/ui/Dashboard/ChartCard';
+import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import SectionHeader from '../components/layout/SectionHeader';
 

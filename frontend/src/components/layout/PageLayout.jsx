@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import Background from './Background';
 import Logo from '../common/Logo';
-import Navbar from '../ui/Navbar';
-import Footer from '../ui/Footer';
+import Navbar from './Navbar';
+import Footer from './Footer';
 
 /**
  * PageLayout Component

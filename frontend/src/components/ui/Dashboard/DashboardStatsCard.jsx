@@ -1,5 +1,5 @@
 import React from 'react';
-import Card from './Card';
+import Card from '../../common/Card';
 
 /**
  * Dashboard Stats Card Component

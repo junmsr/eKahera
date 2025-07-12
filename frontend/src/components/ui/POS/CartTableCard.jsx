@@ -1,6 +1,6 @@
 import React from 'react';
-import Card from './Card';
-import Button from '../common/Button';
+import Card from '../../common/Card';
+import Button from '../../common/Button';
 
 /**
  * Cart Table Card Component

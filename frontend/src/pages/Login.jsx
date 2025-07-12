@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 
 // Components
 import Background from "../components/layout/Background";
-import Card from "../components/ui/Card";
+import Card from "../components/common/Card";
 import Logo from "../components/common/Logo";
 import SectionHeader from "../components/layout/SectionHeader";
 import Input from "../components/common/Input";

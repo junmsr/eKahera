@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import Background from "../components/layout/Background";
-import Card from "../components/ui/Card";
+import Card from "../components/common/Card";
 import Input from "../components/common/Input";
 import Button from "../components/common/Button";
 import Loader from "../components/common/Loader";

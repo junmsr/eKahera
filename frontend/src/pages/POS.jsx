@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import ScannerCard from '../components/ui/ScannerCard';
-import SkuFormCard from '../components/ui/SkuFormCard';
-import TransactionCard from '../components/ui/TransactionCard';
-import CartTableCard from '../components/ui/CartTableCard';
+import ScannerCard from '../components/ui/POS/ScannerCard';
+import SkuFormCard from '../components/ui/POS/SkuFormCard';
+import TransactionCard from '../components/ui/POS/TransactionCard';
+import CartTableCard from '../components/ui/POS/CartTableCard';
 import Button from '../components/common/Button';
 import Modal from '../components/modals/Modal';
-import NavAdmin from '../components/ui/Nav-Admin';
+import NavAdmin from '../components/layout/Nav-Admin';
 import Background from '../components/layout/Background';
 
 function POS() {

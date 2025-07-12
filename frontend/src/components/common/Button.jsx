@@ -109,4 +109,32 @@ function Button({
   );
 }
 
+// CashierButton: White, blue border, blue text
+export function CashierButton({ onClick, ...props }) {
+  return (
+    <Button
+      onClick={onClick}
+      className="bg-white border-2 border-blue-400 text-blue-600 font-semibold rounded-full py-3 px-10 text-lg shadow-sm hover:bg-blue-50 transition-colors min-w-[160px]"
+      aria-label="Go to Customer Portal"
+      {...props}
+    >
+      Cashier
+    </Button>
+  );
+}
+
+// AdminButton: Blue background, white text
+export function AdminButton({ onClick, ...props }) {
+  return (
+    <Button
+      onClick={onClick}
+      className="bg-blue-400 text-white font-semibold rounded-full py-3 px-10 text-lg shadow-sm hover:bg-blue-500 transition-colors min-w-[160px]"
+      aria-label="Go to Cashier/Admin Portal"
+      {...props}
+    >
+      Admin
+    </Button>
+  );
+}
+
 export default Button;

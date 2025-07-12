@@ -1,6 +1,6 @@
 import React from 'react';
 import Button from '../common/Button';
-import StatsCard from '../ui/StatsCard';
+import StatsCard from '../ui/Dashboard/StatsCard';
 
 /**
  * Inventory Table Component

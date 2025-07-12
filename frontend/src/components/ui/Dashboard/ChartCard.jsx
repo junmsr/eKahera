@@ -1,6 +1,6 @@
 import React from 'react';
-import Card from './Card';
-import SectionHeader from '../layout/SectionHeader';
+import Card from '../../common/Card';
+import SectionHeader from '../../layout/SectionHeader';
 
 /**
  * ChartCard Component

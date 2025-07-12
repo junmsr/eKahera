@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import PageLayout from '../components/layout/PageLayout';
-import NavAdmin from '../components/ui/Nav-Admin';
+import NavAdmin from '../components/layout/Nav-Admin';
 import Inventory from '../components/inventory/Inventory';
 import Modal from '../components/modals/Modal';
 
