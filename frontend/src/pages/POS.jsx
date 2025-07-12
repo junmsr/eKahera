@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import ScannerCard from '../components/ScannerCard';
-import SkuFormCard from '../components/SkuFormCard';
-import TransactionCard from '../components/TransactionCard';
-import CartTableCard from '../components/CartTableCard';
-import Button from '../components/Button';
-import Modal from '../components/Modal';
-import NavAdmin from '../components/Nav-Admin';
-import Background from '../components/Background';
+import ScannerCard from '../components/ui/ScannerCard';
+import SkuFormCard from '../components/ui/SkuFormCard';
+import TransactionCard from '../components/ui/TransactionCard';
+import CartTableCard from '../components/ui/CartTableCard';
+import Button from '../components/common/Button';
+import Modal from '../components/modals/Modal';
+import NavAdmin from '../components/ui/Nav-Admin';
+import Background from '../components/layout/Background';
 
 function POS() {
   // State
@@ -64,6 +64,7 @@ function POS() {
                     }}
                     paused={scannerPaused}
                     onResume={() => setScannerPaused(false)}
+                    textMain="text-blue-700"
                   />
                 </div>
                 <div className={cardClass}>

@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 
 // Components
-import Logo from './Logo';
+import Logo from '../common/Logo';
 
 /**
  * Footer Component

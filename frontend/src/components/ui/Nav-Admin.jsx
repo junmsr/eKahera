@@ -1,5 +1,5 @@
 import React from "react";
-import Logo from "./Logo";
+import Logo from "../common/Logo";
 import { NavLink } from "react-router-dom";
 
 const navItems = [

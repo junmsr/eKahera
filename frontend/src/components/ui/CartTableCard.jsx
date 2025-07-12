@@ -1,10 +1,25 @@
 import React from 'react';
 import Card from './Card';
-import Button from './Button';
+import Button from '../common/Button';
 
-function CartTableCard({ cart, handleRemove, total, cardBg }) {
+/**
+ * Cart Table Card Component
+ * Displays cart items in a table format with totals
+ */
+function CartTableCard({ 
+  cart,
+  handleRemove,
+  total,
+  className = '',
+  ...props
+}) {
   return (
-    <Card className={`flex-1 flex flex-col shadow-2xl h-full min-h-0 ${cardBg} emphasized-card`} microinteraction>
+    <Card 
+      className={`flex-1 flex flex-col shadow-2xl h-full min-h-0 emphasized-card ${className}`} 
+      variant="glass" 
+      microinteraction 
+      {...props}
+    >
       <div className="flex-1 min-h-0 flex flex-col">
         <div className="overflow-auto flex-1 min-h-0 rounded-2xl" style={{ maxHeight: 'calc(100vh - 220px)' }}>
           <table className="w-full text-left mb-4">

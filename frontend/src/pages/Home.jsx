@@ -1,8 +1,8 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import PageLayout from '../components/PageLayout';
-import Button from '../components/Button';
-import SectionHeader from '../components/SectionHeader';
+import PageLayout from '../components/layout/PageLayout';
+import Button from '../components/common/Button';
+import SectionHeader from '../components/layout/SectionHeader';
 import heroIllustration from '../assets/images/hero-illustration.png';
 
 function Home() {

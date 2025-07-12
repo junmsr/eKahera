@@ -2,12 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, Legend } from 'recharts';
 
 // Components
-import PageLayout from '../components/PageLayout';
-import NavAdmin from '../components/Nav-Admin';
-import StatsCard from '../components/StatsCard';
-import Card from '../components/Card';
-import Button from '../components/Button';
-import SectionHeader from '../components/SectionHeader';
+import PageLayout from '../components/layout/PageLayout';
+import NavAdmin from '../components/ui/Nav-Admin';
+import StatsCard from '../components/ui/StatsCard';
+import ChartCard from '../components/ui/ChartCard';
+import Card from '../components/ui/Card';
+import Button from '../components/common/Button';
+import SectionHeader from '../components/layout/SectionHeader';
 
 // Constants
 const BLUE_COLORS = ['#2563eb', '#60a5fa', '#93c5fd', '#dbeafe'];
@@ -100,8 +101,7 @@ function generatePieData() {
 // Chart Components
 function VisitorsChart({ data }) {
   return (
-    <Card variant="gradient">
-      <SectionHeader size="md" align="left">Visitors for the last 6 months</SectionHeader>
+    <ChartCard title="Visitors for the last 6 months">
       <ResponsiveContainer width="100%" height={180}>
         <LineChart data={data} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#e9d5ff" />
@@ -111,14 +111,13 @@ function VisitorsChart({ data }) {
           <Line type="monotone" dataKey="value" stroke="#2563eb" strokeWidth={3} dot={{ r: 4, fill: '#2563eb' }} activeDot={{ r: 6 }} />
         </LineChart>
       </ResponsiveContainer>
-    </Card>
+    </ChartCard>
   );
 }
 
 function SalesPieChart({ data }) {
   return (
-    <Card variant="gradient">
-      <SectionHeader size="md" align="left">Sales by Product Category</SectionHeader>
+    <ChartCard title="Sales by Product Category">
       <ResponsiveContainer width="100%" height={180}>
         <PieChart>
           <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={60} label>
@@ -130,14 +129,13 @@ function SalesPieChart({ data }) {
           <Tooltip contentStyle={{ background: '#f3e8ff', borderColor: '#2563eb' }} />
         </PieChart>
       </ResponsiveContainer>
-    </Card>
+    </ChartCard>
   );
 }
 
 function EngagementChart({ data }) {
   return (
-    <Card variant="gradient">
-      <SectionHeader size="md" align="left">Engagement exceed targets</SectionHeader>
+    <ChartCard title="Engagement exceed targets">
       <ResponsiveContainer width="100%" height={180}>
         <BarChart data={data} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#e9d5ff" />
@@ -147,14 +145,13 @@ function EngagementChart({ data }) {
           <Bar dataKey="engagement" fill="#2563eb" radius={[8, 8, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
-    </Card>
+    </ChartCard>
   );
 }
 
 function CustomersChart({ data }) {
   return (
-    <Card variant="gradient">
-      <SectionHeader size="md" align="left">Customers</SectionHeader>
+    <ChartCard title="Customers">
       <ResponsiveContainer width="100%" height={180}>
         <BarChart data={data} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#e9d5ff" />
@@ -164,7 +161,7 @@ function CustomersChart({ data }) {
           <Bar dataKey="customers" fill="#2563eb" radius={[8, 8, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
-    </Card>
+    </ChartCard>
   );
 }
 
@@ -233,11 +230,7 @@ export default function Dashboard() {
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 px-8 py-6">
         {stats.map(stat => (
-          <StatsCard
-            key={stat.label}
-            {...stat}
-            loading={loading}
-          />
+          <StatsCard key={stat.label} {...stat} loading={loading} />
         ))}
       </div>
 

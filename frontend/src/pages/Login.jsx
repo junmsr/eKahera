@@ -2,14 +2,14 @@ import React, { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 // Components
-import Background from "../components/Background";
-import Card from "../components/Card";
-import Logo from "../components/Logo";
-import SectionHeader from "../components/SectionHeader";
-import Input from "../components/Input";
-import PasswordInput from "../components/PasswordInput";
-import Button from "../components/Button";
-import Loader from "../components/Loader";
+import Background from "../components/layout/Background";
+import Card from "../components/ui/Card";
+import Logo from "../components/common/Logo";
+import SectionHeader from "../components/layout/SectionHeader";
+import Input from "../components/common/Input";
+import PasswordInput from "../components/common/PasswordInput";
+import Button from "../components/common/Button";
+import Loader from "../components/common/Loader";
 
 /**
  * Login Page Component

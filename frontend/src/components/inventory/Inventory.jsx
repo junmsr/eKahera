@@ -1,17 +1,12 @@
 import React from 'react';
-import Button from './Button';
+import Button from '../common/Button';
+import StatsCard from '../ui/StatsCard';
 
-const EditIcon = () => (
-  <svg width="18" height="18" fill="none" stroke="#2196f3" strokeWidth="2" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 1 1 2.828 2.828L11.828 15.828a4 4 0 0 1-1.414.828l-4.243 1.414 1.414-4.243a4 4 0 0 1 .828-1.414z"/></svg>
-);
-const DeleteIcon = () => (
-  <svg width="18" height="18" fill="none" stroke="#f44336" strokeWidth="2" viewBox="0 0 24 24"><path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/><path d="M10 11v6M14 11v6"/></svg>
-);
-const StockIcon = () => (
-  <svg width="18" height="18" fill="none" stroke="#4caf50" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9 12l2 2l4-4"/></svg>
-);
-
-export default function InventoryTable({
+/**
+ * Inventory Table Component
+ * Internal component for displaying inventory data
+ */
+function InventoryTable({
   products,
   page,
   entriesPerPage,
@@ -23,6 +18,16 @@ export default function InventoryTable({
   onEdit,
   onDelete,
 }) {
+  const EditIcon = () => (
+    <svg width="18" height="18" fill="none" stroke="#2196f3" strokeWidth="2" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 1 1 2.828 2.828L11.828 15.828a4 4 0 0 1-1.414.828l-4.243 1.414 1.414-4.243a4 4 0 0 1 .828-1.414z"/></svg>
+  );
+  const DeleteIcon = () => (
+    <svg width="18" height="18" fill="none" stroke="#f44336" strokeWidth="2" viewBox="0 0 24 24"><path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/><path d="M10 11v6M14 11v6"/></svg>
+  );
+  const StockIcon = () => (
+    <svg width="18" height="18" fill="none" stroke="#4caf50" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9 12l2 2l4-4"/></svg>
+  );
+
   return (
     <>
       {/* Controls */}
@@ -74,18 +79,26 @@ export default function InventoryTable({
                   <td className="py-2 px-2">{product.quantity}</td>
                   <td className="py-2 px-2">${Number(product.price).toFixed(2)}</td>
                   <td className="py-2 px-2 flex gap-2">
-                    <button className="bg-green-100 border border-green-300 rounded-full p-1 hover:bg-green-200 transition flex items-center" title="Stock Entry">
-                      <StockIcon />
-                      <span className="ml-1 text-green-700 font-semibold text-xs">Stock Entry</span>
-                    </button>
-                    <button className="bg-blue-100 border border-blue-300 rounded-full p-1 hover:bg-blue-200 transition flex items-center" title="Update" onClick={() => onEdit(product)}>
-                      <EditIcon />
-                      <span className="ml-1 text-blue-700 font-semibold text-xs">Update</span>
-                    </button>
-                    <button className="bg-red-100 border border-red-300 rounded-full p-1 hover:bg-red-200 transition flex items-center" title="Delete" onClick={() => onDelete(product.id)}>
-                      <DeleteIcon />
-                      <span className="ml-1 text-red-700 font-semibold text-xs">Delete</span>
-                    </button>
+                    <Button 
+                      variant="stockEntry" 
+                      title="Stock Entry"
+                      icon={<StockIcon />}
+                      children={<span className="ml-1 text-green-700 font-semibold text-xs">Stock Entry</span>}
+                    />
+                    <Button 
+                      variant="edit" 
+                      title="Update" 
+                      onClick={() => onEdit(product)}
+                      icon={<EditIcon />}
+                      children={<span className="ml-1 text-blue-700 font-semibold text-xs">Update</span>}
+                    />
+                    <Button 
+                      variant="delete" 
+                      title="Delete" 
+                      onClick={() => onDelete(product.id)}
+                      icon={<DeleteIcon />}
+                      children={<span className="ml-1 text-red-700 font-semibold text-xs">Delete</span>}
+                    />
                   </td>
                 </tr>
               ))}
@@ -100,14 +113,13 @@ export default function InventoryTable({
           <div className="flex gap-2 items-center">
             <Button label="Previous" size="sm" variant="secondary" onClick={() => onPageChange(page - 1)} disabled={page === 1} />
             {Array.from({ length: totalPages }, (_, i) => (
-              <button
+              <Button
                 key={i + 1}
-                className={`px-3 py-1 rounded-lg font-semibold border ${page === i + 1 ? 'bg-blue-500 text-white border-blue-500' : 'bg-white text-blue-700 border-blue-200 hover:bg-blue-100'}`}
+                variant={page === i + 1 ? "paginationActive" : "paginationInactive"}
                 onClick={() => onPageChange(i + 1)}
                 disabled={page === i + 1}
-              >
-                {i + 1}
-              </button>
+                children={i + 1}
+              />
             ))}
             <Button label="Next" size="sm" variant="secondary" onClick={() => onPageChange(page + 1)} disabled={page === totalPages} />
           </div>
@@ -115,4 +127,77 @@ export default function InventoryTable({
       </div>
     </>
   );
-} 
+}
+
+/**
+ * Inventory Stats Component
+ * Internal component for displaying inventory statistics
+ */
+function InventoryStats({ stats }) {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+      {stats.map((stat, i) => (
+        <StatsCard
+          key={stat.label}
+          label={stat.label}
+          value={stat.value}
+          icon={stat.icon}
+          color={stat.color}
+          change={0}
+          sub={i === 1 ? 'This Month' : ''}
+          className="h-full"
+        />
+      ))}
+    </div>
+  );
+}
+
+/**
+ * Main Inventory Component
+ * Combines stats and table into a single, cohesive component
+ */
+function Inventory({
+  products,
+  stats,
+  page,
+  entriesPerPage,
+  totalPages,
+  onPageChange,
+  onEntriesChange,
+  search,
+  onSearchChange,
+  onEdit,
+  onDelete,
+  onAddProduct,
+  className = ''
+}) {
+  return (
+    <div className={`max-w-7xl mx-auto py-8 px-2 md:px-6 ${className}`}>
+      <InventoryStats stats={stats} />
+      <h2 className="text-2xl font-bold text-blue-900 tracking-tight mb-2 md:mb-0">Inventory List</h2>
+      <InventoryTable
+        products={products}
+        page={page}
+        entriesPerPage={entriesPerPage}
+        totalPages={totalPages}
+        onPageChange={onPageChange}
+        onEntriesChange={onEntriesChange}
+        search={search}
+        onSearchChange={onSearchChange}
+        onEdit={onEdit}
+        onDelete={onDelete}
+      />
+      <div className="flex flex-row gap-6 mt-8 px-2">
+        <Button 
+          label="ADD PRODUCT" 
+          onClick={onAddProduct} 
+          size="lg" 
+          variant="primary" 
+          microinteraction 
+        />
+      </div>
+    </div>
+  );
+}
+
+export default Inventory; 

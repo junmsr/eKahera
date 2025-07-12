@@ -1,9 +1,8 @@
 import React, { useState, useMemo } from 'react';
-import PageLayout from '../components/PageLayout';
-import NavAdmin from '../components/Nav-Admin';
-import InventoryStats from '../components/InventoryStats';
-import InventoryTable from '../components/InventoryTable';
-import ProductModal from '../components/ProductModal';
+import PageLayout from '../components/layout/PageLayout';
+import NavAdmin from '../components/ui/Nav-Admin';
+import Inventory from '../components/inventory/Inventory';
+import Modal from '../components/modals/Modal';
 
 const initialProducts = [
   { id: '0001', name: 'Test Test', category: 'Category QQ', description: 'This is just a demo test. This is just a demo test.', quantity: 126, price: 38.0 },
@@ -26,7 +25,7 @@ const initialCategories = [
   { id: 6, name: 'Category One' },
 ];
 
-export default function Inventory() {
+export default function InventoryPage() {
   // State
   const [products, setProducts] = useState(initialProducts);
   const [categories] = useState(initialCategories);
@@ -109,36 +108,31 @@ export default function Inventory() {
 
   return (
     <PageLayout title={null} sidebar={<NavAdmin />} showHeader={false} showNavbar={false} showFooter={false}>
-      <div className="max-w-7xl mx-auto py-8 px-2 md:px-6">
-        <InventoryStats stats={stats} />
-        <h2 className="text-2xl font-bold text-blue-900 tracking-tight mb-2 md:mb-0">Inventory List</h2>
-        <InventoryTable
-          products={paginatedProducts}
-          page={page}
-          entriesPerPage={entriesPerPage}
-          totalPages={totalPages}
-          onPageChange={handlePageChange}
-          onEntriesChange={handleEntriesChange}
-          search={search}
-          onSearchChange={handleSearchChange}
-          onEdit={openEditProduct}
-          onDelete={handleDeleteProduct}
-        />
-        <div className="flex flex-row gap-6 mt-8 px-2">
-          <button onClick={openAddProduct} className="rounded-xl font-bold shadow-md bg-gradient-to-r from-blue-500 to-blue-700 text-white px-8 py-3 text-lg hover:from-blue-600 hover:to-blue-800 hover:scale-105 active:scale-95 transition-all duration-200">
-            ADD PRODUCT
-          </button>
-        </div>
-      </div>
-      <ProductModal
+      <Inventory
+        products={paginatedProducts}
+        stats={stats}
+        page={page}
+        entriesPerPage={entriesPerPage}
+        totalPages={totalPages}
+        onPageChange={handlePageChange}
+        onEntriesChange={handleEntriesChange}
+        search={search}
+        onSearchChange={handleSearchChange}
+        onEdit={openEditProduct}
+        onDelete={handleDeleteProduct}
+        onAddProduct={openAddProduct}
+      />
+      <Modal
         isOpen={showProductModal}
         onClose={() => setShowProductModal(false)}
-        onSubmit={handleProductSubmit}
-        loading={loading}
+        title={editingProduct ? 'Update Product' : 'Add Product'}
+        variant="product"
         editingProduct={editingProduct}
         productForm={productForm}
         onChange={handleProductFormChange}
         categories={categories}
+        onSubmit={handleProductSubmit}
+        loading={loading}
       />
     </PageLayout>
   );
