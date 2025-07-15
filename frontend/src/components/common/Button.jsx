@@ -114,7 +114,7 @@ export function CashierButton({ onClick, ...props }) {
   return (
     <Button
       onClick={onClick}
-      className="bg-white border-2 border-blue-400 text-blue-600 font-semibold rounded-full py-3 px-10 text-lg shadow-sm hover:bg-blue-50 transition-colors min-w-[160px]"
+      className="bg-white text-blue-700 font-semibold px-5 py-2 rounded shadow border border-blue-200 hover:bg-blue-50 hover:scale-105 active:scale-95 transition-all duration-200 text-sm"
       aria-label="Go to Customer Portal"
       {...props}
     >
@@ -128,7 +128,7 @@ export function AdminButton({ onClick, ...props }) {
   return (
     <Button
       onClick={onClick}
-      className="bg-blue-400 text-white font-semibold rounded-full py-3 px-10 text-lg shadow-sm hover:bg-blue-500 transition-colors min-w-[160px]"
+      className="bg-blue-600 text-white font-semibold px-5 py-2 rounded shadow hover:bg-blue-700 hover:scale-105 active:scale-95 transition-all duration-200 text-sm"
       aria-label="Go to Cashier/Admin Portal"
       {...props}
     >

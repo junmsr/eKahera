@@ -24,7 +24,7 @@ export default function PageLayout({
   const [theme, setTheme] = useState('light');
   const toggleTheme = () => setTheme(theme === 'light' ? 'dark' : 'light');
   return (
-    <Background variant={backgroundVariant} pattern="dots" overlay floatingElements className={theme}>
+    <Background variant="white" pattern={undefined} overlay={false} floatingElements={false} className={theme}>
       <div className={`flex flex-col min-h-screen ${className} ${theme}`} role="main" aria-label="Main content area">
         {/* Navbar */}
         {showNavbar && (
