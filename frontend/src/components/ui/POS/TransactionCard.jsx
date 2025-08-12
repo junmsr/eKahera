@@ -12,12 +12,12 @@ function TransactionCard({
 }) {
   return (
     <Card 
-      className={`flex-shrink-0 emphasized-card ${className}`} 
+      className={`flex-shrink-0 emphasized-card h-45 ${className}`} 
       variant="glass" 
       microinteraction 
       {...props}
     >
-      <div className="flex flex-col items-center shadow">
+      <div className="flex flex-col items-center shadow mt-7">
         <div className="text-xs font-semibold text-blue-500">TRANSACTION NUMBER</div>
         <div className="text-3xl font-mono font-bold tracking-widest text-blue-900">{transactionNumber}</div>
       </div>
@@ -25,4 +25,4 @@ function TransactionCard({
   );
 }
 
-export default TransactionCard; 
+export default TransactionCard;
