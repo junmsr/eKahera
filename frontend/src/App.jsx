@@ -1,24 +1,14 @@
+import { Outlet } from 'react-router-dom';
 
-import Home from './pages/Home';
-import Features from './pages/Features';
-import Navbar from './components/Navbar';
-import Services from './pages/Services';
-import AboutUs from './pages/AboutUs';
-import Contact from './pages/Contact';
-import Footer from './components/Footer';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-
+/**
+ * Main App Component
+ * Serves as the root layout for the application
+ */
 function App() {
   return (
-    <>
-      <Navbar />
-      <Home/>
-      <Features/>
-      <Services/>
-      <AboutUs/>
-      <Contact/>
-      <Footer/>
-    </>
+    <div className="app">
+      <Outlet />
+    </div>
   );
 }
 
