@@ -7,6 +7,7 @@ import Button from '../components/common/Button';
 import Modal from '../components/modals/Modal';
 import NavAdmin from '../components/layout/Nav-Admin';
 import Background from '../components/layout/Background';
+import PriceCheckModal from '../components/modals/PriceCheckModal';
 
 function POS() {
   // State
@@ -105,9 +106,7 @@ function POS() {
           <Modal isOpen={showDiscount} onClose={() => setShowDiscount(false)} title="Discount">
             <div>Discount logic goes here.</div>
           </Modal>
-          <Modal isOpen={showPriceCheck} onClose={() => setShowPriceCheck(false)} title="Price Check">
-            <div>Price check logic goes here.</div>
-          </Modal>
+          <PriceCheckModal isOpen={showPriceCheck} onClose={() => setShowPriceCheck(false)} />
         </div>
       </div>
     </Background>
