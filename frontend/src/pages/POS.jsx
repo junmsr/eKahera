@@ -8,6 +8,7 @@ import Modal from '../components/modals/Modal';
 import NavAdmin from '../components/layout/Nav-Admin';
 import Background from '../components/layout/Background';
 import PriceCheckModal from '../components/modals/PriceCheckModal';
+import DiscountModal from '../components/modals/DiscountModal';
 
 function POS() {
   // State
@@ -103,11 +104,9 @@ function POS() {
           <Modal isOpen={showRefund} onClose={() => setShowRefund(false)} title="Product Refund">
             <div>Refund logic goes here.</div>
           </Modal>
-          <Modal isOpen={showDiscount} onClose={() => setShowDiscount(false)} title="Discount">
-            <div>Discount logic goes here.</div>
-          </Modal>
+          <DiscountModal isOpen={showDiscount} onClose={() => setShowDiscount(false)} />
           <PriceCheckModal isOpen={showPriceCheck} onClose={() => setShowPriceCheck(false)} />
-        </div>
+        </div>  
       </div>
     </Background>
   );
