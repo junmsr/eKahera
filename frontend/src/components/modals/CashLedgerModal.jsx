@@ -1,0 +1,140 @@
+import React, { useState } from "react";
+import Modal from "./Modal";
+
+function CashLedgerModal({ isOpen, onClose }) {
+  // Tab state: "SUMMARY" or "TRANSACTIONS"
+  const [tab, setTab] = useState("SUMMARY");
+
+  // Dummy transactions data for demo
+  const transactions = [
+    { id: 1, type: "Cash on hand", amount: 100, date: "2025-05-25 10:00" },
+    { id: 2, type: "Gcash", amount: 50, date: "2025-05-25 11:30" },
+    { id: 3, type: "Maya", amount: 75, date: "2025-05-25 13:15" },
+  ];
+
+  // Responsive tab navigation
+  const renderTabs = () => (
+    <div className="flex w-full justify-around mt-8 border-t pt-3">
+      <button
+        className={`flex flex-col items-center transition ${tab === "SUMMARY" ? "text-blue-700 font-bold" : "text-gray-500 hover:text-blue-700"}`}
+        onClick={() => setTab("SUMMARY")}
+      >
+        <span className="material-icons text-xl mb-1">description</span>
+        <span className="text-xs font-medium">Summary</span>
+      </button>
+      <button
+        className={`flex flex-col items-center transition ${tab === "TRANSACTIONS" ? "text-blue-700 font-bold" : "text-gray-500 hover:text-blue-700"}`}
+        onClick={() => setTab("TRANSACTIONS")}
+      >
+        <span className="material-icons text-xl mb-1">swap_horiz</span>
+        <span className="text-xs font-medium">Transactions</span>
+      </button>
+    </div>
+  );
+
+  // Summary Page
+  const renderSummary = () => (
+    <>
+      {/* Total Cash */}
+      <div className="w-full flex flex-col items-center mb-4">
+        <div className="bg-gradient-to-b from-blue-500 to-blue-700 text-white rounded-2xl shadow px-8 py-4 text-center w-full max-w-xs">
+          <div className="text-4xl font-bold flex items-center justify-center gap-2">
+            <span className="text-3xl">₱</span>200.00
+          </div>
+          <div className="text-sm font-semibold mt-1">Total Cash</div>
+        </div>
+      </div>
+      {/* Date */}
+      <div className="flex items-center gap-2 mb-3 text-black">
+        <span className="material-icons text-base">calendar_today</span>
+        <span className="font-medium text-base">May 25, 2025</span>
+      </div>
+      {/* Duration Selector
+      <div className="flex w-full mb-5">
+        <button className="flex-1 border border-blue-500 rounded-l-lg px-2 py-1 bg-blue-600 text-white font-medium text-sm transition-colors duration-150">
+          Select Duration
+        </button>
+        <button className="flex-1 border-t border-b border-r border-blue-500 rounded-r-lg px-2 py-1 bg-white text-blue-700 font-medium text-sm transition-colors duration-150">
+          This Day
+        </button>
+      </div> */}
+      {/* Payment Types */}
+      <div className="w-full">
+        <div className="flex justify-between px-1 mb-2 text-gray-700 text-xs font-semibold">
+          <span>Payment Type</span>
+          <span>Balance</span>
+        </div>
+        <div className="flex flex-col gap-2">
+          <button className="flex justify-between items-center bg-white rounded-xl shadow px-4 py-2 font-medium text-sm hover:bg-blue-50 transition">
+            <span>Cash on hand</span>
+            <span className="font-bold">₱335.00</span>
+            <span className="material-icons text-gray-400 ml-2 text-base">chevron_right</span>
+          </button>
+          <button className="flex justify-between items-center bg-white rounded-xl shadow px-4 py-2 font-medium text-sm hover:bg-blue-50 transition">
+            <span>Gcash</span>
+            <span className="font-bold">₱150.00</span>
+            <span className="material-icons text-gray-400 ml-2 text-base">chevron_right</span>
+          </button>
+          <button className="flex justify-between items-center bg-white rounded-xl shadow px-4 py-2 font-medium text-sm hover:bg-blue-50 transition">
+            <span>Maya</span>
+            <span className="font-bold">₱235.00</span>
+            <span className="material-icons text-gray-400 ml-2 text-base">chevron_right</span>
+          </button>
+        </div>
+      </div>
+    </>
+  );
+
+  // Transactions Page
+  const renderTransactions = () => (
+    <div className="w-full flex flex-col items-center mt-2">
+      <div className="w-full mb-2 text-blue-700 font-semibold text-base text-center">Transactions</div>
+      <div className="w-full max-h-72 overflow-y-auto">
+        <table className="w-full text-xs text-left">
+          <thead>
+            <tr className="text-gray-600 border-b">
+              <th className="py-2 px-2">Date/Time</th>
+              <th className="py-2 px-2">Type</th>
+              <th className="py-2 px-2 text-right">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            {transactions.length === 0 ? (
+              <tr>
+                <td colSpan={3} className="text-center py-4 text-gray-400">No transactions found.</td>
+              </tr>
+            ) : (
+              transactions.map(tx => (
+                <tr key={tx.id} className="border-b hover:bg-blue-50 transition">
+                  <td className="py-2 px-2">{tx.date}</td>
+                  <td className="py-2 px-2">{tx.type}</td>
+                  <td className="py-2 px-2 text-right font-bold text-blue-700">₱{tx.amount.toFixed(2)}</td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title="Cash Ledger" className="max-w-md">
+      {/* Exit "X" Button */}
+      <button
+        onClick={onClose}
+        className="absolute top-4 right-4 text-2xl text-gray-400 hover:text-blue-600 focus:outline-none z-10"
+        aria-label="Close"
+        type="button"
+      >
+        ×
+      </button>
+      <div className="flex flex-col items-center px-6 pb-6 pt-2 relative min-h-[420px]">
+        {tab === "SUMMARY" ? renderSummary() : renderTransactions()}
+        {renderTabs()}
+      </div>
+    </Modal>
+  );
+}
+
+export default CashLedgerModal;
