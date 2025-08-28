@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { api } from "../lib/api";
 
 // Components
 import Background from "../components/layout/Background";
@@ -27,6 +28,7 @@ export default function Login() {
   });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
+  const [apiError, setApiError] = useState("");
 
   // Form handlers
   const handleChange = (e) => {
@@ -42,9 +44,7 @@ export default function Login() {
     const err = {};
     
     if (!form.email) {
-      err.email = "Email is required";
-    } else if (!/^\S+@\S+\.\S+$/.test(form.email)) {
-      err.email = "Please enter a valid email address";
+      err.email = "Email or username is required";
     }
     
     if (!form.password) {
@@ -56,18 +56,24 @@ export default function Login() {
   };
 
   // Form submission
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    
     if (!validateForm()) return;
-    
     setLoading(true);
-    
-    // Simulate API call
-    setTimeout(() => {
-      setLoading(false);
+    setApiError("");
+    try {
+      const { token, user } = await api('/api/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ email: form.email, password: form.password })
+      });
+      localStorage.setItem('auth_token', token);
+      localStorage.setItem('auth_user', JSON.stringify(user));
       navigate("/dashboard");
-    }, 1500);
+    } catch (err) {
+      setApiError(err.message || 'Login failed');
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Determine login type
@@ -138,6 +144,10 @@ export default function Login() {
                   autoComplete="current-password"
                   required
                 />
+
+                {apiError && (
+                  <div className="text-red-600 text-sm">{apiError}</div>
+                )}
                 
                 {/* Submit Button */}
                 <Button
