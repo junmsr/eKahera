@@ -9,6 +9,8 @@ import NavAdmin from '../components/layout/Nav-Admin';
 import Background from '../components/layout/Background';
 import PriceCheckModal from '../components/modals/PriceCheckModal';
 import DiscountModal from '../components/modals/DiscountModal';
+import CashLedgerModal from '../components/modals/CashLedgerModal';
+import ProductReplacementModal from '../components/modals/ProductReplacementModal';
 
 function POS() {
   // State
@@ -18,6 +20,7 @@ function POS() {
   const [showRefund, setShowRefund] = useState(false);
   const [showDiscount, setShowDiscount] = useState(false);
   const [showPriceCheck, setShowPriceCheck] = useState(false);
+  const [showCashLedger, setShowCashLedger] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
   const [scannerPaused, setScannerPaused] = useState(false);
   const transactionNumber = '000000000';
@@ -76,7 +79,7 @@ function POS() {
                 <CartTableCard cart={cart} handleRemove={handleRemove} total={total} className="flex-1" />
                 {/* Action Buttons */}
                 <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 mt-4">
-                  <Button label="CASH LEDGER" size="lg" className="w-full h-16 text-base font-bold" variant="secondary" microinteraction />
+                  <Button label="CASH LEDGER" size="lg" className="w-full h-16 text-base font-bold" variant="secondary" microinteraction onClick={() => setShowCashLedger(true)} />
                   <Button label="DISCOUNT" size="lg" className="w-full h-16 text-base font-bold" onClick={() => setShowDiscount(true)} variant="secondary" microinteraction />
                     {/* Big Checkout Button */}
                   <Button label="CHECKOUT" size="lg" className="w-full h-35 text-lg font-bold row-span-2" variant="primary" microinteraction />
@@ -104,8 +107,24 @@ function POS() {
           <Modal isOpen={showRefund} onClose={() => setShowRefund(false)} title="Product Refund">
             <div>Refund logic goes here.</div>
           </Modal>
-          <DiscountModal isOpen={showDiscount} onClose={() => setShowDiscount(false)} />
+          <DiscountModal
+            isOpen={showDiscount}
+            onClose={() => setShowDiscount(false)}
+            onApplyDiscount={discount => {
+              // Apply the discount to your transaction/cart here
+              // Example: setAppliedDiscount(discount);
+            }}
+          />
           <PriceCheckModal isOpen={showPriceCheck} onClose={() => setShowPriceCheck(false)} />
+          <CashLedgerModal isOpen={showCashLedger} onClose={() => setShowCashLedger(false)} />
+          <ProductReplacementModal
+            isOpen={showRefund}
+            onClose={() => setShowRefund(false)}
+            onConfirm={data => {
+              // Handle refund logic here
+              setShowRefund(false);
+            }}
+          />
         </div>  
       </div>
     </Background>
