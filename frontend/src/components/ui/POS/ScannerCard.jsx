@@ -24,7 +24,7 @@ function ScannerCard({
     >
       <div className="flex flex-col items-center shadow-2xl">
         <div className={`w-full text-center mb-2 font-bold text-lg tracking-wide ${textMain}`}>SCAN QR & BARCODE</div>
-        <div className="w-56 h-40 bg-gradient-to-b from-blue-100/60 to-blue-200/60 rounded-2xl flex items-center justify-center border-2 border-blue-300/40 mb-2 overflow-hidden relative">
+        <div className="w-56 h-55 bg-gradient-to-b from-blue-100/60 to-blue-200/60 rounded-2xl flex items-center justify-center border-2 border-blue-300/40 mb-2 overflow-hidden relative">
           <Scanner
             onScan={onScan}
             onError={err => console.error(err)}

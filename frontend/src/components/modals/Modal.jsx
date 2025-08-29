@@ -121,11 +121,6 @@ function Modal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm transition-opacity duration-200" role="dialog" aria-modal="true">
       <div className={`${variants[variant]} rounded-3xl shadow-2xl p-8 w-full ${sizes[size]} relative animate-fadeIn`}>
         {title && <h3 className="text-2xl font-bold mb-4 tracking-tight text-blue-900 drop-shadow">{title}</h3>}
-        <Button
-          onClick={onClose}
-          isCloseButton={true}
-          aria-label="Close"
-        />
         {modalContent}
       </div>
       <style>{`
