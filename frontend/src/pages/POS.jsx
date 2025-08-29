@@ -28,7 +28,9 @@ function POS() {
     if (!sku || quantity < 1) return;
     setError('');
     try {
-      const product = await api(`/api/products/sku/${encodeURIComponent(sku)}`);
+      const product = await api(`/api/products/sku/${encodeURIComponent(sku)}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       const price = Number(product.selling_price || 0);
       setCart([...cart, { product_id: product.product_id, sku: product.sku, name: product.product_name, quantity, price }]);
       setSku('');

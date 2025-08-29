@@ -17,6 +17,7 @@ function InventoryTable({
   onSearchChange,
   onEdit,
   onDelete,
+  onStockEntry,
 }) {
   const EditIcon = () => (
     <svg width="18" height="18" fill="none" stroke="#2196f3" strokeWidth="2" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 1 1 2.828 2.828L11.828 15.828a4 4 0 0 1-1.414.828l-4.243 1.414 1.414-4.243a4 4 0 0 1 .828-1.414z"/></svg>
@@ -82,6 +83,7 @@ function InventoryTable({
                     <Button 
                       variant="stockEntry" 
                       title="Stock Entry"
+                      onClick={() => onStockEntry && onStockEntry(product)}
                       icon={<StockIcon />}
                       children={<span className="ml-1 text-green-700 font-semibold text-xs">Stock Entry</span>}
                     />
