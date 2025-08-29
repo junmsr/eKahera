@@ -1,21 +1,11 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import PageLayout from '../components/layout/PageLayout';
 import NavAdmin from '../components/layout/Nav-Admin';
 import Inventory from '../components/inventory/Inventory';
 import Modal from '../components/modals/Modal';
+import { api, authHeaders } from '../lib/api';
 
-const initialProducts = [
-  { id: '0001', name: 'Test Test', category: 'Category QQ', description: 'This is just a demo test. This is just a demo test.', quantity: 126, price: 38.0 },
-  { id: '0002', name: 'Test Item', category: 'CategoryTest', description: 'asdasdasd', quantity: 84, price: 25.0 },
-  { id: '0003', name: 'Item XY', category: 'CategoryTwo', description: 'q w qw wv wv !!!!!!!!', quantity: 74, price: 21.0 },
-  { id: '0004', name: 'CRMB99 QQ', category: 'CRMB99 QQ', description: 'a a a wv mv sssss', quantity: 17, price: 32.0 },
-  { id: '0005', name: 'Test123', category: 'Category Three', description: 'aaaa bbb ccc', quantity: 77, price: 20.0 },
-  { id: '0006', name: 'XYZ', category: 'CategoryTest', description: 'ccc abc', quantity: 41, price: 19.0 },
-  { id: '0007', name: 'ABC', category: 'Category QQ', description: 'qweqwe qweqwe qweqwe', quantity: 222, price: 31.0 },
-  { id: '0008', name: 'Astro', category: 'Category One', description: 'astro test', quantity: 91, price: 88.0 },
-  { id: '0009', name: 'TestItem', category: 'CategoryTest', description: 'This is a test. This is a test. This is a test.', quantity: 33, price: 56.0 },
-  { id: '0010', name: 'Item Three', category: 'Category One', description: 'qwerty qwerty qwert qwww', quantity: 38, price: 13.0 },
-];
+const initialProducts = [];
 const initialCategories = [
   { id: 1, name: 'Category QQ' },
   { id: 2, name: 'CategoryTest' },
@@ -30,12 +20,43 @@ export default function InventoryPage() {
   const [products, setProducts] = useState(initialProducts);
   const [categories] = useState(initialCategories);
   const [showProductModal, setShowProductModal] = useState(false);
+  const [showStockModal, setShowStockModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [productForm, setProductForm] = useState({ id: '', name: '', category: '', description: '', quantity: '', price: '' });
+  const [stockForm, setStockForm] = useState({ sku: '', quantity: '' });
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [entriesPerPage, setEntriesPerPage] = useState(10);
   const [page, setPage] = useState(1);
+  const [apiError, setApiError] = useState('');
+
+  // Load inventory from API
+  useEffect(() => {
+    const fetchInventory = async () => {
+      try {
+        setLoading(true);
+        setApiError('');
+        const token = localStorage.getItem('auth_token');
+        const data = await api('/api/inventory', { headers: authHeaders(token) });
+        // Map backend rows to UI shape
+        const mapped = (data || []).map((row) => ({
+          id: String(row.product_id ?? row.inventory_id ?? ''),
+          name: row.product_name || '-',
+          category: '-',
+          description: '-',
+          quantity: Number(row.quantity_in_stock ?? 0),
+          price: Number(row.selling_price ?? 0),
+        }));
+        setProducts(mapped);
+      } catch (err) {
+        setApiError(err.message || 'Failed to load inventory');
+        setProducts([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchInventory();
+  }, []);
 
   // Stats (mocked)
   const stats = [
@@ -68,27 +89,79 @@ export default function InventoryPage() {
     setProductForm({ ...product });
     setShowProductModal(true);
   };
+  const openStockEntry = (product) => {
+    setStockForm({ sku: product?.sku || '', quantity: '' });
+    setShowStockModal(true);
+  };
   const handleProductFormChange = (e) => {
     const { name, value } = e.target;
     setProductForm((prev) => ({ ...prev, [name]: value }));
   };
-  const handleProductSubmit = (e) => {
+  const handleProductSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
-    setTimeout(() => {
-      if (editingProduct) {
-        setProducts((prev) =>
-          prev.map((p) => (p.id === editingProduct.id ? { ...productForm, quantity: Number(productForm.quantity), price: Number(productForm.price) } : p))
-        );
-      } else {
-        setProducts((prev) => [
-          ...prev,
-          { ...productForm, id: Date.now().toString(), quantity: Number(productForm.quantity), price: Number(productForm.price) },
-        ]);
-      }
+    try {
+      setLoading(true);
+      setApiError('');
+      const token = localStorage.getItem('auth_token');
+      await api('/api/products', {
+        method: 'POST',
+        headers: authHeaders(token),
+        body: JSON.stringify({
+          product_category_id: null,
+          product_name: productForm.name,
+          cost_price: Number(productForm.price) || 0,
+          selling_price: Number(productForm.price) || 0,
+          sku: productForm.id || `SKU-${Date.now()}`,
+        }),
+      });
+      // refresh
+      const data = await api('/api/inventory', { headers: authHeaders(token) });
+      const mapped = (data || []).map((row) => ({
+        id: String(row.product_id ?? row.inventory_id ?? ''),
+        name: row.product_name || '-',
+        category: '-',
+        description: '-',
+        quantity: Number(row.quantity_in_stock ?? 0),
+        price: Number(row.selling_price ?? 0),
+        sku: row.sku || '',
+      }));
+      setProducts(mapped);
       setShowProductModal(false);
+    } catch (err) {
+      setApiError(err.message || 'Failed to save product');
+    } finally {
       setLoading(false);
-    }, 500);
+    }
+  };
+
+  const handleStockSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      setLoading(true);
+      setApiError('');
+      const token = localStorage.getItem('auth_token');
+      await api('/api/products/add-stock-by-sku', {
+        method: 'POST',
+        headers: authHeaders(token),
+        body: JSON.stringify({ sku: stockForm.sku, quantity: Number(stockForm.quantity) })
+      });
+      const data = await api('/api/inventory', { headers: authHeaders(token) });
+      const mapped = (data || []).map((row) => ({
+        id: String(row.product_id ?? row.inventory_id ?? ''),
+        name: row.product_name || '-',
+        category: '-',
+        description: '-',
+        quantity: Number(row.quantity_in_stock ?? 0),
+        price: Number(row.selling_price ?? 0),
+        sku: row.sku || '',
+      }));
+      setProducts(mapped);
+      setShowStockModal(false);
+    } catch (err) {
+      setApiError(err.message || 'Failed to add stock');
+    } finally {
+      setLoading(false);
+    }
   };
   const handleDeleteProduct = (id) => {
     setProducts((prev) => prev.filter((p) => p.id !== id));
@@ -121,7 +194,11 @@ export default function InventoryPage() {
         onEdit={openEditProduct}
         onDelete={handleDeleteProduct}
         onAddProduct={openAddProduct}
+        onStockEntry={openStockEntry}
       />
+      {apiError && (
+        <div className="text-red-600 text-sm mt-2 px-4">{apiError}</div>
+      )}
       <Modal
         isOpen={showProductModal}
         onClose={() => setShowProductModal(false)}
@@ -132,6 +209,19 @@ export default function InventoryPage() {
         onChange={handleProductFormChange}
         categories={categories}
         onSubmit={handleProductSubmit}
+        loading={loading}
+      />
+      {/* Stock Entry Modal (simple) */}
+      <Modal
+        isOpen={showStockModal}
+        onClose={() => setShowStockModal(false)}
+        title={'Stock Entry'}
+        variant="product"
+        editingProduct={null}
+        productForm={stockForm}
+        onChange={(e) => setStockForm({ ...stockForm, [e.target.name]: e.target.value })}
+        categories={[]}
+        onSubmit={handleStockSubmit}
         loading={loading}
       />
     </PageLayout>

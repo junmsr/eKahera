@@ -3,7 +3,7 @@ import heroIllustration from "../../../assets/images/hero-illustration.png";
 import Button, { CashierButton, AdminButton } from "../../common/Button";
 import { motion } from "framer-motion";
 
-function HomeHero({ onCashierClick, onAdminClick }) {
+function HomeHero({ onCustomerClick, onStaffClick }) {
   return (
     <section
       className="relative w-full min-h-screen flex flex-col items-center justify-center px-4 py-0 overflow-hidden"
@@ -38,18 +38,18 @@ function HomeHero({ onCashierClick, onAdminClick }) {
           </div>
           <div className="flex flex-row gap-4 w-full md:w-auto">
             <button
-              onClick={onCashierClick}
+              onClick={onCustomerClick}
               className="bg-white text-blue-700 font-semibold px-7 py-3 rounded shadow border border-blue-200 hover:bg-blue-50 hover:scale-105 active:scale-95 transition-all duration-200 text-base flex items-center gap-2"
               style={{ fontFamily: "Inter, sans-serif" }}
             >
-              Cashier
+              Customer
             </button>
             <button
-              onClick={onAdminClick}
+              onClick={onStaffClick}
               className="bg-gradient-to-r from-blue-600 to-blue-400 text-white font-semibold px-7 py-3 rounded shadow-lg hover:from-blue-700 hover:to-blue-500 hover:scale-105 active:scale-95 transition-all duration-200 text-base flex items-center gap-2"
               style={{ fontFamily: "Inter, sans-serif" }}
             >
-              Admin
+              Admin/Cashier
             </button>
           </div>
         </motion.div>
