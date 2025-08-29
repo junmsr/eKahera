@@ -6,23 +6,24 @@ import Modal from '../components/modals/Modal';
 import { api, authHeaders } from '../lib/api';
 
 const initialProducts = [];
-const initialCategories = [
-  { id: 1, name: 'Category QQ' },
-  { id: 2, name: 'CategoryTest' },
-  { id: 3, name: 'CategoryTwo' },
-  { id: 4, name: 'CRMB99 QQ' },
-  { id: 5, name: 'Category Three' },
-  { id: 6, name: 'Category One' },
-];
+const initialCategories = [];
 
 export default function InventoryPage() {
   // State
   const [products, setProducts] = useState(initialProducts);
-  const [categories] = useState(initialCategories);
+  const [categories, setCategories] = useState(initialCategories);
   const [showProductModal, setShowProductModal] = useState(false);
   const [showStockModal, setShowStockModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
-  const [productForm, setProductForm] = useState({ id: '', name: '', category: '', description: '', quantity: '', price: '' });
+  const [productForm, setProductForm] = useState({ 
+    sku: '', 
+    name: '', 
+    category: '', 
+    description: '', 
+    quantity: '', 
+    cost_price: '', 
+    selling_price: '' 
+  });
   const [stockForm, setStockForm] = useState({ sku: '', quantity: '' });
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
@@ -38,14 +39,19 @@ export default function InventoryPage() {
         setApiError('');
         const token = localStorage.getItem('auth_token');
         const data = await api('/api/inventory', { headers: authHeaders(token) });
-        // Map backend rows to UI shape
+        const cats = await api('/api/products/categories/all', { headers: authHeaders(token) });
+        setCategories((cats || []).map(c => ({ id: c.product_category_id, name: c.product_category_name })));
+        
+        // Map backend rows to UI shape with correct column mapping
         const mapped = (data || []).map((row) => ({
-          id: String(row.product_id ?? row.inventory_id ?? ''),
-          name: row.product_name || '-',
-          category: '-',
-          description: '-',
-          quantity: Number(row.quantity_in_stock ?? 0),
-          price: Number(row.selling_price ?? 0),
+          id: String(row.id || ''),
+          name: row.name || '-',
+          category: row.category || '-',
+          quantity: Number(row.quantity || 0),
+          cost_price: Number(row.cost_price || 0),
+          selling_price: Number(row.selling_price || 0),
+          sku: row.sku || '',
+          description: row.description || '',
         }));
         setProducts(mapped);
       } catch (err) {
@@ -81,49 +87,86 @@ export default function InventoryPage() {
   // Handlers
   const openAddProduct = () => {
     setEditingProduct(null);
-    setProductForm({ id: '', name: '', category: '', description: '', quantity: '', price: '' });
+    setProductForm({ 
+      sku: '', 
+      name: '', 
+      category: '', 
+      description: '', 
+      quantity: '', 
+      cost_price: '', 
+      selling_price: '' 
+    });
     setShowProductModal(true);
   };
+
   const openEditProduct = (product) => {
     setEditingProduct(product);
     setProductForm({ ...product });
     setShowProductModal(true);
   };
+
   const openStockEntry = (product) => {
     setStockForm({ sku: product?.sku || '', quantity: '' });
     setShowStockModal(true);
   };
+
   const handleProductFormChange = (e) => {
     const { name, value } = e.target;
     setProductForm((prev) => ({ ...prev, [name]: value }));
   };
+
   const handleProductSubmit = async (e) => {
     e.preventDefault();
     try {
       setLoading(true);
       setApiError('');
       const token = localStorage.getItem('auth_token');
-      await api('/api/products', {
-        method: 'POST',
-        headers: authHeaders(token),
-        body: JSON.stringify({
-          product_category_id: null,
-          product_name: productForm.name,
-          cost_price: Number(productForm.price) || 0,
-          selling_price: Number(productForm.price) || 0,
-          sku: productForm.id || `SKU-${Date.now()}`,
-        }),
-      });
-      // refresh
+      
+      if (editingProduct) {
+        // Update existing product
+        await api(`/api/inventory/${editingProduct.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', ...authHeaders(token) },
+          body: JSON.stringify({
+            product_name: (productForm.name || '').trim(),
+            cost_price: Number(productForm.cost_price) || 0,
+            selling_price: Number(productForm.selling_price) || 0,
+            sku: (productForm.sku || '').trim(),
+            category: (productForm.category || '').trim(),
+            description: (productForm.description || '').trim(),
+          }),
+        });
+      } else {
+        // Create new product
+        await api('/api/products', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...authHeaders(token) },
+          body: JSON.stringify({
+            product_category_id: null,
+            category: (productForm.category || '').trim(),
+            product_name: (productForm.name || '').trim(),
+            name: (productForm.name || '').trim(),
+            description: (productForm.description || '').trim(),
+            cost_price: Number(productForm.cost_price) || 0,
+            selling_price: Number(productForm.selling_price) || 0,
+            price: Number(productForm.selling_price) || 0,
+            sku: (productForm.sku || '').trim() || `SKU-${Date.now()}`,
+            quantity: Number(productForm.quantity) || 0,
+          }),
+        });
+      }
+
+      // Refresh inventory list after creation/update
       const data = await api('/api/inventory', { headers: authHeaders(token) });
       const mapped = (data || []).map((row) => ({
-        id: String(row.product_id ?? row.inventory_id ?? ''),
-        name: row.product_name || '-',
-        category: '-',
-        description: '-',
-        quantity: Number(row.quantity_in_stock ?? 0),
-        price: Number(row.selling_price ?? 0),
+        id: String(row.id || ''),
+        name: row.name || '-',
+        category: row.category || '-',
+        quantity: Number(row.quantity || 0),
+        cost_price: Number(row.cost_price || 0),
+        selling_price: Number(row.selling_price || 0),
         sku: row.sku || '',
+        description: row.description || '',
       }));
       setProducts(mapped);
       setShowProductModal(false);
@@ -147,13 +190,14 @@ export default function InventoryPage() {
       });
       const data = await api('/api/inventory', { headers: authHeaders(token) });
       const mapped = (data || []).map((row) => ({
-        id: String(row.product_id ?? row.inventory_id ?? ''),
-        name: row.product_name || '-',
-        category: '-',
-        description: '-',
-        quantity: Number(row.quantity_in_stock ?? 0),
-        price: Number(row.selling_price ?? 0),
+        id: String(row.id || ''),
+        name: row.name || '-',
+        category: row.category || '-',
+        quantity: Number(row.quantity || 0),
+        cost_price: Number(row.cost_price || 0),
+        selling_price: Number(row.selling_price || 0),
         sku: row.sku || '',
+        description: row.description || '',
       }));
       setProducts(mapped);
       setShowStockModal(false);
@@ -163,17 +207,49 @@ export default function InventoryPage() {
       setLoading(false);
     }
   };
-  const handleDeleteProduct = (id) => {
-    setProducts((prev) => prev.filter((p) => p.id !== id));
+
+  const handleDeleteProduct = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this product?')) return;
+    
+    try {
+      setLoading(true);
+      setApiError('');
+      const token = localStorage.getItem('auth_token');
+      await api(`/api/inventory/${id}`, {
+        method: 'DELETE',
+        headers: authHeaders(token),
+      });
+      
+      // Refresh inventory list after deletion
+      const data = await api('/api/inventory', { headers: authHeaders(token) });
+      const mapped = (data || []).map((row) => ({
+        id: String(row.id || ''),
+        name: row.name || '-',
+        category: row.category || '-',
+        quantity: Number(row.quantity || 0),
+        cost_price: Number(row.cost_price || 0),
+        selling_price: Number(row.selling_price || 0),
+        sku: row.sku || '',
+        description: row.description || '',
+      }));
+      setProducts(mapped);
+    } catch (err) {
+      setApiError(err.message || 'Failed to delete product');
+    } finally {
+      setLoading(false);
+    }
   };
+
   const handlePageChange = (newPage) => {
     if (newPage < 1 || newPage > totalPages) return;
     setPage(newPage);
   };
+
   const handleEntriesChange = (e) => {
     setEntriesPerPage(Number(e.target.value));
     setPage(1);
   };
+
   const handleSearchChange = (e) => {
     setSearch(e.target.value);
     setPage(1);

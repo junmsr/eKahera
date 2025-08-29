@@ -53,11 +53,13 @@ exports.login = async (req, res) => {
     // Try to find user by email or username
     const result = await pool.query(
       `SELECT u.user_id, u.username, u.email, u.password_hash, u.role, u.contact_number,
-              u.user_type_id, u.business_id, ut.user_type_name,
+              u.user_type_id,
+              u.business_id AS business_id,
+              ut.user_type_name,
               b.business_name AS store_name
        FROM users u
        LEFT JOIN user_type ut ON ut.user_type_id = u.user_type_id
-       LEFT JOIN business b ON b.user_id = u.user_id
+       LEFT JOIN business b ON b.business_id = u.business_id
        WHERE u.email = $1 OR u.username = $1`,
       [email]
     );
