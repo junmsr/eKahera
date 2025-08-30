@@ -3,7 +3,7 @@ import heroIllustration from "../../../assets/images/hero-illustration.png";
 import Button, { CashierButton, AdminButton } from "../../common/Button";
 import { motion } from "framer-motion";
 
-function HomeHero({ onCashierClick, onAdminClick }) {
+function HomeHero({ onCashierClick, onAdminClick, onMobileScannerClick }) {
   return (
     <section
       className="relative w-full min-h-screen flex flex-col items-center justify-center px-4 py-0 overflow-hidden"
@@ -50,6 +50,13 @@ function HomeHero({ onCashierClick, onAdminClick }) {
               style={{ fontFamily: "Inter, sans-serif" }}
             >
               Admin
+            </button>
+            <button
+              onClick={onMobileScannerClick}
+              className="bg-blue-50 text-blue-700 font-semibold px-7 py-3 rounded shadow border border-blue-200 hover:bg-blue-100 hover:scale-105 active:scale-95 transition-all duration-200 text-base flex items-center gap-2"
+              style={{ fontFamily: "Inter, sans-serif" }}
+            >
+              Mobile Scanner
             </button>
           </div>
         </motion.div>
