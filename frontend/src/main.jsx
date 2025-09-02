@@ -12,6 +12,8 @@ import Login from './pages/Login.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import POS from './pages/POS.jsx';
 import Inventory from './pages/Inventory.jsx';
+import SelectRole from './pages/SelectRole';
+import Customer from './pages/Customer';
 
 // Router Configuration
 const router = createBrowserRouter([
@@ -27,6 +29,8 @@ const router = createBrowserRouter([
       { path: 'dashboard', element: <Dashboard /> },
       { path: 'pos', element: <POS /> },
       { path: 'inventory', element: <Inventory /> },
+      { path: 'select-role', element: <SelectRole /> },
+      { path: 'customer', element: <Customer /> },
     ],
   }
 ]);
