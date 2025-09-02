@@ -2,12 +2,12 @@
 -- PostgreSQL database dump
 --
 
-\restrict DlckQMtLca0UeIG6S5PUoov9oPeF1uMM4yPo5baDVAcxSX4orQ6Yh43Y4indiJc
+\restrict dVAHXv1ius2OZavHcRMe5lqi9RyEzQlyt56GjRHEceGkraSjBeUMfNoBKmNuTqo
 
 -- Dumped from database version 17.6
 -- Dumped by pg_dump version 17.6
 
--- Started on 2025-08-28 18:49:40
+-- Started on 2025-08-29 19:48:53
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -22,7 +22,7 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 --
--- TOC entry 245 (class 1255 OID 24769)
+-- TOC entry 245 (class 1255 OID 32989)
 -- Name: enforce_business_user_admin(); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
@@ -30,17 +30,7 @@ CREATE FUNCTION public.enforce_business_user_admin() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
 BEGIN
-  IF NEW.user_id IS NOT NULL THEN
-    PERFORM 1
-    FROM public.users u
-    JOIN public.user_type ut ON ut.user_type_id = u.user_type_id
-    WHERE u.user_id = NEW.user_id
-      AND ut.user_type_name IN ('admin','superadmin');
-
-    IF NOT FOUND THEN
-      RAISE EXCEPTION 'business.user_id must reference an admin or superadmin';
-    END IF;
-  END IF;
+  -- No enforcement needed because ownership is via users.business_id
   RETURN NEW;
 END;
 $$;
@@ -76,7 +66,6 @@ SET default_table_access_method = heap;
 
 CREATE TABLE public.business (
     business_id integer NOT NULL,
-    user_id integer,
     business_name character varying(255) NOT NULL,
     business_type character varying(100) NOT NULL,
     country character varying(100) NOT NULL,
@@ -144,7 +133,7 @@ CREATE SEQUENCE public.business_business_id_seq
 ALTER SEQUENCE public.business_business_id_seq OWNER TO postgres;
 
 --
--- TOC entry 5089 (class 0 OID 0)
+-- TOC entry 5087 (class 0 OID 0)
 -- Dependencies: 241
 -- Name: business_business_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
@@ -183,7 +172,7 @@ CREATE SEQUENCE public.discounts_discount_id_seq
 ALTER SEQUENCE public.discounts_discount_id_seq OWNER TO postgres;
 
 --
--- TOC entry 5090 (class 0 OID 0)
+-- TOC entry 5088 (class 0 OID 0)
 -- Dependencies: 220
 -- Name: discounts_discount_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
@@ -225,7 +214,7 @@ CREATE SEQUENCE public.inventory_inventory_id_seq
 ALTER SEQUENCE public.inventory_inventory_id_seq OWNER TO postgres;
 
 --
--- TOC entry 5091 (class 0 OID 0)
+-- TOC entry 5089 (class 0 OID 0)
 -- Dependencies: 222
 -- Name: inventory_inventory_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
@@ -268,7 +257,7 @@ CREATE SEQUENCE public.logs_log_id_seq
 ALTER SEQUENCE public.logs_log_id_seq OWNER TO postgres;
 
 --
--- TOC entry 5092 (class 0 OID 0)
+-- TOC entry 5090 (class 0 OID 0)
 -- Dependencies: 224
 -- Name: logs_log_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
@@ -306,7 +295,7 @@ CREATE SEQUENCE public.product_categories_product_category_id_seq
 ALTER SEQUENCE public.product_categories_product_category_id_seq OWNER TO postgres;
 
 --
--- TOC entry 5093 (class 0 OID 0)
+-- TOC entry 5091 (class 0 OID 0)
 -- Dependencies: 226
 -- Name: product_categories_product_category_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
@@ -329,7 +318,8 @@ CREATE TABLE public.products (
     created_at timestamp with time zone DEFAULT now(),
     updated_at timestamp with time zone DEFAULT now(),
     created_by_user_id integer,
-    business_id integer
+    business_id integer,
+    description text
 );
 
 
@@ -352,7 +342,7 @@ CREATE SEQUENCE public.products_product_id_seq
 ALTER SEQUENCE public.products_product_id_seq OWNER TO postgres;
 
 --
--- TOC entry 5094 (class 0 OID 0)
+-- TOC entry 5092 (class 0 OID 0)
 -- Dependencies: 228
 -- Name: products_product_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
@@ -392,7 +382,7 @@ CREATE SEQUENCE public.returned_items_returned_items_id_seq
 ALTER SEQUENCE public.returned_items_returned_items_id_seq OWNER TO postgres;
 
 --
--- TOC entry 5095 (class 0 OID 0)
+-- TOC entry 5093 (class 0 OID 0)
 -- Dependencies: 230
 -- Name: returned_items_returned_items_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
@@ -432,7 +422,7 @@ CREATE SEQUENCE public.returns_return_id_seq
 ALTER SEQUENCE public.returns_return_id_seq OWNER TO postgres;
 
 --
--- TOC entry 5096 (class 0 OID 0)
+-- TOC entry 5094 (class 0 OID 0)
 -- Dependencies: 232
 -- Name: returns_return_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
@@ -474,7 +464,7 @@ CREATE SEQUENCE public.transaction_items_transaction_item_id_seq
 ALTER SEQUENCE public.transaction_items_transaction_item_id_seq OWNER TO postgres;
 
 --
--- TOC entry 5097 (class 0 OID 0)
+-- TOC entry 5095 (class 0 OID 0)
 -- Dependencies: 218
 -- Name: transaction_items_transaction_item_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
@@ -518,7 +508,7 @@ CREATE SEQUENCE public.transaction_payment_transasction_payment_id_seq
 ALTER SEQUENCE public.transaction_payment_transasction_payment_id_seq OWNER TO postgres;
 
 --
--- TOC entry 5098 (class 0 OID 0)
+-- TOC entry 5096 (class 0 OID 0)
 -- Dependencies: 234
 -- Name: transaction_payment_transasction_payment_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
@@ -543,7 +533,7 @@ CREATE SEQUENCE public.transactions_transaction_id_seq
 ALTER SEQUENCE public.transactions_transaction_id_seq OWNER TO postgres;
 
 --
--- TOC entry 5099 (class 0 OID 0)
+-- TOC entry 5097 (class 0 OID 0)
 -- Dependencies: 236
 -- Name: transactions_transaction_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
@@ -581,7 +571,7 @@ CREATE SEQUENCE public.user_type_user_type_id_seq
 ALTER SEQUENCE public.user_type_user_type_id_seq OWNER TO postgres;
 
 --
--- TOC entry 5100 (class 0 OID 0)
+-- TOC entry 5098 (class 0 OID 0)
 -- Dependencies: 238
 -- Name: user_type_user_type_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
@@ -627,7 +617,7 @@ CREATE SEQUENCE public.users_user_id_seq
 ALTER SEQUENCE public.users_user_id_seq OWNER TO postgres;
 
 --
--- TOC entry 5101 (class 0 OID 0)
+-- TOC entry 5099 (class 0 OID 0)
 -- Dependencies: 240
 -- Name: users_user_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
@@ -740,19 +730,18 @@ ALTER TABLE ONLY public.users ALTER COLUMN user_id SET DEFAULT nextval('public.u
 
 
 --
--- TOC entry 5083 (class 0 OID 24588)
+-- TOC entry 5081 (class 0 OID 24588)
 -- Dependencies: 242
 -- Data for Name: business; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.business (business_id, user_id, business_name, business_type, country, business_address, house_number, mobile, email, created_at, updated_at) FROM stdin;
-8	12	qwerty	qwerty	qwerty	qwerty	qwerty	09123456789	rimis47454@iotrama.com	2025-08-28 16:37:00.967998+08	2025-08-28 16:37:00.967998+08
-9	13	qwer	qwer	qwer	wer	qwer	09123456789	napok30878@evoxury.com	2025-08-28 18:46:15.055373+08	2025-08-28 18:46:15.055373+08
+COPY public.business (business_id, business_name, business_type, country, business_address, house_number, mobile, email, created_at, updated_at) FROM stdin;
+5	qwer	qwer	qwer	qwer	qwer	09123456789	barovoc509@lespedia.com	2025-08-29 18:01:42.369496+08	2025-08-29 18:01:42.369496+08
 \.
 
 
 --
--- TOC entry 5060 (class 0 OID 16393)
+-- TOC entry 5058 (class 0 OID 16393)
 -- Dependencies: 219
 -- Data for Name: discounts; Type: TABLE DATA; Schema: public; Owner: postgres
 --
@@ -762,17 +751,19 @@ COPY public.discounts (discount_id, discount_name, discount_percentage) FROM std
 
 
 --
--- TOC entry 5062 (class 0 OID 16397)
+-- TOC entry 5060 (class 0 OID 16397)
 -- Dependencies: 221
 -- Data for Name: inventory; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
 COPY public.inventory (inventory_id, product_id, quantity_in_stock, updated_at, business_id) FROM stdin;
+2	2	2	2025-08-29 19:29:43.117265+08	5
+3	3	2	2025-08-29 19:45:26.919626+08	5
 \.
 
 
 --
--- TOC entry 5064 (class 0 OID 16401)
+-- TOC entry 5062 (class 0 OID 16401)
 -- Dependencies: 223
 -- Data for Name: logs; Type: TABLE DATA; Schema: public; Owner: postgres
 --
@@ -782,27 +773,30 @@ COPY public.logs (log_id, transaction_id, inventory_id, product_id, return_id, d
 
 
 --
--- TOC entry 5066 (class 0 OID 16406)
+-- TOC entry 5064 (class 0 OID 16406)
 -- Dependencies: 225
 -- Data for Name: product_categories; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
 COPY public.product_categories (product_category_id, product_category_name) FROM stdin;
+1	compliments
 \.
 
 
 --
--- TOC entry 5068 (class 0 OID 16410)
+-- TOC entry 5066 (class 0 OID 16410)
 -- Dependencies: 227
 -- Data for Name: products; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.products (product_id, product_category_id, product_name, cost_price, selling_price, sku, created_at, updated_at, created_by_user_id, business_id) FROM stdin;
+COPY public.products (product_id, product_category_id, product_name, cost_price, selling_price, sku, created_at, updated_at, created_by_user_id, business_id, description) FROM stdin;
+2	1	knorr	123.00	190.00	4808680230764	2025-08-29 19:29:43.117265+08	2025-08-29 19:30:09.524033+08	8	5	\N
+3	1	knorp	134.00	145.00	4808680230764	2025-08-29 19:45:26.919626+08	2025-08-29 19:45:26.919626+08	8	5	\N
 \.
 
 
 --
--- TOC entry 5070 (class 0 OID 16414)
+-- TOC entry 5068 (class 0 OID 16414)
 -- Dependencies: 229
 -- Data for Name: returned_items; Type: TABLE DATA; Schema: public; Owner: postgres
 --
@@ -812,7 +806,7 @@ COPY public.returned_items (returned_items_id, return_id, product_id, product_qu
 
 
 --
--- TOC entry 5072 (class 0 OID 16418)
+-- TOC entry 5070 (class 0 OID 16418)
 -- Dependencies: 231
 -- Data for Name: returns; Type: TABLE DATA; Schema: public; Owner: postgres
 --
@@ -822,7 +816,7 @@ COPY public.returns (return_id, transaction_id, date_returned, money_returned) F
 
 
 --
--- TOC entry 5058 (class 0 OID 16389)
+-- TOC entry 5056 (class 0 OID 16389)
 -- Dependencies: 217
 -- Data for Name: transaction_items; Type: TABLE DATA; Schema: public; Owner: postgres
 --
@@ -832,7 +826,7 @@ COPY public.transaction_items (transaction_item_id, transaction_id, product_id, 
 
 
 --
--- TOC entry 5074 (class 0 OID 16426)
+-- TOC entry 5072 (class 0 OID 16426)
 -- Dependencies: 233
 -- Data for Name: transaction_payment; Type: TABLE DATA; Schema: public; Owner: postgres
 --
@@ -842,7 +836,7 @@ COPY public.transaction_payment (transasction_payment_id, user_id, discount_id, 
 
 
 --
--- TOC entry 5076 (class 0 OID 16431)
+-- TOC entry 5074 (class 0 OID 16431)
 -- Dependencies: 235
 -- Data for Name: transactions; Type: TABLE DATA; Schema: public; Owner: postgres
 --
@@ -852,42 +846,41 @@ COPY public.transactions (transaction_id, cashier_user_id, customer_user_id, tot
 
 
 --
--- TOC entry 5078 (class 0 OID 16435)
+-- TOC entry 5076 (class 0 OID 16435)
 -- Dependencies: 237
 -- Data for Name: user_type; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
 COPY public.user_type (user_type_id, user_type_name) FROM stdin;
-4	customer
 1	superadmin
 2	admin
 3	cashier
+4	customer
 \.
 
 
 --
--- TOC entry 5080 (class 0 OID 16439)
+-- TOC entry 5078 (class 0 OID 16439)
 -- Dependencies: 239
 -- Data for Name: users; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
 COPY public.users (user_id, user_type_id, username, contact_number, email, password_hash, role, created_at, updated_at, business_id) FROM stdin;
-12	2	toktok	09123456789	rimis47454@iotrama.com	$2b$10$5t7MCb7EiXrilxAzybYt8.h8fW22cVhB1l.77iHwgQLxnjg7j2p/y	business_owner	2025-08-28 16:37:00.967998+08	2025-08-28 18:06:58.527013+08	\N
-13	2	napok	09123456789	napok30878@evoxury.com	$2b$10$3L8UaAVXm7elx3KXybBOvOrrSDG4DE7yRZzXNGzvx4wVn2RSUTlhm	business_owner	2025-08-28 18:46:15.055373+08	2025-08-28 18:46:15.055373+08	\N
+8	2	bravo	09123456789	barovoc509@lespedia.com	$2b$10$nIAv0niohz.mHgbLeXO8iOA7.e8NalZGYySJV2guOjR5JjKeaoqs2	business_owner	2025-08-29 18:01:42.369496+08	2025-08-29 18:01:42.369496+08	5
 \.
 
 
 --
--- TOC entry 5102 (class 0 OID 0)
+-- TOC entry 5100 (class 0 OID 0)
 -- Dependencies: 241
 -- Name: business_business_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.business_business_id_seq', 9, true);
+SELECT pg_catalog.setval('public.business_business_id_seq', 5, true);
 
 
 --
--- TOC entry 5103 (class 0 OID 0)
+-- TOC entry 5101 (class 0 OID 0)
 -- Dependencies: 220
 -- Name: discounts_discount_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
@@ -896,16 +889,16 @@ SELECT pg_catalog.setval('public.discounts_discount_id_seq', 1, false);
 
 
 --
--- TOC entry 5104 (class 0 OID 0)
+-- TOC entry 5102 (class 0 OID 0)
 -- Dependencies: 222
 -- Name: inventory_inventory_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.inventory_inventory_id_seq', 1, false);
+SELECT pg_catalog.setval('public.inventory_inventory_id_seq', 3, true);
 
 
 --
--- TOC entry 5105 (class 0 OID 0)
+-- TOC entry 5103 (class 0 OID 0)
 -- Dependencies: 224
 -- Name: logs_log_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
@@ -914,25 +907,25 @@ SELECT pg_catalog.setval('public.logs_log_id_seq', 1, false);
 
 
 --
--- TOC entry 5106 (class 0 OID 0)
+-- TOC entry 5104 (class 0 OID 0)
 -- Dependencies: 226
 -- Name: product_categories_product_category_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.product_categories_product_category_id_seq', 1, false);
+SELECT pg_catalog.setval('public.product_categories_product_category_id_seq', 1, true);
 
 
 --
--- TOC entry 5107 (class 0 OID 0)
+-- TOC entry 5105 (class 0 OID 0)
 -- Dependencies: 228
 -- Name: products_product_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.products_product_id_seq', 1, false);
+SELECT pg_catalog.setval('public.products_product_id_seq', 3, true);
 
 
 --
--- TOC entry 5108 (class 0 OID 0)
+-- TOC entry 5106 (class 0 OID 0)
 -- Dependencies: 230
 -- Name: returned_items_returned_items_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
@@ -941,7 +934,7 @@ SELECT pg_catalog.setval('public.returned_items_returned_items_id_seq', 1, false
 
 
 --
--- TOC entry 5109 (class 0 OID 0)
+-- TOC entry 5107 (class 0 OID 0)
 -- Dependencies: 232
 -- Name: returns_return_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
@@ -950,7 +943,7 @@ SELECT pg_catalog.setval('public.returns_return_id_seq', 1, false);
 
 
 --
--- TOC entry 5110 (class 0 OID 0)
+-- TOC entry 5108 (class 0 OID 0)
 -- Dependencies: 218
 -- Name: transaction_items_transaction_item_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
@@ -959,7 +952,7 @@ SELECT pg_catalog.setval('public.transaction_items_transaction_item_id_seq', 1, 
 
 
 --
--- TOC entry 5111 (class 0 OID 0)
+-- TOC entry 5109 (class 0 OID 0)
 -- Dependencies: 234
 -- Name: transaction_payment_transasction_payment_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
@@ -968,7 +961,7 @@ SELECT pg_catalog.setval('public.transaction_payment_transasction_payment_id_seq
 
 
 --
--- TOC entry 5112 (class 0 OID 0)
+-- TOC entry 5110 (class 0 OID 0)
 -- Dependencies: 236
 -- Name: transactions_transaction_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
@@ -977,21 +970,21 @@ SELECT pg_catalog.setval('public.transactions_transaction_id_seq', 1, false);
 
 
 --
--- TOC entry 5113 (class 0 OID 0)
+-- TOC entry 5111 (class 0 OID 0)
 -- Dependencies: 238
 -- Name: user_type_user_type_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.user_type_user_type_id_seq', 3, true);
+SELECT pg_catalog.setval('public.user_type_user_type_id_seq', 4, true);
 
 
 --
--- TOC entry 5114 (class 0 OID 0)
+-- TOC entry 5112 (class 0 OID 0)
 -- Dependencies: 240
 -- Name: users_user_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.users_user_id_seq', 13, true);
+SELECT pg_catalog.setval('public.users_user_id_seq', 8, true);
 
 
 --
@@ -1156,14 +1149,6 @@ CREATE INDEX idx_business_email ON public.business USING btree (email);
 
 
 --
--- TOC entry 4881 (class 1259 OID 24603)
--- Name: idx_business_user_id; Type: INDEX; Schema: public; Owner: postgres
---
-
-CREATE INDEX idx_business_user_id ON public.business USING btree (user_id);
-
-
---
 -- TOC entry 4856 (class 1259 OID 24763)
 -- Name: idx_payment_tx; Type: INDEX; Schema: public; Owner: postgres
 --
@@ -1236,7 +1221,7 @@ CREATE INDEX idx_users_role ON public.users USING btree (role);
 
 
 --
--- TOC entry 4910 (class 2620 OID 24770)
+-- TOC entry 4908 (class 2620 OID 32990)
 -- Name: business trg_enforce_business_user_admin; Type: TRIGGER; Schema: public; Owner: postgres
 --
 
@@ -1244,7 +1229,7 @@ CREATE TRIGGER trg_enforce_business_user_admin BEFORE INSERT OR UPDATE ON public
 
 
 --
--- TOC entry 4911 (class 2620 OID 24612)
+-- TOC entry 4909 (class 2620 OID 24612)
 -- Name: business update_business_updated_at; Type: TRIGGER; Schema: public; Owner: postgres
 --
 
@@ -1252,7 +1237,7 @@ CREATE TRIGGER update_business_updated_at BEFORE UPDATE ON public.business FOR E
 
 
 --
--- TOC entry 4906 (class 2620 OID 24767)
+-- TOC entry 4904 (class 2620 OID 24767)
 -- Name: inventory update_inventory_updated_at; Type: TRIGGER; Schema: public; Owner: postgres
 --
 
@@ -1260,7 +1245,7 @@ CREATE TRIGGER update_inventory_updated_at BEFORE UPDATE ON public.inventory FOR
 
 
 --
--- TOC entry 4907 (class 2620 OID 24607)
+-- TOC entry 4905 (class 2620 OID 24607)
 -- Name: products update_products_updated_at; Type: TRIGGER; Schema: public; Owner: postgres
 --
 
@@ -1268,7 +1253,7 @@ CREATE TRIGGER update_products_updated_at BEFORE UPDATE ON public.products FOR E
 
 
 --
--- TOC entry 4908 (class 2620 OID 24738)
+-- TOC entry 4906 (class 2620 OID 24738)
 -- Name: transactions update_transactions_updated_at; Type: TRIGGER; Schema: public; Owner: postgres
 --
 
@@ -1276,7 +1261,7 @@ CREATE TRIGGER update_transactions_updated_at BEFORE UPDATE ON public.transactio
 
 
 --
--- TOC entry 4909 (class 2620 OID 24611)
+-- TOC entry 4907 (class 2620 OID 24611)
 -- Name: users update_users_updated_at; Type: TRIGGER; Schema: public; Owner: postgres
 --
 
@@ -1284,16 +1269,7 @@ CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON public.users FOR EACH RO
 
 
 --
--- TOC entry 4905 (class 2606 OID 24598)
--- Name: business business_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY public.business
-    ADD CONSTRAINT business_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(user_id) ON DELETE CASCADE;
-
-
---
--- TOC entry 4882 (class 2606 OID 16486)
+-- TOC entry 4881 (class 2606 OID 16486)
 -- Name: transaction_items fk_cart_product_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1302,7 +1278,7 @@ ALTER TABLE ONLY public.transaction_items
 
 
 --
--- TOC entry 4883 (class 2606 OID 16491)
+-- TOC entry 4882 (class 2606 OID 16491)
 -- Name: transaction_items fk_cart_transaction_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1311,7 +1287,7 @@ ALTER TABLE ONLY public.transaction_items
 
 
 --
--- TOC entry 4884 (class 2606 OID 32884)
+-- TOC entry 4883 (class 2606 OID 32884)
 -- Name: inventory fk_inventory_business; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1320,7 +1296,7 @@ ALTER TABLE ONLY public.inventory
 
 
 --
--- TOC entry 4885 (class 2606 OID 16496)
+-- TOC entry 4884 (class 2606 OID 16496)
 -- Name: inventory fk_inventory_product_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1329,7 +1305,7 @@ ALTER TABLE ONLY public.inventory
 
 
 --
--- TOC entry 4886 (class 2606 OID 32889)
+-- TOC entry 4885 (class 2606 OID 32889)
 -- Name: logs fk_logs_business; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1338,7 +1314,7 @@ ALTER TABLE ONLY public.logs
 
 
 --
--- TOC entry 4887 (class 2606 OID 16506)
+-- TOC entry 4886 (class 2606 OID 16506)
 -- Name: logs fk_logs_inventory_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1347,7 +1323,7 @@ ALTER TABLE ONLY public.logs
 
 
 --
--- TOC entry 4888 (class 2606 OID 16511)
+-- TOC entry 4887 (class 2606 OID 16511)
 -- Name: logs fk_logs_product_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1356,7 +1332,7 @@ ALTER TABLE ONLY public.logs
 
 
 --
--- TOC entry 4889 (class 2606 OID 16521)
+-- TOC entry 4888 (class 2606 OID 16521)
 -- Name: logs fk_logs_transaction_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1365,7 +1341,7 @@ ALTER TABLE ONLY public.logs
 
 
 --
--- TOC entry 4891 (class 2606 OID 32874)
+-- TOC entry 4890 (class 2606 OID 32874)
 -- Name: products fk_products_business; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1374,7 +1350,7 @@ ALTER TABLE ONLY public.products
 
 
 --
--- TOC entry 4892 (class 2606 OID 24713)
+-- TOC entry 4891 (class 2606 OID 24713)
 -- Name: products fk_products_created_by_user_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1383,7 +1359,7 @@ ALTER TABLE ONLY public.products
 
 
 --
--- TOC entry 4896 (class 2606 OID 16526)
+-- TOC entry 4895 (class 2606 OID 16526)
 -- Name: returns fk_return_transaction_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1392,7 +1368,7 @@ ALTER TABLE ONLY public.returns
 
 
 --
--- TOC entry 4894 (class 2606 OID 16531)
+-- TOC entry 4893 (class 2606 OID 16531)
 -- Name: returned_items fk_returned_items_product_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1401,7 +1377,7 @@ ALTER TABLE ONLY public.returned_items
 
 
 --
--- TOC entry 4895 (class 2606 OID 16536)
+-- TOC entry 4894 (class 2606 OID 16536)
 -- Name: returned_items fk_returned_items_return_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1410,7 +1386,7 @@ ALTER TABLE ONLY public.returned_items
 
 
 --
--- TOC entry 4897 (class 2606 OID 16541)
+-- TOC entry 4896 (class 2606 OID 16541)
 -- Name: transaction_payment fk_transaction_payment_discount_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1419,7 +1395,7 @@ ALTER TABLE ONLY public.transaction_payment
 
 
 --
--- TOC entry 4898 (class 2606 OID 24754)
+-- TOC entry 4897 (class 2606 OID 24754)
 -- Name: transaction_payment fk_transaction_payment_transaction_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1428,7 +1404,7 @@ ALTER TABLE ONLY public.transaction_payment
 
 
 --
--- TOC entry 4899 (class 2606 OID 24749)
+-- TOC entry 4898 (class 2606 OID 24749)
 -- Name: transaction_payment fk_transaction_payment_user_id_users; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1437,7 +1413,7 @@ ALTER TABLE ONLY public.transaction_payment
 
 
 --
--- TOC entry 4900 (class 2606 OID 32869)
+-- TOC entry 4899 (class 2606 OID 32869)
 -- Name: transactions fk_transactions_business; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1446,7 +1422,7 @@ ALTER TABLE ONLY public.transactions
 
 
 --
--- TOC entry 4901 (class 2606 OID 24728)
+-- TOC entry 4900 (class 2606 OID 24728)
 -- Name: transactions fk_transactions_cashier_user_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1455,7 +1431,7 @@ ALTER TABLE ONLY public.transactions
 
 
 --
--- TOC entry 4902 (class 2606 OID 24733)
+-- TOC entry 4901 (class 2606 OID 24733)
 -- Name: transactions fk_transactions_customer_user_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1464,16 +1440,16 @@ ALTER TABLE ONLY public.transactions
 
 
 --
--- TOC entry 4903 (class 2606 OID 32894)
+-- TOC entry 4902 (class 2606 OID 32930)
 -- Name: users fk_users_business; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY public.users
-    ADD CONSTRAINT fk_users_business FOREIGN KEY (business_id) REFERENCES public.business(business_id);
+    ADD CONSTRAINT fk_users_business FOREIGN KEY (business_id) REFERENCES public.business(business_id) ON DELETE CASCADE;
 
 
 --
--- TOC entry 4904 (class 2606 OID 16551)
+-- TOC entry 4903 (class 2606 OID 16551)
 -- Name: users fk_users_user_type_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1482,7 +1458,7 @@ ALTER TABLE ONLY public.users
 
 
 --
--- TOC entry 4890 (class 2606 OID 16556)
+-- TOC entry 4889 (class 2606 OID 16556)
 -- Name: logs logs_return_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1491,7 +1467,7 @@ ALTER TABLE ONLY public.logs
 
 
 --
--- TOC entry 4893 (class 2606 OID 16561)
+-- TOC entry 4892 (class 2606 OID 16561)
 -- Name: products products_product_category_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1499,11 +1475,11 @@ ALTER TABLE ONLY public.products
     ADD CONSTRAINT products_product_category_id_fkey FOREIGN KEY (product_category_id) REFERENCES public.product_categories(product_category_id);
 
 
--- Completed on 2025-08-28 18:49:40
+-- Completed on 2025-08-29 19:48:54
 
 --
 -- PostgreSQL database dump complete
 --
 
-\unrestrict DlckQMtLca0UeIG6S5PUoov9oPeF1uMM4yPo5baDVAcxSX4orQ6Yh43Y4indiJc
+\unrestrict dVAHXv1ius2OZavHcRMe5lqi9RyEzQlyt56GjRHEceGkraSjBeUMfNoBKmNuTqo
 

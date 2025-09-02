@@ -46,6 +46,7 @@ function POS() {
       setError(err.message || 'Product not found');
     }
   };
+
   const handleRemove = idx => setCart(cart.filter((_, i) => i !== idx));
   const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
@@ -72,7 +73,6 @@ function POS() {
 
   const cardClass = "bg-white border border-blue-100 rounded-2xl p-6 shadow-lg";
 
-  <Button label="CHECKOUT" size="lg" className="w-full" variant="primary" microinteraction aria-label="Checkout" onClick={handleCheckout} />
   return (
     <Background variant="gradientBlue" pattern="dots" floatingElements overlay>
       <div className="flex h-screen overflow-hidden">
@@ -118,8 +118,15 @@ function POS() {
                 <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 mt-4">
                   <Button label="CASH LEDGER" size="lg" className="w-full h-16 text-base font-bold" variant="secondary" microinteraction onClick={() => setShowCashLedger(true)} />
                   <Button label="DISCOUNT" size="lg" className="w-full h-16 text-base font-bold" onClick={() => setShowDiscount(true)} variant="secondary" microinteraction />
-                    {/* Big Checkout Button */}
-                  <Button label="CHECKOUT" size="lg" className="w-full h-35 text-lg font-bold row-span-2" variant="primary" microinteraction />
+                  {/* Big Checkout Button */}
+                  <Button 
+                    label="CHECKOUT" 
+                    size="lg" 
+                    className="w-full h-35 text-lg font-bold row-span-2" 
+                    variant="primary" 
+                    microinteraction 
+                    onClick={handleCheckout} 
+                  />
                   <Button label="REFUND" size="lg" className="w-full h-16 text-base font-bold" onClick={() => setShowRefund(true)} variant="secondary" microinteraction />
                   <Button label="PRICE CHECK" size="lg" className="w-full h-16 text-base font-bold" onClick={() => setShowPriceCheck(true)} variant="secondary" microinteraction />
                 </div>

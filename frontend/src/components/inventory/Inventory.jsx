@@ -63,22 +63,24 @@ function InventoryTable({
                 <th className="py-2 px-2 font-bold text-black">Name</th>
                 <th className="py-2 px-2 font-bold text-black">Category</th>
                 <th className="py-2 px-2 font-bold text-black">Description</th>
+                <th className="py-2 px-2 font-bold text-black">Cost Price</th>
+                <th className="py-2 px-2 font-bold text-black">Selling Price</th>
                 <th className="py-2 px-2 font-bold text-black">Quantity</th>
-                <th className="py-2 px-2 font-bold text-black">Price</th>
                 <th className="py-2 px-2 font-bold text-black">Actions</th>
               </tr>
             </thead>
             <tbody>
               {products.length === 0 ? (
-                <tr><td colSpan={7} className="text-center text-blue-300 py-8">No products</td></tr>
+                <tr><td colSpan={8} className="text-center text-blue-300 py-8">No products</td></tr>
               ) : products.map((product, idx) => (
                 <tr key={product.id} className="border-b border-blue-100 hover:bg-blue-50/60 transition-colors">
                   <td className="py-2 px-2">{(page - 1) * entriesPerPage + idx + 1}</td>
                   <td className="py-2 px-2 font-medium text-blue-900">{product.name}</td>
                   <td className="py-2 px-2">{product.category}</td>
                   <td className="py-2 px-2 max-w-xs truncate" title={product.description}>{product.description}</td>
+                  <td className="py-2 px-2">₱{Number(product.cost_price).toFixed(2)}</td>
+                  <td className="py-2 px-2">₱{Number(product.selling_price).toFixed(2)}</td>
                   <td className="py-2 px-2">{product.quantity}</td>
-                  <td className="py-2 px-2">${Number(product.price).toFixed(2)}</td>
                   <td className="py-2 px-2 flex gap-2">
                     <Button 
                       variant="stockEntry" 
@@ -171,6 +173,7 @@ function Inventory({
   onEdit,
   onDelete,
   onAddProduct,
+  onStockEntry,
   className = ''
 }) {
   return (
@@ -188,6 +191,7 @@ function Inventory({
         onSearchChange={onSearchChange}
         onEdit={onEdit}
         onDelete={onDelete}
+        onStockEntry={onStockEntry}
       />
       <div className="flex flex-row gap-6 mt-8 px-2">
         <Button 

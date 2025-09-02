@@ -123,6 +123,13 @@ exports.registerBusiness = async (req, res) => {
       });
     }
 
+    // Check if business with email already exists
+    const existingBiz = await client.query('SELECT business_id FROM business WHERE email = $1 LIMIT 1', [email]);
+    if (existingBiz.rows.length > 0) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'A business with this email already exists' });
+    }
+
     // Hash password
     const saltRounds = 10;
     const passwordHash = await bcrypt.hash(password, saltRounds);
@@ -130,6 +137,10 @@ exports.registerBusiness = async (req, res) => {
     // Get user_type_id for 'admin'
     const adminTypeRes = await client.query('SELECT user_type_id FROM user_type WHERE lower(user_type_name) = $1', ['admin']);
     const adminTypeId = adminTypeRes.rows[0]?.user_type_id || null;
+    if (!adminTypeId) {
+      await client.query('ROLLBACK');
+      return res.status(500).json({ error: 'Admin user type not configured' });
+    }
 
     // Create user account with user_type_id
     const userResult = await client.query(`
@@ -143,20 +154,24 @@ exports.registerBusiness = async (req, res) => {
     // Create business profile
     const businessResult = await client.query(`
       INSERT INTO business (
-        user_id, business_name, business_type, country, 
+        business_name, business_type, country, 
         business_address, house_number, mobile, email, 
         created_at, updated_at
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
+      VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
       RETURNING business_id, business_name
-    `, [userId, businessName, businessType, country, businessAddress, houseNumber, mobile, email]);
+    `, [businessName, businessType, country, businessAddress, houseNumber, mobile, email]);
+
+    // Update user with business_id (users table has business_id column per ekahera.sql)
+    await client.query('UPDATE users SET business_id = $1 WHERE user_id = $2', [businessResult.rows[0].business_id, userId]);
 
     // Generate JWT token
     const token = jwt.sign(
       { 
         userId: userId, 
         email: email, 
-        role: 'business_owner' 
+        role: 'business_owner',
+        businessId: businessResult.rows[0].business_id
       },
       config.JWT_SECRET,
       { expiresIn: '24h' }
@@ -182,6 +197,9 @@ exports.registerBusiness = async (req, res) => {
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('Business registration error:', error);
+    if (error.code === '23505') {
+      return res.status(400).json({ error: 'Duplicate value violates unique constraint' });
+    }
     res.status(500).json({ 
       error: 'Failed to register business. Please try again.' 
     });

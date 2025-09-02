@@ -21,7 +21,7 @@ function StatsCard({
     if (formatValue) return formatValue(value);
     
     if (label === 'Growth Rate') return `${value}%`;
-    if (label === 'Total Revenue') return `$${value.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+    if (label === 'Total Revenue') return `₱${value.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
     return value.toLocaleString();
   };
 
