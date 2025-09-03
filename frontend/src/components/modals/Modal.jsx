@@ -119,12 +119,12 @@ function ProductForm({
  * Modal Component
  * Enhanced modal with product form variant
  */
-function Modal({ 
-  isOpen, 
-  onClose, 
-  title, 
-  children, 
-  size = 'md', 
+function Modal({
+  isOpen,
+  onClose,
+  title,
+  children,
+  size = 'md',
   variant = 'glass',
   // Product Modal Props
   editingProduct,
@@ -135,45 +135,25 @@ function Modal({
   loading
 }) {
   if (!isOpen) return null;
-  
-  const sizes = {
-    sm: 'max-w-sm',
-    md: 'max-w-md',
-    lg: 'max-w-2xl',
-  };
-  
-  const variants = {
-    glass: 'bg-white/60 backdrop-blur-xl border border-white/30',
-    dark: 'bg-gray-900/90 text-white',
-    default: 'bg-white',
-  };
-
-  // Determine content based on variant
-  let modalContent = children;
-  if (variant === 'product') {
-    modalContent = (
-      <ProductForm
-        editingProduct={editingProduct}
-        productForm={productForm}
-        onChange={onChange}
-        categories={categories}
-        onSubmit={onSubmit}
-        loading={loading}
-        onClose={onClose}
-      />
-    );
-  }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm transition-opacity duration-200" role="dialog" aria-modal="true">
-      <div className={`${variants[variant]} rounded-3xl shadow-2xl p-8 w-full ${sizes[size]} relative animate-fadeIn`}>
-        {title && <h3 className="text-2xl font-bold mb-4 tracking-tight text-blue-900 drop-shadow">{title}</h3>}
-        {modalContent}
+    <div className="fixed inset-0 flex items-center justify-center z-50">
+      {/* Blurred background */}
+      <div className="absolute inset-0 backdrop-blur-sm pointer-events-none"></div>
+      {/* Modal content */}
+      <div className={`relative bg-white rounded-2xl shadow-lg p-8 min-w-[340px] z-10`}>
+        {/* Exit button */}
+        <button
+          className="absolute top-4 right-4 text-2xl text-gray-400 hover:text-blue-600 focus:outline-none"
+          onClick={onClose}
+          aria-label="Close"
+          type="button"
+        >
+          ×
+        </button>
+        {title && <h2 className="text-xl font-bold mb-6 text-blue-700">{title}</h2>}
+        {children}
       </div>
-      <style>{`
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        .animate-fadeIn { animation: fadeIn 0.3s; }
-      `}</style>
     </div>
   );
 }
