@@ -3,16 +3,12 @@ import heroIllustration from "../../../assets/images/hero-illustration.png";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 
-function HomeHero() {
+function HomeHero({ onCustomerClick, onStaffClick }) {
   const navigate = useNavigate();
 
-  const handleRoleSelect = () => {
-    navigate("/select-role");
-  };
-
-  const handleCustomer = () => {
-    navigate("/customer");
-  };
+  // If parent didn't provide handlers, fall back to navigation
+  const handleCustomer = onCustomerClick || (() => navigate("/customer"));
+  const handleStaff = onStaffClick || (() => navigate("/select-role"));
 
   return (
     <section
@@ -50,21 +46,22 @@ function HomeHero() {
           </div>
           <div className="flex flex-row gap-4 w-full md:w-auto">
             <button
-              onClick={handleRoleSelect}
-              className="bg-gradient-to-r from-blue-600 to-blue-400 text-white font-semibold px-7 py-3 rounded shadow-lg hover:from-blue-700 hover:to-blue-500 hover:scale-105 active:scale-95 transition-all duration-200 text-base flex items-center gap-2"
-              style={{ fontFamily: "Inter, sans-serif" }}
-            >
-              Cashier / Admin
-            </button>
-            <button
               onClick={handleCustomer}
-              className="bg-gradient-to-r from-green-500 to-green-400 text-white font-semibold px-7 py-3 rounded shadow-lg hover:from-green-600 hover:to-green-500 hover:scale-105 active:scale-95 transition-all duration-200 text-base flex items-center gap-2"
+              className="bg-white text-blue-700 font-semibold px-7 py-3 rounded shadow border border-blue-200 hover:bg-blue-50 hover:scale-105 active:scale-95 transition-all duration-200 text-base flex items-center gap-2"
               style={{ fontFamily: "Inter, sans-serif" }}
             >
               Customer
             </button>
+            <button
+              onClick={handleStaff}
+              className="bg-gradient-to-r from-blue-600 to-blue-400 text-white font-semibold px-7 py-3 rounded shadow-lg hover:from-blue-700 hover:to-blue-500 hover:scale-105 active:scale-95 transition-all duration-200 text-base flex items-center gap-2"
+              style={{ fontFamily: "Inter, sans-serif" }}
+            >
+              Admin / Cashier
+            </button>
           </div>
         </motion.div>
+
         {/* Right Column: Hero Illustration with floating animation */}
         <motion.div
           className="flex-1 flex items-center justify-center h-full mt-8 md:mt-0"

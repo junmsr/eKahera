@@ -26,7 +26,7 @@ function Home() {
       className="overflow-x-hidden bg-white"
     >
       {/* Hero Section */}
-      <HomeHero onCashierClick={handleCustomerPortal} onAdminClick={handleStaffPortal} />
+      <HomeHero onCustomerClick={handleCustomerPortal} onStaffClick={handleStaffPortal} />
 
       {/* Divider: vector1 between Hero and Features (overlapping for seamless transition) */}
       <div style={{ position: 'relative', width: '100%', zIndex: 2, marginTop: '-5vw', marginBottom: '-2vw' }}>

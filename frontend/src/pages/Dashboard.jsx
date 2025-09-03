@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { api, authHeaders } from '../lib/api';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, Legend } from 'recharts';
 
 // Components
@@ -17,8 +18,8 @@ const BLUE_COLORS = ['#2563eb', '#60a5fa', '#93c5fd', '#dbeafe'];
 const initialStats = [
   {
     label: 'Total Revenue',
-    value: 1250,
-    change: 12.5,
+    value: 0,
+    change: 0,
     icon: (
       <svg width="32" height="32" fill="none" stroke="#2563eb" strokeWidth="2" viewBox="0 0 24 24">
         <path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm0 0V4m0 16v-4"/>
@@ -28,8 +29,8 @@ const initialStats = [
   },
   {
     label: 'New Customers',
-    value: 1234,
-    change: -20,
+    value: 0,
+    change: 0,
     icon: (
       <svg width="32" height="32" fill="none" stroke="#2563eb" strokeWidth="2" viewBox="0 0 24 24">
         <circle cx="12" cy="8" r="4"/>
@@ -40,8 +41,8 @@ const initialStats = [
   },
   {
     label: 'Active Accounts',
-    value: 45678,
-    change: 12.5,
+    value: 0,
+    change: 0,
     icon: (
       <svg width="32" height="32" fill="none" stroke="#2563eb" strokeWidth="2" viewBox="0 0 24 24">
         <rect x="4" y="4" width="16" height="16" rx="4"/>
@@ -52,8 +53,8 @@ const initialStats = [
   },
   {
     label: 'Growth Rate',
-    value: 4.5,
-    change: 4.5,
+    value: 0,
+    change: 0,
     icon: (
       <svg width="32" height="32" fill="none" stroke="#2563eb" strokeWidth="2" viewBox="0 0 24 24">
         <path d="M3 17l6-6 4 4 8-8"/>
@@ -77,25 +78,6 @@ function randomizeStats(stats) {
     value: Math.round(stat.value * (0.9 + Math.random() * 0.2)),
     change: Math.round((stat.change * (0.9 + Math.random() * 0.2)) * 10) / 10
   }));
-}
-
-function generateChartData(range) {
-  const length = range === 'week' ? 7 : range === 'month' ? 30 : 12;
-  return Array.from({ length }, (_, i) => ({
-    name: range === 'year' ? `M${i+1}` : `D${i+1}`,
-    value: Math.round(100 + Math.random() * 200),
-    customers: Math.round(20 + Math.random() * 50),
-    engagement: Math.round(50 + Math.random() * 100),
-  }));
-}
-
-function generatePieData() {
-  return [
-    { name: 'Alcohol', value: Math.round(100 + Math.random() * 100) },
-    { name: 'Chips', value: Math.round(80 + Math.random() * 80) },
-    { name: 'Biscuit', value: Math.round(60 + Math.random() * 60) },
-    { name: 'Softdrinks', value: Math.round(90 + Math.random() * 90) },
-  ];
 }
 
 // Chart Components
@@ -172,23 +154,38 @@ export default function Dashboard() {
   const [stats, setStats] = useState(initialStats);
   const [range, setRange] = useState('week');
   const [loading, setLoading] = useState(false);
-  const [chartData, setChartData] = useState(generateChartData('week'));
-  const [pieData, setPieData] = useState(generatePieData());
+  const [chartData, setChartData] = useState([]);
+  const [pieData, setPieData] = useState([]);
 
   // Data fetching
-  const fetchData = () => {
-    setLoading(true);
-    setTimeout(() => {
-      setStats(randomizeStats(initialStats));
-      setChartData(generateChartData(range));
-      setPieData(generatePieData());
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('auth_token');
+      const summary = await api('/api/stats/summary', { headers: authHeaders(token) });
+      const timeseries = await api(`/api/stats/sales-timeseries?days=${range === 'week' ? 7 : range === 'month' ? 30 : 365}`, { headers: authHeaders(token) });
+      const pie = await api('/api/stats/sales-by-category', { headers: authHeaders(token) });
+      setStats([
+        { ...initialStats[0], value: summary.totalRevenue, change: summary.growthRate },
+        { ...initialStats[1], value: summary.newCustomers, change: 0 },
+        { ...initialStats[2], value: summary.activeAccounts, change: 0 },
+        { ...initialStats[3], value: summary.growthRate, change: summary.growthRate },
+      ]);
+      setChartData(timeseries.map(d => ({ ...d, customers: 0, engagement: 0 })));
+      setPieData(pie);
+    } catch (err) {
+      setStats(initialStats);
+      setChartData([]);
+      setPieData([]);
+    } finally {
       setLoading(false);
-    }, 900);
+    }
   };
 
   // Effects
   useEffect(() => {
     fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [range]);
 
   // Header actions

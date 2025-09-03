@@ -1,11 +1,13 @@
 const express = require('express');
 const router = express.Router();
-const { getAllProducts, getProductById, createProduct, getProductBySku } = require('../controllers/productController');
+const { getAllProducts, getProductById, createProduct, getProductBySku, addStockBySku, getCategories } = require('../controllers/productController');
 const { authenticate } = require('../middleware/authMiddleware');
 
-router.get('/', getAllProducts);
-router.get('/sku/:sku', getProductBySku);
-router.get('/:id', getProductById);
+router.get('/', authenticate, getAllProducts);
+router.get('/sku/:sku', authenticate, getProductBySku);
+router.get('/:id', authenticate, getProductById);
 router.post('/', authenticate, createProduct);
+router.post('/add-stock-by-sku', authenticate, addStockBySku);
+router.get('/categories/all', authenticate, getCategories);
 
 module.exports = router;

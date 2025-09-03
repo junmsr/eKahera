@@ -68,7 +68,14 @@ export default function Login() {
       });
       localStorage.setItem('auth_token', token);
       localStorage.setItem('auth_user', JSON.stringify(user));
-      navigate("/dashboard");
+      const role = (user?.role || '').toLowerCase();
+      if (role === 'cashier') {
+        navigate('/pos');
+      } else if (role === 'admin' || role === 'superadmin') {
+        navigate('/dashboard');
+      } else {
+        navigate('/');
+      }
     } catch (err) {
       setApiError(err.message || 'Login failed');
     } finally {
@@ -122,13 +129,13 @@ export default function Login() {
               </SectionHeader>
               
               <form onSubmit={handleSubmit} className="w-full flex flex-col gap-6" noValidate>
-                {/* Email Input */}
+                {/* Email/Username Input */}
                 <Input
                   name="email"
                   value={form.email}
                   onChange={handleChange}
-                  placeholder="Enter your email"
-                  type="email"
+                  placeholder="Enter your email or username"
+                  type="text"
                   error={errors.email}
                   autoComplete="username"
                   required
