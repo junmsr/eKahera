@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Card from '../../common/Card';
 import Button from '../../common/Button';
 import { Scanner } from '@yudiel/react-qr-scanner';
@@ -15,6 +15,11 @@ function ScannerCard({
   className = '',
   ...props
 }) {
+  const [facingMode, setFacingMode] = useState('user');
+
+  const toggleCamera = () => {
+    setFacingMode(prev => (prev === 'user' ? 'environment' : 'user'));
+  };
   return (
     <Card 
       className={`flex-shrink-0 emphasized-card ${className}`} 
@@ -29,13 +34,27 @@ function ScannerCard({
             onScan={onScan}
             onError={err => console.error(err)}
             paused={paused}
-            constraints={{ facingMode: 'environment' }}
+            constraints={{ facingMode }}
             styles={{
-              container: { width: '100%', height: '100%', borderRadius: '1rem', overflow: 'hidden' },
-              video: { width: '100%', height: '100%', objectFit: 'cover', borderRadius: '1rem' },
+              container: { width: '100%', height: '100%', borderRadius: '1rem', overflow: 'visible' },
+              video: {
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                borderRadius: '1rem',
+                backgroundColor: 'black',
+              },
             }}
             classNames={{ container: 'w-full h-full' }}
             formats={['qr_code', 'code_128', 'code_39', 'ean_13', 'ean_8', 'upc_a', 'upc_e', 'itf', 'codabar', 'data_matrix', 'pdf417']}
+          />
+          <Button
+            label={facingMode === 'user' ? 'Rear' : 'Front'}
+            size="sm"
+            variant="secondary"
+            className="absolute top-2 right-2 z-10"
+            onClick={toggleCamera}
+            microinteraction
           />
           {paused && (
             <Button
