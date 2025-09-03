@@ -4,9 +4,13 @@ import SkuFormCard from '../components/ui/POS/SkuFormCard';
 import TransactionCard from '../components/ui/POS/TransactionCard';
 import CartTableCard from '../components/ui/POS/CartTableCard';
 import Button from '../components/common/Button';
-import Modal from '../components/modals/Modal';
 import NavAdmin from '../components/layout/Nav-Admin';
 import Background from '../components/layout/Background';
+import { api } from '../lib/api';
+import PriceCheckModal from '../components/modals/PriceCheckModal';
+import DiscountModal from '../components/modals/DiscountModal';
+import CashLedgerModal from '../components/modals/CashLedgerModal';
+import ProductReplacementModal from '../components/modals/ProductReplacementModal';
 
 function POS() {
   // State
@@ -16,20 +20,66 @@ function POS() {
   const [showRefund, setShowRefund] = useState(false);
   const [showDiscount, setShowDiscount] = useState(false);
   const [showPriceCheck, setShowPriceCheck] = useState(false);
+  const [showCashLedger, setShowCashLedger] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
   const [scannerPaused, setScannerPaused] = useState(false);
+  const [error, setError] = useState('');
   const transactionNumber = '000000000';
 
-  // Handlers
-  const handleAddToCart = () => {
+  const token = localStorage.getItem('auth_token');
+  const user = JSON.parse(localStorage.getItem('auth_user') || '{}');
+
+  const handleAddToCart = async () => {
     if (!sku || quantity < 1) return;
-    setCart([...cart, { sku, name: `Product ${sku}`, quantity, price: 100 }]);
-    setSku('');
-    setQuantity(1);
-    setScannerPaused(false);
+    setError('');
+    try {
+      const product = await api(`/api/products/sku/${encodeURIComponent(sku)}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const price = Number(product.selling_price || 0);
+      setCart([
+        ...cart,
+        {
+          product_id: product.product_id,
+          sku: product.sku,
+          name: product.product_name,
+          quantity,
+          price,
+        },
+      ]);
+      setSku('');
+      setQuantity(1);
+      setScannerPaused(false);
+    } catch (err) {
+      setError(err.message || 'Product not found');
+    }
   };
-  const handleRemove = idx => setCart(cart.filter((_, i) => i !== idx));
+
+  const handleRemove = (idx) => setCart(cart.filter((_, i) => i !== idx));
   const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+  const handleCheckout = async () => {
+    if (cart.length === 0) return;
+    setError('');
+    try {
+      const body = {
+        tenant_id: 1,
+        items: cart.map((i) => ({ product_id: i.product_id, quantity: i.quantity })),
+        payment_type: true,
+        money_received: total,
+      };
+      await api('/api/sales/checkout', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify(body),
+      });
+      setCart([]);
+    } catch (err) {
+      setError(err.message || 'Checkout failed');
+    }
+  };
+
+  const cardClass = 'bg-white border border-blue-100 rounded-2xl p-6 shadow-lg';
 
   return (
     <Background variant="gradientBlue" pattern="dots" floatingElements overlay>
@@ -58,7 +108,7 @@ function POS() {
               {/* ScannerCard */}
               <div className="row-span-1 col-span-1">
                 <ScannerCard
-                  onScan={result => {
+                  onScan={(result) => {
                     if (result?.[0]?.rawValue) {
                       setSku(result[0].rawValue);
                       setScannerPaused(true);
@@ -74,12 +124,47 @@ function POS() {
                 <CartTableCard cart={cart} handleRemove={handleRemove} total={total} className="flex-1" />
                 {/* Action Buttons */}
                 <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 mt-4">
-                  <Button label="CASH LEDGER" size="lg" className="w-full h-16 text-base font-bold" variant="secondary" microinteraction />
-                  <Button label="DISCOUNT" size="lg" className="w-full h-16 text-base font-bold" onClick={() => setShowDiscount(true)} variant="secondary" microinteraction />
-                    {/* Big Checkout Button */}
-                  <Button label="CHECKOUT" size="lg" className="w-full h-35 text-lg font-bold row-span-2" variant="primary" microinteraction />
-                  <Button label="REFUND" size="lg" className="w-full h-16 text-base font-bold" onClick={() => setShowRefund(true)} variant="secondary" microinteraction />
-                  <Button label="PRICE CHECK" size="lg" className="w-full h-16 text-base font-bold" onClick={() => setShowPriceCheck(true)} variant="secondary" microinteraction />
+                  <Button
+                    label="CASH LEDGER"
+                    size="lg"
+                    className="w-full h-16 text-base font-bold"
+                    variant="secondary"
+                    microinteraction
+                    onClick={() => setShowCashLedger(true)}
+                  />
+                  <Button
+                    label="DISCOUNT"
+                    size="lg"
+                    className="w-full h-16 text-base font-bold"
+                    onClick={() => setShowDiscount(true)}
+                    variant="secondary"
+                    microinteraction
+                  />
+                  {/* Big Checkout Button */}
+                  <Button
+                    label="CHECKOUT"
+                    size="lg"
+                    className="w-full h-35 text-lg font-bold row-span-2"
+                    variant="primary"
+                    microinteraction
+                    onClick={handleCheckout}
+                  />
+                  <Button
+                    label="REFUND"
+                    size="lg"
+                    className="w-full h-16 text-base font-bold"
+                    onClick={() => setShowRefund(true)}
+                    variant="secondary"
+                    microinteraction
+                  />
+                  <Button
+                    label="PRICE CHECK"
+                    size="lg"
+                    className="w-full h-16 text-base font-bold"
+                    onClick={() => setShowPriceCheck(true)}
+                    variant="secondary"
+                    microinteraction
+                  />
                 </div>
               </div>
               {/* SkuFormCard */}
@@ -91,6 +176,7 @@ function POS() {
                   setQuantity={setQuantity}
                   handleAddToCart={handleAddToCart}
                 />
+                {error && <div className="text-red-600 text-sm mt-2">{error}</div>}
               </div>
               {/* TransactionCard */}
               <div className="row-start-3 col-start-1 -mt-16">
@@ -99,15 +185,24 @@ function POS() {
             </div>
           </main>
           {/* Modals */}
-          <Modal isOpen={showRefund} onClose={() => setShowRefund(false)} title="Product Refund">
-            <div>Refund logic goes here.</div>
-          </Modal>
-          <Modal isOpen={showDiscount} onClose={() => setShowDiscount(false)} title="Discount">
-            <div>Discount logic goes here.</div>
-          </Modal>
-          <Modal isOpen={showPriceCheck} onClose={() => setShowPriceCheck(false)} title="Price Check">
-            <div>Price check logic goes here.</div>
-          </Modal>
+          <DiscountModal
+            isOpen={showDiscount}
+            onClose={() => setShowDiscount(false)}
+            onApplyDiscount={(discount) => {
+              // Apply the discount to your transaction/cart here
+              // Example: setAppliedDiscount(discount);
+            }}
+          />
+          <PriceCheckModal isOpen={showPriceCheck} onClose={() => setShowPriceCheck(false)} />
+          <CashLedgerModal isOpen={showCashLedger} onClose={() => setShowCashLedger(false)} />
+          <ProductReplacementModal
+            isOpen={showRefund}
+            onClose={() => setShowRefund(false)}
+            onConfirm={(data) => {
+              // Handle refund logic here
+              setShowRefund(false);
+            }}
+          />
         </div>
       </div>
     </Background>

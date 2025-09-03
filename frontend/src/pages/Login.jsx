@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { api } from "../lib/api";
 
 // Components
 import Background from "../components/layout/Background";
@@ -27,6 +28,7 @@ export default function Login() {
   });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
+  const [apiError, setApiError] = useState("");
 
   // Form handlers
   const handleChange = (e) => {
@@ -42,9 +44,7 @@ export default function Login() {
     const err = {};
     
     if (!form.email) {
-      err.email = "Email is required";
-    } else if (!/^\S+@\S+\.\S+$/.test(form.email)) {
-      err.email = "Please enter a valid email address";
+      err.email = "Email or username is required";
     }
     
     if (!form.password) {
@@ -56,18 +56,31 @@ export default function Login() {
   };
 
   // Form submission
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    
     if (!validateForm()) return;
-    
     setLoading(true);
-    
-    // Simulate API call
-    setTimeout(() => {
+    setApiError("");
+    try {
+      const { token, user } = await api('/api/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ email: form.email, password: form.password })
+      });
+      localStorage.setItem('auth_token', token);
+      localStorage.setItem('auth_user', JSON.stringify(user));
+      const role = (user?.role || '').toLowerCase();
+      if (role === 'cashier') {
+        navigate('/pos');
+      } else if (role === 'admin' || role === 'superadmin') {
+        navigate('/dashboard');
+      } else {
+        navigate('/');
+      }
+    } catch (err) {
+      setApiError(err.message || 'Login failed');
+    } finally {
       setLoading(false);
-      navigate("/dashboard");
-    }, 1500);
+    }
   };
 
   // Determine login type
@@ -116,13 +129,13 @@ export default function Login() {
               </SectionHeader>
               
               <form onSubmit={handleSubmit} className="w-full flex flex-col gap-6" noValidate>
-                {/* Email Input */}
+                {/* Email/Username Input */}
                 <Input
                   name="email"
                   value={form.email}
                   onChange={handleChange}
-                  placeholder="Enter your email"
-                  type="email"
+                  placeholder="Enter your email or username"
+                  type="text"
                   error={errors.email}
                   autoComplete="username"
                   required
@@ -138,6 +151,10 @@ export default function Login() {
                   autoComplete="current-password"
                   required
                 />
+
+                {apiError && (
+                  <div className="text-red-600 text-sm">{apiError}</div>
+                )}
                 
                 {/* Submit Button */}
                 <Button

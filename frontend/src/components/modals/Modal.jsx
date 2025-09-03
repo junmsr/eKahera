@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Button from '../common/Button';
 import FormField from '../common/FormField';
 import Loader from '../common/Loader';
+import ScannerCard from '../ui/POS/ScannerCard';
 
 /**
  * Product Form Component
@@ -16,8 +17,44 @@ function ProductForm({
   loading, 
   onClose 
 }) {
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const [scannerPaused, setScannerPaused] = useState(false);
   return (
     <form onSubmit={onSubmit} className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <FormField
+          label="SKU Code"
+          name="sku"
+          value={productForm.sku}
+          onChange={onChange}
+          placeholder="Scan or enter SKU"
+          required
+        />
+        <div className="flex items-end">
+          <Button
+            label={scannerOpen ? 'Close Scanner' : 'Scan Barcode'}
+            type="button"
+            variant="secondary"
+            onClick={() => setScannerOpen(!scannerOpen)}
+          />
+        </div>
+      </div>
+      {scannerOpen && (
+        <div className="rounded-2xl border border-blue-100 p-4">
+          <ScannerCard
+            onScan={result => {
+              const code = result?.[0]?.rawValue || '';
+              if (code) {
+                onChange({ target: { name: 'sku', value: code } });
+                setScannerPaused(true);
+              }
+            }}
+            paused={scannerPaused}
+            onResume={() => setScannerPaused(false)}
+            textMain="text-blue-700"
+          />
+        </div>
+      )}
       <FormField
         label="Name"
         name="name"
@@ -43,22 +80,32 @@ function ProductForm({
         onChange={onChange}
         required
       />
-      <FormField
-        label="Quantity"
-        name="quantity"
-        type="number"
-        value={productForm.quantity}
-        onChange={onChange}
-        required
-      />
-      <FormField
-        label="Price"
-        name="price"
-        type="number"
-        value={productForm.price}
-        onChange={onChange}
-        required
-      />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <FormField
+          label="Quantity"
+          name="quantity"
+          type="number"
+          value={productForm.quantity}
+          onChange={onChange}
+          required
+        />
+        <FormField
+          label="Cost Price (₱)"
+          name="cost_price"
+          type="number"
+          value={productForm.cost_price}
+          onChange={onChange}
+          required
+        />
+        <FormField
+          label="Selling Price (₱)"
+          name="selling_price"
+          type="number"
+          value={productForm.selling_price}
+          onChange={onChange}
+          required
+        />
+      </div>
       <div className="flex justify-end gap-2 mt-4">
         <Button label="Cancel" variant="secondary" onClick={onClose} type="button" />
         <Button label={editingProduct ? 'Update' : 'Add'} variant="primary" type="submit" disabled={loading} />
@@ -72,12 +119,12 @@ function ProductForm({
  * Modal Component
  * Enhanced modal with product form variant
  */
-function Modal({ 
-  isOpen, 
-  onClose, 
-  title, 
-  children, 
-  size = 'md', 
+function Modal({
+  isOpen,
+  onClose,
+  title,
+  children,
+  size = 'md',
   variant = 'glass',
   // Product Modal Props
   editingProduct,
@@ -88,50 +135,25 @@ function Modal({
   loading
 }) {
   if (!isOpen) return null;
-  
-  const sizes = {
-    sm: 'max-w-sm',
-    md: 'max-w-md',
-    lg: 'max-w-2xl',
-  };
-  
-  const variants = {
-    glass: 'bg-white/60 backdrop-blur-xl border border-white/30',
-    dark: 'bg-gray-900/90 text-white',
-    default: 'bg-white',
-  };
-
-  // Determine content based on variant
-  let modalContent = children;
-  if (variant === 'product') {
-    modalContent = (
-      <ProductForm
-        editingProduct={editingProduct}
-        productForm={productForm}
-        onChange={onChange}
-        categories={categories}
-        onSubmit={onSubmit}
-        loading={loading}
-        onClose={onClose}
-      />
-    );
-  }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm transition-opacity duration-200" role="dialog" aria-modal="true">
-      <div className={`${variants[variant]} rounded-3xl shadow-2xl p-8 w-full ${sizes[size]} relative animate-fadeIn`}>
-        {title && <h3 className="text-2xl font-bold mb-4 tracking-tight text-blue-900 drop-shadow">{title}</h3>}
-        <Button
+    <div className="fixed inset-0 flex items-center justify-center z-50">
+      {/* Blurred background */}
+      <div className="absolute inset-0 backdrop-blur-sm pointer-events-none"></div>
+      {/* Modal content */}
+      <div className={`relative bg-white rounded-2xl shadow-lg p-8 min-w-[340px] z-10`}>
+        {/* Exit button */}
+        <button
+          className="absolute top-4 right-4 text-2xl text-gray-400 hover:text-blue-600 focus:outline-none"
           onClick={onClose}
-          isCloseButton={true}
           aria-label="Close"
-        />
-        {modalContent}
+          type="button"
+        >
+          ×
+        </button>
+        {title && <h2 className="text-xl font-bold mb-6 text-blue-700">{title}</h2>}
+        {children}
       </div>
-      <style>{`
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        .animate-fadeIn { animation: fadeIn 0.3s; }
-      `}</style>
     </div>
   );
 }

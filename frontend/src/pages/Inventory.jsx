@@ -1,41 +1,68 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import PageLayout from '../components/layout/PageLayout';
 import NavAdmin from '../components/layout/Nav-Admin';
 import Inventory from '../components/inventory/Inventory';
 import Modal from '../components/modals/Modal';
+import { api, authHeaders } from '../lib/api';
 
-const initialProducts = [
-  { id: '0001', name: 'Test Test', category: 'Category QQ', description: 'This is just a demo test. This is just a demo test.', quantity: 126, price: 38.0 },
-  { id: '0002', name: 'Test Item', category: 'CategoryTest', description: 'asdasdasd', quantity: 84, price: 25.0 },
-  { id: '0003', name: 'Item XY', category: 'CategoryTwo', description: 'q w qw wv wv !!!!!!!!', quantity: 74, price: 21.0 },
-  { id: '0004', name: 'CRMB99 QQ', category: 'CRMB99 QQ', description: 'a a a wv mv sssss', quantity: 17, price: 32.0 },
-  { id: '0005', name: 'Test123', category: 'Category Three', description: 'aaaa bbb ccc', quantity: 77, price: 20.0 },
-  { id: '0006', name: 'XYZ', category: 'CategoryTest', description: 'ccc abc', quantity: 41, price: 19.0 },
-  { id: '0007', name: 'ABC', category: 'Category QQ', description: 'qweqwe qweqwe qweqwe', quantity: 222, price: 31.0 },
-  { id: '0008', name: 'Astro', category: 'Category One', description: 'astro test', quantity: 91, price: 88.0 },
-  { id: '0009', name: 'TestItem', category: 'CategoryTest', description: 'This is a test. This is a test. This is a test.', quantity: 33, price: 56.0 },
-  { id: '0010', name: 'Item Three', category: 'Category One', description: 'qwerty qwerty qwert qwww', quantity: 38, price: 13.0 },
-];
-const initialCategories = [
-  { id: 1, name: 'Category QQ' },
-  { id: 2, name: 'CategoryTest' },
-  { id: 3, name: 'CategoryTwo' },
-  { id: 4, name: 'CRMB99 QQ' },
-  { id: 5, name: 'Category Three' },
-  { id: 6, name: 'Category One' },
-];
+const initialProducts = [];
+const initialCategories = [];
 
 export default function InventoryPage() {
   // State
   const [products, setProducts] = useState(initialProducts);
-  const [categories] = useState(initialCategories);
+  const [categories, setCategories] = useState(initialCategories);
   const [showProductModal, setShowProductModal] = useState(false);
+  const [showStockModal, setShowStockModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
-  const [productForm, setProductForm] = useState({ id: '', name: '', category: '', description: '', quantity: '', price: '' });
+  const [productForm, setProductForm] = useState({ 
+    sku: '', 
+    name: '', 
+    category: '', 
+    description: '', 
+    quantity: '', 
+    cost_price: '', 
+    selling_price: '' 
+  });
+  const [stockForm, setStockForm] = useState({ sku: '', quantity: '' });
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [entriesPerPage, setEntriesPerPage] = useState(10);
   const [page, setPage] = useState(1);
+  const [apiError, setApiError] = useState('');
+
+  // Load inventory from API
+  useEffect(() => {
+    const fetchInventory = async () => {
+      try {
+        setLoading(true);
+        setApiError('');
+        const token = localStorage.getItem('auth_token');
+        const data = await api('/api/inventory', { headers: authHeaders(token) });
+        const cats = await api('/api/products/categories/all', { headers: authHeaders(token) });
+        setCategories((cats || []).map(c => ({ id: c.product_category_id, name: c.product_category_name })));
+        
+        // Map backend rows to UI shape with correct column mapping
+        const mapped = (data || []).map((row) => ({
+          id: String(row.id || ''),
+          name: row.name || '-',
+          category: row.category || '-',
+          quantity: Number(row.quantity || 0),
+          cost_price: Number(row.cost_price || 0),
+          selling_price: Number(row.selling_price || 0),
+          sku: row.sku || '',
+          description: row.description || '',
+        }));
+        setProducts(mapped);
+      } catch (err) {
+        setApiError(err.message || 'Failed to load inventory');
+        setProducts([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchInventory();
+  }, []);
 
   // Stats (mocked)
   const stats = [
@@ -60,47 +87,169 @@ export default function InventoryPage() {
   // Handlers
   const openAddProduct = () => {
     setEditingProduct(null);
-    setProductForm({ id: '', name: '', category: '', description: '', quantity: '', price: '' });
+    setProductForm({ 
+      sku: '', 
+      name: '', 
+      category: '', 
+      description: '', 
+      quantity: '', 
+      cost_price: '', 
+      selling_price: '' 
+    });
     setShowProductModal(true);
   };
+
   const openEditProduct = (product) => {
     setEditingProduct(product);
     setProductForm({ ...product });
     setShowProductModal(true);
   };
+
+  const openStockEntry = (product) => {
+    setStockForm({ sku: product?.sku || '', quantity: '' });
+    setShowStockModal(true);
+  };
+
   const handleProductFormChange = (e) => {
     const { name, value } = e.target;
     setProductForm((prev) => ({ ...prev, [name]: value }));
   };
-  const handleProductSubmit = (e) => {
+
+  const handleProductSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
-    setTimeout(() => {
+    try {
+      setLoading(true);
+      setApiError('');
+      const token = localStorage.getItem('auth_token');
+      
       if (editingProduct) {
-        setProducts((prev) =>
-          prev.map((p) => (p.id === editingProduct.id ? { ...productForm, quantity: Number(productForm.quantity), price: Number(productForm.price) } : p))
-        );
+        // Update existing product
+        await api(`/api/inventory/${editingProduct.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', ...authHeaders(token) },
+          body: JSON.stringify({
+            product_name: (productForm.name || '').trim(),
+            cost_price: Number(productForm.cost_price) || 0,
+            selling_price: Number(productForm.selling_price) || 0,
+            sku: (productForm.sku || '').trim(),
+            category: (productForm.category || '').trim(),
+            description: (productForm.description || '').trim(),
+          }),
+        });
       } else {
-        setProducts((prev) => [
-          ...prev,
-          { ...productForm, id: Date.now().toString(), quantity: Number(productForm.quantity), price: Number(productForm.price) },
-        ]);
+        // Create new product
+        await api('/api/products', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...authHeaders(token) },
+          body: JSON.stringify({
+            product_category_id: null,
+            category: (productForm.category || '').trim(),
+            product_name: (productForm.name || '').trim(),
+            name: (productForm.name || '').trim(),
+            description: (productForm.description || '').trim(),
+            cost_price: Number(productForm.cost_price) || 0,
+            selling_price: Number(productForm.selling_price) || 0,
+            price: Number(productForm.selling_price) || 0,
+            sku: (productForm.sku || '').trim() || `SKU-${Date.now()}`,
+            quantity: Number(productForm.quantity) || 0,
+          }),
+        });
       }
+
+      // Refresh inventory list after creation/update
+      const data = await api('/api/inventory', { headers: authHeaders(token) });
+      const mapped = (data || []).map((row) => ({
+        id: String(row.id || ''),
+        name: row.name || '-',
+        category: row.category || '-',
+        quantity: Number(row.quantity || 0),
+        cost_price: Number(row.cost_price || 0),
+        selling_price: Number(row.selling_price || 0),
+        sku: row.sku || '',
+        description: row.description || '',
+      }));
+      setProducts(mapped);
       setShowProductModal(false);
+    } catch (err) {
+      setApiError(err.message || 'Failed to save product');
+    } finally {
       setLoading(false);
-    }, 500);
+    }
   };
-  const handleDeleteProduct = (id) => {
-    setProducts((prev) => prev.filter((p) => p.id !== id));
+
+  const handleStockSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      setLoading(true);
+      setApiError('');
+      const token = localStorage.getItem('auth_token');
+      await api('/api/products/add-stock-by-sku', {
+        method: 'POST',
+        headers: authHeaders(token),
+        body: JSON.stringify({ sku: stockForm.sku, quantity: Number(stockForm.quantity) })
+      });
+      const data = await api('/api/inventory', { headers: authHeaders(token) });
+      const mapped = (data || []).map((row) => ({
+        id: String(row.id || ''),
+        name: row.name || '-',
+        category: row.category || '-',
+        quantity: Number(row.quantity || 0),
+        cost_price: Number(row.cost_price || 0),
+        selling_price: Number(row.selling_price || 0),
+        sku: row.sku || '',
+        description: row.description || '',
+      }));
+      setProducts(mapped);
+      setShowStockModal(false);
+    } catch (err) {
+      setApiError(err.message || 'Failed to add stock');
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const handleDeleteProduct = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this product?')) return;
+    
+    try {
+      setLoading(true);
+      setApiError('');
+      const token = localStorage.getItem('auth_token');
+      await api(`/api/inventory/${id}`, {
+        method: 'DELETE',
+        headers: authHeaders(token),
+      });
+      
+      // Refresh inventory list after deletion
+      const data = await api('/api/inventory', { headers: authHeaders(token) });
+      const mapped = (data || []).map((row) => ({
+        id: String(row.id || ''),
+        name: row.name || '-',
+        category: row.category || '-',
+        quantity: Number(row.quantity || 0),
+        cost_price: Number(row.cost_price || 0),
+        selling_price: Number(row.selling_price || 0),
+        sku: row.sku || '',
+        description: row.description || '',
+      }));
+      setProducts(mapped);
+    } catch (err) {
+      setApiError(err.message || 'Failed to delete product');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handlePageChange = (newPage) => {
     if (newPage < 1 || newPage > totalPages) return;
     setPage(newPage);
   };
+
   const handleEntriesChange = (e) => {
     setEntriesPerPage(Number(e.target.value));
     setPage(1);
   };
+
   const handleSearchChange = (e) => {
     setSearch(e.target.value);
     setPage(1);
@@ -121,7 +270,11 @@ export default function InventoryPage() {
         onEdit={openEditProduct}
         onDelete={handleDeleteProduct}
         onAddProduct={openAddProduct}
+        onStockEntry={openStockEntry}
       />
+      {apiError && (
+        <div className="text-red-600 text-sm mt-2 px-4">{apiError}</div>
+      )}
       <Modal
         isOpen={showProductModal}
         onClose={() => setShowProductModal(false)}
@@ -132,6 +285,19 @@ export default function InventoryPage() {
         onChange={handleProductFormChange}
         categories={categories}
         onSubmit={handleProductSubmit}
+        loading={loading}
+      />
+      {/* Stock Entry Modal (simple) */}
+      <Modal
+        isOpen={showStockModal}
+        onClose={() => setShowStockModal(false)}
+        title={'Stock Entry'}
+        variant="product"
+        editingProduct={null}
+        productForm={stockForm}
+        onChange={(e) => setStockForm({ ...stockForm, [e.target.name]: e.target.value })}
+        categories={[]}
+        onSubmit={handleStockSubmit}
         loading={loading}
       />
     </PageLayout>

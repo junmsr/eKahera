@@ -28,8 +28,8 @@ function Home() {
     >
       {/* Hero Section */}
       <HomeHero
-        onCashierClick={handleCustomerPortal}
-        onAdminClick={handleStaffPortal}
+        onCustomerClick={handleCustomerPortal}
+        onStaffClick={handleStaffPortal}
         onMobileScannerClick={handleMobileScanner}
       />
 
