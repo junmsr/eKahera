@@ -20,11 +20,11 @@ export default function Login() {
   // Navigation and URL params
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  
+
   // Form state
-  const [form, setForm] = useState({ 
-    email: "", 
-    password: "" 
+  const [form, setForm] = useState({
+    email: "",
+    password: "",
   });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
@@ -42,15 +42,15 @@ export default function Login() {
   // Validation
   const validateForm = () => {
     const err = {};
-    
+
     if (!form.email) {
       err.email = "Email or username is required";
     }
-    
+
     if (!form.password) {
       err.password = "Password is required";
     }
-    
+
     setErrors(err);
     return Object.keys(err).length === 0;
   };
@@ -62,22 +62,22 @@ export default function Login() {
     setLoading(true);
     setApiError("");
     try {
-      const { token, user } = await api('/api/auth/login', {
-        method: 'POST',
-        body: JSON.stringify({ email: form.email, password: form.password })
+      const { token, user } = await api("/api/auth/login", {
+        method: "POST",
+        body: JSON.stringify({ email: form.email, password: form.password }),
       });
-      localStorage.setItem('auth_token', token);
-      localStorage.setItem('auth_user', JSON.stringify(user));
-      const role = (user?.role || '').toLowerCase();
-      if (role === 'cashier') {
-        navigate('/pos');
-      } else if (role === 'admin' || role === 'superadmin') {
-        navigate('/dashboard');
+      localStorage.setItem("auth_token", token);
+      localStorage.setItem("auth_user", JSON.stringify(user));
+      const role = (user?.role || "").toLowerCase();
+      if (role === "cashier") {
+        navigate("/pos");
+      } else if (role === "admin" || role === "superadmin") {
+        navigate("/dashboard");
       } else {
-        navigate('/');
+        navigate("/");
       }
     } catch (err) {
-      setApiError(err.message || 'Login failed');
+      setApiError(err.message || "Login failed");
     } finally {
       setLoading(false);
     }
@@ -90,8 +90,8 @@ export default function Login() {
   return (
     <Background variant="gradientBlue" pattern="dots" overlay floatingElements>
       <main className="flex flex-1 items-center justify-center py-16 px-2 relative z-10 mt-24">
-        <Card 
-          variant="glass" 
+        <Card
+          variant="glass"
           className="w-full max-w-4xl flex flex-col md:flex-row overflow-hidden p-0 animate-fadeIn"
         >
           {/* Left: Branding Panel */}
@@ -100,19 +100,20 @@ export default function Login() {
             <div className="absolute inset-0 opacity-10 -z-10 pointer-events-none">
               <div className="w-full h-full bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.3)_1px,transparent_0)] bg-[length:20px_20px]" />
             </div>
-            
+
             {/* Content */}
             <div className="relative z-10 flex flex-col items-center">
               <Logo size={64} className="mb-6" />
-              <SectionHeader 
-                variant="white" 
-                size="xl" 
+              <SectionHeader
+                variant="white"
+                size="xl"
                 className="mb-4 mt-4 text-center"
               >
                 Welcome back!
               </SectionHeader>
               <p className="text-white/90 text-center text-lg max-w-xs font-medium leading-relaxed">
-                Please log in to access your account and manage your transactions.
+                Please log in to access your account and manage your
+                transactions.
               </p>
             </div>
           </aside>
@@ -120,15 +121,19 @@ export default function Login() {
           {/* Right: Login Form Panel */}
           <section className="w-full md:w-1/2 flex flex-col justify-center items-center p-8 md:p-12 bg-white/95 backdrop-blur-sm">
             <div className="w-full max-w-sm">
-              <SectionHeader 
-                variant="dark" 
-                size="lg" 
+              <SectionHeader
+                variant="dark"
+                size="lg"
                 className="mb-8 text-center"
               >
                 {loginTitle}
               </SectionHeader>
-              
-              <form onSubmit={handleSubmit} className="w-full flex flex-col gap-6" noValidate>
+
+              <form
+                onSubmit={handleSubmit}
+                className="w-full flex flex-col gap-6"
+                noValidate
+              >
                 {/* Email/Username Input */}
                 <Input
                   name="email"
@@ -140,7 +145,7 @@ export default function Login() {
                   autoComplete="username"
                   required
                 />
-                
+
                 {/* Password Input */}
                 <PasswordInput
                   name="password"
@@ -155,7 +160,7 @@ export default function Login() {
                 {apiError && (
                   <div className="text-red-600 text-sm">{apiError}</div>
                 )}
-                
+
                 {/* Submit Button */}
                 <Button
                   type="submit"
@@ -167,7 +172,7 @@ export default function Login() {
                   {loading ? "Logging in..." : "Login"}
                 </Button>
               </form>
-              
+
               {/* Footer */}
               <div className="mt-6 text-center">
                 <p className="text-gray-500 text-sm">
@@ -178,7 +183,7 @@ export default function Login() {
           </section>
         </Card>
       </main>
-      
+
       {/* Animations */}
       <style>{`
         .animate-fadeIn {
