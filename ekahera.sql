@@ -2,12 +2,12 @@
 -- PostgreSQL database dump
 --
 
-\restrict dVAHXv1ius2OZavHcRMe5lqi9RyEzQlyt56GjRHEceGkraSjBeUMfNoBKmNuTqo
+\restrict pHGd7R4KrTHWCwjydjaHLOFaW2BgBJEyf1by0YUjgdheVAqkw8D0OVFjElzSyAv
 
 -- Dumped from database version 17.6
 -- Dumped by pg_dump version 17.6
 
--- Started on 2025-08-29 19:48:53
+-- Started on 2025-09-03 17:10:55
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -737,6 +737,7 @@ ALTER TABLE ONLY public.users ALTER COLUMN user_id SET DEFAULT nextval('public.u
 
 COPY public.business (business_id, business_name, business_type, country, business_address, house_number, mobile, email, created_at, updated_at) FROM stdin;
 5	qwer	qwer	qwer	qwer	qwer	09123456789	barovoc509@lespedia.com	2025-08-29 18:01:42.369496+08	2025-08-29 18:01:42.369496+08
+6	adsf	asdf	asd	fasdf	asdfa	09123456789	sefola6477@lespedia.com	2025-09-02 14:25:09.897047+08	2025-09-02 14:25:09.897047+08
 \.
 
 
@@ -758,7 +759,7 @@ COPY public.discounts (discount_id, discount_name, discount_percentage) FROM std
 
 COPY public.inventory (inventory_id, product_id, quantity_in_stock, updated_at, business_id) FROM stdin;
 2	2	2	2025-08-29 19:29:43.117265+08	5
-3	3	2	2025-08-29 19:45:26.919626+08	5
+4	4	3	2025-08-31 13:57:02.404958+08	5
 \.
 
 
@@ -780,6 +781,7 @@ COPY public.logs (log_id, transaction_id, inventory_id, product_id, return_id, d
 
 COPY public.product_categories (product_category_id, product_category_name) FROM stdin;
 1	compliments
+2	cologne
 \.
 
 
@@ -791,7 +793,7 @@ COPY public.product_categories (product_category_id, product_category_name) FROM
 
 COPY public.products (product_id, product_category_id, product_name, cost_price, selling_price, sku, created_at, updated_at, created_by_user_id, business_id, description) FROM stdin;
 2	1	knorr	123.00	190.00	4808680230764	2025-08-29 19:29:43.117265+08	2025-08-29 19:30:09.524033+08	8	5	\N
-3	1	knorp	134.00	145.00	4808680230764	2025-08-29 19:45:26.919626+08	2025-08-29 19:45:26.919626+08	8	5	\N
+4	2	axe	122.00	144.00	8851932349130	2025-08-31 13:57:02.404958+08	2025-08-31 13:57:02.404958+08	8	5	hgdf
 \.
 
 
@@ -867,6 +869,7 @@ COPY public.user_type (user_type_id, user_type_name) FROM stdin;
 
 COPY public.users (user_id, user_type_id, username, contact_number, email, password_hash, role, created_at, updated_at, business_id) FROM stdin;
 8	2	bravo	09123456789	barovoc509@lespedia.com	$2b$10$nIAv0niohz.mHgbLeXO8iOA7.e8NalZGYySJV2guOjR5JjKeaoqs2	business_owner	2025-08-29 18:01:42.369496+08	2025-08-29 18:01:42.369496+08	5
+10	2	sef	09123456789	sefola6477@lespedia.com	$2b$10$cNC1vueYBcaomTqdSlZbfePmEzWmFiDXrX8FWZ2YsKuibIEg/jBNK	business_owner	2025-09-02 14:25:09.897047+08	2025-09-02 14:25:09.897047+08	6
 \.
 
 
@@ -876,7 +879,7 @@ COPY public.users (user_id, user_type_id, username, contact_number, email, passw
 -- Name: business_business_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.business_business_id_seq', 5, true);
+SELECT pg_catalog.setval('public.business_business_id_seq', 6, true);
 
 
 --
@@ -894,7 +897,7 @@ SELECT pg_catalog.setval('public.discounts_discount_id_seq', 1, false);
 -- Name: inventory_inventory_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.inventory_inventory_id_seq', 3, true);
+SELECT pg_catalog.setval('public.inventory_inventory_id_seq', 4, true);
 
 
 --
@@ -912,7 +915,7 @@ SELECT pg_catalog.setval('public.logs_log_id_seq', 1, false);
 -- Name: product_categories_product_category_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.product_categories_product_category_id_seq', 1, true);
+SELECT pg_catalog.setval('public.product_categories_product_category_id_seq', 3, true);
 
 
 --
@@ -921,7 +924,7 @@ SELECT pg_catalog.setval('public.product_categories_product_category_id_seq', 1,
 -- Name: products_product_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.products_product_id_seq', 3, true);
+SELECT pg_catalog.setval('public.products_product_id_seq', 4, true);
 
 
 --
@@ -984,7 +987,7 @@ SELECT pg_catalog.setval('public.user_type_user_type_id_seq', 4, true);
 -- Name: users_user_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.users_user_id_seq', 8, true);
+SELECT pg_catalog.setval('public.users_user_id_seq', 10, true);
 
 
 --
@@ -1475,11 +1478,11 @@ ALTER TABLE ONLY public.products
     ADD CONSTRAINT products_product_category_id_fkey FOREIGN KEY (product_category_id) REFERENCES public.product_categories(product_category_id);
 
 
--- Completed on 2025-08-29 19:48:54
+-- Completed on 2025-09-03 17:10:55
 
 --
 -- PostgreSQL database dump complete
 --
 
-\unrestrict dVAHXv1ius2OZavHcRMe5lqi9RyEzQlyt56GjRHEceGkraSjBeUMfNoBKmNuTqo
+\unrestrict pHGd7R4KrTHWCwjydjaHLOFaW2BgBJEyf1by0YUjgdheVAqkw8D0OVFjElzSyAv
 

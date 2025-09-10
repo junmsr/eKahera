@@ -25,13 +25,13 @@ const pool = new Pool({
   ssl: config.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
-// Admin creates a cashier user for their tenant
+// Admin creates a cashier user under their business
 exports.createCashier = async (req, res) => {
   try {
     const adminUserId = req.user.userId;
-    const adminTenantId = req.user.tenantId;
-    if (!adminTenantId) {
-      return res.status(400).json({ error: 'Admin is not associated with a tenant' });
+    const adminBusinessId = req.user.businessId;
+    if (!adminBusinessId) {
+      return res.status(400).json({ error: 'Admin is not associated with a business' });
     }
 
     const { username, password, contact_number, email } = req.body;
@@ -52,10 +52,10 @@ exports.createCashier = async (req, res) => {
     const cashierTypeId = roleRes.rows[0]?.user_type_id || null;
 
     const ins = await pool.query(
-      `INSERT INTO users (username, email, password_hash, contact_number, user_type_id, role, tenant_id, created_at, updated_at)
+      `INSERT INTO users (username, email, password_hash, contact_number, user_type_id, role, business_id, created_at, updated_at)
        VALUES ($1, $2, $3, $4, $5, 'cashier', $6, NOW(), NOW())
-       RETURNING user_id, username, tenant_id`,
-      [username, email || null, passwordHash, contact_number || null, cashierTypeId, adminTenantId]
+       RETURNING user_id, username, business_id`,
+      [username, email || null, passwordHash, contact_number || null, cashierTypeId, adminBusinessId]
     );
 
     res.status(201).json({
@@ -67,17 +67,17 @@ exports.createCashier = async (req, res) => {
   }
 };
 
-// List cashiers under current admin's tenant
+// List cashiers under current admin's business
 exports.listCashiers = async (req, res) => {
   try {
-    const tenantId = req.user.tenantId;
+    const businessId = req.user.businessId;
     const rows = await pool.query(
       `SELECT u.user_id, u.username, u.email, u.contact_number, u.created_at
        FROM users u
        LEFT JOIN user_type ut ON ut.user_type_id = u.user_type_id
-       WHERE u.tenant_id = $1 AND (lower(ut.user_type_name) = 'cashier' OR lower(u.role) = 'cashier')
+       WHERE u.business_id = $1 AND (lower(ut.user_type_name) = 'cashier' OR lower(u.role) = 'cashier')
        ORDER BY u.created_at DESC`,
-      [tenantId]
+      [businessId]
     );
     res.json(rows.rows);
   } catch (err) {
