@@ -12,9 +12,8 @@ function Home() {
   const navigate = useNavigate();
 
   // Navigation handlers
-  const handleCustomerPortal = () => navigate("/pos");
+  const handleCustomerPortal = () => navigate("/customer");
   const handleStaffPortal = () => navigate("/login");
-  const handleMobileScanner = () => navigate("/mobile-scanner");
 
   return (
     <PageLayout
@@ -30,7 +29,6 @@ function Home() {
       <HomeHero
         onCustomerClick={handleCustomerPortal}
         onStaffClick={handleStaffPortal}
-        onMobileScannerClick={handleMobileScanner}
       />
 
       {/* Divider: vector1 between Hero and Features */}
