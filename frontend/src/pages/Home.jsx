@@ -18,6 +18,7 @@ function Home() {
 
   const handleCustomerPortal = () => navigate("/customer");
   const handleStaffPortal = () => navigate("/login");
+  const handleMobileScanner = () => navigate("/mobile-scanner");
 
   useEffect(() => {
     const doc = document.documentElement;
