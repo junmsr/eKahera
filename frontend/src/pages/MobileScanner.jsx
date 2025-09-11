@@ -1,8 +1,8 @@
 import React from 'react';
 import MobileScannerView from '../components/ui/Mobile-Scanner/MobileScannerView';
 
-function Customer() {
+function MobileScanner() {
   return <MobileScannerView />;
 }
 
-export default Customer;
+export default MobileScanner; 
