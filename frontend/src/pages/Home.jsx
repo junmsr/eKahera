@@ -16,9 +16,8 @@ import SkipLink from "../components/ui/home/SkipLink";
 function Home() {
   const navigate = useNavigate();
 
-  const handleCustomerPortal = () => navigate("/pos");
+  const handleCustomerPortal = () => navigate("/customer");
   const handleStaffPortal = () => navigate("/login");
-  const handleMobileScanner = () => navigate("/mobile-scanner");
 
   useEffect(() => {
     const doc = document.documentElement;
@@ -46,7 +45,11 @@ function Home() {
       backgroundVariant={undefined}
       className="overflow-x-hidden bg-white"
     >
-      <SkipLink />
+      {/* Hero Section */}
+      <HomeHero
+        onCustomerClick={handleCustomerPortal}
+        onStaffClick={handleStaffPortal}
+      />
 
       <main id="main-content" role="main" className="min-h-screen">
         <HomeHero

@@ -133,6 +133,34 @@ exports.getProductBySku = async (req, res) => {
   }
 };
 
+// Public endpoint for customers to get product by SKU (no authentication required)
+exports.getProductBySkuPublic = async (req, res) => {
+  try {
+    const { sku } = req.params;
+    const { business_id } = req.query;
+    
+    if (!business_id) {
+      return res.status(400).json({ error: 'business_id query parameter is required' });
+    }
+    
+    const result = await pool.query(
+      `SELECT p.*, COALESCE(i.quantity_in_stock, 0) as stock_quantity
+       FROM products p
+       LEFT JOIN inventory i ON i.product_id = p.product_id AND i.business_id = p.business_id
+       WHERE p.sku = $1 AND p.business_id = $2`,
+      [sku, business_id]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+    
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
 // Add or adjust stock by SKU
 exports.addStockBySku = async (req, res) => {
   const { sku, quantity } = req.body || {};
