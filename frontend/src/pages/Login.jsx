@@ -70,7 +70,7 @@ export default function Login() {
       localStorage.setItem('auth_user', JSON.stringify(user));
       const role = (user?.role || '').toLowerCase();
       if (role === 'cashier') {
-        navigate('/pos');
+        navigate('/cashier-pos');
       } else if (role === 'admin' || role === 'superadmin') {
         navigate('/dashboard');
       } else {

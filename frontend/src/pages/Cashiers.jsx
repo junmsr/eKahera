@@ -1,33 +1,87 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import NavAdmin from "../components/layout/Nav-Admin";
 import Modal from "../components/modals/Modal";
 import Button from "../components/common/Button";
+import { api, authHeaders } from "../lib/api";
 
 const initialCashiers = [];
 
 function Cashiers() {
   const [cashiers, setCashiers] = useState(initialCashiers);
+  const [loading, setLoading] = useState(false);
+  const [apiError, setApiError] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editIndex, setEditIndex] = useState(null);
   const [form, setForm] = useState({
-    name: "",
-    id: "",
-    number: "",
+    username: "",
+    password: "",
     email: "",
+    number: "",
     status: "ACTIVE",
   });
 
+  // Load cashiers from API
+  useEffect(() => {
+    const load = async () => {
+      try {
+        setLoading(true);
+        setApiError("");
+        const token = localStorage.getItem('auth_token');
+        const list = await api('/api/business/cashiers', { headers: authHeaders(token) });
+        const mapped = (list || []).map(r => ({
+          name: r.username || '-',
+          number: r.contact_number || '-',
+          email: r.email || '-',
+          status: 'ACTIVE',
+        }));
+        setCashiers(mapped);
+      } catch (err) {
+        setApiError(err.message || 'Failed to load cashiers');
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, []);
+
   // Handle Add Cashier
   const handleAddCashier = () => {
-    setForm({ name: "", id: "", number: "", email: "", status: "ACTIVE" });
+    setForm({ username: "", password: "", email: "", number: "", status: "ACTIVE" });
     setShowAddModal(true);
   };
 
-  const handleSaveAdd = (e) => {
+  const handleSaveAdd = async (e) => {
     e.preventDefault();
-    setCashiers([...cashiers, form]);
-    setShowAddModal(false);
+    try {
+      setLoading(true);
+      setApiError("");
+      const token = localStorage.getItem('auth_token');
+      await api('/api/business/cashiers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders(token) },
+        body: JSON.stringify({
+          username: (form.username || '').trim(),
+          password: form.password,
+          email: (form.email || '').trim() || null,
+          contact_number: (form.number || '').trim() || null,
+        })
+      });
+      // refresh list
+      const list = await api('/api/business/cashiers', { headers: authHeaders(token) });
+      const mapped = (list || []).map(r => ({
+        name: r.username || '-',
+        number: r.contact_number || '-',
+        email: r.email || '-',
+        status: 'ACTIVE',
+      }));
+      setCashiers(mapped);
+      setShowAddModal(false);
+    } catch (err) {
+      setApiError(err.message || 'Failed to create cashier');
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Handle Edit Cashier
@@ -77,8 +131,7 @@ function Cashiers() {
                 <thead>
                   <tr className="bg-white text-gray-700 font-semibold text-base border-b border-blue-200">
                     <th className="py-4 px-6">Name</th>
-                    <th className="py-4 px-6">Cashier ID</th>
-                    <th className="py-4 px-6">Number</th>
+                    <th className="py-4 px-6">Contact Number</th>
                     <th className="py-4 px-6">Email</th>
                     <th className="py-4 px-6">Status</th>
                     <th className="py-4 px-6">Action</th>
@@ -88,7 +141,6 @@ function Cashiers() {
                   {cashiers.map((c, idx) => (
                     <tr key={idx} className={idx % 2 === 1 ? "bg-gray-100" : ""}>
                       <td className="py-4 px-6">{c.name}</td>
-                      <td className="py-4 px-6">{c.id}</td>
                       <td className="py-4 px-6">{c.number}</td>
                       <td className="py-4 px-6">{c.email}</td>
                       <td className="py-4 px-6 font-bold">
@@ -145,23 +197,23 @@ function Cashiers() {
           <input
             type="text"
             className="border rounded px-3 py-2"
-            placeholder="Name"
-            value={form.name}
-            onChange={e => setForm({ ...form, name: e.target.value })}
+            placeholder="Username"
+            value={form.username}
+            onChange={e => setForm({ ...form, username: e.target.value })}
+            required
+          />
+          <input
+            type="password"
+            className="border rounded px-3 py-2"
+            placeholder="Password"
+            value={form.password}
+            onChange={e => setForm({ ...form, password: e.target.value })}
             required
           />
           <input
             type="text"
             className="border rounded px-3 py-2"
-            placeholder="Cashier ID"
-            value={form.id}
-            onChange={e => setForm({ ...form, id: e.target.value })}
-            required
-          />
-          <input
-            type="text"
-            className="border rounded px-3 py-2"
-            placeholder="Number"
+            placeholder="Contact Number"
             value={form.number}
             onChange={e => setForm({ ...form, number: e.target.value })}
             required
@@ -203,23 +255,15 @@ function Cashiers() {
           <input
             type="text"
             className="border rounded px-3 py-2"
-            placeholder="Name"
-            value={form.name}
-            onChange={e => setForm({ ...form, name: e.target.value })}
+            placeholder="Username"
+            value={form.username}
+            onChange={e => setForm({ ...form, username: e.target.value })}
             required
           />
           <input
             type="text"
             className="border rounded px-3 py-2"
-            placeholder="Cashier ID"
-            value={form.id}
-            onChange={e => setForm({ ...form, id: e.target.value })}
-            required
-          />
-          <input
-            type="text"
-            className="border rounded px-3 py-2"
-            placeholder="Number"
+            placeholder="Contact Number"
             value={form.number}
             onChange={e => setForm({ ...form, number: e.target.value })}
             required

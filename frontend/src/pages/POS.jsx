@@ -63,9 +63,8 @@ function POS() {
     setError('');
     try {
       const body = {
-        tenant_id: 1,
         items: cart.map((i) => ({ product_id: i.product_id, quantity: i.quantity })),
-        payment_type: true,
+        payment_type: 'cash',
         money_received: total,
       };
       await api('/api/sales/checkout', {
