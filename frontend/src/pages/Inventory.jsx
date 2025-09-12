@@ -287,16 +287,15 @@ export default function InventoryPage() {
         onSubmit={handleProductSubmit}
         loading={loading}
       />
-      {/* Stock Entry Modal (simple) */}
+      {/* Stock Entry Modal */}
       <Modal
         isOpen={showStockModal}
         onClose={() => setShowStockModal(false)}
         title={'Stock Entry'}
-        variant="product"
+        variant="stock"
         editingProduct={null}
         productForm={stockForm}
         onChange={(e) => setStockForm({ ...stockForm, [e.target.name]: e.target.value })}
-        categories={[]}
         onSubmit={handleStockSubmit}
         loading={loading}
       />
