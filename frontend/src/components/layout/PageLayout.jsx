@@ -21,6 +21,7 @@ export default function PageLayout({
 }) {
   const [theme, setTheme] = useState("light");
   const toggleTheme = () => setTheme(theme === "light" ? "dark" : "light");
+
   return (
     <Background
       variant="white"
@@ -29,37 +30,32 @@ export default function PageLayout({
       floatingElements={false}
       className={theme}
     >
-      <div
-        className={`flex flex-col min-h-screen ${className} ${theme}`}
-        role="main"
-        aria-label="Main content area"
-      >
-        {/* Navbar */}
-        {showNavbar && <Navbar />}
+      <div className={`flex min-h-screen relative ${className} ${theme}`}>
+        {/* Sidebar */}
+        {sidebar && (
+          <aside className="fixed top-0 left-0 h-full z-50">{sidebar}</aside>
+        )}
 
-        {/* Main Content Area */}
-        <div className="flex flex-1">
-          {/* Sidebar */}
-          {sidebar && <aside className="flex-shrink-0">{sidebar}</aside>}
+        {/* Main Content */}
+        <main className={`flex-1 flex flex-col ${sidebar ? "ml-48" : ""}`}>
+          {/* Header */}
+          {showHeader && (
+            <Header
+              title={title}
+              subtitle={subtitle}
+              headerActions={headerActions}
+              className="sticky top-0 z-0 bg-white"
+            />
+          )}
 
-          {/* Main Content */}
-          <main className={`flex-1 flex flex-col${sidebar ? " ml-32" : ""}`}>
-            {/* Header */}
-            {showHeader && (
-              <Header
-                title={title}
-                subtitle={subtitle}
-                headerActions={headerActions}
-              />
-            )}
-
-            {/* Page Content */}
-            <div className="flex-1">{children}</div>
-          </main>
-        </div>
+          {/* Page Content */}
+          <div className="flex-1 relative z-40 overflow-x-hidden">
+            {children}
+          </div>
+        </main>
 
         {/* Footer */}
-        {showFooter && <Footer />}
+        {showFooter && <Footer className="z-50" />}
       </div>
     </Background>
   );

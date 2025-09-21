@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import NavAdmin from "../components/layout/Nav-Admin";
 import PageLayout from "../components/layout/PageLayout";
 import LogsCard from "../components/ui/Logs/LogsCard";
@@ -25,6 +25,17 @@ const adminLogs = [
 ];
 
 const LogsPage = () => {
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const searchBarStyle = {
+    width: "100%",
+    padding: "0.75rem",
+    marginBottom: "1rem",
+    borderRadius: "8px",
+    border: "1px solid #ddd",
+    fontSize: "1rem",
+  };
+
   return (
     <PageLayout
       title="LOGS"
@@ -33,9 +44,20 @@ const LogsPage = () => {
       className="h-screen overflow-hidden"
     >
       <div className="flex-1 bg-transparent overflow-hidden p-4">
+        <input
+          type="text"
+          placeholder="Search logs..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          style={searchBarStyle}
+        />
         <div style={{ display: "flex", gap: "2rem" }}>
-          <LogsCard title="CASHIER" logs={cashierLogs} />
-          <LogsCard title="ADMIN" logs={adminLogs} />
+          <LogsCard
+            title="CASHIER"
+            logs={cashierLogs}
+            searchQuery={searchQuery}
+          />
+          <LogsCard title="ADMIN" logs={adminLogs} searchQuery={searchQuery} />
         </div>
       </div>
     </PageLayout>

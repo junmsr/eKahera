@@ -325,20 +325,18 @@ export default function Dashboard() {
       sidebar={<NavAdmin active={activeNav} onNavigate={setActiveNav} />}
       headerActions={headerActions}
     >
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 px-8 py-6">
+      {/* Summary Cards - Tighter spacing */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 p-4">
         {stats.map((stat) => (
           <StatsCard key={stat.label} {...stat} loading={loading} />
         ))}
       </div>
 
-      {/* Analytics Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 px-8 pb-8">
+      {/* Analytics Grid - Tighter spacing */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
         <VisitorsChart data={chartData} />
         <SalesPieChart data={pieData} />
         <EngagementChart data={chartData} />
-
-        {/* Acquisition Card */}
         <Card variant="gradient">
           <SectionHeader size="md" align="left">
             Acquisition needs attention
@@ -348,7 +346,6 @@ export default function Dashboard() {
             <span className="text-xs text-blue-500">Down 20% this period</span>
           </div>
         </Card>
-
         <CustomersChart data={chartData} />
       </div>
     </PageLayout>
