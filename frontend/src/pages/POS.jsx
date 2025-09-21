@@ -5,7 +5,7 @@ import TransactionCard from '../components/ui/POS/TransactionCard';
 import CartTableCard from '../components/ui/POS/CartTableCard';
 import Button from '../components/common/Button';
 import NavAdmin from '../components/layout/Nav-Admin';
-import Background from '../components/layout/Background';
+import PageLayout from '../components/layout/PageLayout';
 import { api } from '../lib/api';
 import PriceCheckModal from '../components/modals/PriceCheckModal';
 import DiscountModal from '../components/modals/DiscountModal';
@@ -82,21 +82,13 @@ function POS() {
   const cardClass = 'bg-white border border-blue-100 rounded-2xl p-6 shadow-lg';
 
   return (
-    <Background variant="gradientBlue" pattern="dots" floatingElements overlay>
-      <div className="flex h-screen overflow-hidden">
-        {/* Sidebar */}
-        <NavAdmin />
-        {/* Main Content */}
-        <div className="flex-1 ml-28 flex flex-col h-screen">
-          {/* Header */}
-          <header className="flex items-center gap-4 px-6 py-3 bg-white/80 shadow-sm border-b border-blue-100 h-[56px] min-h-[56px] max-h-[56px]">
-            <span className="text-2xl font-bold text-blue-700 tracking-tight flex items-center gap-2">
-              <span className="bg-blue-600 text-white rounded-xl px-3 py-1 text-xl font-bold mr-2">eK</span>
-              POS
-            </span>
-          </header>
-          {/* Main Area */}
-          <main className="flex-1 bg-transparent overflow-hidden p-4">
+    <PageLayout
+      title="POS"
+      subtitle="Point of Sale System"
+      sidebar={<NavAdmin />}
+      className="h-screen overflow-hidden"
+    >
+      <div className="flex-1 bg-transparent overflow-hidden p-4">
             <div
               className="grid gap-8 h-full"
               style={{
@@ -183,29 +175,28 @@ function POS() {
                 <TransactionCard transactionNumber={transactionNumber} />
               </div>
             </div>
-          </main>
-          {/* Modals */}
-          <DiscountModal
-            isOpen={showDiscount}
-            onClose={() => setShowDiscount(false)}
-            onApplyDiscount={(discount) => {
-              // Apply the discount to your transaction/cart here
-              // Example: setAppliedDiscount(discount);
-            }}
-          />
-          <PriceCheckModal isOpen={showPriceCheck} onClose={() => setShowPriceCheck(false)} />
-          <CashLedgerModal isOpen={showCashLedger} onClose={() => setShowCashLedger(false)} />
-          <ProductReplacementModal
-            isOpen={showRefund}
-            onClose={() => setShowRefund(false)}
-            onConfirm={(data) => {
-              // Handle refund logic here
-              setShowRefund(false);
-            }}
-          />
-        </div>
       </div>
-    </Background>
+      
+      {/* Modals */}
+      <DiscountModal
+        isOpen={showDiscount}
+        onClose={() => setShowDiscount(false)}
+        onApplyDiscount={(discount) => {
+          // Apply the discount to your transaction/cart here
+          // Example: setAppliedDiscount(discount);
+        }}
+      />
+      <PriceCheckModal isOpen={showPriceCheck} onClose={() => setShowPriceCheck(false)} />
+      <CashLedgerModal isOpen={showCashLedger} onClose={() => setShowCashLedger(false)} />
+      <ProductReplacementModal
+        isOpen={showRefund}
+        onClose={() => setShowRefund(false)}
+        onConfirm={(data) => {
+          // Handle refund logic here
+          setShowRefund(false);
+        }}
+      />
+    </PageLayout>
   );
 }
 

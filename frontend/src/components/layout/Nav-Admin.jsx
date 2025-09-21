@@ -66,22 +66,23 @@ const NAV_ITEMS = [
 
 // Styling constants
 const STYLES = {
-  sidebar: "bg-white border-r border-blue-100 shadow-lg flex flex-col items-center py-8 px-4 w-40 min-h-screen relative z-20",
-  logoContainer: "mb-12 drop-shadow-lg flex items-center gap-2 group cursor-pointer",
-  logoText: "text-blue-600 font-bold text-sm tracking-wide transition-all duration-300 group-hover:text-blue-700 group-hover:scale-105",
-  nav: "flex flex-col gap-0 w-full",
-  navItem: "group flex flex-col items-center w-full py-4 rounded-sm transition-all duration-200 font-medium text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 relative",
-  navItemActive: "bg-blue-600 text-white shadow-md",
-  navItemInactive: "bg-white text-gray-500 hover:bg-blue-50",
-  iconContainer: "mb-2 relative",
-  label: "text-center leading-tight",
-  tooltip: "absolute left-full ml-4 top-1/2 -translate-y-1/2 bg-gray-800 text-white text-xs rounded-lg px-3 py-2 shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 z-50 whitespace-nowrap",
+  sidebar: "bg-gray-100 border-r border-gray-200 shadow-sm flex flex-col py-6 px-4 w-48 min-h-screen relative z-20",
+  logoContainer: "mb-8 flex items-center gap-3 group cursor-pointer px-2",
+  logoText: "text-gray-800 font-semibold text-lg tracking-wide transition-all duration-300 group-hover:text-gray-900",
+  nav: "flex-col gap-10 w-full",
+  navItem: "group flex items-center w-full py-3 px-3 rounded-lg transition-all duration-200 font-medium text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 relative",
+  navItemActive: "bg-blue-600 text-white shadow-sm",
+  navItemInactive: "bg-transparent text-gray-600 hover:bg-gray-100 hover:text-gray-800",
+  iconContainer: "mr-3 relative flex-shrink-0",
+  label: "leading-tight",
+  tooltip: "absolute left-full ml-3 top-1/2 -translate-y-1/2 bg-gray-800 text-white text-xs rounded-md px-2 py-1 shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 z-50 whitespace-nowrap",
+  sectionHeader: "text-gray-500 text-xs font-semibold uppercase tracking-wider mb-2 mt-0 px-3",
 };
 
 // Color constants
 const COLORS = {
   activeIcon: "#ffffff",
-  inactiveIcon: "#2563eb",
+  inactiveIcon: "#4b5563",
 };
 
 /**
@@ -101,9 +102,9 @@ const NavigationItem = ({ item, isActive }) => {
       tabIndex={0}
     >
       <span className={STYLES.iconContainer}>
-        {React.cloneElement(item.icon, { stroke: iconColor })}
+        {React.cloneElement(item.icon, { stroke: iconColor, width: "20", height: "20" })}
       </span>
-      <span className={STYLES.label} aria-hidden="true">
+      <span className={STYLES.label}>
         {item.label}
       </span>
       <span className={STYLES.tooltip}>
@@ -137,14 +138,15 @@ const NavAdmin = () => {
 
   return (
     <>
-      <aside className={STYLES.sidebar}>
+      <aside className={STYLES.sidebar }>
         <div className={`${STYLES.logoContainer} logoContainer`} onClick={handleLogoClick}>
           <div className="transition-all duration-300 group-hover:scale-110">
-            <Logo size={40} />
+            <Logo size={42} />
           </div>
         </div>
         
         <nav className={STYLES.nav} aria-label="Main navigation">
+          <div className={STYLES.sectionHeader}>MENU</div>
           {NAV_ITEMS.map((item) => (
             <NavigationItem
               key={item.id}

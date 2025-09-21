@@ -41,9 +41,6 @@ function Home() {
       showNavbar={true}
       showFooter={true}
       showHeader={true}
-      navbarVariant="default"
-      footerVariant="default"
-      backgroundVariant={undefined}
       className="overflow-x-hidden bg-white"
     >
       <SkipLink />
