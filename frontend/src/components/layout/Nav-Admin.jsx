@@ -118,6 +118,9 @@ const STYLES = {
     "absolute left-full ml-3 top-1/2 -translate-y-1/2 bg-gray-800 text-white text-xs rounded-md px-2 py-1 shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 z-50 whitespace-nowrap",
   sectionHeader:
     "text-gray-500 text-xs font-semibold uppercase tracking-wider mb-2 mt-0 px-3",
+  logoutButton:
+    "mt-auto flex items-center w-full py-3 px-3 rounded-lg transition-all duration-200 font-medium text-sm text-gray-600 hover:bg-gray-200 hover:text-gray-800",
+  logoutIcon: "mr-3 flex-shrink-0",
 };
 
 // Color constants
@@ -177,6 +180,21 @@ const NavAdmin = () => {
     setShowLogoutModal(false);
   };
 
+  const LogoutIcon = () => (
+    <svg
+      width="20"
+      height="20"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      viewBox="0 0 24 24"
+    >
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+      <polyline points="16 17 21 12 16 7" />
+      <line x1="21" y1="12" x2="9" y2="12" />
+    </svg>
+  );
+
   return (
     <>
       <aside className={STYLES.sidebar}>
@@ -189,7 +207,10 @@ const NavAdmin = () => {
           </div>
         </div>
 
-        <nav className={STYLES.nav} aria-label="Main navigation">
+        <nav
+          className={`${STYLES.nav} h-full flex flex-col`}
+          aria-label="Main navigation"
+        >
           <div className={STYLES.sectionHeader}>MENU</div>
           {NAV_ITEMS.map((item) => (
             <NavigationItem
@@ -198,6 +219,18 @@ const NavAdmin = () => {
               isActive={window.location.pathname === item.path}
             />
           ))}
+
+          {/* Logout Button */}
+          <button
+            onClick={handleLogoClick}
+            className={STYLES.logoutButton}
+            aria-label="Logout"
+          >
+            <span className={STYLES.logoutIcon}>
+              <LogoutIcon />
+            </span>
+            <span className={STYLES.label}>Logout</span>
+          </button>
         </nav>
       </aside>
 

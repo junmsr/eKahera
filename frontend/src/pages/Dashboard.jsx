@@ -125,25 +125,27 @@ function randomizeStats(stats) {
 // Chart Components
 function VisitorsChart({ data }) {
   return (
-    <ChartCard title="Visitors for the last 6 months">
+    <ChartCard
+      title="Visitors for the last 6 months"
+      className="bg-white border border-gray-200"
+    >
       <ResponsiveContainer width="100%" height={180}>
         <LineChart
           data={data}
           margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
         >
-          <CartesianGrid strokeDasharray="3 3" stroke="#e9d5ff" />
-          <XAxis dataKey="name" tick={{ fill: "#2563eb", fontWeight: 700 }} />
-          <YAxis tick={{ fill: "#2563eb", fontWeight: 700 }} />
+          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+          <XAxis dataKey="name" tick={{ fill: "#374151" }} />
+          <YAxis tick={{ fill: "#374151" }} />
           <Tooltip
-            contentStyle={{ background: "#f3e8ff", borderColor: "#2563eb" }}
+            contentStyle={{ background: "#fff", borderColor: "#e5e7eb" }}
           />
           <Line
             type="monotone"
             dataKey="value"
             stroke="#2563eb"
-            strokeWidth={3}
+            strokeWidth={2}
             dot={{ r: 4, fill: "#2563eb" }}
-            activeDot={{ r: 6 }}
           />
         </LineChart>
       </ResponsiveContainer>
@@ -286,18 +288,17 @@ export default function Dashboard() {
 
   // Header actions
   const headerActions = (
-    <>
-      <Button
-        variant="primary"
+    <div className="flex items-center gap-4">
+      <button
         onClick={fetchData}
         disabled={loading}
-        className="bg-gradient-to-r from-blue-500 to-blue-700 text-white px-4 py-2 rounded-lg font-semibold flex items-center shadow-lg hover:scale-105 transition"
+        className="bg-white hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium transition-colors"
       >
         {loading ? "Refreshing..." : "Refresh"}
-      </Button>
+      </button>
 
       <select
-        className="bg-blue-200 text-blue-800 px-4 py-2 rounded-lg font-semibold outline-none border-none shadow"
+        className="bg-white hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium transition-colors outline-none cursor-pointer"
         value={range}
         onChange={(e) => setRange(e.target.value)}
         disabled={loading}
@@ -309,13 +310,13 @@ export default function Dashboard() {
         ))}
       </select>
 
-      <div className="flex items-center gap-2 bg-gradient-to-r from-blue-100 to-blue-200 px-3 py-2 rounded-lg shadow">
-        <span className="w-8 h-8 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center font-bold text-white shadow">
+      <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-lg border border-gray-200">
+        <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-medium">
           A
-        </span>
-        <span className="text-sm font-semibold text-blue-800">Admin</span>
+        </div>
+        <span className="text-sm font-medium text-gray-700">Admin</span>
       </div>
-    </>
+    </div>
   );
 
   return (
@@ -324,26 +325,32 @@ export default function Dashboard() {
       subtitle="Overview of your business performance"
       sidebar={<NavAdmin active={activeNav} onNavigate={setActiveNav} />}
       headerActions={headerActions}
+      className="bg-gray-50"
     >
-      {/* Summary Cards - Tighter spacing */}
+      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 p-4">
         {stats.map((stat) => (
-          <StatsCard key={stat.label} {...stat} loading={loading} />
+          <StatsCard
+            key={stat.label}
+            {...stat}
+            loading={loading}
+            className="bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow"
+          />
         ))}
       </div>
 
-      {/* Analytics Grid - Tighter spacing */}
+      {/* Charts Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
         <VisitorsChart data={chartData} />
         <SalesPieChart data={pieData} />
         <EngagementChart data={chartData} />
-        <Card variant="gradient">
-          <SectionHeader size="md" align="left">
-            Acquisition needs attention
+        <Card className="bg-white border border-gray-200 p-4">
+          <SectionHeader size="md" align="left" className="text-gray-900">
+            Acquisition Overview
           </SectionHeader>
           <div className="flex flex-col gap-2">
-            <span className="text-lg font-bold text-red-500">-20%</span>
-            <span className="text-xs text-blue-500">Down 20% this period</span>
+            <span className="text-lg font-bold text-red-600">-20%</span>
+            <span className="text-sm text-gray-600">Down 20% this period</span>
           </div>
         </Card>
         <CustomersChart data={chartData} />

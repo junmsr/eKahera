@@ -54,23 +54,11 @@ function Cashiers() {
     }
   };
 
-  const headerActions = (
-    <div className="flex items-center gap-6">
-      <span className="material-icons text-blue-700 text-2xl">
-        notifications
-      </span>
-      <span className="material-icons text-blue-700 text-2xl">person</span>
-      <span className="text-blue-700 font-bold">Cashiers #0001</span>
-      <span className="material-icons text-blue-700 text-2xl">logout</span>
-    </div>
-  );
-
   return (
     <PageLayout
       title="CASHIER"
       subtitle="Manage cashier accounts and permissions"
       sidebar={<NavAdmin />}
-      headerActions={headerActions}
       className="h-screen bg-white"
     >
       <div className="flex-1 bg-transparent overflow-hidden p-8">
