@@ -89,21 +89,19 @@ export default function Login() {
 
   return (
     <Background variant="gradientBlue" pattern="dots" overlay floatingElements>
-      <main className="flex flex-1 items-center justify-center py-16 px-2 relative z-10 mt-24">
+      <main className="flex h-screen items-center justify-center px-2 relative z-10 overflow-hidden">
         <Card
           variant="glass"
           className="w-full max-w-4xl flex flex-col md:flex-row overflow-hidden p-0 animate-fadeIn"
         >
           {/* Left: Branding Panel */}
-          <aside className="hidden md:flex flex-col justify-center items-center bg-gradient-to-br from-blue-600 via-blue-500 to-blue-400 w-1/2 p-12 gap-6 relative overflow-hidden">
-            {/* Background pattern */}
+          <aside className="hidden md:flex flex-col justify-center items-center bg-gradient-to-br from-blue-100 via-blue-400 to-blue-100 w-1/2 p-12 gap-6 relative overflow-hidden">
             <div className="absolute inset-0 opacity-10 -z-10 pointer-events-none">
               <div className="w-full h-full bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.3)_1px,transparent_0)] bg-[length:20px_20px]" />
             </div>
 
-            {/* Content */}
             <div className="relative z-10 flex flex-col items-center">
-              <Logo size={64} className="mb-6" />
+              <Logo size={64} className="mb-10" />
               <SectionHeader
                 variant="white"
                 size="xl"
@@ -122,7 +120,7 @@ export default function Login() {
           <section className="w-full md:w-1/2 flex flex-col justify-center items-center p-8 md:p-12 bg-white/95 backdrop-blur-sm">
             <div className="w-full max-w-sm">
               <SectionHeader
-                variant="dark"
+                variant="light"
                 size="lg"
                 className="mb-8 text-center"
               >
@@ -134,7 +132,6 @@ export default function Login() {
                 className="w-full flex flex-col gap-6"
                 noValidate
               >
-                {/* Email/Username Input */}
                 <Input
                   name="email"
                   value={form.email}
@@ -146,7 +143,6 @@ export default function Login() {
                   required
                 />
 
-                {/* Password Input */}
                 <PasswordInput
                   name="password"
                   value={form.password}
@@ -161,7 +157,6 @@ export default function Login() {
                   <div className="text-red-600 text-sm">{apiError}</div>
                 )}
 
-                {/* Submit Button */}
                 <Button
                   type="submit"
                   variant="primary"
@@ -173,7 +168,6 @@ export default function Login() {
                 </Button>
               </form>
 
-              {/* Footer */}
               <div className="mt-6 text-center">
                 <p className="text-gray-500 text-sm">
                   Secure login powered by eKahera
@@ -184,22 +178,15 @@ export default function Login() {
         </Card>
       </main>
 
-      {/* Animations */}
+      {/* Page lock style */}
       <style>{`
-        .animate-fadeIn {
-          animation: fadeIn 0.6s ease-out;
-        }
-        @keyframes fadeIn {
-          from {
-            opacity: 0;
-            transform: translateY(30px) scale(0.95);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-          }
-        }
-      `}</style>
+    html, body, #root {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden; /* No scroll */
+    }
+  `}</style>
     </Background>
   );
 }
