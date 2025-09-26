@@ -11,6 +11,8 @@ import PriceCheckModal from '../components/modals/PriceCheckModal';
 import DiscountModal from '../components/modals/DiscountModal';
 import CashLedgerModal from '../components/modals/CashLedgerModal';
 import ProductReplacementModal from '../components/modals/ProductReplacementModal';
+import CheckoutModal from '../components/modals/CheckoutModal';
+
 
 function POS() {
   // State
@@ -25,6 +27,8 @@ function POS() {
   const [scannerPaused, setScannerPaused] = useState(false);
   const [error, setError] = useState('');
   const transactionNumber = '000000000';
+  const [showCheckout, setShowCheckout] = useState(false);
+
 
   const token = localStorage.getItem('auth_token');
   const user = JSON.parse(localStorage.getItem('auth_user') || '{}');
@@ -58,25 +62,26 @@ function POS() {
   const handleRemove = (idx) => setCart(cart.filter((_, i) => i !== idx));
   const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
-  const handleCheckout = async () => {
-    if (cart.length === 0) return;
-    setError('');
-    try {
-      const body = {
-        items: cart.map((i) => ({ product_id: i.product_id, quantity: i.quantity })),
-        payment_type: 'cash',
-        money_received: total,
-      };
-      await api('/api/sales/checkout', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        body: JSON.stringify(body),
-      });
-      setCart([]);
-    } catch (err) {
-      setError(err.message || 'Checkout failed');
-    }
-  };
+  const handleCheckout = async (paymentType = "cash") => {
+  if (cart.length === 0) return;
+  setError('');
+  try {
+    const body = {
+      items: cart.map((i) => ({ product_id: i.product_id, quantity: i.quantity })),
+      payment_type: paymentType,
+      money_received: total,
+    };
+    await api('/api/sales/checkout', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify(body),
+    });
+    setCart([]);
+  } catch (err) {
+    setError(err.message || 'Checkout failed');
+  }
+};
+
 
   const cardClass = 'bg-white border border-blue-100 rounded-2xl p-6 shadow-lg';
 
@@ -146,7 +151,7 @@ function POS() {
                     className="w-full h-35 text-lg font-bold row-span-2"
                     variant="primary"
                     microinteraction
-                    onClick={handleCheckout}
+                    onClick={() => setShowCheckout(true)}
                   />
                   <Button
                     label="REFUND"
@@ -202,6 +207,19 @@ function POS() {
               setShowRefund(false);
             }}
           />
+          <CheckoutModal
+            isOpen={showCheckout}
+            onClose={() => setShowCheckout(false)}
+            total={total}
+            onSelectPayment={(method) => {
+              console.log("Payment method selected:", method);
+              setShowCheckout(false);
+
+             // Call checkout API here
+             handleCheckout(method);
+           }}
+          />
+
         </div>
       </div>
     </Background>
