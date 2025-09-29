@@ -341,13 +341,11 @@ export default function InventoryPage() {
         isOpen={showStockModal}
         onClose={() => setShowStockModal(false)}
         title={"Stock Entry"}
-        variant="product"
-        editingProduct={null}
-        productForm={stockForm}
+        variant="stock"
+        stockForm={stockForm}
         onChange={(e) =>
           setStockForm({ ...stockForm, [e.target.name]: e.target.value })
         }
-        categories={[]}
         onSubmit={handleStockSubmit}
         loading={loading}
       />
