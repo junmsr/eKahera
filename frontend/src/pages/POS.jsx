@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+
 import ScannerCard from '../components/ui/POS/ScannerCard';
 import SkuFormCard from '../components/ui/POS/SkuFormCard';
 import TransactionCard from '../components/ui/POS/TransactionCard';
@@ -6,11 +7,16 @@ import CartTableCard from '../components/ui/POS/CartTableCard';
 import Button from '../components/common/Button';
 import NavAdmin from '../components/layout/Nav-Admin';
 import Background from '../components/layout/Background';
+
 import { api } from '../lib/api';
 import PriceCheckModal from '../components/modals/PriceCheckModal';
 import DiscountModal from '../components/modals/DiscountModal';
 import CashLedgerModal from '../components/modals/CashLedgerModal';
 import ProductReplacementModal from '../components/modals/ProductReplacementModal';
+import CheckoutModal from '../components/modals/CheckoutModal';
+import CashPaymentModal from '../components/modals/CashPaymentModal';
+
+
 
 function POS() {
   // State
@@ -24,19 +30,27 @@ function POS() {
   const [darkMode, setDarkMode] = useState(false);
   const [scannerPaused, setScannerPaused] = useState(false);
   const [error, setError] = useState('');
-  const transactionNumber = '000000000';
+  const [showCheckout, setShowCheckout] = useState(false);
+  const [showCashModal, setShowCashModal] = useState(false);
+  const [selectedPayment, setSelectedPayment] = useState(null);
 
+
+
+  const transactionNumber = '000000000';
   const token = localStorage.getItem('auth_token');
   const user = JSON.parse(localStorage.getItem('auth_user') || '{}');
 
   const handleAddToCart = async () => {
     if (!sku || quantity < 1) return;
     setError('');
+
     try {
       const product = await api(`/api/products/sku/${encodeURIComponent(sku)}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
+
       const price = Number(product.selling_price || 0);
+
       setCart([
         ...cart,
         {
@@ -47,6 +61,7 @@ function POS() {
           price,
         },
       ]);
+
       setSku('');
       setQuantity(1);
       setScannerPaused(false);
@@ -56,16 +71,17 @@ function POS() {
   };
 
   const handleRemove = (idx) => setCart(cart.filter((_, i) => i !== idx));
+
   const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
-  const handleCheckout = async () => {
+  const handleCheckout = async (paymentType = "cash", moneyReceived = total) => {
     if (cart.length === 0) return;
     setError('');
     try {
       const body = {
         items: cart.map((i) => ({ product_id: i.product_id, quantity: i.quantity })),
-        payment_type: 'cash',
-        money_received: total,
+        payment_type: paymentType,
+        money_received: moneyReceived,
       };
       await api('/api/sales/checkout', {
         method: 'POST',
@@ -78,6 +94,7 @@ function POS() {
     }
   };
 
+
   const cardClass = 'bg-white border border-blue-100 rounded-2xl p-6 shadow-lg';
 
   return (
@@ -85,6 +102,7 @@ function POS() {
       <div className="flex h-screen overflow-hidden">
         {/* Sidebar */}
         <NavAdmin />
+
         {/* Main Content */}
         <div className="flex-1 ml-28 flex flex-col h-screen">
           {/* Header */}
@@ -94,6 +112,7 @@ function POS() {
               POS
             </span>
           </header>
+
           {/* Main Area */}
           <main className="flex-1 bg-transparent overflow-hidden p-4">
             <div
@@ -118,9 +137,11 @@ function POS() {
                   textMain="text-blue-700"
                 />
               </div>
+
               {/* CartTableCard (spans 3 rows on the right) */}
               <div className="row-span-3 col-start-2 row-start-1 flex flex-col h-full">
                 <CartTableCard cart={cart} handleRemove={handleRemove} total={total} className="flex-1" />
+
                 {/* Action Buttons */}
                 <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 mt-4">
                   <Button
@@ -146,7 +167,7 @@ function POS() {
                     className="w-full h-35 text-lg font-bold row-span-2"
                     variant="primary"
                     microinteraction
-                    onClick={handleCheckout}
+                    onClick={() => setShowCheckout(true)}
                   />
                   <Button
                     label="REFUND"
@@ -166,6 +187,7 @@ function POS() {
                   />
                 </div>
               </div>
+
               {/* SkuFormCard */}
               <div className="row-start-2 col-start-1 mb-0">
                 <SkuFormCard
@@ -177,12 +199,14 @@ function POS() {
                 />
                 {error && <div className="text-red-600 text-sm mt-2">{error}</div>}
               </div>
+
               {/* TransactionCard */}
               <div className="row-start-3 col-start-1 -mt-16">
                 <TransactionCard transactionNumber={transactionNumber} />
               </div>
             </div>
           </main>
+
           {/* Modals */}
           <DiscountModal
             isOpen={showDiscount}
@@ -202,6 +226,35 @@ function POS() {
               setShowRefund(false);
             }}
           />
+          <CheckoutModal
+            isOpen={showCheckout}
+            onClose={() => setShowCheckout(false)}
+            total={total}
+            onSelectPayment={(method) => {
+              setSelectedPayment(method);
+              setShowCheckout(false);
+            
+              if (method === "cash") {
+                setShowCashModal(true);
+              } else {
+                // For GCASH/MAYA, proceed directly
+                handleCheckout(method);
+              }
+            }}
+          />
+
+          <CashPaymentModal
+            isOpen={showCashModal}
+            onClose={() => setShowCashModal(false)}
+            total={total}
+            onConfirm={(amountReceived) => {
+              handleCheckout("cash", amountReceived);
+              setShowCashModal(false);
+            }}
+          />
+
+
+
         </div>
       </div>
     </Background>
