@@ -3,13 +3,12 @@ import heroIllustration from "../../../assets/images/hero-illustration.png";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 
-function HomeHero({ onCustomerClick, onStaffClick, onMobileScannerClick }) {
+function HomeHero({ onCustomerClick, onStaffClick }) {
   const navigate = useNavigate();
 
   // If parent didn't provide handlers, fall back to navigation
   const handleCustomer = onCustomerClick || (() => navigate("/customer"));
   const handleStaff = onStaffClick || (() => navigate("/select-role"));
-  const handleMobileScanner = onMobileScannerClick || (() => navigate("/mobile-scanner"));
 
   return (
     <section
@@ -59,13 +58,6 @@ function HomeHero({ onCustomerClick, onStaffClick, onMobileScannerClick }) {
               style={{ fontFamily: "Inter, sans-serif" }}
             >
               Admin / Cashier
-            </button>
-            <button
-              onClick={handleMobileScanner}
-              className="bg-blue-50 text-blue-700 font-semibold px-7 py-3 rounded shadow border border-blue-200 hover:bg-blue-100 hover:scale-105 active:scale-95 transition-all duration-200 text-base flex items-center gap-2"
-              style={{ fontFamily: "Inter, sans-serif" }}
-            >
-              Mobile Scanner
             </button>
           </div>
         </motion.div>

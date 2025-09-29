@@ -1,13 +1,16 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import NavAdmin from "../components/layout/Nav-Admin";
 import PageLayout from "../components/layout/PageLayout";
 import Modal from "../components/modals/Modal";
 import Button from "../components/common/Button";
+import { api, authHeaders } from "../lib/api";
 
 const initialCashiers = [];
 
 function Cashiers() {
   const [cashiers, setCashiers] = useState(initialCashiers);
+  const [loading, setLoading] = useState(false);
+  const [apiError, setApiError] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editIndex, setEditIndex] = useState(null);
@@ -19,16 +22,69 @@ function Cashiers() {
     status: "ACTIVE",
   });
 
+  // Load cashiers from API
+  useEffect(() => {
+    const load = async () => {
+      try {
+        setLoading(true);
+        setApiError("");
+        const token = localStorage.getItem('auth_token');
+        const list = await api('/api/business/cashiers', { headers: authHeaders(token) });
+        const mapped = (list || []).map(r => ({
+          name: r.username || '-',
+          id: r.id || '-',
+          number: r.contact_number || '-',
+          email: r.email || '-',
+          status: 'ACTIVE',
+        }));
+        setCashiers(mapped);
+      } catch (err) {
+        setApiError(err.message || 'Failed to load cashiers');
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, []);
+
   // Handle Add Cashier
   const handleAddCashier = () => {
     setForm({ name: "", id: "", number: "", email: "", status: "ACTIVE" });
     setShowAddModal(true);
   };
 
-  const handleSaveAdd = (e) => {
+  const handleSaveAdd = async (e) => {
     e.preventDefault();
-    setCashiers([...cashiers, form]);
-    setShowAddModal(false);
+    try {
+      setLoading(true);
+      setApiError("");
+      const token = localStorage.getItem('auth_token');
+      await api('/api/business/cashiers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders(token) },
+        body: JSON.stringify({
+          username: (form.name || '').trim(),
+          cashier_id: (form.id || '').trim(),
+          contact_number: (form.number || '').trim() || null,
+          email: (form.email || '').trim() || null,
+        })
+      });
+      // refresh list
+      const list = await api('/api/business/cashiers', { headers: authHeaders(token) });
+      const mapped = (list || []).map(r => ({
+        name: r.username || '-',
+        id: r.id || '-',
+        number: r.contact_number || '-',
+        email: r.email || '-',
+        status: 'ACTIVE',
+      }));
+      setCashiers(mapped);
+      setShowAddModal(false);
+    } catch (err) {
+      setApiError(err.message || 'Failed to create cashier');
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Handle Edit Cashier
@@ -83,13 +139,7 @@ function Cashiers() {
                     <td className="py-4 px-6">{c.number}</td>
                     <td className="py-4 px-6">{c.email}</td>
                     <td className="py-4 px-6 font-bold">
-                      <span
-                        className={
-                          c.status === "ACTIVE"
-                            ? "text-green-600"
-                            : "text-red-600"
-                        }
-                      >
+                      <span className={c.status === "ACTIVE" ? "text-green-600" : "text-red-600"}>
                         {c.status}
                       </span>
                     </td>

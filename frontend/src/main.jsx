@@ -11,12 +11,15 @@ import Contact from "./pages/Contact.jsx";
 import Login from "./pages/Login.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import POS from "./pages/POS.jsx";
+import CashierPOS from "./pages/CashierPOS.jsx";
 import Inventory from "./pages/Inventory.jsx";
 import MobileScanner from "./pages/MobileScanner.jsx";
 import SelectRole from "./pages/SelectRole";
 import Customer from "./pages/Customer";
 import Cashiers from "./pages/Cashiers";
 import Logs from "./pages/Logs.jsx";
+import SuperAdmin from "./pages/SuperAdmin.jsx";
+import SuperAdminView from "./pages/SuperAdminView.jsx";
 
 // Router Configuration
 const router = createBrowserRouter([
@@ -31,12 +34,15 @@ const router = createBrowserRouter([
       { path: "login", element: <Login /> },
       { path: "dashboard", element: <Dashboard /> },
       { path: "pos", element: <POS /> },
+      { path: "cashier-pos", element: <CashierPOS /> },
       { path: "inventory", element: <Inventory /> },
       { path: "mobile-scanner", element: <MobileScanner /> },
       { path: "select-role", element: <SelectRole /> },
       { path: "customer", element: <Customer /> },
       { path: "cashiers", element: <Cashiers /> },
       { path: "logs", element: <Logs /> },
+      { path: "superadmin", element: <SuperAdmin /> },
+      { path: "superadmin/stores/:id", element: <SuperAdminView /> },
     ],
   },
 ]);
