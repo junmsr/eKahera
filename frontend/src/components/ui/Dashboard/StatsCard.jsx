@@ -1,63 +1,56 @@
-import React from 'react';
-import Card from '../../common/Card';
+import React from "react";
+import Card from "../../common/Card";
 
 /**
  * Stats Card Component
  * Displays statistics with icon, value, and change indicator
  */
-function StatsCard({ 
+function StatsCard({
   label,
   value,
   change = 0,
   icon,
-  sub = '',
-  color = "text-blue-800",
+  sub = "",
   loading = false,
   formatValue = null,
-  className = '',
+  className = "",
   ...props
 }) {
   const formatDisplayValue = () => {
     if (formatValue) return formatValue(value);
-    
-    if (label === 'Growth Rate') return `${value}%`;
-    if (label === 'Total Revenue') return `₱${value.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+    if (label === "Growth Rate") return `${value}%`;
+    if (label === "Total Revenue")
+      return `₱${value.toLocaleString(undefined, {
+        minimumFractionDigits: 2,
+      })}`;
     return value.toLocaleString();
   };
 
-  const changeColor = change < 0 ? 'text-red-500' : 'text-blue-800';
-  const changePrefix = change > 0 ? '+' : '';
+  const changeColor = change < 0 ? "text-red-500" : "text-emerald-500";
+  const changePrefix = change > 0 ? "+" : "";
 
   return (
-    <Card 
-      className={`h-full ${className}`} 
-      variant="gradient" 
-      microinteraction 
-      {...props}
-    >
-      <div className={`flex flex-col gap-2 ${loading ? 'opacity-60' : ''}`}>
-        <div className="flex items-center gap-3">
-          <div className="bg-gradient-to-br from-blue-200 to-blue-400 rounded-full p-2 text-blue-800 shadow">
-            {icon}
-          </div>
-          <div>
-            <div className="text-xs font-bold text-blue-800 uppercase tracking-wide">
-              {label}
-            </div>
-            <div className="text-2xl font-extrabold text-blue-900 drop-shadow">
-              {formatDisplayValue()}
-            </div>
+    <Card className={`bg-white border border-gray-200 ${className}`} {...props}>
+      <div className={`flex flex-col gap-3 p-5 ${loading ? "opacity-60" : ""}`}>
+        <div className="flex items-center justify-between">
+          <div className="bg-blue-50 rounded-lg p-2">{icon}</div>
+          <div className={`text-sm font-semibold ${changeColor}`}>
+            {changePrefix}
+            {change}%
           </div>
         </div>
-        <div className="flex items-center gap-2 mt-2">
-          <span className={`text-xs font-bold ${changeColor}`}>
-            {changePrefix}{change}%
-          </span>
-          <span className="text-xs text-blue-500">{sub}</span>
+
+        <div className="space-y-1">
+          <div className="text-3xl font-bold text-gray-900">
+            {formatDisplayValue()}
+          </div>
+          <div className="text-sm font-medium text-gray-600">{label}</div>
         </div>
+
+        <div className="text-xs text-gray-500">{sub}</div>
       </div>
     </Card>
   );
 }
 
-export default StatsCard; 
+export default StatsCard;

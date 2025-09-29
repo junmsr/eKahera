@@ -18,6 +18,8 @@ import SelectRole from "./pages/SelectRole";
 import Customer from "./pages/Customer";
 import Cashiers from "./pages/Cashiers";
 import Logs from "./pages/Logs.jsx";
+import SuperAdmin from "./pages/SuperAdmin.jsx";
+import SuperAdminView from "./pages/SuperAdminView.jsx";
 
 // Router Configuration
 const router = createBrowserRouter([
@@ -39,6 +41,8 @@ const router = createBrowserRouter([
       { path: "customer", element: <Customer /> },
       { path: "cashiers", element: <Cashiers /> },
       { path: "logs", element: <Logs /> },
+      { path: "superadmin", element: <SuperAdmin /> },
+      { path: "superadmin/stores/:id", element: <SuperAdminView /> },
     ],
   },
 ]);

@@ -12,6 +12,13 @@ function CashLedgerModal({ isOpen, onClose }) {
     { id: 3, type: "Maya", amount: 75, date: "2025-05-25 13:15" },
   ];
 
+  // Dummy data for payment types
+  const paymentTypes = [
+    { name: "Cash on hand", balance: 335.0 },
+    { name: "Gcash", balance: 150.0 },
+    { name: "Maya", balance: 235.0 },
+  ];
+
   // Responsive tab navigation
   const renderTabs = () => (
     <div className="flex w-full justify-around mt-8 border-t pt-3">
@@ -32,14 +39,17 @@ function CashLedgerModal({ isOpen, onClose }) {
     </div>
   );
 
-  // Summary Page
-  const renderSummary = () => (
-    <>
+  // Summary Page Component
+  const renderSummary = () => {
+    const totalCash = paymentTypes.reduce((sum, type) => sum + type.balance, 0);
+
+    return (
+      <>
       {/* Total Cash */}
       <div className="w-full flex flex-col items-center mb-4">
-        <div className="bg-gradient-to-b from-blue-500 to-blue-700 text-white rounded-2xl shadow px-8 py-4 text-center w-full max-w-xs">
+        <div className="bg-gradient-to-b from-blue-500 to-blue-700 text-white rounded-2xl shadow px-8 py-4 text-center w-full max-w-sm">
           <div className="text-4xl font-bold flex items-center justify-center gap-2">
-            <span className="text-3xl">₱</span>200.00
+            <span className="text-3xl">₱</span>{totalCash.toFixed(2)}
           </div>
           <div className="text-sm font-semibold mt-1">Total Cash</div>
         </div>
@@ -65,31 +75,24 @@ function CashLedgerModal({ isOpen, onClose }) {
           <span>Balance</span>
         </div>
         <div className="flex flex-col gap-2">
-          <button className="flex justify-between items-center bg-white rounded-xl shadow px-4 py-2 font-medium text-sm hover:bg-blue-50 transition">
-            <span>Cash on hand</span>
-            <span className="font-bold">₱335.00</span>
-            <span className="material-icons text-gray-400 ml-2 text-base">chevron_right</span>
-          </button>
-          <button className="flex justify-between items-center bg-white rounded-xl shadow px-4 py-2 font-medium text-sm hover:bg-blue-50 transition">
-            <span>Gcash</span>
-            <span className="font-bold">₱150.00</span>
-            <span className="material-icons text-gray-400 ml-2 text-base">chevron_right</span>
-          </button>
-          <button className="flex justify-between items-center bg-white rounded-xl shadow px-4 py-2 font-medium text-sm hover:bg-blue-50 transition">
-            <span>Maya</span>
-            <span className="font-bold">₱235.00</span>
-            <span className="material-icons text-gray-400 ml-2 text-base">chevron_right</span>
-          </button>
+          {paymentTypes.map((type) => (
+            <button key={type.name} className="flex justify-between items-center bg-white rounded-xl shadow px-4 py-2 font-medium text-sm hover:bg-blue-50 transition">
+              <span>{type.name}</span>
+              <span className="font-bold">₱{type.balance.toFixed(2)}</span>
+              <span className="material-icons text-gray-400 ml-2 text-base">chevron_right</span>
+            </button>
+          ))}
         </div>
       </div>
     </>
-  );
+    );
+  };
 
   // Transactions Page
   const renderTransactions = () => (
     <div className="w-full flex flex-col items-center mt-2">
-      <div className="w-full mb-2 text-blue-700 font-semibold text-base text-center">Transactions</div>
-      <div className="w-full max-h-72 overflow-y-auto">
+      <div className="w-full mb-3 text-blue-700 font-semibold text-lg text-center">Transactions</div>
+      <div className="w-full max-h-96 overflow-y-auto">
         <table className="w-full text-xs text-left">
           <thead>
             <tr className="text-gray-600 border-b">
@@ -119,7 +122,7 @@ function CashLedgerModal({ isOpen, onClose }) {
   );
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Cash Ledger" className="max-w-md">
+    <Modal isOpen={isOpen} onClose={onClose} title="Cash Ledger" className="max-w-2xl">
       {/* Exit "X" Button */}
       <button
         onClick={onClose}
@@ -129,7 +132,7 @@ function CashLedgerModal({ isOpen, onClose }) {
       >
         ×
       </button>
-      <div className="flex flex-col items-center px-6 pb-6 pt-2 relative min-h-[420px]">
+      <div className="flex flex-col items-center px-6 pb-6 pt-2 relative min-h-[550px]">
         {tab === "SUMMARY" ? renderSummary() : renderTransactions()}
         {renderTabs()}
       </div>

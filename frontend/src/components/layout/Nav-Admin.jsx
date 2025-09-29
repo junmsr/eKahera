@@ -1,17 +1,20 @@
-import React from "react";
+import React, { useState } from "react";
+import { NavLink, useNavigate } from "react-router-dom";
 import Logo from "../common/Logo";
-import { NavLink } from "react-router-dom";
+import LogoutModal from "../modals/LogoutModal";
 
-const navItems = [
+// Navigation configuration
+const NAV_ITEMS = [
   {
+    id: "dashboard",
     label: "Dashboard",
-    to: "/dashboard",
+    path: "/dashboard",
     icon: (
       <svg
         width="28"
         height="28"
         fill="none"
-        stroke="#2563eb"
+        stroke="currentColor"
         strokeWidth="2.2"
         viewBox="0 0 24 24"
       >
@@ -23,14 +26,15 @@ const navItems = [
     ),
   },
   {
+    id: "pos",
     label: "POS",
-    to: "/pos",
+    path: "/pos",
     icon: (
       <svg
         width="28"
         height="28"
         fill="none"
-        stroke="#2563eb"
+        stroke="currentColor"
         strokeWidth="2.2"
         viewBox="0 0 24 24"
       >
@@ -40,14 +44,15 @@ const navItems = [
     ),
   },
   {
+    id: "cashiers",
     label: "Cashiers",
-    to: "/cashiers",
+    path: "/cashiers",
     icon: (
       <svg
         width="28"
         height="28"
         fill="none"
-        stroke="#2563eb"
+        stroke="currentColor"
         strokeWidth="2.2"
         viewBox="0 0 24 24"
       >
@@ -57,14 +62,15 @@ const navItems = [
     ),
   },
   {
+    id: "inventory",
     label: "Inventory",
-    to: "/inventory",
+    path: "/inventory",
     icon: (
       <svg
         width="28"
         height="28"
         fill="none"
-        stroke="#2563eb"
+        stroke="currentColor"
         strokeWidth="2.2"
         viewBox="0 0 24 24"
       >
@@ -74,14 +80,15 @@ const navItems = [
     ),
   },
   {
+    id: "logs",
     label: "Logs",
-    to: "/logs",
+    path: "/logs",
     icon: (
       <svg
         width="28"
         height="28"
         fill="none"
-        stroke="#2563eb"
+        stroke="currentColor"
         strokeWidth="2.2"
         viewBox="0 0 24 24"
       >
@@ -92,50 +99,148 @@ const navItems = [
   },
 ];
 
-function NavAdmin() {
+// Styling constants
+const STYLES = {
+  sidebar:
+    "bg-gray-100 border-r border-gray-200 shadow-sm flex flex-col py-4 px-4 w-48 h-screen fixed z-20",
+  logoContainer: "mb-8 flex items-center gap-3 group cursor-pointer px-2",
+  logoText:
+    "text-gray-800 font-semibold text-lg tracking-wide transition-all duration-300 group-hover:text-gray-900",
+  nav: "flex-col gap-10 w-full",
+  navItem:
+    "group flex items-center w-full py-3 px-3 rounded-lg transition-all duration-200 font-medium text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 relative",
+  navItemActive: "bg-blue-600 text-white shadow-sm",
+  navItemInactive:
+    "bg-transparent text-gray-600 hover:bg-gray-100 hover:text-gray-800",
+  iconContainer: "mr-3 relative flex-shrink-0",
+  label: "leading-tight",
+  tooltip:
+    "absolute left-full ml-3 top-1/2 -translate-y-1/2 bg-gray-800 text-white text-xs rounded-md px-2 py-1 shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 z-50 whitespace-nowrap",
+  sectionHeader:
+    "text-gray-500 text-xs font-semibold uppercase tracking-wider mb-2 mt-0 px-3",
+  logoutButton:
+    "mt-auto flex items-center w-full py-3 px-3 rounded-lg transition-all duration-200 font-medium text-sm text-gray-600 hover:bg-gray-200 hover:text-gray-800",
+  logoutIcon: "mr-3 flex-shrink-0",
+};
+
+// Color constants
+const COLORS = {
+  activeIcon: "#ffffff",
+  inactiveIcon: "#4b5563",
+};
+
+/**
+ * Navigation item component
+ */
+const NavigationItem = ({ item, isActive }) => {
+  const iconColor = isActive ? COLORS.activeIcon : COLORS.inactiveIcon;
+
   return (
-    <aside className="backdrop-blur-xl bg-white/60 border border-blue-100 shadow-2xl rounded-3xl flex flex-col items-center py-8 px-3 w-28 min-h-screen gap-6 relative z-20">
-      <Logo size={56} className="mb-10 drop-shadow-lg" />
-      <nav className="flex flex-col gap-4 w-full" aria-label="Main navigation">
-        {navItems.map((item) => (
-          <NavLink
-            key={item.label}
-            to={item.to}
-            aria-label={item.label}
-            className={({ isActive }) =>
-              `group flex flex-col items-center w-full py-4 rounded-2xl transition-all font-semibold text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 relative
-              ${
-                isActive
-                  ? "bg-gradient-to-r from-blue-500/80 to-blue-700/90 text-white shadow-xl scale-105"
-                  : "bg-white/60 text-blue-700 hover:bg-blue-100/80 hover:text-blue-900"
-              }
-              `
-            }
-            tabIndex={0}
-          >
-            <span className="mb-1 relative">
-              {item.icon}
-              {/* Animated active indicator */}
-              <span
-                className={`absolute -right-3 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-blue-400 shadow-lg transition-all duration-300 ${
-                  window.location.pathname === item.to
-                    ? "opacity-100 scale-100"
-                    : "opacity-0 scale-0"
-                }`}
-              ></span>
-            </span>
-            <span className="mt-1" aria-hidden="true">
-              {item.label}
-            </span>
-            {/* Tooltip */}
-            <span className="absolute left-full ml-3 top-1/2 -translate-y-1/2 bg-blue-700 text-white text-xs rounded-lg px-3 py-1 shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 z-50">
-              {item.label}
-            </span>
-          </NavLink>
-        ))}
-      </nav>
-    </aside>
+    <NavLink
+      key={item.id}
+      to={item.path}
+      aria-label={item.label}
+      className={`${STYLES.navItem} ${
+        isActive ? STYLES.navItemActive : STYLES.navItemInactive
+      }`}
+      tabIndex={0}
+    >
+      <span className={STYLES.iconContainer}>
+        {React.cloneElement(item.icon, {
+          stroke: iconColor,
+          width: "20",
+          height: "20",
+        })}
+      </span>
+      <span className={STYLES.label}>{item.label}</span>
+      <span className={STYLES.tooltip}>{item.label}</span>
+    </NavLink>
   );
-}
+};
+
+/**
+ * Admin Navigation Sidebar Component
+ *
+ * @returns {JSX.Element} The admin navigation sidebar
+ */
+const NavAdmin = () => {
+  const navigate = useNavigate();
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+
+  const handleLogoClick = () => {
+    setShowLogoutModal(true);
+  };
+
+  const handleLogoutConfirm = () => {
+    setShowLogoutModal(false);
+    navigate("/");
+  };
+
+  const handleLogoutCancel = () => {
+    setShowLogoutModal(false);
+  };
+
+  const LogoutIcon = () => (
+    <svg
+      width="20"
+      height="20"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      viewBox="0 0 24 24"
+    >
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+      <polyline points="16 17 21 12 16 7" />
+      <line x1="21" y1="12" x2="9" y2="12" />
+    </svg>
+  );
+
+  return (
+    <>
+      <aside className={STYLES.sidebar}>
+        <div
+          className={`${STYLES.logoContainer} logoContainer`}
+          onClick={handleLogoClick}
+        >
+          <div className="transition-all duration-300 group-hover:scale-110">
+            <Logo size={42} />
+          </div>
+        </div>
+
+        <nav
+          className={`${STYLES.nav} h-full flex flex-col`}
+          aria-label="Main navigation"
+        >
+          <div className={STYLES.sectionHeader}>MENU</div>
+          {NAV_ITEMS.map((item) => (
+            <NavigationItem
+              key={item.id}
+              item={item}
+              isActive={window.location.pathname === item.path}
+            />
+          ))}
+
+          {/* Logout Button */}
+          <button
+            onClick={handleLogoClick}
+            className={STYLES.logoutButton}
+            aria-label="Logout"
+          >
+            <span className={STYLES.logoutIcon}>
+              <LogoutIcon />
+            </span>
+            <span className={STYLES.label}>Logout</span>
+          </button>
+        </nav>
+      </aside>
+
+      <LogoutModal
+        isOpen={showLogoutModal}
+        onClose={handleLogoutCancel}
+        onConfirm={handleLogoutConfirm}
+      />
+    </>
+  );
+};
 
 export default NavAdmin;

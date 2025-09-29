@@ -124,6 +124,7 @@ function Modal({
   onClose,
   title,
   children,
+  className = '',
   size = 'md',
   variant = 'glass',
   // Product Modal Props
@@ -141,7 +142,7 @@ function Modal({
       {/* Blurred background */}
       <div className="absolute inset-0 backdrop-blur-sm pointer-events-none"></div>
       {/* Modal content */}
-      <div className={`relative bg-white rounded-2xl shadow-lg p-8 min-w-[340px] z-10`}>
+      <div className={`relative bg-white rounded-2xl shadow-lg p-8 min-w-[340px] z-10 w-full ${className}`}>
         {/* Exit button */}
         <button
           className="absolute top-4 right-4 text-2xl text-gray-400 hover:text-blue-600 focus:outline-none"
