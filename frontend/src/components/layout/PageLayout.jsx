@@ -30,6 +30,8 @@ export default function PageLayout({
       floatingElements={false}
       className={theme}
     >
+      {/* Navbar */}
+      {showNavbar && <Navbar />}
       <div className={`flex min-h-screen relative ${className} ${theme}`}>
         {/* Sidebar */}
         {sidebar && (

@@ -7,6 +7,7 @@ import { api } from "../lib/api";
 const LogsPage = () => {
   const [logs, setLogs] = useState([]);
   const [error, setError] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
 
 
   const searchBarStyle = {
@@ -44,6 +45,18 @@ const LogsPage = () => {
   const cashierLogs = useMemo(() => logs.filter((l) => l.role === "cashier"), [logs]);
   const adminLogs = useMemo(() => logs.filter((l) => l.role === "admin" || l.role === "business_owner"), [logs]);
 
+  const filteredCashierLogs = useMemo(() => {
+    const query = (searchQuery || "").toLowerCase();
+    if (!query) return cashierLogs;
+    return cashierLogs.filter((l) => (l.action || "").toLowerCase().includes(query));
+  }, [cashierLogs, searchQuery]);
+
+  const filteredAdminLogs = useMemo(() => {
+    const query = (searchQuery || "").toLowerCase();
+    if (!query) return adminLogs;
+    return adminLogs.filter((l) => (l.action || "").toLowerCase().includes(query));
+  }, [adminLogs, searchQuery]);
+
   return (
     <PageLayout
       title="LOGS"
@@ -60,8 +73,8 @@ const LogsPage = () => {
           style={searchBarStyle}
         />
         <div style={{ display: "flex", gap: "2rem" }}>
-          <LogsCard title="CASHIER" logs={cashierLogs} searchQuery={searchQuery} />
-          <LogsCard title="ADMIN" logs={adminLogs} searchQuery={searchQuery} />
+          <LogsCard title="CASHIER" logs={filteredCashierLogs} />
+          <LogsCard title="ADMIN" logs={filteredAdminLogs} />
         </div>
         {error && (
           <div className="mb-3 text-sm text-red-700 bg-red-50 border border-red-200 rounded px-3 py-2">

@@ -42,8 +42,8 @@ function Home() {
   return (
     <PageLayout
       showNavbar={true}
-      showFooter={true}
-      showHeader={true}
+      showFooter={false}
+      showHeader={false}
       navbarVariant="default"
       footerVariant="default"
       className="overflow-x-hidden bg-white min-h-screen flex flex-col"
@@ -82,8 +82,7 @@ function Home() {
         {/* Bottom Vector Divider */}
         <ImageDivider src={vector2} overlay={false} />
       </main>
-
-      <Footer />
+      {/* Footer is provided by PageLayout when showFooter is true */}
     </PageLayout>
   );
 }
