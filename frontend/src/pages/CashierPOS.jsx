@@ -23,29 +23,38 @@ function CashierPOS() {
   const [darkMode, setDarkMode] = useState(false);
   const [scannerPaused, setScannerPaused] = useState(false);
   const [error, setError] = useState('');
-  const transactionNumber = '000000000';
+  const [transactionNumber, setTransactionNumber] = useState('');
+  const [transactionId, setTransactionId] = useState(null);
 
   const token = localStorage.getItem('auth_token');
   const user = JSON.parse(localStorage.getItem('auth_user') || '{}');
 
-  const handleAddToCart = async () => {
-    if (!sku || quantity < 1) return;
+  const addSkuToCart = async (skuValue, qty = 1) => {
+    if (!skuValue || qty < 1) return;
     setError('');
     try {
-      const product = await api(`/api/products/sku/${encodeURIComponent(sku)}`, {
+      const product = await api(`/api/products/sku/${encodeURIComponent(skuValue)}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const price = Number(product.selling_price || 0);
-      setCart([
-        ...cart,
-        {
-          product_id: product.product_id,
-          sku: product.sku,
-          name: product.product_name,
-          quantity,
-          price,
-        },
-      ]);
+      // If item already in cart, increment quantity
+      const existingIdx = cart.findIndex(i => i.product_id === product.product_id);
+      if (existingIdx >= 0) {
+        const next = [...cart];
+        next[existingIdx] = { ...next[existingIdx], quantity: next[existingIdx].quantity + qty };
+        setCart(next);
+      } else {
+        setCart([
+          ...cart,
+          {
+            product_id: product.product_id,
+            sku: product.sku,
+            name: product.product_name,
+            quantity: qty,
+            price,
+          },
+        ]);
+      }
       setSku('');
       setQuantity(1);
       setScannerPaused(false);
@@ -54,8 +63,21 @@ function CashierPOS() {
     }
   };
 
+  const handleAddToCart = async () => addSkuToCart(sku, quantity);
+
   const handleRemove = (idx) => setCart(cart.filter((_, i) => i !== idx));
-  const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const [appliedDiscount, setAppliedDiscount] = useState(null);
+  const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const total = (() => {
+    if (!appliedDiscount) return subtotal;
+    if (typeof appliedDiscount.value === 'string' && appliedDiscount.value.endsWith('%')) {
+      const pct = parseFloat(appliedDiscount.value);
+      if (Number.isFinite(pct) && pct > 0) return Math.max(0, subtotal - subtotal * (pct / 100));
+    }
+    const fixed = Number(appliedDiscount.value);
+    if (Number.isFinite(fixed) && fixed > 0) return Math.max(0, subtotal - fixed);
+    return subtotal;
+  })();
 
   const handleCheckout = async () => {
     if (cart.length === 0) return;
@@ -65,13 +87,21 @@ function CashierPOS() {
         items: cart.map((i) => ({ product_id: i.product_id, quantity: i.quantity })),
         payment_type: 'cash',
         money_received: total,
+        ...(appliedDiscount && typeof appliedDiscount.value === 'string' && appliedDiscount.value.endsWith('%')
+          ? { discount_percentage: parseFloat(appliedDiscount.value) }
+          : appliedDiscount
+          ? { discount_amount: Number(appliedDiscount.value) }
+          : {}),
       };
-      await api('/api/sales/checkout', {
+      const resp = await api('/api/sales/checkout', {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: JSON.stringify(body),
       });
+      if (resp?.transaction_number) setTransactionNumber(resp.transaction_number);
+      if (resp?.transaction_id) setTransactionId(resp.transaction_id);
       setCart([]);
+      setAppliedDiscount(null);
     } catch (err) {
       setError(err.message || 'Checkout failed');
     }
@@ -119,11 +149,11 @@ function CashierPOS() {
             {/* ScannerCard */}
             <div className="row-span-1 col-span-1">
               <ScannerCard
-                onScan={(result) => {
-                  if (result?.[0]?.rawValue) {
-                    setSku(result[0].rawValue);
-                    setScannerPaused(true);
-                  }
+                onScan={async (result) => {
+                  const code = result?.[0]?.rawValue;
+                  if (!code) return;
+                  setScannerPaused(true);
+                  await addSkuToCart(code, 1);
                 }}
                 paused={scannerPaused}
                 onResume={() => setScannerPaused(false)}
@@ -191,7 +221,7 @@ function CashierPOS() {
             </div>
             {/* TransactionCard */}
             <div className="row-start-3 col-start-1 -mt-16">
-              <TransactionCard transactionNumber={transactionNumber} />
+              <TransactionCard transactionNumber={transactionNumber} transactionId={transactionId} />
             </div>
           </div>
         </main>
@@ -201,8 +231,8 @@ function CashierPOS() {
           isOpen={showDiscount}
           onClose={() => setShowDiscount(false)}
           onApplyDiscount={(discount) => {
-            // Apply the discount to your transaction/cart here
-            // Example: setAppliedDiscount(discount);
+            setAppliedDiscount(discount);
+            setShowDiscount(false);
           }}
         />
         <PriceCheckModal isOpen={showPriceCheck} onClose={() => setShowPriceCheck(false)} />

@@ -1,4 +1,5 @@
 const pool = require('../config/database');
+const { logAction } = require('../utils/logger');
 
 exports.getStock = async (req, res) => {
   try {
@@ -66,12 +67,11 @@ exports.adjustStock = async (req, res) => {
     );
     if (result.rowCount === 0) return res.status(404).json({ error: 'Inventory not found' });
     // Log inventory adjustment
-    try {
-      await pool.query(
-        'INSERT INTO logs (business_id, inventory_id, product_id, date_time) VALUES ($1, $2, $3, NOW())',
-        [req.user?.businessId || null, result.rows[0].inventory_id, result.rows[0].product_id]
-      );
-    } catch (_) {}
+    logAction({
+      userId: req.user?.userId || null,
+      businessId: req.user?.businessId || null,
+      action: `Adjust stock by ${delta} for product_id=${result.rows[0].product_id} (inventory_id=${result.rows[0].inventory_id})`
+    });
     res.json(result.rows[0]);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -100,6 +100,11 @@ exports.deleteProduct = async (req, res) => {
     }
     
     await client.query('COMMIT');
+    logAction({
+      userId: req.user?.userId || null,
+      businessId: req.user?.businessId || null,
+      action: `Delete product_id=${product_id}`
+    });
     res.json({ message: 'Product deleted successfully' });
   } catch (err) {
     await client.query('ROLLBACK');

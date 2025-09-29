@@ -1,21 +1,43 @@
 import React, { useState } from "react";
 import Modal from "./Modal";
+import { api } from "../../lib/api";
+import ScannerCard from "../ui/POS/ScannerCard";
 
 function PriceCheckModal({ isOpen, onClose }) {
   const [sku, setSku] = useState("");
   const [product, setProduct] = useState(null);
 
-  const handleCheck = () => {
-    if (sku === "12345") {
-      setProduct({
-        name: "Sample Product",
-        price: 150,
-        sku: "12345",
-      });
-    } else {
+  const handleCheck = async () => {
+    if (!sku) return;
+    try {
+      const businessId = localStorage.getItem('business_id');
+      const query = businessId ? `?business_id=${encodeURIComponent(businessId)}` : '';
+      const res = await api(`/api/products/public/sku/${encodeURIComponent(sku)}${query}`);
+      if (res) {
+        setProduct({
+          name: res.product_name,
+          price: Number(res.selling_price || 0),
+          sku: res.sku,
+        });
+      } else {
+        setProduct(null);
+      }
+    } catch (_) {
       setProduct(null);
     }
   };
+
+  // Auto-fetch on SKU change
+  React.useEffect(() => {
+    if (!sku) {
+      setProduct(null);
+      return;
+    }
+    const t = setTimeout(() => {
+      handleCheck();
+    }, 200);
+    return () => clearTimeout(t);
+  }, [sku]);
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Price Check" className="max-w-md">
@@ -29,6 +51,21 @@ function PriceCheckModal({ isOpen, onClose }) {
         ×
       </button>
       <div className="flex flex-col items-center gap-4 p-4">
+        {/* Optional embedded scanner */}
+        <div className="w-full">
+          <ScannerCard
+            onScan={(result) => {
+              const code = result?.[0]?.rawValue;
+              if (code) {
+                setSku(code);
+              }
+            }}
+            paused={false}
+            onResume={() => {}}
+            className="w-full"
+            textMain="text-blue-700"
+          />
+        </div>
         <div className="w-full">
           <label className="block text-blue-700 font-semibold mb-2">Enter SKU or Barcode</label>
           <input
@@ -39,12 +76,7 @@ function PriceCheckModal({ isOpen, onClose }) {
             placeholder="Enter SKU or scan barcode"
           />
         </div>
-        <button
-          onClick={handleCheck}
-          className="w-full bg-gradient-to-r from-blue-600 to-blue-400 text-white font-bold py-2 rounded shadow hover:from-blue-700 hover:to-blue-500 transition-all"
-        >
-          Check Price
-        </button>
+        {/* Auto-updates; no need for a button */}
         {product ? (
           <div className="w-full bg-blue-50 rounded-lg shadow p-4 mt-2 flex flex-col items-center">
             <div className="text-lg font-semibold text-blue-700">{product.name}</div>

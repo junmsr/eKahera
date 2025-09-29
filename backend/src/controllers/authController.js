@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const fs = require('fs');
 const path = require('path');
+const { logAction } = require('../utils/logger');
 
 // Load config from config.env file
 const configPath = path.join(__dirname, '..', '..', 'config.env');
@@ -98,7 +99,7 @@ exports.login = async (req, res) => {
       { expiresIn: '7d' }
     );
 
-    return res.json({
+    const response = {
       token,
       user: {
         user_id: user.user_id,
@@ -109,7 +110,12 @@ exports.login = async (req, res) => {
         businessId: user.business_id || null,
         store_name: user.store_name || null
       }
-    });
+    };
+
+    // Log login action (best effort)
+    logAction({ userId: user.user_id, businessId: user.business_id || null, action: 'Login' });
+
+    return res.json(response);
 
   } catch (err) {
     console.error('Login error:', err);

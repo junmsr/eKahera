@@ -7,6 +7,7 @@ import Card from '../../common/Card';
  */
 function TransactionCard({ 
   transactionNumber,
+  transactionId,
   className = '',
   ...props
 }) {
@@ -19,7 +20,8 @@ function TransactionCard({
     >
       <div className="flex flex-col items-center shadow mt-7">
         <div className="text-xs font-semibold text-blue-500">TRANSACTION NUMBER</div>
-        <div className="text-3xl font-mono font-bold tracking-widest text-blue-900">{transactionNumber}</div>
+        <div className="text-3xl font-mono font-bold tracking-widest text-blue-900">{transactionNumber || '—'}</div>
+        <div className="text-[10px] text-blue-500 mt-1">ID: {transactionId ?? '—'}</div>
       </div>
     </Card>
   );

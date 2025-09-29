@@ -7,7 +7,7 @@ function ProductReplacementModal({ isOpen, onClose, onConfirm }) {
   const [refundMethod, setRefundMethod] = useState("GCASH");
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Product Replacement" className="max-w-md">
+    <Modal isOpen={isOpen} onClose={onClose} title="Product Replacement" className="max-w-lg">
       {/* Exit "X" Button */}
       <button
         onClick={onClose}
