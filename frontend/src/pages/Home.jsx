@@ -22,17 +22,11 @@ function Home() {
   const handleMobileScanner = () => navigate("/mobile-scanner");
 
   useEffect(() => {
-    // Setup smooth scrolling and header offset
     const doc = document.documentElement;
     const prevSmooth = doc.style.scrollBehavior;
     doc.style.scrollBehavior = "smooth";
-
-    const header = document.querySelector("header");
-    if (header) {
-      doc.style.scrollPaddingTop = `${header.offsetHeight}px`;
-    }
-
-    // Cleanup function
+    // offset for fixed navbar height
+    doc.style.scrollPaddingTop = "80px";
     return () => {
       doc.style.scrollBehavior = prevSmooth || "";
       doc.style.scrollPaddingTop = "";

@@ -32,6 +32,8 @@ export default function PageLayout({
     >
       {/* Navbar */}
       {showNavbar && <Navbar />}
+      {/* Spacer to offset fixed navbar */}
+      {showNavbar && <div className="h-16 md:h-20" aria-hidden="true" />}
       <div className={`flex min-h-screen relative ${className} ${theme}`}>
         {/* Sidebar */}
         {sidebar && (
@@ -46,7 +48,7 @@ export default function PageLayout({
               title={title}
               subtitle={subtitle}
               headerActions={headerActions}
-              className="sticky top-0 z-0 bg-white"
+              className="sticky top-0 z-50 bg-white"
             />
           )}
 
