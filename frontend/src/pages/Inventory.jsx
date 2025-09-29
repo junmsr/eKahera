@@ -336,12 +336,12 @@ export default function InventoryPage() {
         onSubmit={handleProductSubmit}
         loading={loading}
       />
-      {/* Stock Entry Modal (simple) */}
+      {/* Stock Entry Modal */}
       <Modal
         isOpen={showStockModal}
         onClose={() => setShowStockModal(false)}
-        title={"Stock Entry"}
-        variant="product"
+        title={'Stock Entry'}
+        variant="stock"
         editingProduct={null}
         productForm={stockForm}
         onChange={(e) =>

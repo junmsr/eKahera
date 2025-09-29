@@ -15,6 +15,7 @@ function MobileScannerView() {
   const [paymentMethod, setPaymentMethod] = useState('GCash');
   const [drawerOpen, setDrawerOpen] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [checkoutMessage, setCheckoutMessage] = useState('');
   const [error, setError] = useState('');
 
   const total = useMemo(() => cart.reduce((sum, item) => sum + item.price * item.quantity, 0), [cart]);
@@ -42,8 +43,10 @@ function MobileScannerView() {
       }
 
       // Fetch product from database using public endpoint
-      // For now, using business_id = 1 as default. In production, this should be configurable
-      const product = await api(`/api/products/public/sku/${encodeURIComponent(code)}?business_id=1`);
+      // Prefer stored business_id if available; backend now also supports fallback without it
+      const storedBusinessId = localStorage.getItem('business_id');
+      const query = storedBusinessId ? `?business_id=${encodeURIComponent(storedBusinessId)}` : '';
+      const product = await api(`/api/products/public/sku/${encodeURIComponent(code)}${query}`);
 
       if (product) {
         const price = Number(product.selling_price || 0);
@@ -127,8 +130,33 @@ function MobileScannerView() {
           total={total}
           method={paymentMethod}
           setMethod={setPaymentMethod}
-          onPay={() => setShowCheckout(false)}
+          onPay={async () => {
+            try {
+              const businessId = localStorage.getItem('business_id');
+              const body = {
+                items: cart.map(i => ({ product_id: i.product_id, quantity: i.quantity })),
+                payment_type: paymentMethod,
+                money_received: total,
+                business_id: businessId ? Number(businessId) : null,
+              };
+              const res = await api('/api/sales/public/checkout', { method: 'POST', body: JSON.stringify(body) });
+              setCheckoutMessage(`Transaction ${res.transaction_number} completed. Total ₱${Number(res.total || 0).toFixed(2)}`);
+              setCart([]);
+            } catch (err) {
+              setCheckoutMessage('Checkout failed');
+            } finally {
+              setShowCheckout(false);
+            }
+          }}
         />
+
+        {checkoutMessage && (
+          <div className="px-4 mt-4">
+            <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-green-700 text-sm">
+              {checkoutMessage}
+            </div>
+          </div>
+        )}
       </div>
     </Background>
   );

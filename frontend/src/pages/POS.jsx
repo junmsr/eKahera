@@ -6,7 +6,6 @@ import TransactionCard from "../components/ui/POS/TransactionCard";
 import CartTableCard from "../components/ui/POS/CartTableCard";
 import Button from "../components/common/Button";
 import NavAdmin from "../components/layout/Nav-Admin";
-import PageLayout from "../components/layout/PageLayout";
 import Background from "../components/layout/Background";
 import { api } from "../lib/api";
 import PriceCheckModal from "../components/modals/PriceCheckModal";
@@ -36,32 +35,41 @@ function POS() {
   const [darkMode, setDarkMode] = useState(false);
   const [scannerPaused, setScannerPaused] = useState(false);
   const [error, setError] = useState("");
+  const [transactionNumber, setTransactionNumber] = useState("");
+  const [transactionId, setTransactionId] = useState(null);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const notificationRef = useRef(null);
 
-  const transactionNumber = "000000000";
   const token = localStorage.getItem("auth_token");
   const user = JSON.parse(localStorage.getItem("auth_user") || "{}");
 
-  const handleAddToCart = async () => {
-    if (!sku || quantity < 1) return;
+  const addSkuToCart = async (skuValue, qty = 1) => {
+    if (!skuValue || qty < 1) return;
     setError("");
     try {
-      const product = await api(`/api/products/sku/${encodeURIComponent(sku)}`, {
+      const product = await api(`/api/products/sku/${encodeURIComponent(skuValue)}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const price = Number(product.selling_price || 0);
-      setCart([
-        ...cart,
-        {
-          product_id: product.product_id,
-          sku: product.sku,
-          name: product.product_name,
-          quantity,
-          price,
-        },
-      ]);
+      // If item already in cart, increment quantity
+      const existingIdx = cart.findIndex((i) => i.product_id === product.product_id);
+      if (existingIdx >= 0) {
+        const next = [...cart];
+        next[existingIdx] = { ...next[existingIdx], quantity: next[existingIdx].quantity + qty };
+        setCart(next);
+      } else {
+        setCart([
+          ...cart,
+          {
+            product_id: product.product_id,
+            sku: product.sku,
+            name: product.product_name,
+            quantity: qty,
+            price,
+          },
+        ]);
+      }
       setSku("");
       setQuantity(1);
       setScannerPaused(false);
@@ -70,9 +78,19 @@ function POS() {
     }
   };
 
+  const handleAddToCart = async () => {
+    await addSkuToCart(sku, quantity);
+  };
+
   const handleRemove = (idx) => setCart(cart.filter((_, i) => i !== idx));
 
-  const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+  // Placeholder for appliedDiscount state and discount calculation if needed
+  // const [appliedDiscount, setAppliedDiscount] = useState(null);
+  // const total = calculateTotalWithDiscount(subtotal, appliedDiscount);
+  // For now, total equals subtotal
+  const total = subtotal;
 
   const handleCheckout = async (paymentType = "cash", moneyReceived = total) => {
     if (cart.length === 0) return;
@@ -83,18 +101,19 @@ function POS() {
         payment_type: paymentType,
         money_received: moneyReceived,
       };
-      await api("/api/sales/checkout", {
+      const resp = await api("/api/sales/checkout", {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: JSON.stringify(body),
       });
+      if (resp?.transaction_number) setTransactionNumber(resp.transaction_number);
+      if (resp?.transaction_id) setTransactionId(resp.transaction_id);
       setCart([]);
+      // setAppliedDiscount(null); // if using discount
     } catch (err) {
       setError(err.message || "Checkout failed");
     }
   };
-
-  const cardClass = "bg-white border border-blue-100 rounded-2xl p-6 shadow-lg";
 
   // Sample notifications - replace with actual notifications data
   const notifications = [
@@ -121,7 +140,7 @@ function POS() {
     },
   ];
 
-  // Close dropdown when clicking outside
+  // Close dropdown when clicking outside notifications
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (notificationRef.current && !notificationRef.current.contains(event.target)) {
@@ -131,10 +150,6 @@ function POS() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-
-  const handleProfileClick = () => {
-    navigate("/profile"); // Adjust this route if necessary
-  };
 
   const headerActions = (
     <div className="flex items-center gap-4">
@@ -161,7 +176,6 @@ function POS() {
           </span>
         </button>
 
-        {/* Notification Dropdown */}
         {showNotifications && (
           <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
             <div className="p-4 border-b border-gray-200 flex justify-between items-center">
@@ -244,7 +258,9 @@ function POS() {
           {/* Header */}
           <header className="flex items-center gap-4 px-6 py-3 bg-white/80 shadow-sm border-b border-blue-100 h-[56px] min-h-[56px] max-h-[56px]">
             <span className="text-2xl font-bold text-blue-700 tracking-tight flex items-center gap-2">
-              <span className="bg-blue-600 text-white rounded-xl px-3 py-1 text-xl font-bold mr-2">eK</span>
+              <span className="bg-blue-600 text-white rounded-xl px-3 py-1 text-xl font-bold mr-2">
+                eK
+              </span>
               POS
             </span>
 
@@ -264,11 +280,11 @@ function POS() {
               {/* ScannerCard */}
               <div className="row-span-1 col-span-1">
                 <ScannerCard
-                  onScan={(result) => {
-                    if (result?.[0]?.rawValue) {
-                      setSku(result[0].rawValue);
-                      setScannerPaused(true);
-                    }
+                  onScan={async (result) => {
+                    const code = result?.[0]?.rawValue;
+                    if (!code) return;
+                    setScannerPaused(true);
+                    await addSkuToCart(code, 1);
                   }}
                   paused={scannerPaused}
                   onResume={() => setScannerPaused(false)}
@@ -340,7 +356,7 @@ function POS() {
 
               {/* TransactionCard */}
               <div className="row-start-3 col-start-1 -mt-16">
-                <TransactionCard transactionNumber={transactionNumber} />
+                <TransactionCard transactionNumber={transactionNumber} transactionId={transactionId} />
               </div>
             </div>
           </main>
@@ -351,6 +367,8 @@ function POS() {
             onClose={() => setShowDiscount(false)}
             onApplyDiscount={(discount) => {
               // Apply the discount to your transaction/cart here
+              // Optionally handle discount state update
+              setShowDiscount(false);
             }}
           />
           <PriceCheckModal isOpen={showPriceCheck} onClose={() => setShowPriceCheck(false)} />
