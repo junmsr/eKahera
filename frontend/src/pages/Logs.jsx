@@ -1,6 +1,6 @@
-import React from "react";
+import React, { useState } from "react";
 import NavAdmin from "../components/layout/Nav-Admin";
-import Background from "../components/layout/Background";
+import PageLayout from "../components/layout/PageLayout";
 import LogsCard from "../components/ui/Logs/LogsCard";
 
 // Sample data from Figma
@@ -25,30 +25,42 @@ const adminLogs = [
 ];
 
 const LogsPage = () => {
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const searchBarStyle = {
+    width: "100%",
+    padding: "0.75rem",
+    marginBottom: "1rem",
+    borderRadius: "8px",
+    border: "1px solid #ddd",
+    fontSize: "1rem",
+  };
+
   return (
-    <Background variant="gradientBlue" pattern="dots" floatingElements overlay>
-      <div className="flex h-screen overflow-hidden">
-        {/* Sidebar */}
-        <NavAdmin />
-        {/* Main Content */}
-        <div className="flex-1 ml-28 flex flex-col h-screen">
-          <header className="flex items-center gap-4 px-6 py-3 bg-white/80 shadow-sm border-b border-blue-100 h-[56px] min-h-[56px] max-h-[56px]">
-            <span className="text-2xl font-bold text-blue-700 tracking-tight flex items-center gap-2">
-              <span className="bg-blue-600 text-white rounded-xl px-3 py-1 text-xl font-bold mr-2">
-                eK
-              </span>
-              LOGS
-            </span>
-          </header>
-          <main className="flex-1 bg-transparent overflow-hidden p-4">
-            <div style={{ display: "flex", gap: "2rem" }}>
-              <LogsCard title="CASHIER" logs={cashierLogs} />
-              <LogsCard title="ADMIN" logs={adminLogs} />
-            </div>
-          </main>
+    <PageLayout
+      title="LOGS"
+      subtitle="System activity and transaction logs"
+      sidebar={<NavAdmin />}
+      className="h-screen overflow-hidden"
+    >
+      <div className="flex-1 bg-transparent overflow-hidden p-4">
+        <input
+          type="text"
+          placeholder="Search logs..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          style={searchBarStyle}
+        />
+        <div style={{ display: "flex", gap: "2rem" }}>
+          <LogsCard
+            title="CASHIER"
+            logs={cashierLogs}
+            searchQuery={searchQuery}
+          />
+          <LogsCard title="ADMIN" logs={adminLogs} searchQuery={searchQuery} />
         </div>
       </div>
-    </Background>
+    </PageLayout>
   );
 };
 
