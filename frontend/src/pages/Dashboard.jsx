@@ -236,6 +236,12 @@ export default function Dashboard() {
   const [chartData, setChartData] = useState([]);
   const [pieData, setPieData] = useState([]);
 
+  // Admin modal state
+  const [showAdminModal, setShowAdminModal] = useState(false);
+  const [username, setUsername] = useState("admin");
+  const [password, setPassword] = useState("");
+  const [saving, setSaving] = useState(false);
+
   // Data fetching
   const fetchData = async () => {
     try {
@@ -310,12 +316,16 @@ export default function Dashboard() {
         ))}
       </select>
 
-      <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-lg border border-gray-200">
+      {/* Admin Button */}
+      <button
+        onClick={() => setShowAdminModal(true)}
+        className="flex items-center gap-2 bg-white px-4 py-2 rounded-lg border border-gray-200 hover:bg-gray-50 transition"
+      >
         <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-medium">
           A
         </div>
         <span className="text-sm font-medium text-gray-700">Admin</span>
-      </div>
+      </button>
     </div>
   );
 
@@ -355,6 +365,70 @@ export default function Dashboard() {
         </Card>
         <CustomersChart data={chartData} />
       </div>
+
+      {/* Admin Modal */}
+      {/* Admin Modal */}
+      {showAdminModal && (
+        <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg w-96 p-6">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">
+              Update Admin Credentials
+            </h2>
+
+            <label className="block mb-2 text-sm font-medium">Username</label>
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg p-2 mb-4"
+            />
+
+            <label className="block mb-2 text-sm font-medium">Password</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg p-2 mb-8"
+            />
+
+            {/* Buttons */}
+            <div className="flex gap-4 justify-end">
+              <button
+                onClick={() => setShowAdminModal(false)}
+                className="px-6 py-2.5 rounded-lg font-medium text-sm transition-all duration-200 bg-gray-100 text-gray-800 hover:bg-gray-200 hover:shadow-md"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  try {
+                    setSaving(true);
+                    const token = localStorage.getItem("auth_token");
+                    await api("/api/admin/update-credentials", {
+                      method: "POST",
+                      headers: {
+                        ...authHeaders(token),
+                        "Content-Type": "application/json",
+                      },
+                      body: JSON.stringify({ username, password }),
+                    });
+                    alert("Credentials updated successfully!");
+                    setShowAdminModal(false);
+                  } catch (err) {
+                    alert("Failed to update credentials");
+                  } finally {
+                    setSaving(false);
+                  }
+                }}
+                className="px-6 py-2.5 rounded-lg font-medium text-sm transition-all duration-200 bg-blue-600 text-white hover:bg-blue-700 hover:shadow-md"
+                disabled={saving}
+              >
+                {saving ? "Saving..." : "Save"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </PageLayout>
   );
 }

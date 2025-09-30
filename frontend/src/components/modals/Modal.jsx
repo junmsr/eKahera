@@ -1,21 +1,64 @@
-import React, { useState } from 'react';
-import Button from '../common/Button';
-import FormField from '../common/FormField';
-import Loader from '../common/Loader';
-import ScannerCard from '../ui/POS/ScannerCard';
+import React, { useState } from "react";
+import Button from "../common/Button";
+import FormField from "../common/FormField";
+import Loader from "../common/Loader";
+import ScannerCard from "../ui/POS/ScannerCard";
+
+/**
+ * Stock Form Component
+ * Internal component for stock entry form
+ */
+function StockForm({ stockForm, onChange, onSubmit, loading, onClose }) {
+  return (
+    <form onSubmit={onSubmit} className="space-y-4">
+      <FormField
+        label="SKU Code"
+        name="sku"
+        value={stockForm.sku}
+        onChange={onChange}
+        placeholder="Enter SKU"
+        required
+      />
+      <FormField
+        label="Quantity to Add"
+        name="quantity"
+        type="number"
+        value={stockForm.quantity}
+        onChange={onChange}
+        placeholder="Enter quantity"
+        required
+      />
+      <div className="flex justify-end gap-2 mt-4">
+        <Button
+          label="Cancel"
+          variant="secondary"
+          onClick={onClose}
+          type="button"
+        />
+        <Button
+          label="Add Stock"
+          variant="primary"
+          type="submit"
+          disabled={loading}
+        />
+      </div>
+      {loading && <Loader size="sm" className="mt-2" />}
+    </form>
+  );
+}
 
 /**
  * Product Form Component
  * Internal component for product form fields
  */
-function ProductForm({ 
-  editingProduct, 
-  productForm, 
-  onChange, 
-  categories, 
-  onSubmit, 
-  loading, 
-  onClose 
+function ProductForm({
+  editingProduct,
+  productForm,
+  onChange,
+  categories,
+  onSubmit,
+  loading,
+  onClose,
 }) {
   const [scannerOpen, setScannerOpen] = useState(false);
   const [scannerPaused, setScannerPaused] = useState(false);
@@ -32,7 +75,7 @@ function ProductForm({
         />
         <div className="flex items-end">
           <Button
-            label={scannerOpen ? 'Close Scanner' : 'Scan Barcode'}
+            label={scannerOpen ? "Close Scanner" : "Scan Barcode"}
             type="button"
             variant="secondary"
             onClick={() => setScannerOpen(!scannerOpen)}
@@ -42,10 +85,10 @@ function ProductForm({
       {scannerOpen && (
         <div className="rounded-2xl border border-blue-100 p-4">
           <ScannerCard
-            onScan={result => {
-              const code = result?.[0]?.rawValue || '';
+            onScan={(result) => {
+              const code = result?.[0]?.rawValue || "";
               if (code) {
-                onChange({ target: { name: 'sku', value: code } });
+                onChange({ target: { name: "sku", value: code } });
                 setScannerPaused(true);
               }
             }}
@@ -71,7 +114,9 @@ function ProductForm({
         required
       />
       <datalist id="category-list">
-        {categories.map((c) => <option key={c.id} value={c.name} />)}
+        {categories.map((c) => (
+          <option key={c.id} value={c.name} />
+        ))}
       </datalist>
       <FormField
         label="Description"
@@ -107,8 +152,18 @@ function ProductForm({
         />
       </div>
       <div className="flex justify-end gap-2 mt-4">
-        <Button label="Cancel" variant="secondary" onClick={onClose} type="button" />
-        <Button label={editingProduct ? 'Update' : 'Add'} variant="primary" type="submit" disabled={loading} />
+        <Button
+          label="Cancel"
+          variant="secondary"
+          onClick={onClose}
+          type="button"
+        />
+        <Button
+          label={editingProduct ? "Update" : "Add"}
+          variant="primary"
+          type="submit"
+          disabled={loading}
+        />
       </div>
       {loading && <Loader size="sm" className="mt-2" />}
     </form>
@@ -124,7 +179,6 @@ function Modal({
   onClose,
   title,
   children,
-  className = '',
   size = 'md',
   variant = 'glass',
   // Product Modal Props
@@ -133,16 +187,47 @@ function Modal({
   onChange,
   categories,
   onSubmit,
-  loading
+  loading,
+  // Stock Modal Props
+  stockForm,
 }) {
   if (!isOpen) return null;
+
+  let content;
+  if (variant === "product") {
+    content = (
+      <ProductForm
+        editingProduct={editingProduct}
+        productForm={productForm}
+        onChange={onChange}
+        categories={categories}
+        onSubmit={onSubmit}
+        loading={loading}
+        onClose={onClose}
+      />
+    );
+  } else if (variant === "stock") {
+    content = (
+      <StockForm
+        stockForm={stockForm}
+        onChange={onChange}
+        onSubmit={onSubmit}
+        loading={loading}
+        onClose={onClose}
+      />
+    );
+  } else {
+    content = children;
+  }
 
   return (
     <div className="fixed inset-0 flex items-center justify-center z-50">
       {/* Blurred background */}
       <div className="absolute inset-0 backdrop-blur-sm pointer-events-none"></div>
       {/* Modal content */}
-      <div className={`relative bg-white rounded-2xl shadow-lg p-8 min-w-[340px] z-10 w-full ${className}`}>
+      <div
+        className={`relative bg-white rounded-2xl shadow-lg p-8 min-w-[340px] z-10 max-h-[90vh] overflow-y-auto`}
+      >
         {/* Exit button */}
         <button
           className="absolute top-4 right-4 text-2xl text-gray-400 hover:text-blue-600 focus:outline-none"
@@ -152,7 +237,9 @@ function Modal({
         >
           ×
         </button>
+
         {title && <h2 className="text-xl font-bold mb-6 text-blue-700">{title}</h2>}
+        {content}
         {variant === 'product' ? (
           <ProductForm
             editingProduct={editingProduct}
