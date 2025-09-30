@@ -1,4 +1,5 @@
 const pool = require('../config/database');
+const { logAction } = require('../utils/logger');
 
 exports.getCategories = async (req, res) => {
   try {
@@ -108,6 +109,12 @@ exports.createProduct = async (req, res) => {
     }
 
     await client.query('COMMIT');
+    // Log create product
+    logAction({
+      userId: req.user?.userId || null,
+      businessId: req.user?.businessId || null,
+      action: `Create product: ${product.product_name} (SKU: ${product.sku})`
+    });
     res.status(201).json(product);
   } catch (err) {
     try { await client.query('ROLLBACK'); } catch (_) {}
@@ -128,6 +135,46 @@ exports.getProductBySku = async (req, res) => {
     const result = await pool.query(`SELECT * FROM products WHERE ${where}`, params);
     if (result.rows.length === 0) return res.status(404).json({ error: 'Not found' });
     res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Public endpoint for customers to get product by SKU (no authentication required)
+exports.getProductBySkuPublic = async (req, res) => {
+  try {
+    const { sku } = req.params;
+    const { business_id } = req.query;
+
+    // If business_id is provided, constrain lookup to that business and include inventory quantity
+    if (business_id) {
+      const byBusiness = await pool.query(
+        `SELECT p.*, COALESCE(i.quantity_in_stock, 0) as stock_quantity
+         FROM products p
+         LEFT JOIN inventory i ON i.product_id = p.product_id AND i.business_id = p.business_id
+         WHERE p.sku = $1 AND p.business_id = $2
+         LIMIT 1`,
+        [sku, business_id]
+      );
+      if (byBusiness.rowCount > 0) {
+        return res.json(byBusiness.rows[0]);
+      }
+      // If constrained lookup failed, fall through to global lookup below
+    }
+
+    // Fallback: allow public lookup by SKU without business constraint (most recent match)
+    const anyBusiness = await pool.query(
+      `SELECT p.*
+       FROM products p
+       WHERE p.sku = $1
+       ORDER BY p.updated_at DESC NULLS LAST, p.product_id DESC
+       LIMIT 1`,
+      [sku]
+    );
+    if (anyBusiness.rowCount === 0) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+    return res.json(anyBusiness.rows[0]);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -177,10 +224,11 @@ exports.addStockBySku = async (req, res) => {
     // Log stock add
     try {
       const invRow = await pool.query('SELECT inventory_id FROM inventory WHERE product_id = $1 AND business_id = $2', [productId, req.user?.businessId || null]);
-      await pool.query(
-        'INSERT INTO logs (business_id, inventory_id, product_id, date_time) VALUES ($1, $2, $3, NOW())',
-        [req.user?.businessId || null, invRow.rows?.[0]?.inventory_id || null, productId]
-      );
+      logAction({
+        userId: req.user?.userId || null,
+        businessId: req.user?.businessId || null,
+        action: `Add stock for product_id=${productId} (inventory_id=${invRow.rows?.[0]?.inventory_id || 'n/a'})`
+      });
     } catch (_) {}
     res.json({ message: 'Stock added', product_id: productId, quantity });
   } catch (err) {

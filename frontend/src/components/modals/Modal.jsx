@@ -179,8 +179,8 @@ function Modal({
   onClose,
   title,
   children,
-  size = "md",
-  variant = "glass",
+  size = 'md',
+  variant = 'glass',
   // Product Modal Props
   editingProduct,
   productForm,
@@ -237,10 +237,48 @@ function Modal({
         >
           ×
         </button>
-        {title && (
-          <h2 className="text-xl font-bold mb-6 text-blue-700">{title}</h2>
-        )}
+
+        {title && <h2 className="text-xl font-bold mb-6 text-blue-700">{title}</h2>}
         {content}
+        {variant === 'product' ? (
+          <ProductForm
+            editingProduct={editingProduct}
+            productForm={productForm}
+            onChange={onChange}
+            categories={categories || []}
+            onSubmit={onSubmit}
+            loading={loading}
+            onClose={onClose}
+          />
+        ) : variant === 'stock' ? (
+          <form onSubmit={onSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                label="SKU Code"
+                name="sku"
+                value={productForm?.sku || ''}
+                onChange={onChange}
+                placeholder="Scan or enter SKU"
+                required
+              />
+              <FormField
+                label="Quantity"
+                name="quantity"
+                type="number"
+                value={productForm?.quantity || ''}
+                onChange={onChange}
+                required
+              />
+            </div>
+            <div className="flex justify-end gap-2 mt-4">
+              <Button label="Cancel" variant="secondary" onClick={onClose} type="button" />
+              <Button label="Add Stock" variant="primary" type="submit" disabled={loading} />
+            </div>
+            {loading && <Loader size="sm" className="mt-2" />}
+          </form>
+        ) : (
+          children
+        )}
       </div>
     </div>
   );

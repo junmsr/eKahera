@@ -11,10 +11,10 @@ function Navbar({ className = "" }) {
 
   const navItems = [
     { label: "Home", path: "/" },
-    { label: "Features", path: "/#features" },
-    { label: "Services", path: "/#services" },
-    { label: "About Us", path: "/#about" },
-    { label: "Contact", path: "/#contact" },
+    { label: "Features", path: "#features" },
+    { label: "Services", path: "#services" },
+    { label: "About Us", path: "#about" },
+    { label: "FAQ", path: "#faq" },
   ];
 
   const toggleMenu = () => {
@@ -38,8 +38,10 @@ function Navbar({ className = "" }) {
   return (
     <nav
       id="main-navbar"
-      className={`flex items-center justify-between px-4 py-2 bg-white border border-blue-100 shadow-xl rounded-full fixed top-4 left-1/2 transform -translate-x-1/2 w-[95vw] max-w-2xl z-50 ${className}`}
+      className={`site-navbar-base flex items-center justify-between px-4 py-2 bg-white border border-blue-100 shadow-xl rounded-full fixed top-4 left-1/2 transform -translate-x-1/2 w-[95vw] max-w-2xl z-50 ${className}`}
       style={{ fontFamily: "Inter, sans-serif", fontWeight: 500 }}
+      role="navigation"
+      aria-label="Primary"
     >
       {/* Ensure only the centralized Logo is shown in the header */}
       <style>{`
@@ -56,7 +58,7 @@ function Navbar({ className = "" }) {
       </div>
 
       {/* Desktop Navigation Menu */}
-      <div className="hidden md:flex flex-1 items-center justify-center space-x-6">
+      <div className="hidden md:flex flex-1 items-center justify-center space-x-6" role="menubar">
         {navItems.map((item) => (
           <a
             key={item.label}
@@ -65,6 +67,7 @@ function Navbar({ className = "" }) {
               location.hash === item.path ? "font-bold" : "font-medium"
             }`}
             style={{ fontFamily: "Inter, sans-serif" }}
+            role="menuitem"
           >
             {item.label}
             <span className="absolute left-0 -bottom-1 w-0 h-0.5 bg-blue-600 transition-all duration-300 hover:w-full" />
@@ -84,15 +87,15 @@ function Navbar({ className = "" }) {
       </div>
 
       {/* Mobile Menu Button */}
-      <div className="md:hidden" onClick={toggleMenu}>
-        <Button className="md:hidden bg-white hover:bg-blue-50 text-gray-800 px-2 py-2 font-medium transition-colors cursor-pointer border-opacity-20 rounded-xl border-2 border-blue-600 flex items-center">
+      <div className="md:hidden">
+        <Button aria-expanded={isMenuOpen} aria-controls="mobile-menu" onClick={toggleMenu} className="md:hidden bg-white hover:bg-blue-50 text-gray-800 px-2 py-2 font-medium transition-colors cursor-pointer border-opacity-20 rounded-xl border-2 border-blue-600 flex items-center" aria-label="Open menu">
           <img src={menuBar} alt="menu" className="w-5 h-5" />
         </Button>
       </div>
 
       {/* Mobile Menu Dropdown */}
       {isMenuOpen && (
-        <div className="md:hidden absolute top-full left-1/2 transform -translate-x-1/2 w-[90vw] max-w-xs bg-white shadow-lg z-50 flex flex-col items-start px-6 py-4 space-y-4 rounded-xl border border-blue-100 mt-2">
+        <div id="mobile-menu" className="md:hidden absolute top-full left-1/2 transform -translate-x-1/2 w-[90vw] max-w-xs bg-white shadow-lg z-50 flex flex-col items-start px-6 py-4 space-y-4 rounded-xl border border-blue-100 mt-2" role="menu">
           {navItems.map((item) => (
             <a
               key={item.label}
@@ -100,6 +103,7 @@ function Navbar({ className = "" }) {
               className="text-gray-700 hover:text-blue-600 font-medium w-full transition-colors"
               style={{ fontFamily: "Inter, sans-serif" }}
               onClick={() => setIsMenuOpen(false)}
+              role="menuitem"
             >
               {item.label}
             </a>
@@ -109,6 +113,7 @@ function Navbar({ className = "" }) {
             className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full font-medium cursor-pointer w-full text-center transition-colors"
             style={{ fontFamily: "Inter, sans-serif" }}
             onClick={() => setIsMenuOpen(false)}
+            role="menuitem"
           >
             Get Started
           </a>

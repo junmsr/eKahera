@@ -1,6 +1,7 @@
 import React from "react";
 import PageLayout from "../components/layout/PageLayout";
 import Navbar from "../components/layout/Navbar";
+import MobileScannerView from "../components/ui/Mobile-Scanner/MobileScannerView";
 
 function Customer() {
   return (
@@ -16,6 +17,7 @@ function Customer() {
         <p className="text-lg text-gray-700">
           This is the customer page. Add your customer features here.
         </p>
+        <MobileScannerView />
       </div>
     </PageLayout>
   );

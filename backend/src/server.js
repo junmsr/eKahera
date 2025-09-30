@@ -23,6 +23,7 @@ const salesRoutes = require('./routes/salesRoutes');
 const businessRoutes = require('./routes/businessRoutes');
 const otpRoutes = require('./routes/otpRoutes');
 const statsRoutes = require('./routes/statsRoutes');
+const logsRoutes = require('./routes/logsRoutes');
 
 const app = express();
 
@@ -43,6 +44,7 @@ app.use('/api/sales', salesRoutes);
 app.use('/api/business', businessRoutes);
 app.use('/api/otp', otpRoutes);
 app.use('/api/stats', statsRoutes);
+app.use('/api/logs', logsRoutes);
 
 const port = config.PORT || 5000;
 

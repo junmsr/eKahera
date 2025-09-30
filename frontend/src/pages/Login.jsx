@@ -66,13 +66,13 @@ export default function Login() {
         method: "POST",
         body: JSON.stringify({ email: form.email, password: form.password }),
       });
-      localStorage.setItem("auth_token", token);
-      localStorage.setItem("auth_user", JSON.stringify(user));
-      const role = (user?.role || "").toLowerCase();
-      if (role === "cashier") {
-        navigate("/pos");
-      } else if (role === "admin" || role === "superadmin") {
-        navigate("/dashboard");
+      localStorage.setItem('auth_token', token);
+      localStorage.setItem('auth_user', JSON.stringify(user));
+      const role = (user?.role || '').toLowerCase();
+      if (role === 'cashier') {
+        navigate('/cashier-pos');
+      } else if (role === 'admin' || role === 'superadmin') {
+        navigate('/dashboard');
       } else {
         navigate("/");
       }
