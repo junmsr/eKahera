@@ -24,8 +24,13 @@ const businessRoutes = require('./routes/businessRoutes');
 const otpRoutes = require('./routes/otpRoutes');
 const statsRoutes = require('./routes/statsRoutes');
 const logsRoutes = require('./routes/logsRoutes');
+const paymentsRoutes = require('./routes/paymentsRoutes');
 
 const app = express();
+
+// Webhook must receive raw body. Register BEFORE json parser
+const { paymongoWebhook } = require('./controllers/paymentsController');
+app.post('/api/payments/paymongo/webhook', express.raw({ type: '*/*' }), paymongoWebhook);
 
 app.use(cors());
 app.use(express.json());
@@ -45,6 +50,7 @@ app.use('/api/business', businessRoutes);
 app.use('/api/otp', otpRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/logs', logsRoutes);
+app.use('/api/payments', paymentsRoutes);
 
 const port = config.PORT || 5000;
 

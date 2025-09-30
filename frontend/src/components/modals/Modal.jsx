@@ -14,7 +14,7 @@ function StockForm({ stockForm, onChange, onSubmit, loading, onClose }) {
       <FormField
         label="SKU Code"
         name="sku"
-        value={stockForm.sku}
+        value={stockForm?.sku || ''}
         onChange={onChange}
         placeholder="Enter SKU"
         required
@@ -23,7 +23,7 @@ function StockForm({ stockForm, onChange, onSubmit, loading, onClose }) {
         label="Quantity to Add"
         name="quantity"
         type="number"
-        value={stockForm.quantity}
+        value={stockForm?.quantity || ''}
         onChange={onChange}
         placeholder="Enter quantity"
         required
@@ -239,7 +239,6 @@ function Modal({
         </button>
 
         {title && <h2 className="text-xl font-bold mb-6 text-blue-700">{title}</h2>}
-        {content}
         {variant === 'product' ? (
           <ProductForm
             editingProduct={editingProduct}
@@ -251,31 +250,13 @@ function Modal({
             onClose={onClose}
           />
         ) : variant === 'stock' ? (
-          <form onSubmit={onSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                label="SKU Code"
-                name="sku"
-                value={productForm?.sku || ''}
-                onChange={onChange}
-                placeholder="Scan or enter SKU"
-                required
-              />
-              <FormField
-                label="Quantity"
-                name="quantity"
-                type="number"
-                value={productForm?.quantity || ''}
-                onChange={onChange}
-                required
-              />
-            </div>
-            <div className="flex justify-end gap-2 mt-4">
-              <Button label="Cancel" variant="secondary" onClick={onClose} type="button" />
-              <Button label="Add Stock" variant="primary" type="submit" disabled={loading} />
-            </div>
-            {loading && <Loader size="sm" className="mt-2" />}
-          </form>
+          <StockForm
+            stockForm={stockForm}
+            onChange={onChange}
+            onSubmit={onSubmit}
+            loading={loading}
+            onClose={onClose}
+          />
         ) : (
           children
         )}
