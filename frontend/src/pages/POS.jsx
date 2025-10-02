@@ -45,6 +45,17 @@ function POS() {
   const user = JSON.parse(localStorage.getItem("auth_user") || "{}");
   const hasFinalizedRef = React.useRef(false);
 
+  // Generate a client-side provisional transaction number when POS opens
+  useEffect(() => {
+    if (!transactionNumber) {
+      const businessId = user?.businessId || user?.business_id || 'BIZ';
+      const timePart = new Date().toISOString().replace(/[-:T.Z]/g, '').slice(0, 14);
+      const randPart = Math.floor(1000 + Math.random() * 9000);
+      setTransactionNumber(`T-${businessId}-${timePart}-${randPart}`);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // On mount, if returned from PayMongo success/cancel, finalize or cleanup
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -113,20 +124,20 @@ function POS() {
         setError(`Insufficient stock. Available: ${stockQty}, requested: ${qty}.`);
         return;
       }
-      // If item already in cart, increment quantity
-      const existingIdx = cart.findIndex((i) => i.product_id === product.product_id);
-      if (existingIdx >= 0) {
-        const next = [...cart];
-        const newQty = next[existingIdx].quantity + qty;
-        if (newQty > stockQty) {
-          setError(`Insufficient stock. Available: ${stockQty}, requested: ${newQty}.`);
-          return;
+      setCart((prev) => {
+        const existingIdx = prev.findIndex((i) => i.product_id === product.product_id);
+        if (existingIdx >= 0) {
+          const next = [...prev];
+          const newQty = next[existingIdx].quantity + qty;
+          if (newQty > stockQty) {
+            setError(`Insufficient stock. Available: ${stockQty}, requested: ${newQty}.`);
+            return prev;
+          }
+          next[existingIdx] = { ...next[existingIdx], quantity: newQty };
+          return next;
         }
-        next[existingIdx] = { ...next[existingIdx], quantity: newQty };
-        setCart(next);
-      } else {
-        setCart([
-          ...cart,
+        return [
+          ...prev,
           {
             product_id: product.product_id,
             sku: product.sku,
@@ -134,8 +145,8 @@ function POS() {
             quantity: qty,
             price,
           },
-        ]);
-      }
+        ];
+      });
       setSku("");
       setQuantity(1);
       setScannerPaused(false);
@@ -175,6 +186,11 @@ function POS() {
       if (resp?.transaction_number) setTransactionNumber(resp.transaction_number);
       if (resp?.transaction_id) setTransactionId(resp.transaction_id);
       setCart([]);
+      // Start a fresh provisional transaction number after successful checkout
+      const businessId = user?.businessId || user?.business_id || 'BIZ';
+      const timePart = new Date().toISOString().replace(/[-:T.Z]/g, '').slice(0, 14);
+      const randPart = Math.floor(1000 + Math.random() * 9000);
+      setTransactionNumber(`T-${businessId}-${timePart}-${randPart}`);
       // setAppliedDiscount(null); // if using discount
     } catch (err) {
       setError(err.message || "Checkout failed");
@@ -471,7 +487,7 @@ function POS() {
                       const { checkoutUrl } = await createGcashCheckout({
                         amount: Number(total || 0),
                         description: "POS Order",
-                        referenceNumber: `POS-${Date.now()}`,
+                        referenceNumber: transactionNumber || `POS-${Date.now()}`,
                         cancelUrl,
                         successUrl
                       });

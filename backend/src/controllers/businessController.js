@@ -3,6 +3,73 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const fs = require('fs');
 const path = require('path');
+const { sendApplicationSubmittedNotification } = require('../utils/emailService');
+
+// Required document types for business verification
+const REQUIRED_DOCUMENT_TYPES = [
+  'Business Registration Certificate',
+  'Mayor\'s Permit', 
+  'BIR Certificate of Registration'
+];
+
+// Check if business has uploaded all required documents
+const hasRequiredDocuments = async (businessId) => {
+  try {
+    const documentsQuery = `
+      SELECT DISTINCT document_type 
+      FROM business_documents 
+      WHERE business_id = $1
+    `;
+    const result = await pool.query(documentsQuery, [businessId]);
+    const uploadedTypes = result.rows.map(row => row.document_type);
+    
+    console.log('Document validation check:');
+    console.log('Required types:', REQUIRED_DOCUMENT_TYPES);
+    console.log('Uploaded types:', uploadedTypes);
+    
+    // Check if all required document types are present
+    const hasAllRequired = REQUIRED_DOCUMENT_TYPES.every(requiredType => {
+      const found = uploadedTypes.some(uploadedType => {
+        // Normalize both strings by removing apostrophes and spaces for comparison
+        const normalizedRequired = requiredType.replace(/['\s]/g, '').toLowerCase();
+        const normalizedUploaded = uploadedType.replace(/['\s]/g, '').toLowerCase();
+        const matches = normalizedUploaded.includes(normalizedRequired) || normalizedRequired.includes(normalizedUploaded);
+        
+        console.log(`Checking "${requiredType}" vs "${uploadedType}"`);
+        console.log(`Normalized: "${normalizedRequired}" vs "${normalizedUploaded}" = ${matches}`);
+        
+        return matches;
+      });
+      
+      console.log(`Required document "${requiredType}" found: ${found}`);
+      return found;
+    });
+    
+    return {
+      hasAllRequired,
+      uploadedCount: uploadedTypes.length,
+      requiredCount: REQUIRED_DOCUMENT_TYPES.length,
+      uploadedTypes,
+      missingTypes: REQUIRED_DOCUMENT_TYPES.filter(requiredType => 
+        !uploadedTypes.some(uploadedType => {
+          // Normalize both strings by removing apostrophes and spaces for comparison
+          const normalizedRequired = requiredType.replace(/['\s]/g, '').toLowerCase();
+          const normalizedUploaded = uploadedType.replace(/['\s]/g, '').toLowerCase();
+          return normalizedUploaded.includes(normalizedRequired) || normalizedRequired.includes(normalizedUploaded);
+        })
+      )
+    };
+  } catch (error) {
+    console.error('Error checking required documents:', error);
+    return {
+      hasAllRequired: false,
+      uploadedCount: 0,
+      requiredCount: REQUIRED_DOCUMENT_TYPES.length,
+      uploadedTypes: [],
+      missingTypes: REQUIRED_DOCUMENT_TYPES
+    };
+  }
+};
 
 // Load config from config.env file
 const configPath = path.join(__dirname, '..', '..', 'config.env');
@@ -93,14 +160,16 @@ exports.registerBusiness = async (req, res) => {
     businessName,
     businessType,
     country,
-    businessAddress,
+    province,
+    city,
+    barangay,
     houseNumber,
     mobile,
     password
   } = req.body;
 
   // Validate required fields
-  if (!email || !username || !businessName || !businessType || !country || !businessAddress || !mobile || !password) {
+  if (!email || !username || !businessName || !businessType || !country || !province || !city || !barangay || !houseNumber || !mobile || !password) {
     return res.status(400).json({ 
       error: 'All required fields must be provided' 
     });
@@ -151,7 +220,8 @@ exports.registerBusiness = async (req, res) => {
 
     const userId = userResult.rows[0].user_id;
 
-    // Create business profile
+    // Create business profile - combine address components into business_address
+    const businessAddress = `${barangay}, ${city}, ${province}`;
     const businessResult = await client.query(`
       INSERT INTO business (
         business_name, business_type, country, 
@@ -180,7 +250,7 @@ exports.registerBusiness = async (req, res) => {
     await client.query('COMMIT');
 
     res.status(201).json({
-      message: 'Business registration successful',
+      message: 'Business account created successfully. Please upload required documents to complete verification.',
       user: {
         id: userId,
         username: username,
@@ -191,7 +261,9 @@ exports.registerBusiness = async (req, res) => {
         id: businessResult.rows[0].business_id,
         name: businessResult.rows[0].business_name
       },
-      token: token
+      token: token,
+      requiresDocuments: true,
+      documentsUploaded: false
     });
 
   } catch (error) {
@@ -293,3 +365,88 @@ exports.updateBusinessProfile = async (req, res) => {
     });
   }
 };
+
+// Check document upload status for a business
+exports.checkDocumentStatus = async (req, res) => {
+  try {
+    const businessId = req.user.businessId;
+    
+    if (!businessId) {
+      return res.status(400).json({ error: 'Business ID not found for user' });
+    }
+
+    const documentStatus = await hasRequiredDocuments(businessId);
+    
+    res.json({
+      businessId,
+      documentsRequired: REQUIRED_DOCUMENT_TYPES,
+      documentStatus
+    });
+
+  } catch (error) {
+    console.error('Check document status error:', error);
+    res.status(500).json({ 
+      error: 'Failed to check document status' 
+    });
+  }
+};
+
+// Verify business can access system (has required documents)
+exports.verifyBusinessAccess = async (req, res) => {
+  try {
+    const businessId = req.user.businessId;
+    
+    if (!businessId) {
+      return res.status(400).json({ 
+        error: 'Business ID not found for user',
+        canAccess: false 
+      });
+    }
+
+    const documentStatus = await hasRequiredDocuments(businessId);
+    
+    if (!documentStatus.hasAllRequired) {
+      return res.status(403).json({
+        error: 'Document verification required',
+        canAccess: false,
+        requiresDocuments: true,
+        documentStatus,
+        message: `Please upload the following required documents: ${documentStatus.missingTypes.join(', ')}`
+      });
+    }
+
+    // Check if business is approved
+    const businessQuery = `
+      SELECT verification_status 
+      FROM business 
+      WHERE business_id = $1
+    `;
+    const businessResult = await pool.query(businessQuery, [businessId]);
+    
+    if (businessResult.rows.length === 0) {
+      return res.status(404).json({ 
+        error: 'Business not found',
+        canAccess: false 
+      });
+    }
+
+    const verificationStatus = businessResult.rows[0].verification_status;
+    
+    res.json({
+      canAccess: true,
+      documentsUploaded: true,
+      verificationStatus,
+      documentStatus
+    });
+
+  } catch (error) {
+    console.error('Verify business access error:', error);
+    res.status(500).json({ 
+      error: 'Failed to verify business access',
+      canAccess: false 
+    });
+  }
+};
+
+// Export the hasRequiredDocuments function for use in other modules
+module.exports.hasRequiredDocuments = hasRequiredDocuments;

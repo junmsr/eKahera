@@ -6,6 +6,8 @@ import SectionHeader from "../../../components/layout/SectionHeader";
 import Input from "../../../components/common/Input";
 import Button from "../../../components/common/Button";
 import Loader from "../../../components/common/Loader";
+import PasswordInput from "../../../components/common/PasswordInput";
+import { getProvinces, getCities, getBarangays } from "../../../data/philippinesLocations";
 
 // Inline ProgressBar
 function ProgressBar({ percent }) {
@@ -56,11 +58,101 @@ function Stepper({ steps, currentStep }) {
   );
 }
 
+// Document Upload Component
+function DocumentUploadSection({ documents, documentTypes, onDocumentsChange, error }) {
+  const handleFileChange = (e) => {
+    const files = Array.from(e.target.files);
+    const newDocuments = [...documents, ...files];
+    const newTypes = [...documentTypes, ...files.map(() => '')];
+    onDocumentsChange(newDocuments, newTypes);
+  };
+
+  const handleTypeChange = (index, type) => {
+    const newTypes = [...documentTypes];
+    newTypes[index] = type;
+    onDocumentsChange(documents, newTypes);
+  };
+
+  const removeDocument = (index) => {
+    const newDocuments = documents.filter((_, i) => i !== index);
+    const newTypes = documentTypes.filter((_, i) => i !== index);
+    onDocumentsChange(newDocuments, newTypes);
+  };
+
+  const documentTypeOptions = [
+    'Business Registration Certificate',
+    'Mayor\'s Permit',
+    'BIR Certificate of Registration',
+    'Barangay Business Clearance',
+    'Fire Safety Inspection Certificate',
+    'Sanitary Permit',
+    'Other Business Document'
+  ];
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <label className="block mb-2 text-sm text-gray-700 font-medium">
+          Upload Business Documents <span className="text-red-500">*</span>
+        </label>
+        <input
+          type="file"
+          multiple
+          accept=".pdf,.jpg,.jpeg,.png,.gif"
+          onChange={handleFileChange}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        />
+        <p className="text-xs text-gray-500 mt-1">
+          Accepted formats: PDF, JPG, PNG, GIF. Maximum file size: 10MB per file.
+        </p>
+      </div>
+
+      {documents.length > 0 && (
+        <div className="space-y-3">
+          <h4 className="font-medium text-gray-900">Uploaded Documents:</h4>
+          {documents.map((file, index) => (
+            <div key={index} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+              <div className="flex-1">
+                <p className="text-sm font-medium text-gray-900">{file.name}</p>
+                <p className="text-xs text-gray-500">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+              </div>
+              <div className="flex-1">
+                <select
+                  value={documentTypes[index] || ''}
+                  onChange={(e) => handleTypeChange(index, e.target.value)}
+                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                >
+                  <option value="">Select document type</option>
+                  {documentTypeOptions.map((type) => (
+                    <option key={type} value={type}>{type}</option>
+                  ))}
+                </select>
+              </div>
+              <button
+                type="button"
+                onClick={() => removeDocument(index)}
+                className="text-red-600 hover:text-red-800 text-sm"
+              >
+                Remove
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {error && (
+        <p className="text-red-500 text-sm mt-1">{error}</p>
+      )}
+    </div>
+  );
+}
+
 export default function GetStartedSingle() {
   const steps = [
     { label: "Account Info", icon: "👤" },
     { label: "OTP Verification", icon: "🔒" },
     { label: "Business Details", icon: "🏢" },
+    { label: "Document Upload", icon: "📄" },
   ];
 
   const [step, setStep] = useState(0);
@@ -68,30 +160,117 @@ export default function GetStartedSingle() {
     email: "",
     username: "",
     businessName: "",
+    businessEmail: "",
+    useAdminEmail: false,
     businessType: "",
-    country: "",
-    businessAddress: "",
+    customBusinessType: "",
+    country: "Philippines",
+    province: "",
+    city: "",
+    barangay: "",
     houseNumber: "",
     mobile: "",
     password: "",
     confirmPassword: "",
     otp: "",
+    documents: [],
+    documentTypes: [],
   });
   const [errors, setErrors] = useState({});
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [otpVerified, setOtpVerified] = useState(false);
+  const [usernameChecking, setUsernameChecking] = useState(false);
+  const [emailChecking, setEmailChecking] = useState(false);
+  const [usernameAvailable, setUsernameAvailable] = useState(null);
+  const [emailAvailable, setEmailAvailable] = useState(null);
   const inputRef = useRef(null);
 
   useEffect(() => {
     if (inputRef.current) inputRef.current.focus();
   }, [step]);
 
+  // Debounce function for API calls
+  const useDebounce = (value, delay) => {
+    const [debouncedValue, setDebouncedValue] = useState(value);
+    useEffect(() => {
+      const handler = setTimeout(() => {
+        setDebouncedValue(value);
+      }, delay);
+      return () => {
+        clearTimeout(handler);
+      };
+    }, [value, delay]);
+    return debouncedValue;
+  };
+
+  const debouncedUsername = useDebounce(form.username, 500);
+  const debouncedEmail = useDebounce(form.email, 500);
+
+  // Check username availability
+  useEffect(() => {
+    if (debouncedUsername && debouncedUsername.length >= 3) {
+      checkUsernameAvailability(debouncedUsername);
+    } else {
+      setUsernameAvailable(null);
+    }
+  }, [debouncedUsername]);
+
+  // Check email availability
+  useEffect(() => {
+    if (debouncedEmail && /^\S+@\S+\.\S+$/.test(debouncedEmail)) {
+      checkEmailAvailability(debouncedEmail);
+    } else {
+      setEmailAvailable(null);
+    }
+  }, [debouncedEmail]);
+
+  const checkUsernameAvailability = async (username) => {
+    setUsernameChecking(true);
+    try {
+      const response = await fetch(`http://localhost:5000/api/auth/check-username/${encodeURIComponent(username)}`);
+      const data = await response.json();
+      setUsernameAvailable(data.available);
+    } catch (error) {
+      console.error('Error checking username:', error);
+      setUsernameAvailable(null);
+    } finally {
+      setUsernameChecking(false);
+    }
+  };
+
+  const checkEmailAvailability = async (email) => {
+    setEmailChecking(true);
+    try {
+      const response = await fetch(`http://localhost:5000/api/auth/check-email/${encodeURIComponent(email)}`);
+      const data = await response.json();
+      setEmailAvailable(data.available);
+    } catch (error) {
+      console.error('Error checking email:', error);
+      setEmailAvailable(null);
+    } finally {
+      setEmailChecking(false);
+    }
+  };
+
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setForm((f) => ({ ...f, [name]: value }));
+    const { name, value, type, checked } = e.target;
+    
+    if (name === 'useAdminEmail') {
+      setForm((f) => ({ 
+        ...f, 
+        [name]: checked,
+        businessEmail: checked ? f.email : ""
+      }));
+    } else if (name === 'province') {
+      // Reset city and barangay when province changes
+      setForm((f) => ({ ...f, province: value, city: "", barangay: "" }));
+    } else if (name === 'city') {
+      // Reset barangay when city changes
+      setForm((f) => ({ ...f, city: value, barangay: "" }));
+    } else {
+      setForm((f) => ({ ...f, [name]: type === 'checkbox' ? checked : value }));
+    }
   };
 
   const validateStep = () => {
@@ -99,8 +278,12 @@ export default function GetStartedSingle() {
     if (step === 0) {
       if (!form.email) err.email = "Required";
       else if (!/^\S+@\S+\.\S+$/.test(form.email)) err.email = "Invalid email address";
+      else if (emailAvailable === false) err.email = "Email already exists";
+      
       if (!form.username) err.username = "Required";
       else if (!/^[a-zA-Z0-9_]{3,20}$/.test(form.username)) err.username = "Username must be 3-20 characters";
+      else if (usernameAvailable === false) err.username = "Username already exists";
+      
       if (!form.mobile) err.mobile = "Required";
       else if (!/^\d{10,15}$/.test(form.mobile)) err.mobile = "Invalid mobile number";
       if (!form.password) err.password = "Required";
@@ -113,9 +296,46 @@ export default function GetStartedSingle() {
     }
     if (step === 2) {
       if (!form.businessName) err.businessName = "Required";
+      if (!form.useAdminEmail && !form.businessEmail) err.businessEmail = "Required";
+      else if (!form.useAdminEmail && form.businessEmail && !/^\S+@\S+\.\S+$/.test(form.businessEmail))
+        err.businessEmail = "Invalid email address";
       if (!form.businessType) err.businessType = "Required";
-      if (!form.country) err.country = "Required";
-      if (!form.businessAddress) err.businessAddress = "Required";
+      if (form.businessType === "Others" && !form.customBusinessType) 
+        err.customBusinessType = "Please specify business type";
+      if (!form.province) err.province = "Required";
+      if (!form.city) err.city = "Required";
+      if (!form.barangay) err.barangay = "Required";
+      if (!form.houseNumber) err.houseNumber = "Required";
+    }
+    if (step === 3) {
+      // Required document types
+      const requiredDocTypes = [
+        'Business Registration Certificate',
+        'Mayor\'s Permit',
+        'BIR Certificate of Registration'
+      ];
+      
+      if (!form.documents || form.documents.length === 0) {
+        err.documents = "Please upload at least one business document";
+      }
+      if (form.documents.length !== form.documentTypes.length) {
+        err.documentTypes = "Please specify document type for each uploaded file";
+      }
+      if (form.documentTypes.some(type => !type)) {
+        err.documentTypes = "Please specify document type for each uploaded file";
+      }
+      
+      // Check if all required document types are uploaded
+      const uploadedTypes = form.documentTypes.filter(type => type && type.trim() !== '');
+      const missingRequiredTypes = requiredDocTypes.filter(requiredType => 
+        !uploadedTypes.some(uploadedType => 
+          uploadedType.includes(requiredType.replace(/'/g, ''))
+        )
+      );
+      
+      if (missingRequiredTypes.length > 0) {
+        err.documents = `Missing required documents: ${missingRequiredTypes.join(', ')}. Please upload all three required documents.`;
+      }
     }
     setErrors(err);
     return Object.keys(err).length === 0;
@@ -125,6 +345,17 @@ export default function GetStartedSingle() {
     if (!validateStep()) return;
 
     if (step === 0) {
+      // Ensure availability checks are complete before proceeding
+      if (emailChecking || usernameChecking) {
+        setErrors({ general: "Please wait for availability checks to complete" });
+        return;
+      }
+      
+      if (emailAvailable === false || usernameAvailable === false) {
+        setErrors({ general: "Please fix the availability issues before proceeding" });
+        return;
+      }
+
       setLoading(true);
       try {
         const response = await fetch("http://localhost:5000/api/otp/send", {
@@ -153,7 +384,10 @@ export default function GetStartedSingle() {
   const handleFinish = async () => {
     if (!validateStep()) return;
     setLoading(true);
+    
     try {
+      // Step 1: Register business
+      setErrors({ general: "Creating your business account..." });
       const businessResponse = await fetch("http://localhost:5000/api/business/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -161,25 +395,77 @@ export default function GetStartedSingle() {
           email: form.email,
           username: form.username,
           businessName: form.businessName,
-          businessType: form.businessType,
+          businessEmail: form.useAdminEmail ? form.email : form.businessEmail,
+          businessType: form.businessType === "Others" ? form.customBusinessType : form.businessType,
           country: form.country,
-          businessAddress: form.businessAddress,
+          province: form.province,
+          city: form.city,
+          barangay: form.barangay,
           houseNumber: form.houseNumber,
           mobile: form.mobile,
           password: form.password,
         }),
       });
-      if (businessResponse.ok) {
-        const result = await businessResponse.json();
+      
+      if (!businessResponse.ok) {
+        const error = await businessResponse.json();
+        if (error.error?.includes('username') || error.error?.includes('Username')) {
+          setErrors({ general: "Username already exists. Please go back and choose a different username." });
+        } else if (error.error?.includes('email') || error.error?.includes('Email')) {
+          setErrors({ general: "Email already exists. Please go back and use a different email address." });
+        } else {
+          setErrors({ general: error.error || "Registration failed. Please try again." });
+        }
+        return;
+      }
+
+      const result = await businessResponse.json();
+      const businessId = result.business?.id;
+      
+      if (!businessId) {
+        setErrors({ general: "Registration successful, but failed to get business ID. Please contact support." });
+        return;
+      }
+      
+      // Step 2: Upload documents
+      setErrors({ general: "Uploading your business documents..." });
+      const formData = new FormData();
+      formData.append('business_id', businessId);
+      formData.append('document_types', JSON.stringify(form.documentTypes));
+      
+      form.documents.forEach((file) => {
+        formData.append('documents', file);
+      });
+
+      const documentResponse = await fetch(
+        "http://localhost:5000/api/documents/upload",
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+
+      if (documentResponse.ok) {
+        const docResult = await documentResponse.json();
         localStorage.setItem("token", result.token);
         localStorage.setItem("user", JSON.stringify(result.user));
-        setSuccess(true);
+        setErrors({}); // Clear loading message
+        
+        // Check if all required documents were uploaded
+        if (docResult.allRequiredUploaded) {
+          setSuccess(true);
+        } else {
+          setErrors({ 
+            general: `${docResult.message}. Your account was created successfully, but you need to upload all required documents before verification can begin.` 
+          });
+        }
       } else {
-        const error = await businessResponse.json();
-        setErrors({ general: error.error || "Registration failed" });
+        const docError = await documentResponse.json();
+        setErrors({ general: `Document upload failed: ${docError.error}. Your account was created, but documents couldn't be uploaded.` });
       }
-    } catch {
-      setErrors({ general: "Network error. Please try again." });
+    } catch (error) {
+      console.error("Registration error:", error);
+      setErrors({ general: "Network error. Please check your connection and try again." });
     } finally {
       setLoading(false);
     }
@@ -193,14 +479,30 @@ export default function GetStartedSingle() {
         <div className="flex flex-col items-center justify-center px-4 py-12">
           <Card className="rounded-3xl p-10 flex flex-col items-center max-w-2xl">
             <SectionHeader className="text-3xl md:text-4xl text-gray-900 mb-4">
-              🎉 Registration Complete!
+              📄 Application Submitted!
             </SectionHeader>
-            <p className="text-gray-800 mb-8 text-base text-center max-w-md">
-              Your business account has been created successfully! You can now log in with your email and password.
+            <p className="text-gray-800 mb-6 text-base text-center max-w-md">
+              Your business application has been submitted successfully! Our verification team will review your documents.
             </p>
+            
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 w-full max-w-md">
+              <h4 className="font-semibold text-blue-800 mb-2">What happens next?</h4>
+              <ul className="text-sm text-blue-700 space-y-1">
+                <li>• Document verification (1-3 business days)</li>
+                <li>• Email notification once complete</li>
+                <li>• Full access upon approval</li>
+              </ul>
+            </div>
+            
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6 w-full max-w-md">
+              <p className="text-sm text-yellow-800 text-center">
+                <strong>Please wait 1-3 business days</strong> for verification. You will receive an email notification once the review is complete.
+              </p>
+            </div>
+            
             <Button
-              label="Back to Home"
-              onClick={() => (window.location.href = "/")}
+              label="Go to Login"
+              onClick={() => (window.location.href = "/login")}
               className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-2 rounded-full font-semibold shadow"
             />
           </Card>
@@ -256,56 +558,84 @@ export default function GetStartedSingle() {
                       <div className="grid gap-4">
                         <div>
                           <label className="block mb-1 text-sm text-gray-700 font-medium">Email</label>
-                          <Input ref={inputRef} name="email" value={form.email} onChange={handleChange} placeholder="Enter your email address" type="email" error={errors.email} />
+                          <div className="relative">
+                            <Input 
+                              ref={inputRef} 
+                              name="email" 
+                              value={form.email} 
+                              onChange={handleChange} 
+                              placeholder="Enter your email address" 
+                              type="email" 
+                              error={errors.email} 
+                            />
+                            {emailChecking && (
+                              <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                                <Loader size="sm" />
+                              </div>
+                            )}
+                          </div>
+                          {form.email && !emailChecking && emailAvailable !== null && (
+                            <p className={`text-xs mt-1 ${emailAvailable ? 'text-green-600' : 'text-red-500'}`}>
+                              {emailAvailable ? '✓ Email is available' : '✗ Email already exists'}
+                            </p>
+                          )}
                         </div>
                         <div>
                           <label className="block mb-1 text-sm text-gray-700 font-medium">Username</label>
-                          <Input name="username" value={form.username} onChange={handleChange} placeholder="Choose a username (3-20 characters)" type="text" error={errors.username} />
+                          <div className="relative">
+                            <Input 
+                              name="username" 
+                              value={form.username} 
+                              onChange={handleChange} 
+                              placeholder="Choose a username (3-20 characters)" 
+                              type="text" 
+                              error={errors.username} 
+                            />
+                            {usernameChecking && (
+                              <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                                <Loader size="sm" />
+                              </div>
+                            )}
+                          </div>
+                          {form.username && !usernameChecking && usernameAvailable !== null && (
+                            <p className={`text-xs mt-1 ${usernameAvailable ? 'text-green-600' : 'text-red-500'}`}>
+                              {usernameAvailable ? '✓ Username is available' : '✗ Username already exists'}
+                            </p>
+                          )}
                         </div>
                         <div>
                           <label className="block mb-1 text-sm text-gray-700 font-medium">Mobile Number</label>
-                          <Input name="mobile" value={form.mobile} onChange={handleChange} placeholder="09xxxxxxxxx" type="tel" maxLength={15} error={errors.mobile} />
+                          <Input 
+                            name="mobile" 
+                            value={form.mobile} 
+                            onChange={handleChange} 
+                            placeholder="09xxxxxxxxx" 
+                            type="tel" 
+                            maxLength={15} 
+                            error={errors.mobile} 
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            Enter your Philippine mobile number (e.g., 09123456789)
+                          </p>
                         </div>
                         <div>
                           <label className="block mb-1 text-sm text-gray-700 font-medium">Password</label>
-                          <Input
-                            type={showPassword ? "text" : "password"}
+                          <PasswordInput
                             name="password"
                             value={form.password}
                             onChange={handleChange}
                             placeholder="Enter password"
                             error={errors.password}
-                            suffix={
-                              <Button
-                                type="button"
-                                onClick={() => setShowPassword((v) => !v)}
-                                isPasswordToggle
-                                showPassword={showPassword}
-                                aria-label={showPassword ? "Hide password" : "Show password"}
-                                tabIndex={-1}
-                              />
-                            }
                           />
                         </div>
                         <div>
                           <label className="block mb-1 text-sm text-gray-700 font-medium">Password Confirmation</label>
-                          <Input
-                            type={showConfirm ? "text" : "password"}
+                          <PasswordInput
                             name="confirmPassword"
                             value={form.confirmPassword}
                             onChange={handleChange}
                             placeholder="Re-enter password"
                             error={errors.confirmPassword}
-                            suffix={
-                              <Button
-                                type="button"
-                                onClick={() => setShowConfirm((v) => !v)}
-                                isPasswordToggle
-                                showPassword={showConfirm}
-                                aria-label={showConfirm ? "Hide password" : "Show password"}
-                                tabIndex={-1}
-                              />
-                            }
                           />
                         </div>
                       </div>
@@ -413,22 +743,213 @@ export default function GetStartedSingle() {
                           <Input name="businessName" value={form.businessName} onChange={handleChange} placeholder="Enter business name" error={errors.businessName} />
                         </div>
                         <div>
+                          <label className="block mb-1 text-sm text-gray-700 font-medium">
+                            Business Email <span className="text-red-500">*</span>
+                          </label>
+                          <div className="space-y-2">
+                            <div className="flex items-center space-x-2">
+                              <input
+                                type="checkbox"
+                                id="useAdminEmail"
+                                name="useAdminEmail"
+                                checked={form.useAdminEmail}
+                                onChange={handleChange}
+                                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                              />
+                              <label htmlFor="useAdminEmail" className="text-sm text-gray-700">
+                                Use admin email ({form.email})
+                              </label>
+                            </div>
+                            {!form.useAdminEmail && (
+                              <Input
+                                name="businessEmail"
+                                value={form.businessEmail}
+                                onChange={handleChange}
+                                placeholder="Enter business email"
+                                type="email"
+                                error={errors.businessEmail}
+                              />
+                            )}
+                          </div>
+                        </div>
+
+                        <div>
                           <label className="block mb-1 text-sm text-gray-700 font-medium">Business Type <span className="text-red-500">*</span></label>
-                          <Input name="businessType" value={form.businessType} onChange={handleChange} placeholder="e.g. Retail, Services, etc." error={errors.businessType} />
+                          <select
+                            name="businessType"
+                            value={form.businessType}
+                            onChange={handleChange}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            style={{ borderColor: errors.businessType ? '#ef4444' : '' }}
+                          >
+                            <option value="">Select business type</option>
+                            <option value="Retail">Retail</option>
+                            <option value="Restaurant">Restaurant</option>
+                            <option value="Grocery Store">Grocery Store</option>
+                            <option value="Pharmacy">Pharmacy</option>
+                            <option value="Clothing Store">Clothing Store</option>
+                            <option value="Electronics Store">Electronics Store</option>
+                            <option value="Hardware Store">Hardware Store</option>
+                            <option value="Beauty Salon">Beauty Salon</option>
+                            <option value="Bakery">Bakery</option>
+                            <option value="Bookstore">Bookstore</option>
+                            <option value="Pet Store">Pet Store</option>
+                            <option value="Convenience Store">Convenience Store</option>
+                            <option value="Services">Services</option>
+                            <option value="Others">Others</option>
+                          </select>
+                          {errors.businessType && (
+                            <p className="text-red-500 text-sm mt-1">{errors.businessType}</p>
+                          )}
+                          {form.businessType === "Others" && (
+                            <div className="mt-2">
+                              <Input
+                                name="customBusinessType"
+                                value={form.customBusinessType}
+                                onChange={handleChange}
+                                placeholder="Please specify your business type"
+                                error={errors.customBusinessType}
+                              />
+                            </div>
+                          )}
                         </div>
                         <div>
                           <div className="mb-2 mt-4 font-semibold text-gray-900">Business Location</div>
-                          <label className="block mb-1 text-sm text-gray-700 font-medium">Country <span className="text-red-500">*</span></label>
-                          <Input name="country" value={form.country} onChange={handleChange} placeholder="Enter country" error={errors.country} />
+                          <div className="space-y-4">
+                            <div>
+                              <label className="block mb-1 text-sm text-gray-700 font-medium">Country</label>
+                              <input
+                                type="text"
+                                value="Philippines"
+                                disabled
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100 text-gray-600 cursor-not-allowed"
+                              />
+                            </div>
+                            
+                            <div>
+                              <label className="block mb-1 text-sm text-gray-700 font-medium">Province <span className="text-red-500">*</span></label>
+                              <select
+                                name="province"
+                                value={form.province}
+                                onChange={handleChange}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                style={{ borderColor: errors.province ? '#ef4444' : '' }}
+                              >
+                                <option value="">Select province</option>
+                                {getProvinces().map((province) => (
+                                  <option key={province} value={province}>
+                                    {province}
+                                  </option>
+                                ))}
+                              </select>
+                              {errors.province && (
+                                <p className="text-red-500 text-sm mt-1">{errors.province}</p>
+                              )}
+                            </div>
+
+                            <div>
+                              <label className="block mb-1 text-sm text-gray-700 font-medium">City/Municipality <span className="text-red-500">*</span></label>
+                              <select
+                                name="city"
+                                value={form.city}
+                                onChange={handleChange}
+                                disabled={!form.province}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                                style={{ borderColor: errors.city ? '#ef4444' : '' }}
+                              >
+                                <option value="">Select city/municipality</option>
+                                {form.province && getCities(form.province).map((city) => (
+                                  <option key={city} value={city}>
+                                    {city}
+                                  </option>
+                                ))}
+                              </select>
+                              {errors.city && (
+                                <p className="text-red-500 text-sm mt-1">{errors.city}</p>
+                              )}
+                            </div>
+
+                            <div>
+                              <label className="block mb-1 text-sm text-gray-700 font-medium">Barangay <span className="text-red-500">*</span></label>
+                              <select
+                                name="barangay"
+                                value={form.barangay}
+                                onChange={handleChange}
+                                disabled={!form.city}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                                style={{ borderColor: errors.barangay ? '#ef4444' : '' }}
+                              >
+                                <option value="">Select barangay</option>
+                                {form.city && getBarangays(form.province, form.city).map((barangay) => (
+                                  <option key={barangay} value={barangay}>
+                                    {barangay}
+                                  </option>
+                                ))}
+                              </select>
+                              {errors.barangay && (
+                                <p className="text-red-500 text-sm mt-1">{errors.barangay}</p>
+                              )}
+                            </div>
+                          </div>
                         </div>
                         <div>
-                          <label className="block mb-1 text-sm text-gray-700 font-medium">Business Address <span className="text-red-500">*</span></label>
-                          <Input name="businessAddress" value={form.businessAddress} onChange={handleChange} placeholder="Enter business address" error={errors.businessAddress} />
+                          <label className="block mb-1 text-sm text-gray-700 font-medium">Street No./Purok/House Number <span className="text-red-500">*</span></label>
+                          <Input name="houseNumber" value={form.houseNumber} onChange={handleChange} placeholder="Enter street no., purok, or house number" error={errors.houseNumber} />
                         </div>
-                        <div>
-                          <label className="block mb-1 text-sm text-gray-700 font-medium">House no./ Street Name / Landmark (optional)</label>
-                          <Input name="houseNumber" value={form.houseNumber} onChange={handleChange} placeholder="Enter house no., street, or landmark (optional)" />
-                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {step === 3 && (
+                    <div className="space-y-4">
+                      <SectionHeader className="text-2xl md:text-3xl text-gray-900">Business Documents</SectionHeader>
+                      <p className="text-gray-700 mb-4 text-sm">
+                        Please upload your business documents for verification. These documents help us verify that your business is legitimate and complies with Philippine regulations.
+                      </p>
+
+                      <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                        <h4 className="font-semibold text-red-800 mb-2">⚠️ REQUIRED Documents (Must Upload All 3):</h4>
+                        <ul className="text-sm text-red-700 space-y-1 font-medium">
+                          <li>✅ Business Registration Certificate (DTI/SEC/CDA)</li>
+                          <li>✅ Mayor's Permit / Business Permit</li>
+                          <li>✅ BIR Certificate of Registration (Form 2303)</li>
+                        </ul>
+                      </div>
+
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                        <h4 className="font-semibold text-blue-800 mb-2">Additional Documents (Optional):</h4>
+                        <ul className="text-sm text-blue-700 space-y-1">
+                          <li>• Barangay Business Clearance</li>
+                          <li>• Fire Safety Inspection Certificate (if applicable)</li>
+                          <li>• Sanitary Permit (for food businesses)</li>
+                        </ul>
+                      </div>
+
+                      <DocumentUploadSection 
+                        documents={form.documents}
+                        documentTypes={form.documentTypes}
+                        onDocumentsChange={(documents, types) => {
+                          setForm(f => ({ ...f, documents, documentTypes: types }));
+                        }}
+                        error={errors.documents || errors.documentTypes}
+                      />
+
+                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-4">
+                        <p className="text-sm text-yellow-800">
+                          <strong>Important:</strong> After submitting your documents, please allow 1-3 business days for verification. 
+                          You will receive an email notification once the review is complete.
+                        </p>
+                      </div>
+
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-4 mt-4">
+                        <h4 className="font-semibold text-green-800 mb-2">💡 Tips for Better Verification:</h4>
+                        <ul className="text-sm text-green-700 space-y-1">
+                          <li>• Ensure documents are clear and readable</li>
+                          <li>• Use good lighting when taking photos</li>
+                          <li>• Upload high-quality scans (PDF preferred)</li>
+                          <li>• Make sure all text is legible</li>
+                          <li>• Documents should be current and valid</li>
+                        </ul>
                       </div>
                     </div>
                   )}
@@ -443,8 +964,14 @@ export default function GetStartedSingle() {
                 )}
                 {step < steps.length - 1 ? (
                   step !== 1 ? (
-                    <Button onClick={handleNext} disabled={loading} variant="primary" className="w-32">
-                      {loading ? <Loader size="sm" /> : "Next"}
+                    <Button 
+                      onClick={handleNext} 
+                      disabled={loading || (step === 0 && (emailChecking || usernameChecking || emailAvailable === false || usernameAvailable === false))} 
+                      variant="primary" 
+                      className="w-32"
+                    >
+                      {loading ? <Loader size="sm" /> : 
+                       (step === 0 && (emailChecking || usernameChecking)) ? "Checking..." : "Next"}
                     </Button>
                   ) : (
                     <div className="text-sm text-gray-700">{loading ? "Verifying..." : "Enter the 4-character code"}</div>
@@ -452,7 +979,7 @@ export default function GetStartedSingle() {
                 ) : (
                   <Button onClick={handleFinish} disabled={loading} variant="primary" className="w-32">
                     {loading ? <Loader className="mr-2" size="sm" /> : null}
-                    {loading ? "Finishing..." : "Finish"}
+                    {loading ? "Processing..." : "Submit Application"}
                   </Button>
                 )}
               </div>
@@ -463,5 +990,3 @@ export default function GetStartedSingle() {
     </Background>
   );
 }
-
-

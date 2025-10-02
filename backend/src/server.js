@@ -25,6 +25,8 @@ const otpRoutes = require('./routes/otpRoutes');
 const statsRoutes = require('./routes/statsRoutes');
 const logsRoutes = require('./routes/logsRoutes');
 const paymentsRoutes = require('./routes/paymentsRoutes');
+const superAdminRoutes = require('./routes/superAdminRoutes');
+const documentRoutes = require('./routes/documentRoutes');
 
 const app = express();
 
@@ -51,6 +53,8 @@ app.use('/api/otp', otpRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/logs', logsRoutes);
 app.use('/api/payments', paymentsRoutes);
+app.use('/api/superadmin', superAdminRoutes);
+app.use('/api/documents', documentRoutes);
 
 const port = config.PORT || 5000;
 

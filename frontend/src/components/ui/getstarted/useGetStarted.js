@@ -5,6 +5,7 @@ export default function useGetStarted() {
     { label: "Account Info", icon: "👤" },
     { label: "OTP Verification", icon: "🔒" },
     { label: "Business Details", icon: "🏢" },
+    { label: "Document Upload", icon: "📄" },
   ];
 
   const [step, setStep] = useState(0);
@@ -12,18 +13,24 @@ export default function useGetStarted() {
     email: "",
     username: "",
     businessName: "",
+    businessEmail: "",
+    useAdminEmail: false,
     businessType: "",
-    country: "",
+    customBusinessType: "",
+    country: "Philippines",
+    province: "",
+    city: "",
+    barangay: "",
     businessAddress: "",
     houseNumber: "",
     mobile: "",
     password: "",
     confirmPassword: "",
     otp: "",
+    documents: [],
+    documentTypes: [],
   });
   const [errors, setErrors] = useState({});
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [otpVerified, setOtpVerified] = useState(false);
@@ -34,8 +41,23 @@ export default function useGetStarted() {
   }, [step]);
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setForm((f) => ({ ...f, [name]: value }));
+    const { name, value, type, checked } = e.target;
+    
+    if (name === 'useAdminEmail') {
+      setForm((f) => ({ 
+        ...f, 
+        [name]: checked,
+        businessEmail: checked ? f.email : ""
+      }));
+    } else if (name === 'province') {
+      // Reset city and barangay when province changes
+      setForm((f) => ({ ...f, province: value, city: "", barangay: "" }));
+    } else if (name === 'city') {
+      // Reset barangay when city changes
+      setForm((f) => ({ ...f, city: value, barangay: "" }));
+    } else {
+      setForm((f) => ({ ...f, [name]: type === 'checkbox' ? checked : value }));
+    }
   };
 
   const validateStep = () => {
@@ -62,9 +84,24 @@ export default function useGetStarted() {
     }
     if (step === 2) {
       if (!form.businessName) err.businessName = "Required";
+      if (!form.useAdminEmail && !form.businessEmail) err.businessEmail = "Required";
+      else if (!form.useAdminEmail && form.businessEmail && !/^\S+@\S+\.\S+$/.test(form.businessEmail))
+        err.businessEmail = "Invalid email address";
       if (!form.businessType) err.businessType = "Required";
-      if (!form.country) err.country = "Required";
+      if (form.businessType === "Others" && !form.customBusinessType) 
+        err.customBusinessType = "Please specify business type";
+      if (!form.province) err.province = "Required";
+      if (!form.city) err.city = "Required";
+      if (!form.barangay) err.barangay = "Required";
       if (!form.businessAddress) err.businessAddress = "Required";
+    }
+    if (step === 3) {
+      if (!form.documents || form.documents.length === 0) {
+        err.documents = "Please upload at least one business document";
+      }
+      if (form.documents.length !== form.documentTypes.length) {
+        err.documentTypes = "Please specify document type for each uploaded file";
+      }
     }
     setErrors(err);
     return Object.keys(err).length === 0;
@@ -103,6 +140,7 @@ export default function useGetStarted() {
     if (!validateStep()) return;
     setLoading(true);
     try {
+      // First register the business
       const businessResponse = await fetch(
         "http://localhost:5000/api/business/register",
         {
@@ -112,8 +150,12 @@ export default function useGetStarted() {
             email: form.email,
             username: form.username,
             businessName: form.businessName,
-            businessType: form.businessType,
+            businessEmail: form.useAdminEmail ? form.email : form.businessEmail,
+            businessType: form.businessType === "Others" ? form.customBusinessType : form.businessType,
             country: form.country,
+            province: form.province,
+            city: form.city,
+            barangay: form.barangay,
             businessAddress: form.businessAddress,
             houseNumber: form.houseNumber,
             mobile: form.mobile,
@@ -121,11 +163,36 @@ export default function useGetStarted() {
           }),
         }
       );
+      
       if (businessResponse.ok) {
         const result = await businessResponse.json();
-        localStorage.setItem("token", result.token);
-        localStorage.setItem("user", JSON.stringify(result.user));
-        setSuccess(true);
+        const businessId = result.business.id;
+        
+        // Upload documents
+        const formData = new FormData();
+        formData.append('business_id', businessId);
+        formData.append('document_types', JSON.stringify(form.documentTypes));
+        
+        form.documents.forEach((file) => {
+          formData.append('documents', file);
+        });
+
+        const documentResponse = await fetch(
+          "http://localhost:5000/api/documents/upload",
+          {
+            method: "POST",
+            body: formData,
+          }
+        );
+
+        if (documentResponse.ok) {
+          localStorage.setItem("token", result.token);
+          localStorage.setItem("user", JSON.stringify(result.user));
+          setSuccess(true);
+        } else {
+          const docError = await documentResponse.json();
+          setErrors({ general: docError.error || "Document upload failed" });
+        }
       } else {
         const error = await businessResponse.json();
         setErrors({ general: error.error || "Registration failed" });
@@ -147,10 +214,6 @@ export default function useGetStarted() {
     setForm,
     errors,
     setErrors,
-    showPassword,
-    setShowPassword,
-    showConfirm,
-    setShowConfirm,
     loading,
     setLoading,
     success,

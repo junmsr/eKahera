@@ -2,9 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Background from '../components/layout/Background';
 import Button from '../components/common/Button';
+import DocumentVerification from '../components/ui/SuperAdmin/DocumentVerification';
 import { api } from '../lib/api';
 
 function SuperAdmin() {
+  const [activeTab, setActiveTab] = useState('verification');
+  
   // temporary single sample store
   const sampleStores = [
     { id: 'sample-1', name: 'ABC Store', email: 'abc@store.com', status: 'approved' },
@@ -99,22 +102,69 @@ function SuperAdmin() {
               </span>
             </div>
             <div className="flex items-center gap-4">
-              <button className="p-3 rounded-full bg-white/60 shadow">
+              <button 
+                onClick={() => navigate('/profile')}
+                className="p-3 rounded-full bg-white/60 shadow hover:bg-white/80 transition-colors"
+                title="Profile"
+              >
                 <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                  <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </button>
+              <button 
+                onClick={() => {
+                  localStorage.removeItem('auth_token');
+                  localStorage.removeItem('auth_user');
+                  navigate('/');
+                }}
+                className="p-3 rounded-full bg-white/60 shadow hover:bg-red-100 transition-colors"
+                title="Logout"
+              >
+                <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                 </svg>
               </button>
             </div>
           </header>
 
           <main className="flex-1 p-8 overflow-auto">
-            <div className="bg-white border border-blue-100 rounded-2xl p-6 shadow-lg">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-blue-700">Stores</h2>
-                <div className="flex items-center gap-2">
-                  <Button label="Refresh" variant="secondary" onClick={fetchStores} />
-                </div>
+            {/* Tab Navigation */}
+            <div className="bg-white border border-blue-100 rounded-2xl mb-6 shadow-lg">
+              <div className="flex border-b border-blue-100">
+                <button
+                  onClick={() => setActiveTab('verification')}
+                  className={`px-6 py-4 font-medium ${
+                    activeTab === 'verification'
+                      ? 'text-blue-700 border-b-2 border-blue-700'
+                      : 'text-gray-600 hover:text-blue-700'
+                  }`}
+                >
+                  Document Verification
+                </button>
+                <button
+                  onClick={() => setActiveTab('stores')}
+                  className={`px-6 py-4 font-medium ${
+                    activeTab === 'stores'
+                      ? 'text-blue-700 border-b-2 border-blue-700'
+                      : 'text-gray-600 hover:text-blue-700'
+                  }`}
+                >
+                  Store Management
+                </button>
               </div>
+            </div>
+
+            {/* Tab Content */}
+            {activeTab === 'verification' ? (
+              <DocumentVerification />
+            ) : (
+              <div className="bg-white border border-blue-100 rounded-2xl p-6 shadow-lg">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-bold text-blue-700">Stores</h2>
+                  <div className="flex items-center gap-2">
+                    <Button label="Refresh" variant="secondary" onClick={fetchStores} />
+                  </div>
+                </div>
 
               {error && <div className="text-red-600 text-sm mb-4">{error}</div>}
               {loading ? (
@@ -188,7 +238,8 @@ function SuperAdmin() {
                   </table>
                 </div>
               )}
-            </div>
+              </div>
+            )}
           </main>
         </div>
       </div>
