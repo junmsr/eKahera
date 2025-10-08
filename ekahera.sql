@@ -2,12 +2,12 @@
 -- PostgreSQL database dump
 --
 
-\restrict 5SUXXI1FSoxp44aMJDIr3Jmr2AgAHdgsSCmn7BThfEWZf8Zg6YWHXljDyeZNgyB
+\restrict pmaPC1cSX6iqhat98wM2hOOww2g2jDm91mNqeElJqpxdWSHjRSfgT2suvYeQGgE
 
 -- Dumped from database version 17.6
 -- Dumped by pg_dump version 17.6
 
--- Started on 2025-10-02 21:15:35
+-- Started on 2025-10-08 20:34:27
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -930,6 +930,7 @@ COPY public.business (business_id, business_name, business_type, country, busine
 7	gebgab store	Grocery Store	Philippines	qwer	qwerqwer	09123456789	gebaga4613@etenx.com	2025-10-02 20:52:47.514667+08	2025-10-02 20:52:47.514667+08	pending	\N	\N	\N	\N	\N
 8	asdf	Pharmacy	Philippines	fdas	afds	09123456789	fohoyec905@gddcorp.com	2025-10-02 21:00:33.617414+08	2025-10-02 21:00:33.617414+08	pending	\N	\N	\N	\N	\N
 9	rexy store	Grocery Store	Philippines	qwer	qwer	09123456789	rexer25110@etenx.com	2025-10-02 21:13:24.554416+08	2025-10-02 21:13:24.554416+08	pending	\N	\N	\N	\N	\N
+10	weyht	Grocery Store	Philippines	Mamplasan, Biñan, Laguna	qwerty	09123456789	weyiw81461@gddcorp.com	2025-10-02 21:30:21.821419+08	2025-10-02 21:30:21.821419+08	pending	\N	\N	\N	\N	\N
 \.
 
 
@@ -943,6 +944,9 @@ COPY public.business_documents (document_id, business_id, document_type, documen
 1	9	Mayor's Permit	Archive_with_tar_guide.pdf	C:\\Users\\Darius\\Desktop\\Capstone\\eKahera\\backend\\uploads\\documents\\9-1759410804904-49851121.pdf	477995	application/pdf	pending	\N	\N	\N	2025-10-02 21:13:25.039472+08	2025-10-02 21:13:25.039472+08
 2	9	BIR Certificate of Registration	L09.pdf	C:\\Users\\Darius\\Desktop\\Capstone\\eKahera\\backend\\uploads\\documents\\9-1759410804942-426546376.pdf	832910	application/pdf	pending	\N	\N	\N	2025-10-02 21:13:25.097869+08	2025-10-02 21:13:25.097869+08
 3	9	Business Registration Certificate	objectives of eKahera.pdf	C:\\Users\\Darius\\Desktop\\Capstone\\eKahera\\backend\\uploads\\documents\\9-1759410804993-814359628.pdf	54213	application/pdf	pending	\N	\N	\N	2025-10-02 21:13:25.121288+08	2025-10-02 21:13:25.121288+08
+4	10	Business Registration Certificate	L09.pdf	C:\\Users\\Darius\\Desktop\\Capstone\\eKahera\\backend\\uploads\\documents\\10-1759411822143-424940251.pdf	832910	application/pdf	pending	\N	\N	\N	2025-10-02 21:30:22.202344+08	2025-10-02 21:30:22.202344+08
+5	10	Mayor's Permit	Archive_with_tar_guide.pdf	C:\\Users\\Darius\\Desktop\\Capstone\\eKahera\\backend\\uploads\\documents\\10-1759411822157-962878518.pdf	477995	application/pdf	pending	\N	\N	\N	2025-10-02 21:30:22.205666+08	2025-10-02 21:30:22.205666+08
+6	10	BIR Certificate of Registration	objectives of eKahera.pdf	C:\\Users\\Darius\\Desktop\\Capstone\\eKahera\\backend\\uploads\\documents\\10-1759411822163-496727454.pdf	54213	application/pdf	pending	\N	\N	\N	2025-10-02 21:30:22.206685+08	2025-10-02 21:30:22.206685+08
 \.
 
 
@@ -1177,6 +1181,7 @@ COPY public.users (user_id, user_type_id, username, contact_number, email, passw
 14	2	gab	09123456789	gebaga4613@etenx.com	$2b$10$sZgfMAPdBpNKBFN3DEgqLOIVoFFr8GJSjCzUOv9Ltctc22tIUJqBC	business_owner	2025-10-02 20:52:47.514667+08	2025-10-02 20:52:47.514667+08	7
 15	2	asdf	09123456789	fohoyec905@gddcorp.com	$2b$10$bxCvBzy1GZz67nHl3BUUEu65o8K7LImMqzzm8MLFTNm7oDgpBKSWW	business_owner	2025-10-02 21:00:33.617414+08	2025-10-02 21:00:33.617414+08	8
 16	2	rex	09123456789	rexer25110@etenx.com	$2b$10$RwMRkIbkt.5ZL3/Lo7s2guUZG3.j7dU42qSxqHnerikfVJgqyhRIq	business_owner	2025-10-02 21:13:24.554416+08	2025-10-02 21:13:24.554416+08	9
+17	2	wey	09123456789	weyiw81461@gddcorp.com	$2b$10$4fMS4YIrGkei3tJQjKRrR.AUMGKUWRlJBpjkqmhYltJzmkI.taTWm	business_owner	2025-10-02 21:30:21.821419+08	2025-10-02 21:30:21.821419+08	10
 \.
 
 
@@ -1186,7 +1191,7 @@ COPY public.users (user_id, user_type_id, username, contact_number, email, passw
 -- Name: business_business_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.business_business_id_seq', 9, true);
+SELECT pg_catalog.setval('public.business_business_id_seq', 10, true);
 
 
 --
@@ -1195,7 +1200,7 @@ SELECT pg_catalog.setval('public.business_business_id_seq', 9, true);
 -- Name: business_documents_document_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.business_documents_document_id_seq', 3, true);
+SELECT pg_catalog.setval('public.business_documents_document_id_seq', 6, true);
 
 
 --
@@ -1312,7 +1317,7 @@ SELECT pg_catalog.setval('public.user_type_user_type_id_seq', 4, true);
 -- Name: users_user_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.users_user_id_seq', 16, true);
+SELECT pg_catalog.setval('public.users_user_id_seq', 17, true);
 
 
 --
@@ -1911,11 +1916,11 @@ ALTER TABLE ONLY public.products
     ADD CONSTRAINT products_product_category_id_fkey FOREIGN KEY (product_category_id) REFERENCES public.product_categories(product_category_id);
 
 
--- Completed on 2025-10-02 21:15:36
+-- Completed on 2025-10-08 20:34:28
 
 --
 -- PostgreSQL database dump complete
 --
 
-\unrestrict 5SUXXI1FSoxp44aMJDIr3Jmr2AgAHdgsSCmn7BThfEWZf8Zg6YWHXljDyeZNgyB
+\unrestrict pmaPC1cSX6iqhat98wM2hOOww2g2jDm91mNqeElJqpxdWSHjRSfgT2suvYeQGgE
 
