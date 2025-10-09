@@ -17,6 +17,51 @@ export default function GetStartedForm({ hook }) {
     handleChange,
   } = hook;
 
+  // Renders existing uploaded docs if user has a business and token
+  function ExistingDocumentsNotice() {
+    const [existing, setExisting] = React.useState([]);
+    const [verification, setVerification] = React.useState(null);
+    React.useEffect(() => {
+      const token = localStorage.getItem('token');
+      let businessId = null;
+      try {
+        const storedUser = JSON.parse(localStorage.getItem('user') || 'null');
+        businessId = storedUser?.businessId || storedUser?.business_id || null;
+      } catch {}
+      if (!token || !businessId) return;
+      (async () => {
+        try {
+          const resp = await fetch(`http://localhost:5000/api/documents/business/${businessId}`, {
+            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
+          });
+          if (resp.ok) {
+            const data = await resp.json();
+            setExisting(Array.isArray(data.documents) ? data.documents : []);
+            setVerification(data.verification || null);
+          }
+        } catch {}
+      })();
+    }, []);
+
+    if (!existing || existing.length === 0) return null;
+    return (
+      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+        <h4 className="font-semibold text-gray-800 mb-2">Previously Uploaded</h4>
+        <ul className="space-y-2 text-sm">
+          {existing.map((d) => (
+            <li key={d.document_id} className="flex justify-between">
+              <span className="text-gray-700">{d.document_type} — {d.document_name}</span>
+              <span className="text-gray-500">{(d.mime_type || '').split('/').pop()}</span>
+            </li>
+          ))}
+        </ul>
+        {verification?.verification_status && (
+          <p className="text-xs text-gray-600 mt-2">Verification status: {verification.verification_status}</p>
+        )}
+      </div>
+    );
+  }
+
   switch (step) {
     case 0:
       return (
@@ -394,6 +439,9 @@ export default function GetStartedForm({ hook }) {
               }}
               error={errors.documents || errors.documentTypes}
             />
+
+            {/* Existing uploaded files (if resuming) */}
+            <ExistingDocumentsNotice />
           </div>
 
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-4">
@@ -413,10 +461,57 @@ export default function GetStartedForm({ hook }) {
 // Document Upload Component
 function DocumentUploadSection({ documents, documentTypes, onDocumentsChange, error }) {
   const handleFileChange = (e) => {
-    const files = Array.from(e.target.files);
-    const newDocuments = [...documents, ...files];
-    const newTypes = [...documentTypes, ...files.map(() => '')];
-    onDocumentsChange(newDocuments, newTypes);
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    const allowedTypes = [
+      'application/pdf',
+      'image/jpeg',
+      'image/jpg',
+      'image/png',
+      'image/gif'
+    ];
+
+    const maxSizeBytes = 10 * 1024 * 1024; // 10MB
+
+    // Prevent duplicates by name+size+lastModified
+    const existingKey = (f) => `${f.name}|${f.size}|${f.lastModified || ''}`;
+    const existingKeys = new Set(documents.map(existingKey));
+
+    const accepted = [];
+    const rejected = [];
+
+    files.forEach((file) => {
+      const key = existingKey(file);
+      if (existingKeys.has(key)) {
+        rejected.push({ file, reason: 'Duplicate file' });
+        return;
+      }
+      if (!allowedTypes.includes(file.type)) {
+        rejected.push({ file, reason: 'Unsupported type' });
+        return;
+      }
+      if (file.size > maxSizeBytes) {
+        rejected.push({ file, reason: 'File too large (>10MB)' });
+        return;
+      }
+      accepted.push(file);
+      existingKeys.add(key);
+    });
+
+    if (accepted.length > 0) {
+      const newDocuments = [...documents, ...accepted];
+      const newTypes = [...documentTypes, ...accepted.map(() => '')];
+      onDocumentsChange(newDocuments, newTypes);
+    }
+
+    if (rejected.length > 0) {
+      const reasons = rejected
+        .map(({ file, reason }) => `${file.name}: ${reason}`)
+        .join(', ');
+      // eslint-disable-next-line no-alert
+      alert(`Some files were not added — ${reasons}`);
+    }
   };
 
   const handleTypeChange = (index, type) => {
@@ -466,7 +561,10 @@ function DocumentUploadSection({ documents, documentTypes, onDocumentsChange, er
             <div key={index} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
               <div className="flex-1">
                 <p className="text-sm font-medium text-gray-900">{file.name}</p>
-                <p className="text-xs text-gray-500">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                <p className="text-xs text-gray-500">
+                  {(file.size / 1024 / 1024).toFixed(2)} MB • {(file.type || 'unknown')}
+                  {file.name?.includes('.') ? ` • .${file.name.split('.').pop()?.toLowerCase()}` : ''}
+                </p>
               </div>
               <div className="flex-1">
                 <select

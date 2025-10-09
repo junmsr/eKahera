@@ -61,10 +61,55 @@ function Stepper({ steps, currentStep }) {
 // Document Upload Component
 function DocumentUploadSection({ documents, documentTypes, onDocumentsChange, error }) {
   const handleFileChange = (e) => {
-    const files = Array.from(e.target.files);
-    const newDocuments = [...documents, ...files];
-    const newTypes = [...documentTypes, ...files.map(() => '')];
-    onDocumentsChange(newDocuments, newTypes);
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    const allowedTypes = [
+      'application/pdf',
+      'image/jpeg',
+      'image/jpg',
+      'image/png',
+      'image/gif'
+    ];
+    const maxSizeBytes = 10 * 1024 * 1024; // 10MB
+
+    const existingKey = (f) => `${f.name}|${f.size}|${f.lastModified || ''}`;
+    const existingKeys = new Set(documents.map(existingKey));
+
+    const accepted = [];
+    const rejected = [];
+
+    files.forEach((file) => {
+      const key = existingKey(file);
+      if (existingKeys.has(key)) {
+        rejected.push({ file, reason: 'Duplicate file' });
+        return;
+      }
+      if (!allowedTypes.includes(file.type)) {
+        rejected.push({ file, reason: 'Unsupported type' });
+        return;
+      }
+      if (file.size > maxSizeBytes) {
+        rejected.push({ file, reason: 'File too large (>10MB)' });
+        return;
+      }
+      accepted.push(file);
+      existingKeys.add(key);
+    });
+
+    if (accepted.length > 0) {
+      const newDocuments = [...documents, ...accepted];
+      const newTypes = [...documentTypes, ...accepted.map(() => '')];
+      onDocumentsChange(newDocuments, newTypes);
+    }
+
+    if (rejected.length > 0) {
+      const reasons = rejected
+        .map(({ file, reason }) => `${file.name}: ${reason}`)
+        .join(', ');
+      // eslint-disable-next-line no-alert
+      alert(`Some files were not added — ${reasons}`);
+    }
   };
 
   const handleTypeChange = (index, type) => {
@@ -114,7 +159,10 @@ function DocumentUploadSection({ documents, documentTypes, onDocumentsChange, er
             <div key={index} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
               <div className="flex-1">
                 <p className="text-sm font-medium text-gray-900">{file.name}</p>
-                <p className="text-xs text-gray-500">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                <p className="text-xs text-gray-500">
+                  {(file.size / 1024 / 1024).toFixed(2)} MB • {(file.type || 'unknown')}
+                  {file.name?.includes('.') ? ` • .${file.name.split('.').pop()?.toLowerCase()}` : ''}
+                </p>
               </div>
               <div className="flex-1">
                 <select
@@ -185,6 +233,8 @@ export default function GetStartedSingle() {
   const [usernameAvailable, setUsernameAvailable] = useState(null);
   const [emailAvailable, setEmailAvailable] = useState(null);
   const inputRef = useRef(null);
+  const [existingDocuments, setExistingDocuments] = useState([]);
+  const [existingVerification, setExistingVerification] = useState(null);
 
   useEffect(() => {
     if (inputRef.current) inputRef.current.focus();
@@ -308,13 +358,12 @@ export default function GetStartedSingle() {
       if (!form.houseNumber) err.houseNumber = "Required";
     }
     if (step === 3) {
-      // Required document types
-      const requiredDocTypes = [
-        'Business Registration Certificate',
-        'Mayor\'s Permit',
-        'BIR Certificate of Registration'
+      const required = [
+        { label: 'Business Registration Certificate', tests: [/\b(business\s*registration\s*(certificate|cert)?|dti|sec|cda)\b/i] },
+        { label: "Mayor's Permit", tests: [/\b(mayor'?s?\s*permit)\b/i, /\b(business\s*permit)\b/i] },
+        { label: 'BIR Certificate of Registration', tests: [/\b(bir\s*certificate\s*of\s*registration)\b/i, /\b(form\s*2303)\b/i] }
       ];
-      
+
       if (!form.documents || form.documents.length === 0) {
         err.documents = "Please upload at least one business document";
       }
@@ -324,17 +373,28 @@ export default function GetStartedSingle() {
       if (form.documentTypes.some(type => !type)) {
         err.documentTypes = "Please specify document type for each uploaded file";
       }
-      
-      // Check if all required document types are uploaded
-      const uploadedTypes = form.documentTypes.filter(type => type && type.trim() !== '');
-      const missingRequiredTypes = requiredDocTypes.filter(requiredType => 
-        !uploadedTypes.some(uploadedType => 
-          uploadedType.includes(requiredType.replace(/'/g, ''))
-        )
-      );
-      
-      if (missingRequiredTypes.length > 0) {
-        err.documents = `Missing required documents: ${missingRequiredTypes.join(', ')}. Please upload all three required documents.`;
+
+      const canon = (s) => String(s || '')
+        .normalize('NFKD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/gi, ' ')
+        .trim();
+
+      const uploadedCanon = (form.documentTypes || [])
+        .filter(Boolean)
+        .map(canon);
+
+      const matched = new Map(required.map(r => [r.label, false]));
+      uploadedCanon.forEach(u => {
+        required.forEach(r => {
+          if (matched.get(r.label)) return;
+          if (r.tests.some(re => re.test(u))) matched.set(r.label, true);
+        });
+      });
+
+      const missing = required.filter(r => !matched.get(r.label)).map(r => r.label);
+      if (missing.length > 0) {
+        err.documents = `Missing required documents: ${missing.join(', ')}. Please upload all three required documents.`;
       }
     }
     setErrors(err);
@@ -380,6 +440,39 @@ export default function GetStartedSingle() {
   };
 
   const handleBack = () => setStep((s) => Math.max(0, s - 1));
+
+  const fetchExistingDocuments = async (bizId, token) => {
+    try {
+      if (!bizId || !token) return;
+      const resp = await fetch(`http://localhost:5000/api/documents/business/${bizId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        setExistingDocuments(Array.isArray(data.documents) ? data.documents : []);
+        setExistingVerification(data.verification || null);
+      }
+    } catch (e) {
+      // best effort; ignore
+    }
+  };
+
+  // If user already has a token and businessId (resume flow), fetch existing documents when on document step
+  useEffect(() => {
+    if (step !== 3) return;
+    const token = localStorage.getItem('token');
+    let businessId = null;
+    try {
+      const storedUser = JSON.parse(localStorage.getItem('user') || 'null');
+      businessId = storedUser?.businessId || storedUser?.business_id || null;
+    } catch {}
+    if (token && businessId) {
+      fetchExistingDocuments(businessId, token);
+    }
+  }, [step]);
 
   const handleFinish = async () => {
     if (!validateStep()) return;
@@ -427,6 +520,18 @@ export default function GetStartedSingle() {
         return;
       }
       
+      // Persist token and user immediately so user can resume and we can fetch existing docs
+      if (result.token) {
+        try {
+          const userToStore = { ...(result.user || {}), businessId };
+          localStorage.setItem('token', result.token);
+          localStorage.setItem('user', JSON.stringify(userToStore));
+        } catch {}
+      }
+
+      // Preload existing documents, if any (resume scenarios)
+      await fetchExistingDocuments(businessId, result.token);
+
       // Step 2: Upload documents
       setErrors({ general: "Uploading your business documents..." });
       const formData = new FormData();
@@ -447,8 +552,6 @@ export default function GetStartedSingle() {
 
       if (documentResponse.ok) {
         const docResult = await documentResponse.json();
-        localStorage.setItem("token", result.token);
-        localStorage.setItem("user", JSON.stringify(result.user));
         setErrors({}); // Clear loading message
         
         // Check if all required documents were uploaded
@@ -951,6 +1054,23 @@ export default function GetStartedSingle() {
                           <li>• Documents should be current and valid</li>
                         </ul>
                       </div>
+
+                  {existingDocuments && existingDocuments.length > 0 && (
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mt-4">
+                      <h4 className="font-semibold text-gray-800 mb-2">Previously Uploaded</h4>
+                      <ul className="space-y-2 text-sm">
+                        {existingDocuments.map((d) => (
+                          <li key={d.document_id} className="flex justify-between">
+                            <span className="text-gray-700">{d.document_type} — {d.document_name}</span>
+                            <span className="text-gray-500">{(d.mime_type || '').split('/').pop()}</span>
+                          </li>
+                        ))}
+                      </ul>
+                      {existingVerification?.verification_status && (
+                        <p className="text-xs text-gray-600 mt-2">Verification status: {existingVerification.verification_status}</p>
+                      )}
+                    </div>
+                  )}
                     </div>
                   )}
                 </div>

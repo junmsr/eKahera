@@ -5,11 +5,35 @@ const fs = require('fs');
 const path = require('path');
 const { sendApplicationSubmittedNotification } = require('../utils/emailService');
 
-// Required document types for business verification
+// Required document types for business verification (canonical labels)
 const REQUIRED_DOCUMENT_TYPES = [
   'Business Registration Certificate',
-  'Mayor\'s Permit', 
+  'Mayor\'s Permit',
   'BIR Certificate of Registration'
+];
+
+// Acceptable matchers for each required document (handles synonyms and punctuation variants)
+const REQUIRED_DOCUMENT_MATCHERS = [
+  {
+    label: 'Business Registration Certificate',
+    tests: [
+      /\b(business\s*registration\s*(certificate|cert)?|dti|sec|cda)\b/i
+    ]
+  },
+  {
+    label: 'Mayor\'s Permit',
+    tests: [
+      /\b(mayor'?s?\s*permit)\b/i,
+      /\b(business\s*permit)\b/i
+    ]
+  },
+  {
+    label: 'BIR Certificate of Registration',
+    tests: [
+      /\b(bir\s*certificate\s*of\s*registration)\b/i,
+      /\b(form\s*2303)\b/i
+    ]
+  }
 ];
 
 // Check if business has uploaded all required documents
@@ -23,41 +47,36 @@ const hasRequiredDocuments = async (businessId) => {
     const result = await pool.query(documentsQuery, [businessId]);
     const uploadedTypes = result.rows.map(row => row.document_type);
     
-    console.log('Document validation check:');
-    console.log('Required types:', REQUIRED_DOCUMENT_TYPES);
-    console.log('Uploaded types:', uploadedTypes);
-    
-    // Check if all required document types are present
-    const hasAllRequired = REQUIRED_DOCUMENT_TYPES.every(requiredType => {
-      const found = uploadedTypes.some(uploadedType => {
-        // Normalize both strings by removing apostrophes and spaces for comparison
-        const normalizedRequired = requiredType.replace(/['\s]/g, '').toLowerCase();
-        const normalizedUploaded = uploadedType.replace(/['\s]/g, '').toLowerCase();
-        const matches = normalizedUploaded.includes(normalizedRequired) || normalizedRequired.includes(normalizedUploaded);
-        
-        console.log(`Checking "${requiredType}" vs "${uploadedType}"`);
-        console.log(`Normalized: "${normalizedRequired}" vs "${normalizedUploaded}" = ${matches}`);
-        
-        return matches;
+    // Canonicalize uploaded labels
+    const canonicalize = (s) => String(s || '')
+      .normalize('NFKD')
+      .replace(/[\u0300-\u036f]/g, '') // remove diacritics
+      .replace(/[^a-z0-9]+/gi, ' ') // non-alphanum to space
+      .trim();
+
+    const matchedByLabel = new Map();
+    REQUIRED_DOCUMENT_MATCHERS.forEach(({ label }) => matchedByLabel.set(label, false));
+
+    uploadedTypes.forEach(uploadedRaw => {
+      const uploadedCanon = canonicalize(uploadedRaw);
+      REQUIRED_DOCUMENT_MATCHERS.forEach(({ label, tests }) => {
+        if (matchedByLabel.get(label)) return;
+        const isMatch = tests.some((re) => re.test(uploadedCanon));
+        if (isMatch) matchedByLabel.set(label, true);
       });
-      
-      console.log(`Required document "${requiredType}" found: ${found}`);
-      return found;
     });
-    
+
+    const hasAllRequired = Array.from(matchedByLabel.values()).every(Boolean);
+    const missingTypes = REQUIRED_DOCUMENT_MATCHERS
+      .filter(({ label }) => !matchedByLabel.get(label))
+      .map(({ label }) => label);
+
     return {
       hasAllRequired,
       uploadedCount: uploadedTypes.length,
       requiredCount: REQUIRED_DOCUMENT_TYPES.length,
       uploadedTypes,
-      missingTypes: REQUIRED_DOCUMENT_TYPES.filter(requiredType => 
-        !uploadedTypes.some(uploadedType => {
-          // Normalize both strings by removing apostrophes and spaces for comparison
-          const normalizedRequired = requiredType.replace(/['\s]/g, '').toLowerCase();
-          const normalizedUploaded = uploadedType.replace(/['\s]/g, '').toLowerCase();
-          return normalizedUploaded.includes(normalizedRequired) || normalizedRequired.includes(normalizedUploaded);
-        })
-      )
+      missingTypes
     };
   } catch (error) {
     console.error('Error checking required documents:', error);
