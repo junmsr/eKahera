@@ -33,9 +33,9 @@ function GetStartedLayout({
       <div className="flex justify-center px-4 py-10">
         <Card className="w-full max-w-5xl overflow-hidden rounded-3xl p-0">
           <div className="md:flex">
-            <aside className="hidden md:flex md:w-5/12 items-center justify-center bg-gradient-to-br from-blue-600 to-blue-400 p-10 relative">
+            <aside className="hidden md:flex md:w-5/12 items-center justify-center bg-gradient-to-br from-blue-500 via-blue-300 to-blue-500 p-10 relative">
               <div className="text-center max-w-xs">
-                <div className="absolute top-8 left-10">
+                <div className="absolute top-55 left-10">
                   <Logo size={48} />
                 </div>
                 <h3 className="text-white text-2xl font-bold mb-4">
@@ -49,26 +49,11 @@ function GetStartedLayout({
 
             <main className="w-full md:w-7/12 p-6 md:p-10 flex flex-col">
               <div className="mb-6">
-                <div className="flex items-center justify-between">
-                  <div className="w-2/3">
+                <div className="flex items-center justify-center">
+                  <div className="w-full max-w-md">
                     <ProgressBar percent={progress} />
                   </div>
-                  <div className="text-right">
-                    <div className="text-xs text-gray-600">
-                      {steps.map((s, i) => (
-                        <span
-                          key={s.label}
-                          className={`inline-block ml-3 ${
-                            i === step ? "text-gray-900 font-semibold" : ""
-                          }`}
-                        >
-                          {s.label}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
                 </div>
-
                 <div className="mt-4">
                   <Stepper steps={steps} currentStep={step} />
                 </div>

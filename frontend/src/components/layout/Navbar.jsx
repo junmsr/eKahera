@@ -38,7 +38,7 @@ function Navbar({ className = "" }) {
   return (
     <nav
       id="main-navbar"
-      className={`site-navbar-base flex items-center justify-between px-4 py-2 bg-white border border-blue-100 shadow-xl rounded-full fixed top-4 left-1/2 transform -translate-x-1/2 w-[95vw] max-w-2xl z-50 ${className}`}
+      className={`site-navbar-base flex items-center justify-between px-4 py-2 bg-white border border-blue-100 shadow-xl rounded-full fixed top-0 left-1/2 transform -translate-x-1/2 w-[95vw] max-w-2xl z-50 ${className}`}
       style={{ fontFamily: "Inter, sans-serif", fontWeight: 500 }}
       role="navigation"
       aria-label="Primary"

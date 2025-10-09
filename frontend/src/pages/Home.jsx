@@ -1,12 +1,10 @@
 import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import PageLayout from "../components/layout/PageLayout";
-import Navbar from "../components/layout/Navbar";
 import HomeHero from "../components/ui/home/HomeHero";
 import Features from "../components/ui/home/Features";
 import AboutUs from "../components/ui/home/AboutUs";
 import FAQ from "../components/ui/home/FAQ";
-import Footer from "../components/layout/Footer";
 import vector1 from "../assets/images/vector1.png";
 import vector2 from "../assets/images/vector2.png";
 import SectionWrapper from "../components/ui/home/SectionWrapper";
@@ -26,7 +24,7 @@ function Home() {
     const prevSmooth = doc.style.scrollBehavior;
     doc.style.scrollBehavior = "smooth";
     // offset for fixed navbar height
-    doc.style.scrollPaddingTop = "80px";
+    doc.style.scrollPaddingTop = "64px";
     return () => {
       doc.style.scrollBehavior = prevSmooth || "";
       doc.style.scrollPaddingTop = "";
@@ -36,11 +34,11 @@ function Home() {
   return (
     <PageLayout
       showNavbar={true}
-      showFooter={false}
+      showFooter={true}
       showHeader={false}
       navbarVariant="default"
       footerVariant="default"
-      className="overflow-x-hidden bg-white min-h-screen flex flex-col"
+      className="overflow-x-hidden bg-gray-50 min-h-screen flex flex-col"
     >
       <SkipLink />
 

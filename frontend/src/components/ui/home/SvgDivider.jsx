@@ -3,7 +3,7 @@ import React from "react";
 /**
  * Small centered svg divider used between About and FAQ.
  */
-function SvgDivider({ className = "my-16" }) {
+function SvgDivider({ className = "my-1" }) {
   return (
     <div className={`w-full flex items-center justify-center ${className}`}>
       <svg

@@ -1,60 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
-import Background from "../../../components/layout/Background";
-import Card from "../../../components/common/Card";
-import Logo from "../../../components/common/Logo";
 import SectionHeader from "../../../components/layout/SectionHeader";
 import Input from "../../../components/common/Input";
 import Button from "../../../components/common/Button";
 import Loader from "../../../components/common/Loader";
-
-// Inline ProgressBar
-function ProgressBar({ percent }) {
-  return (
-    <div
-      className="w-full h-3 bg-blue-100 rounded-full overflow-hidden shadow-inner"
-      aria-label="Progress bar"
-      aria-valuenow={percent}
-      aria-valuemin={0}
-      aria-valuemax={100}
-      role="progressbar"
-    >
-      <div
-        className="h-full bg-gradient-to-r from-blue-500 to-blue-400 transition-all duration-500 rounded-full shadow-md"
-        style={{ width: `${percent}%` }}
-      />
-    </div>
-  );
-}
-
-// Inline Stepper
-function Stepper({ steps, currentStep }) {
-  return (
-    <div className="flex items-center justify-center mb-10 gap-2 md:gap-4">
-      {steps.map((stepObj, idx) => (
-        <React.Fragment key={idx}>
-          <div
-            className={`w-10 h-10 flex items-center justify-center rounded-full border-2 font-bold text-lg transition-all duration-300 shadow-md focus:outline-none focus:ring-2 focus:ring-blue-400 
-              ${
-                idx < currentStep
-                  ? "bg-green-500 border-green-500 text-white"
-                  : idx === currentStep
-                  ? "bg-blue-600 border-blue-700 text-white ring-2 ring-blue-300"
-                  : "bg-blue-100 border-gray-300 text-gray-400"
-              }
-            `}
-            aria-current={idx === currentStep ? "step" : undefined}
-            tabIndex={0}
-          >
-            {stepObj.icon}
-          </div>
-          {idx < steps.length - 1 && (
-            <div className="w-8 h-1 bg-gray-300 mx-1 rounded hidden md:block" />
-          )}
-        </React.Fragment>
-      ))}
-    </div>
-  );
-}
+import GetStartedLayout from "./GetStartedLayout";
 
 export default function GetStartedSingle() {
   const steps = [
@@ -189,70 +138,44 @@ export default function GetStartedSingle() {
 
   if (success) {
     return (
-      <Background variant="gradientBlue" pattern="dots" overlay floatingElements>
+      <GetStartedLayout
+        step={step}
+        steps={steps}
+        progress={100}
+        loading={false}
+        errors={{}}
+      >
         <div className="flex flex-col items-center justify-center px-4 py-12">
-          <Card className="rounded-3xl p-10 flex flex-col items-center max-w-2xl">
-            <SectionHeader className="text-3xl md:text-4xl text-gray-900 mb-4">
-              🎉 Registration Complete!
-            </SectionHeader>
-            <p className="text-gray-800 mb-8 text-base text-center max-w-md">
-              Your business account has been created successfully! You can now log in with your email and password.
-            </p>
-            <Button
-              label="Back to Home"
-              onClick={() => (window.location.href = "/")}
-              className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-2 rounded-full font-semibold shadow"
-            />
-          </Card>
+          <SectionHeader className="text-3xl md:text-4xl text-gray-900 mb-4">
+            🎉 Registration Complete!
+          </SectionHeader>
+          <p className="text-gray-800 mb-8 text-base text-center max-w-md">
+            Your business account has been created successfully! You can now log in with your email and password.
+          </p>
+          <Button
+            label="Back to Home"
+            onClick={() => (window.location.href = "/")}
+            className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-2 rounded-full font-semibold shadow"
+          />
         </div>
-      </Background>
+      </GetStartedLayout>
     );
   }
 
   return (
-    <Background variant="gradientBlue" pattern="dots" overlay floatingElements>
-      <div className="flex justify-center px-4 py-10">
-        <Card className="w-full max-w-5xl overflow-hidden rounded-3xl p-0">
-          <div className="md:flex">
-            <aside className="hidden md:flex md:w-5/12 items-center justify-center bg-gradient-to-br from-blue-600 to-blue-400 p-10 relative">
-              <div className="text-center max-w-xs">
-                <div className="absolute top-8 left-10">
-                  <Logo size={48} />
-                </div>
-                <h3 className="text-white text-2xl font-bold mb-4">Welcome to your business journey!</h3>
-                <p className="text-white/85 text-sm">Let's set up your account in a few easy steps.</p>
-              </div>
-            </aside>
-            <main className="w-full md:w-7/12 p-6 md:p-10 flex flex-col">
-              <div className="mb-6">
-                <div className="flex items-center justify-between">
-                  <div className="w-2/3">
-                    <ProgressBar percent={progress} />
-                  </div>
-                  <div className="text-right">
-                    <div className="text-xs text-gray-600">
-                      {steps.map((s, i) => (
-                        <span key={s.label} className={`inline-block ml-3 ${i === step ? "text-gray-900 font-semibold" : ""}`}>
-                          {s.label}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-                <div className="mt-4">
-                  <Stepper steps={steps} currentStep={step} />
-                </div>
-              </div>
-
-              <div className="flex-1">
-                {errors?.general && (
-                  <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">{errors.general}</div>
-                )}
-
-                <div className="max-w-lg">
+    <GetStartedLayout
+      step={step}
+      steps={steps}
+      progress={progress}
+      loading={loading}
+      errors={errors}
+      onBack={handleBack}
+      onNext={handleNext}
+      onFinish={handleFinish}
+    >
+      <div className="max-w-lg">
                   {step === 0 && (
                     <div className="space-y-4">
-                      <SectionHeader className="text-2xl md:text-3xl text-gray-900">Account Info</SectionHeader>
                       <div className="grid gap-4">
                         <div>
                           <label className="block mb-1 text-sm text-gray-700 font-medium">Email</label>
@@ -314,7 +237,6 @@ export default function GetStartedSingle() {
 
                   {step === 1 && (
                     <div className="space-y-4">
-                      <SectionHeader className="text-2xl md:text-3xl text-gray-900">OTP Verification</SectionHeader>
                       <p className="text-gray-700 mb-2 text-sm">
                         We've sent a 4-character verification code to <strong>{form.email}</strong>.
                       </p>
@@ -406,7 +328,6 @@ export default function GetStartedSingle() {
 
                   {step === 2 && (
                     <div className="space-y-4">
-                      <SectionHeader className="text-2xl md:text-3xl text-gray-900">Business Details</SectionHeader>
                       <div className="grid gap-4">
                         <div>
                           <label className="block mb-1 text-sm text-gray-700 font-medium">Business Name <span className="text-red-500">*</span></label>
@@ -432,35 +353,8 @@ export default function GetStartedSingle() {
                       </div>
                     </div>
                   )}
-                </div>
-              </div>
-
-              <div className="mt-8 md:mt-6 flex items-center justify-between">
-                {step > 0 ? (
-                  <Button onClick={handleBack} variant="secondary" className="w-28">Back</Button>
-                ) : (
-                  <div />
-                )}
-                {step < steps.length - 1 ? (
-                  step !== 1 ? (
-                    <Button onClick={handleNext} disabled={loading} variant="primary" className="w-32">
-                      {loading ? <Loader size="sm" /> : "Next"}
-                    </Button>
-                  ) : (
-                    <div className="text-sm text-gray-700">{loading ? "Verifying..." : "Enter the 4-character code"}</div>
-                  )
-                ) : (
-                  <Button onClick={handleFinish} disabled={loading} variant="primary" className="w-32">
-                    {loading ? <Loader className="mr-2" size="sm" /> : null}
-                    {loading ? "Finishing..." : "Finish"}
-                  </Button>
-                )}
-              </div>
-            </main>
-          </div>
-        </Card>
       </div>
-    </Background>
+    </GetStartedLayout>
   );
 }
 
