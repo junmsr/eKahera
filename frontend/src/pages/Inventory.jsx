@@ -19,6 +19,7 @@ export default function InventoryPage() {
     sku: "",
     name: "",
     category: "",
+    customCategory: "",
     description: "",
     quantity: "",
     cost_price: "",
@@ -123,6 +124,7 @@ export default function InventoryPage() {
       sku: "",
       name: "",
       category: "",
+      customCategory: "",
       description: "",
       quantity: "",
       cost_price: "",
@@ -167,7 +169,7 @@ export default function InventoryPage() {
             cost_price: Number(productForm.cost_price) || 0,
             selling_price: Number(productForm.selling_price) || 0,
             sku: (productForm.sku || "").trim(),
-            category: (productForm.category || "").trim(),
+            category: productForm.category === "Others" ? (productForm.customCategory || "").trim() : (productForm.category || "").trim(),
             description: (productForm.description || "").trim(),
           }),
         });
@@ -181,7 +183,7 @@ export default function InventoryPage() {
           },
           body: JSON.stringify({
             product_category_id: null,
-            category: (productForm.category || "").trim(),
+            category: productForm.category === "Others" ? (productForm.customCategory || "").trim() : (productForm.category || "").trim(),
             product_name: (productForm.name || "").trim(),
             name: (productForm.name || "").trim(),
             description: (productForm.description || "").trim(),
@@ -344,7 +346,7 @@ export default function InventoryPage() {
         title={'Stock Entry'}
         variant="stock"
         editingProduct={null}
-        productForm={stockForm}
+        stockForm={stockForm}
         onChange={(e) =>
           setStockForm({ ...stockForm, [e.target.name]: e.target.value })
         }

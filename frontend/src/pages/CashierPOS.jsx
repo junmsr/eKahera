@@ -29,6 +29,17 @@ function CashierPOS() {
   const token = localStorage.getItem('auth_token');
   const user = JSON.parse(localStorage.getItem('auth_user') || '{}');
 
+  // Generate a provisional transaction number when this POS view opens
+  React.useEffect(() => {
+    if (!transactionNumber) {
+      const businessId = user?.businessId || user?.business_id || 'BIZ';
+      const timePart = new Date().toISOString().replace(/[-:T.Z]/g, '').slice(0, 14);
+      const randPart = Math.floor(1000 + Math.random() * 9000);
+      setTransactionNumber(`T-${businessId}-${timePart}-${randPart}`);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const addSkuToCart = async (skuValue, qty = 1) => {
     if (!skuValue || qty < 1) return;
     setError('');
@@ -37,15 +48,15 @@ function CashierPOS() {
         headers: { Authorization: `Bearer ${token}` },
       });
       const price = Number(product.selling_price || 0);
-      // If item already in cart, increment quantity
-      const existingIdx = cart.findIndex(i => i.product_id === product.product_id);
-      if (existingIdx >= 0) {
-        const next = [...cart];
-        next[existingIdx] = { ...next[existingIdx], quantity: next[existingIdx].quantity + qty };
-        setCart(next);
-      } else {
-        setCart([
-          ...cart,
+      setCart((prev) => {
+        const existingIdx = prev.findIndex(i => i.product_id === product.product_id);
+        if (existingIdx >= 0) {
+          const next = [...prev];
+          next[existingIdx] = { ...next[existingIdx], quantity: next[existingIdx].quantity + qty };
+          return next;
+        }
+        return [
+          ...prev,
           {
             product_id: product.product_id,
             sku: product.sku,
@@ -53,8 +64,8 @@ function CashierPOS() {
             quantity: qty,
             price,
           },
-        ]);
-      }
+        ];
+      });
       setSku('');
       setQuantity(1);
       setScannerPaused(false);
@@ -101,6 +112,11 @@ function CashierPOS() {
       if (resp?.transaction_number) setTransactionNumber(resp.transaction_number);
       if (resp?.transaction_id) setTransactionId(resp.transaction_id);
       setCart([]);
+      // Start a fresh provisional transaction number after successful checkout
+      const businessId = user?.businessId || user?.business_id || 'BIZ';
+      const timePart = new Date().toISOString().replace(/[-:T.Z]/g, '').slice(0, 14);
+      const randPart = Math.floor(1000 + Math.random() * 9000);
+      setTransactionNumber(`T-${businessId}-${timePart}-${randPart}`);
       setAppliedDiscount(null);
     } catch (err) {
       setError(err.message || 'Checkout failed');

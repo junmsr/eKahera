@@ -7,7 +7,7 @@ import CartTableCard from "../components/ui/POS/CartTableCard";
 import Button from "../components/common/Button";
 import NavAdmin from "../components/layout/Nav-Admin";
 import Background from "../components/layout/Background";
-import { api } from "../lib/api";
+import { api, createGcashCheckout } from "../lib/api";
 import PriceCheckModal from "../components/modals/PriceCheckModal";
 import DiscountModal from "../components/modals/DiscountModal";
 import CashLedgerModal from "../components/modals/CashLedgerModal";
@@ -43,6 +43,69 @@ function POS() {
 
   const token = localStorage.getItem("auth_token");
   const user = JSON.parse(localStorage.getItem("auth_user") || "{}");
+  const hasFinalizedRef = React.useRef(false);
+
+  // Generate a client-side provisional transaction number when POS opens
+  useEffect(() => {
+    if (!transactionNumber) {
+      const businessId = user?.businessId || user?.business_id || 'BIZ';
+      const timePart = new Date().toISOString().replace(/[-:T.Z]/g, '').slice(0, 14);
+      const randPart = Math.floor(1000 + Math.random() * 9000);
+      setTransactionNumber(`T-${businessId}-${timePart}-${randPart}`);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // On mount, if returned from PayMongo success/cancel, finalize or cleanup
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const status = params.get('payment');
+    const pending = localStorage.getItem('pending_gcash_cart');
+    if (status === 'success' && pending) {
+      try {
+        const parsed = JSON.parse(pending);
+        // finalize checkout using saved items
+        (async () => {
+          if (hasFinalizedRef.current) return;
+          const guardKey = 'gcash_finalize_done';
+          if (sessionStorage.getItem(guardKey) === '1') return;
+          hasFinalizedRef.current = true;
+          sessionStorage.setItem(guardKey, '1');
+          try {
+            setError("");
+            const body = {
+              items: parsed.items || [],
+              payment_type: 'gcash',
+              money_received: parsed.total || null,
+            };
+            const resp = await api("/api/sales/checkout", {
+              method: "POST",
+              headers: { Authorization: `Bearer ${token}` },
+              body: JSON.stringify(body),
+            });
+            if (resp?.transaction_number) setTransactionNumber(resp.transaction_number);
+            if (resp?.transaction_id) setTransactionId(resp.transaction_id);
+            setCart([]);
+          } catch (e) {
+            setError(e.message || 'Failed to record GCASH payment');
+          } finally {
+            localStorage.removeItem('pending_gcash_cart');
+            // remove query param
+            const url = new URL(window.location.href);
+            url.searchParams.delete('payment');
+            window.history.replaceState({}, '', url.toString());
+          }
+        })();
+      } catch (_) {
+        localStorage.removeItem('pending_gcash_cart');
+      }
+    } else if (status === 'cancel') {
+      localStorage.removeItem('pending_gcash_cart');
+      const url = new URL(window.location.href);
+      url.searchParams.delete('payment');
+      window.history.replaceState({}, '', url.toString());
+    }
+  }, []);
 
   const addSkuToCart = async (skuValue, qty = 1) => {
     if (!skuValue || qty < 1) return;
@@ -52,15 +115,29 @@ function POS() {
         headers: { Authorization: `Bearer ${token}` },
       });
       const price = Number(product.selling_price || 0);
-      // If item already in cart, increment quantity
-      const existingIdx = cart.findIndex((i) => i.product_id === product.product_id);
-      if (existingIdx >= 0) {
-        const next = [...cart];
-        next[existingIdx] = { ...next[existingIdx], quantity: next[existingIdx].quantity + qty };
-        setCart(next);
-      } else {
-        setCart([
-          ...cart,
+      const stockQty = Number(product.stock_quantity ?? 0);
+      if (stockQty <= 0) {
+        setError(`Stock for ${product.product_name} (SKU ${product.sku}) is 0.`);
+        return;
+      }
+      if (qty > stockQty) {
+        setError(`Insufficient stock. Available: ${stockQty}, requested: ${qty}.`);
+        return;
+      }
+      setCart((prev) => {
+        const existingIdx = prev.findIndex((i) => i.product_id === product.product_id);
+        if (existingIdx >= 0) {
+          const next = [...prev];
+          const newQty = next[existingIdx].quantity + qty;
+          if (newQty > stockQty) {
+            setError(`Insufficient stock. Available: ${stockQty}, requested: ${newQty}.`);
+            return prev;
+          }
+          next[existingIdx] = { ...next[existingIdx], quantity: newQty };
+          return next;
+        }
+        return [
+          ...prev,
           {
             product_id: product.product_id,
             sku: product.sku,
@@ -68,8 +145,8 @@ function POS() {
             quantity: qty,
             price,
           },
-        ]);
-      }
+        ];
+      });
       setSku("");
       setQuantity(1);
       setScannerPaused(false);
@@ -109,6 +186,11 @@ function POS() {
       if (resp?.transaction_number) setTransactionNumber(resp.transaction_number);
       if (resp?.transaction_id) setTransactionId(resp.transaction_id);
       setCart([]);
+      // Start a fresh provisional transaction number after successful checkout
+      const businessId = user?.businessId || user?.business_id || 'BIZ';
+      const timePart = new Date().toISOString().replace(/[-:T.Z]/g, '').slice(0, 14);
+      const randPart = Math.floor(1000 + Math.random() * 9000);
+      setTransactionNumber(`T-${businessId}-${timePart}-${randPart}`);
       // setAppliedDiscount(null); // if using discount
     } catch (err) {
       setError(err.message || "Checkout failed");
@@ -392,8 +474,33 @@ function POS() {
               if (method === "cash") {
                 setShowCashModal(true);
               } else {
-                // For GCASH/MAYA, proceed directly
-                handleCheckout(method);
+                if (method === "gcash") {
+                  (async () => {
+                    try {
+                      const successUrl = window.location.origin + "/pos?payment=success";
+                      const cancelUrl = window.location.origin + "/pos?payment=cancel";
+                      // persist cart to finalize after redirect back
+                      localStorage.setItem('pending_gcash_cart', JSON.stringify({
+                        items: cart.map((i) => ({ product_id: i.product_id, quantity: i.quantity })),
+                        total
+                      }));
+                      const { checkoutUrl } = await createGcashCheckout({
+                        amount: Number(total || 0),
+                        description: "POS Order",
+                        referenceNumber: transactionNumber || `POS-${Date.now()}`,
+                        cancelUrl,
+                        successUrl
+                      });
+                      window.location.href = checkoutUrl;
+                    } catch (e) {
+                      setError(e.message || "Failed to init GCash");
+                      localStorage.removeItem('pending_gcash_cart');
+                    }
+                  })();
+                } else {
+                  // For MAYA or others, fall back to existing checkout flow
+                  handleCheckout(method);
+                }
               }
             }}
           />

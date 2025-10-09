@@ -5,9 +5,11 @@ const {
   getBusinessProfile, 
   updateBusinessProfile,
   createCashier,
-  listCashiers
+  listCashiers,
+  checkDocumentStatus,
+  verifyBusinessAccess
 } = require('../controllers/businessController');
-const { authenticate, authorize } = require('../middleware/authMiddleware');
+const { authenticate, authorize, requireDocuments } = require('../middleware/authMiddleware');
 
 // Public route for business registration
 router.post('/register', registerBusiness);
@@ -16,8 +18,12 @@ router.post('/register', registerBusiness);
 router.get('/profile', authenticate, getBusinessProfile);
 router.put('/profile', authenticate, updateBusinessProfile);
 
-// Admin-only cashier management
-router.post('/cashiers', authenticate, authorize(['admin','superadmin']), createCashier);
-router.get('/cashiers', authenticate, authorize(['admin','superadmin']), listCashiers);
+// Admin-only cashier management (requires documents)
+router.post('/cashiers', authenticate, requireDocuments, authorize(['admin','superadmin']), createCashier);
+router.get('/cashiers', authenticate, requireDocuments, authorize(['admin','superadmin']), listCashiers);
+
+// Document validation routes
+router.get('/document-status', authenticate, checkDocumentStatus);
+router.get('/verify-access', authenticate, verifyBusinessAccess);
 
 module.exports = router;

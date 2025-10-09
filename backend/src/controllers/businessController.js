@@ -3,6 +3,92 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const fs = require('fs');
 const path = require('path');
+const { sendApplicationSubmittedNotification } = require('../utils/emailService');
+
+// Required document types for business verification (canonical labels)
+const REQUIRED_DOCUMENT_TYPES = [
+  'Business Registration Certificate',
+  'Mayor\'s Permit',
+  'BIR Certificate of Registration'
+];
+
+// Acceptable matchers for each required document (handles synonyms and punctuation variants)
+const REQUIRED_DOCUMENT_MATCHERS = [
+  {
+    label: 'Business Registration Certificate',
+    tests: [
+      /\b(business\s*registration\s*(certificate|cert)?|dti|sec|cda)\b/i
+    ]
+  },
+  {
+    label: 'Mayor\'s Permit',
+    tests: [
+      /\b(mayor'?s?\s*permit)\b/i,
+      /\b(business\s*permit)\b/i
+    ]
+  },
+  {
+    label: 'BIR Certificate of Registration',
+    tests: [
+      /\b(bir\s*certificate\s*of\s*registration)\b/i,
+      /\b(form\s*2303)\b/i
+    ]
+  }
+];
+
+// Check if business has uploaded all required documents
+const hasRequiredDocuments = async (businessId) => {
+  try {
+    const documentsQuery = `
+      SELECT DISTINCT document_type 
+      FROM business_documents 
+      WHERE business_id = $1
+    `;
+    const result = await pool.query(documentsQuery, [businessId]);
+    const uploadedTypes = result.rows.map(row => row.document_type);
+    
+    // Canonicalize uploaded labels
+    const canonicalize = (s) => String(s || '')
+      .normalize('NFKD')
+      .replace(/[\u0300-\u036f]/g, '') // remove diacritics
+      .replace(/[^a-z0-9]+/gi, ' ') // non-alphanum to space
+      .trim();
+
+    const matchedByLabel = new Map();
+    REQUIRED_DOCUMENT_MATCHERS.forEach(({ label }) => matchedByLabel.set(label, false));
+
+    uploadedTypes.forEach(uploadedRaw => {
+      const uploadedCanon = canonicalize(uploadedRaw);
+      REQUIRED_DOCUMENT_MATCHERS.forEach(({ label, tests }) => {
+        if (matchedByLabel.get(label)) return;
+        const isMatch = tests.some((re) => re.test(uploadedCanon));
+        if (isMatch) matchedByLabel.set(label, true);
+      });
+    });
+
+    const hasAllRequired = Array.from(matchedByLabel.values()).every(Boolean);
+    const missingTypes = REQUIRED_DOCUMENT_MATCHERS
+      .filter(({ label }) => !matchedByLabel.get(label))
+      .map(({ label }) => label);
+
+    return {
+      hasAllRequired,
+      uploadedCount: uploadedTypes.length,
+      requiredCount: REQUIRED_DOCUMENT_TYPES.length,
+      uploadedTypes,
+      missingTypes
+    };
+  } catch (error) {
+    console.error('Error checking required documents:', error);
+    return {
+      hasAllRequired: false,
+      uploadedCount: 0,
+      requiredCount: REQUIRED_DOCUMENT_TYPES.length,
+      uploadedTypes: [],
+      missingTypes: REQUIRED_DOCUMENT_TYPES
+    };
+  }
+};
 
 // Load config from config.env file
 const configPath = path.join(__dirname, '..', '..', 'config.env');
@@ -93,14 +179,16 @@ exports.registerBusiness = async (req, res) => {
     businessName,
     businessType,
     country,
-    businessAddress,
+    province,
+    city,
+    barangay,
     houseNumber,
     mobile,
     password
   } = req.body;
 
   // Validate required fields
-  if (!email || !username || !businessName || !businessType || !country || !businessAddress || !mobile || !password) {
+  if (!email || !username || !businessName || !businessType || !country || !province || !city || !barangay || !houseNumber || !mobile || !password) {
     return res.status(400).json({ 
       error: 'All required fields must be provided' 
     });
@@ -151,7 +239,8 @@ exports.registerBusiness = async (req, res) => {
 
     const userId = userResult.rows[0].user_id;
 
-    // Create business profile
+    // Create business profile - combine address components into business_address
+    const businessAddress = `${barangay}, ${city}, ${province}`;
     const businessResult = await client.query(`
       INSERT INTO business (
         business_name, business_type, country, 
@@ -180,7 +269,7 @@ exports.registerBusiness = async (req, res) => {
     await client.query('COMMIT');
 
     res.status(201).json({
-      message: 'Business registration successful',
+      message: 'Business account created successfully. Please upload required documents to complete verification.',
       user: {
         id: userId,
         username: username,
@@ -191,7 +280,9 @@ exports.registerBusiness = async (req, res) => {
         id: businessResult.rows[0].business_id,
         name: businessResult.rows[0].business_name
       },
-      token: token
+      token: token,
+      requiresDocuments: true,
+      documentsUploaded: false
     });
 
   } catch (error) {
@@ -293,3 +384,88 @@ exports.updateBusinessProfile = async (req, res) => {
     });
   }
 };
+
+// Check document upload status for a business
+exports.checkDocumentStatus = async (req, res) => {
+  try {
+    const businessId = req.user.businessId;
+    
+    if (!businessId) {
+      return res.status(400).json({ error: 'Business ID not found for user' });
+    }
+
+    const documentStatus = await hasRequiredDocuments(businessId);
+    
+    res.json({
+      businessId,
+      documentsRequired: REQUIRED_DOCUMENT_TYPES,
+      documentStatus
+    });
+
+  } catch (error) {
+    console.error('Check document status error:', error);
+    res.status(500).json({ 
+      error: 'Failed to check document status' 
+    });
+  }
+};
+
+// Verify business can access system (has required documents)
+exports.verifyBusinessAccess = async (req, res) => {
+  try {
+    const businessId = req.user.businessId;
+    
+    if (!businessId) {
+      return res.status(400).json({ 
+        error: 'Business ID not found for user',
+        canAccess: false 
+      });
+    }
+
+    const documentStatus = await hasRequiredDocuments(businessId);
+    
+    if (!documentStatus.hasAllRequired) {
+      return res.status(403).json({
+        error: 'Document verification required',
+        canAccess: false,
+        requiresDocuments: true,
+        documentStatus,
+        message: `Please upload the following required documents: ${documentStatus.missingTypes.join(', ')}`
+      });
+    }
+
+    // Check if business is approved
+    const businessQuery = `
+      SELECT verification_status 
+      FROM business 
+      WHERE business_id = $1
+    `;
+    const businessResult = await pool.query(businessQuery, [businessId]);
+    
+    if (businessResult.rows.length === 0) {
+      return res.status(404).json({ 
+        error: 'Business not found',
+        canAccess: false 
+      });
+    }
+
+    const verificationStatus = businessResult.rows[0].verification_status;
+    
+    res.json({
+      canAccess: true,
+      documentsUploaded: true,
+      verificationStatus,
+      documentStatus
+    });
+
+  } catch (error) {
+    console.error('Verify business access error:', error);
+    res.status(500).json({ 
+      error: 'Failed to verify business access',
+      canAccess: false 
+    });
+  }
+};
+
+// Export the hasRequiredDocuments function for use in other modules
+module.exports.hasRequiredDocuments = hasRequiredDocuments;

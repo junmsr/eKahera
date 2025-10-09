@@ -13,3 +13,10 @@ export async function api(path, options = {}) {
 export function authHeaders(token) {
   return token ? { Authorization: `Bearer ${token}` } : {};
 } 
+
+export async function createGcashCheckout({ amount, description, referenceNumber, cancelUrl, successUrl }) {
+  return await api('/payments/gcash/checkout', {
+    method: 'POST',
+    body: JSON.stringify({ amount, description, referenceNumber, cancelUrl, successUrl })
+  });
+}

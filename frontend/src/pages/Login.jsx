@@ -71,7 +71,9 @@ export default function Login() {
       const role = (user?.role || '').toLowerCase();
       if (role === 'cashier') {
         navigate('/cashier-pos');
-      } else if (role === 'admin' || role === 'superadmin') {
+      } else if (role === 'superadmin') {
+        navigate('/superadmin');
+      } else if (role === 'admin') {
         navigate('/dashboard');
       } else {
         navigate("/");
