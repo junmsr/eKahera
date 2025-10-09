@@ -620,466 +620,463 @@ export default function GetStartedSingle() {
   }
 
   return (
-    <GetStartedLayout
-      step={step}
-      steps={steps}
-      progress={progress}
-      loading={loading}
-      errors={errors}
-      onBack={handleBack}
-      onNext={handleNext}
-      onFinish={handleFinish}
-    >
-      <div className="max-w-lg">
-                  {step === 0 && (
-                    <div className="space-y-4">
-                      <div className="grid gap-4">
-                        <div>
-                          <label className="block mb-1 text-sm text-gray-700 font-medium">Email</label>
-                          <div className="relative">
-                            <Input 
-                              ref={inputRef} 
-                              name="email" 
-                              value={form.email} 
-                              onChange={handleChange} 
-                              placeholder="Enter your email address" 
-                              type="email" 
-                              error={errors.email} 
-                            />
-                            {emailChecking && (
-                              <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                                <Loader size="sm" />
-                              </div>
-                            )}
-                          </div>
-                          {form.email && !emailChecking && emailAvailable !== null && (
-                            <p className={`text-xs mt-1 ${emailAvailable ? 'text-green-600' : 'text-red-500'}`}>
-                              {emailAvailable ? '✓ Email is available' : '✗ Email already exists'}
-                            </p>
-                          )}
-                        </div>
-                        <div>
-                          <label className="block mb-1 text-sm text-gray-700 font-medium">Username</label>
-                          <div className="relative">
-                            <Input 
-                              name="username" 
-                              value={form.username} 
-                              onChange={handleChange} 
-                              placeholder="Choose a username (3-20 characters)" 
-                              type="text" 
-                              error={errors.username} 
-                            />
-                            {usernameChecking && (
-                              <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                                <Loader size="sm" />
-                              </div>
-                            )}
-                          </div>
-                          {form.username && !usernameChecking && usernameAvailable !== null && (
-                            <p className={`text-xs mt-1 ${usernameAvailable ? 'text-green-600' : 'text-red-500'}`}>
-                              {usernameAvailable ? '✓ Username is available' : '✗ Username already exists'}
-                            </p>
-                          )}
-                        </div>
-                        <div>
-                          <label className="block mb-1 text-sm text-gray-700 font-medium">Mobile Number</label>
-                          <Input 
-                            name="mobile" 
-                            value={form.mobile} 
-                            onChange={handleChange} 
-                            placeholder="09xxxxxxxxx" 
-                            type="tel" 
-                            maxLength={15} 
-                            error={errors.mobile} 
-                          />
-                          <p className="text-xs text-gray-500 mt-1">
-                            Enter your Philippine mobile number (e.g., 09123456789)
-                          </p>
-                        </div>
-                        <div>
-                          <label className="block mb-1 text-sm text-gray-700 font-medium">Password</label>
-                          <PasswordInput
-                            name="password"
-                            value={form.password}
-                            onChange={handleChange}
-                            placeholder="Enter password"
-                            error={errors.password}
-                          />
-                        </div>
-                        <div>
-                          <label className="block mb-1 text-sm text-gray-700 font-medium">Password Confirmation</label>
-                          <PasswordInput
-                            name="confirmPassword"
-                            value={form.confirmPassword}
-                            onChange={handleChange}
-                            placeholder="Re-enter password"
-                            error={errors.confirmPassword}
-                          />
-                        </div>
+    <>
+      <GetStartedLayout
+        step={step}
+        steps={steps}
+        progress={progress}
+        loading={loading}
+        errors={errors}
+        onBack={handleBack}
+        onNext={handleNext}
+        onFinish={handleFinish}
+      >
+        <div className="max-w-lg">
+          {step === 0 && (
+            <div className="space-y-4">
+              <div className="grid gap-4">
+                <div>
+                  <label className="block mb-1 text-sm text-gray-700 font-medium">Email</label>
+                  <div className="relative">
+                    <Input 
+                      ref={inputRef} 
+                      name="email" 
+                      value={form.email} 
+                      onChange={handleChange} 
+                      placeholder="Enter your email address" 
+                      type="email" 
+                      error={errors.email} 
+                    />
+                    {emailChecking && (
+                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                        <Loader size="sm" />
                       </div>
-                    </div>
+                    )}
+                  </div>
+                  {form.email && !emailChecking && emailAvailable !== null && (
+                    <p className={`text-xs mt-1 ${emailAvailable ? 'text-green-600' : 'text-red-500'}`}>
+                      {emailAvailable ? '✓ Email is available' : '✗ Email already exists'}
+                    </p>
                   )}
-
-                  {step === 1 && (
-                    <div className="space-y-4">
-                      <p className="text-gray-700 mb-2 text-sm">
-                        We've sent a 4-character verification code to <strong>{form.email}</strong>.
-                      </p>
-                      <div>
-                        <label className="block mb-1 text-sm text-gray-700 font-medium">Enter OTP</label>
-                        <Input
-                          ref={inputRef}
-                          name="otp"
-                          value={form.otp}
-                          onChange={async (e) => {
-                            const value = e.target.value.slice(0, 4);
-                            setForm((f) => ({ ...f, otp: value }));
-                            if (errors.otp) setErrors({ ...errors, otp: null });
-                            if (value.length === 4) {
-                              setLoading(true);
-                              try {
-                                const otpResponse = await fetch("http://localhost:5000/api/otp/verify", {
-                                  method: "POST",
-                                  headers: { "Content-Type": "application/json" },
-                                  body: JSON.stringify({ email: form.email, otp: value }),
-                                });
-                                if (otpResponse.ok) {
-                                  setOtpVerified(true);
-                                  setTimeout(() => {
-                                    setStep((s) => s + 1);
-                                    setOtpVerified(false);
-                                  }, 800);
-                                } else {
-                                  const error = await otpResponse.json();
-                                  setErrors({ otp: error.error || "OTP verification failed" });
-                                }
-                              } catch {
-                                setErrors({ otp: "Network error. Please try again." });
-                              } finally {
-                                setLoading(false);
-                              }
-                            }
-                          }}
-                          placeholder="Enter 4-character code (auto-verifies)"
-                          type="text"
-                          maxLength={4}
-                          error={errors.otp}
-                        />
-                        {loading && form.otp.length === 4 && (
-                          <div className="mt-2 text-gray-700 text-sm font-medium flex items-center">
-                            <Loader size="sm" className="mr-2" />
-                            Verifying OTP...
-                          </div>
-                        )}
-                        {otpVerified && (
-                          <div className="mt-2 text-green-600 text-sm font-medium flex items-center">
-                            <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20" aria-hidden>
-                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                            </svg>
-                            OTP verified successfully!
-                          </div>
-                        )}
+                </div>
+                <div>
+                  <label className="block mb-1 text-sm text-gray-700 font-medium">Username</label>
+                  <div className="relative">
+                    <Input 
+                      name="username" 
+                      value={form.username} 
+                      onChange={handleChange} 
+                      placeholder="Choose a username (3-20 characters)" 
+                      type="text" 
+                      error={errors.username} 
+                    />
+                    {usernameChecking && (
+                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                        <Loader size="sm" />
                       </div>
-                      <div className="text-center">
-                        <button
-                          type="button"
-                          onClick={async () => {
-                            setLoading(true);
-                            try {
-                              const response = await fetch("http://localhost:5000/api/otp/resend", {
-                                method: "POST",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({ email: form.email }),
-                              });
-                              if (response.ok) alert("New OTP sent successfully!");
-                              else {
-                                const error = await response.json();
-                                alert(error.error || "Failed to resend OTP");
-                              }
-                            } catch {
-                              alert("Network error. Please try again.");
-                            } finally {
-                              setLoading(false);
-                            }
-                          }}
-                          className="text-gray-700 hover:text-gray-900 text-sm underline"
-                          disabled={loading}
-                        >
-                          {loading ? "Sending..." : "Resend OTP"}
-                        </button>
-                      </div>
-                    </div>
+                    )}
+                  </div>
+                  {form.username && !usernameChecking && usernameAvailable !== null && (
+                    <p className={`text-xs mt-1 ${usernameAvailable ? 'text-green-600' : 'text-red-500'}`}>
+                      {usernameAvailable ? '✓ Username is available' : '✗ Username already exists'}
+                    </p>
                   )}
+                </div>
+                <div>
+                  <label className="block mb-1 text-sm text-gray-700 font-medium">Mobile Number</label>
+                  <Input 
+                    name="mobile" 
+                    value={form.mobile} 
+                    onChange={handleChange} 
+                    placeholder="09xxxxxxxxx" 
+                    type="tel" 
+                    maxLength={15} 
+                    error={errors.mobile} 
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Enter your Philippine mobile number (e.g., 09123456789)
+                  </p>
+                </div>
+                <div>
+                  <label className="block mb-1 text-sm text-gray-700 font-medium">Password</label>
+                  <PasswordInput
+                    name="password"
+                    value={form.password}
+                    onChange={handleChange}
+                    placeholder="Enter password"
+                    error={errors.password}
+                  />
+                </div>
+                <div>
+                  <label className="block mb-1 text-sm text-gray-700 font-medium">Password Confirmation</label>
+                  <PasswordInput
+                    name="confirmPassword"
+                    value={form.confirmPassword}
+                    onChange={handleChange}
+                    placeholder="Re-enter password"
+                    error={errors.confirmPassword}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
 
-                  {step === 2 && (
-                    <div className="space-y-4">
-                      <div className="grid gap-4">
-                        <div>
-                          <label className="block mb-1 text-sm text-gray-700 font-medium">Business Name <span className="text-red-500">*</span></label>
-                          <Input name="businessName" value={form.businessName} onChange={handleChange} placeholder="Enter business name" error={errors.businessName} />
-                        </div>
-                        <div>
-                          <label className="block mb-1 text-sm text-gray-700 font-medium">
-                            Business Email <span className="text-red-500">*</span>
-                          </label>
-                          <div className="space-y-2">
-                            <div className="flex items-center space-x-2">
-                              <input
-                                type="checkbox"
-                                id="useAdminEmail"
-                                name="useAdminEmail"
-                                checked={form.useAdminEmail}
-                                onChange={handleChange}
-                                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
-                              />
-                              <label htmlFor="useAdminEmail" className="text-sm text-gray-700">
-                                Use admin email ({form.email})
-                              </label>
-                            </div>
-                            {!form.useAdminEmail && (
-                              <Input
-                                name="businessEmail"
-                                value={form.businessEmail}
-                                onChange={handleChange}
-                                placeholder="Enter business email"
-                                type="email"
-                                error={errors.businessEmail}
-                              />
-                            )}
-                          </div>
-                        </div>
+          {step === 1 && (
+            <div className="space-y-4">
+              <p className="text-gray-700 mb-2 text-sm">
+                We've sent a 4-character verification code to <strong>{form.email}</strong>.
+              </p>
+              <div>
+                <label className="block mb-1 text-sm text-gray-700 font-medium">Enter OTP</label>
+                <Input
+                  ref={inputRef}
+                  name="otp"
+                  value={form.otp}
+                  onChange={async (e) => {
+                    const value = e.target.value.slice(0, 4);
+                    setForm((f) => ({ ...f, otp: value }));
+                    if (errors.otp) setErrors({ ...errors, otp: null });
+                    if (value.length === 4) {
+                      setLoading(true);
+                      try {
+                        const otpResponse = await fetch("http://localhost:5000/api/otp/verify", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ email: form.email, otp: value }),
+                        });
+                        if (otpResponse.ok) {
+                          setOtpVerified(true);
+                          setTimeout(() => {
+                            setStep((s) => s + 1);
+                            setOtpVerified(false);
+                          }, 800);
+                        } else {
+                          const error = await otpResponse.json();
+                          setErrors({ otp: error.error || "OTP verification failed" });
+                        }
+                      } catch {
+                        setErrors({ otp: "Network error. Please try again." });
+                      } finally {
+                        setLoading(false);
+                      }
+                    }
+                  }}
+                  placeholder="Enter 4-character code (auto-verifies)"
+                  type="text"
+                  maxLength={4}
+                  error={errors.otp}
+                />
+                {loading && form.otp.length === 4 && (
+                  <div className="mt-2 text-gray-700 text-sm font-medium flex items-center">
+                    <Loader size="sm" className="mr-2" />
+                    Verifying OTP...
+                  </div>
+                )}
+                {otpVerified && (
+                  <div className="mt-2 text-green-600 text-sm font-medium flex items-center">
+                    <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20" aria-hidden>
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                    OTP verified successfully!
+                  </div>
+                )}
+              </div>
+              <div className="text-center">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setLoading(true);
+                    try {
+                      const response = await fetch("http://localhost:5000/api/otp/resend", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ email: form.email }),
+                      });
+                      if (response.ok) alert("New OTP sent successfully!");
+                      else {
+                        const error = await response.json();
+                        alert(error.error || "Failed to resend OTP");
+                      }
+                    } catch {
+                      alert("Network error. Please try again.");
+                    } finally {
+                      setLoading(false);
+                    }
+                  }}
+                  className="text-gray-700 hover:text-gray-900 text-sm underline"
+                  disabled={loading}
+                >
+                  {loading ? "Sending..." : "Resend OTP"}
+                </button>
+              </div>
+            </div>
+          )}
 
-                        <div>
-                          <label className="block mb-1 text-sm text-gray-700 font-medium">Business Type <span className="text-red-500">*</span></label>
-                          <select
-                            name="businessType"
-                            value={form.businessType}
-                            onChange={handleChange}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                            style={{ borderColor: errors.businessType ? '#ef4444' : '' }}
-                          >
-                            <option value="">Select business type</option>
-                            <option value="Retail">Retail</option>
-                            <option value="Restaurant">Restaurant</option>
-                            <option value="Grocery Store">Grocery Store</option>
-                            <option value="Pharmacy">Pharmacy</option>
-                            <option value="Clothing Store">Clothing Store</option>
-                            <option value="Electronics Store">Electronics Store</option>
-                            <option value="Hardware Store">Hardware Store</option>
-                            <option value="Beauty Salon">Beauty Salon</option>
-                            <option value="Bakery">Bakery</option>
-                            <option value="Bookstore">Bookstore</option>
-                            <option value="Pet Store">Pet Store</option>
-                            <option value="Convenience Store">Convenience Store</option>
-                            <option value="Services">Services</option>
-                            <option value="Others">Others</option>
-                          </select>
-                          {errors.businessType && (
-                            <p className="text-red-500 text-sm mt-1">{errors.businessType}</p>
-                          )}
-                          {form.businessType === "Others" && (
-                            <div className="mt-2">
-                              <Input
-                                name="customBusinessType"
-                                value={form.customBusinessType}
-                                onChange={handleChange}
-                                placeholder="Please specify your business type"
-                                error={errors.customBusinessType}
-                              />
-                            </div>
-                          )}
-                        </div>
-                        <div>
-                          <div className="mb-2 mt-4 font-semibold text-gray-900">Business Location</div>
-                          <div className="space-y-4">
-                            <div>
-                              <label className="block mb-1 text-sm text-gray-700 font-medium">Country</label>
-                              <input
-                                type="text"
-                                value="Philippines"
-                                disabled
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100 text-gray-600 cursor-not-allowed"
-                              />
-                            </div>
-                            
-                            <div>
-                              <label className="block mb-1 text-sm text-gray-700 font-medium">Province <span className="text-red-500">*</span></label>
-                              <select
-                                name="province"
-                                value={form.province}
-                                onChange={handleChange}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                style={{ borderColor: errors.province ? '#ef4444' : '' }}
-                              >
-                                <option value="">Select province</option>
-                                {getProvinces().map((province) => (
-                                  <option key={province} value={province}>
-                                    {province}
-                                  </option>
-                                ))}
-                              </select>
-                              {errors.province && (
-                                <p className="text-red-500 text-sm mt-1">{errors.province}</p>
-                              )}
-                            </div>
-
-                            <div>
-                              <label className="block mb-1 text-sm text-gray-700 font-medium">City/Municipality <span className="text-red-500">*</span></label>
-                              <select
-                                name="city"
-                                value={form.city}
-                                onChange={handleChange}
-                                disabled={!form.province}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
-                                style={{ borderColor: errors.city ? '#ef4444' : '' }}
-                              >
-                                <option value="">Select city/municipality</option>
-                                {form.province && getCities(form.province).map((city) => (
-                                  <option key={city} value={city}>
-                                    {city}
-                                  </option>
-                                ))}
-                              </select>
-                              {errors.city && (
-                                <p className="text-red-500 text-sm mt-1">{errors.city}</p>
-                              )}
-                            </div>
-
-                            <div>
-                              <label className="block mb-1 text-sm text-gray-700 font-medium">Barangay <span className="text-red-500">*</span></label>
-                              <select
-                                name="barangay"
-                                value={form.barangay}
-                                onChange={handleChange}
-                                disabled={!form.city}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
-                                style={{ borderColor: errors.barangay ? '#ef4444' : '' }}
-                              >
-                                <option value="">Select barangay</option>
-                                {form.city && getBarangays(form.province, form.city).map((barangay) => (
-                                  <option key={barangay} value={barangay}>
-                                    {barangay}
-                                  </option>
-                                ))}
-                              </select>
-                              {errors.barangay && (
-                                <p className="text-red-500 text-sm mt-1">{errors.barangay}</p>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                        <div>
-                          <label className="block mb-1 text-sm text-gray-700 font-medium">Street No./Purok/House Number <span className="text-red-500">*</span></label>
-                          <Input name="houseNumber" value={form.houseNumber} onChange={handleChange} placeholder="Enter street no., purok, or house number" error={errors.houseNumber} />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {step === 3 && (
-                    <div className="space-y-4">
-                      <SectionHeader className="text-2xl md:text-3xl text-gray-900">Business Documents</SectionHeader>
-                      <p className="text-gray-700 mb-4 text-sm">
-                        Please upload your business documents for verification. These documents help us verify that your business is legitimate and complies with Philippine regulations.
-                      </p>
-
-                      <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
-                        <h4 className="font-semibold text-red-800 mb-2">⚠️ REQUIRED Documents (Must Upload All 3):</h4>
-                        <ul className="text-sm text-red-700 space-y-1 font-medium">
-                          <li>✅ Business Registration Certificate (DTI/SEC/CDA)</li>
-                          <li>✅ Mayor's Permit / Business Permit</li>
-                          <li>✅ BIR Certificate of Registration (Form 2303)</li>
-                        </ul>
-                      </div>
-
-                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                        <h4 className="font-semibold text-blue-800 mb-2">Additional Documents (Optional):</h4>
-                        <ul className="text-sm text-blue-700 space-y-1">
-                          <li>• Barangay Business Clearance</li>
-                          <li>• Fire Safety Inspection Certificate (if applicable)</li>
-                          <li>• Sanitary Permit (for food businesses)</li>
-                        </ul>
-                      </div>
-
-                      <DocumentUploadSection 
-                        documents={form.documents}
-                        documentTypes={form.documentTypes}
-                        onDocumentsChange={(documents, types) => {
-                          setForm(f => ({ ...f, documents, documentTypes: types }));
-                        }}
-                        error={errors.documents || errors.documentTypes}
+          {step === 2 && (
+            <div className="space-y-4">
+              <div className="grid gap-4">
+                <div>
+                  <label className="block mb-1 text-sm text-gray-700 font-medium">Business Name <span className="text-red-500">*</span></label>
+                  <Input name="businessName" value={form.businessName} onChange={handleChange} placeholder="Enter business name" error={errors.businessName} />
+                </div>
+                <div>
+                  <label className="block mb-1 text-sm text-gray-700 font-medium">
+                    Business Email <span className="text-red-500">*</span>
+                  </label>
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="useAdminEmail"
+                        name="useAdminEmail"
+                        checked={form.useAdminEmail}
+                        onChange={handleChange}
+                        className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
                       />
-
-                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-4">
-                        <p className="text-sm text-yellow-800">
-                          <strong>Important:</strong> After submitting your documents, please allow 1-3 business days for verification. 
-                          You will receive an email notification once the review is complete.
-                        </p>
-                      </div>
-
-                      <div className="bg-green-50 border border-green-200 rounded-lg p-4 mt-4">
-                        <h4 className="font-semibold text-green-800 mb-2">💡 Tips for Better Verification:</h4>
-                        <ul className="text-sm text-green-700 space-y-1">
-                          <li>• Ensure documents are clear and readable</li>
-                          <li>• Use good lighting when taking photos</li>
-                          <li>• Upload high-quality scans (PDF preferred)</li>
-                          <li>• Make sure all text is legible</li>
-                          <li>• Documents should be current and valid</li>
-                        </ul>
-                      </div>
-
-                  {existingDocuments && existingDocuments.length > 0 && (
-                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mt-4">
-                      <h4 className="font-semibold text-gray-800 mb-2">Previously Uploaded</h4>
-                      <ul className="space-y-2 text-sm">
-                        {existingDocuments.map((d) => (
-                          <li key={d.document_id} className="flex justify-between">
-                            <span className="text-gray-700">{d.document_type} — {d.document_name}</span>
-                            <span className="text-gray-500">{(d.mime_type || '').split('/').pop()}</span>
-                          </li>
-                        ))}
-                      </ul>
-                      {existingVerification?.verification_status && (
-                        <p className="text-xs text-gray-600 mt-2">Verification status: {existingVerification.verification_status}</p>
-                      )}
+                      <label htmlFor="useAdminEmail" className="text-sm text-gray-700">
+                        Use admin email ({form.email})
+                      </label>
                     </div>
+                    {!form.useAdminEmail && (
+                      <Input
+                        name="businessEmail"
+                        value={form.businessEmail}
+                        onChange={handleChange}
+                        placeholder="Enter business email"
+                        type="email"
+                        error={errors.businessEmail}
+                      />
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block mb-1 text-sm text-gray-700 font-medium">Business Type <span className="text-red-500">*</span></label>
+                  <select
+                    name="businessType"
+                    value={form.businessType}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    style={{ borderColor: errors.businessType ? '#ef4444' : '' }}
+                  >
+                    <option value="">Select business type</option>
+                    <option value="Retail">Retail</option>
+                    <option value="Restaurant">Restaurant</option>
+                    <option value="Grocery Store">Grocery Store</option>
+                    <option value="Pharmacy">Pharmacy</option>
+                    <option value="Clothing Store">Clothing Store</option>
+                    <option value="Electronics Store">Electronics Store</option>
+                    <option value="Hardware Store">Hardware Store</option>
+                    <option value="Beauty Salon">Beauty Salon</option>
+                    <option value="Bakery">Bakery</option>
+                    <option value="Bookstore">Bookstore</option>
+                    <option value="Pet Store">Pet Store</option>
+                    <option value="Convenience Store">Convenience Store</option>
+                    <option value="Services">Services</option>
+                    <option value="Others">Others</option>
+                  </select>
+                  {errors.businessType && (
+                    <p className="text-red-500 text-sm mt-1">{errors.businessType}</p>
                   )}
+                  {form.businessType === "Others" && (
+                    <div className="mt-2">
+                      <Input
+                        name="customBusinessType"
+                        value={form.customBusinessType}
+                        onChange={handleChange}
+                        placeholder="Please specify your business type"
+                        error={errors.customBusinessType}
+                      />
                     </div>
                   )}
                 </div>
+                <div>
+                  <div className="mb-2 mt-4 font-semibold text-gray-900">Business Location</div>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block mb-1 text-sm text-gray-700 font-medium">Country</label>
+                      <input
+                        type="text"
+                        value="Philippines"
+                        disabled
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100 text-gray-600 cursor-not-allowed"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block mb-1 text-sm text-gray-700 font-medium">Province <span className="text-red-500">*</span></label>
+                      <select
+                        name="province"
+                        value={form.province}
+                        onChange={handleChange}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        style={{ borderColor: errors.province ? '#ef4444' : '' }}
+                      >
+                        <option value="">Select province</option>
+                        {getProvinces().map((province) => (
+                          <option key={province} value={province}>
+                            {province}
+                          </option>
+                        ))}
+                      </select>
+                      {errors.province && (
+                        <p className="text-red-500 text-sm mt-1">{errors.province}</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block mb-1 text-sm text-gray-700 font-medium">City/Municipality <span className="text-red-500">*</span></label>
+                      <select
+                        name="city"
+                        value={form.city}
+                        onChange={handleChange}
+                        disabled={!form.province}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                        style={{ borderColor: errors.city ? '#ef4444' : '' }}
+                      >
+                        <option value="">Select city/municipality</option>
+                        {form.province && getCities(form.province).map((city) => (
+                          <option key={city} value={city}>
+                            {city}
+                          </option>
+                        ))}
+                      </select>
+                      {errors.city && (
+                        <p className="text-red-500 text-sm mt-1">{errors.city}</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block mb-1 text-sm text-gray-700 font-medium">Barangay <span className="text-red-500">*</span></label>
+                      <select
+                        name="barangay"
+                        value={form.barangay}
+                        onChange={handleChange}
+                        disabled={!form.city}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                        style={{ borderColor: errors.barangay ? '#ef4444' : '' }}
+                      >
+                        <option value="">Select barangay</option>
+                        {form.city && getBarangays(form.province, form.city).map((barangay) => (
+                          <option key={barangay} value={barangay}>
+                            {barangay}
+                          </option>
+                        ))}
+                      </select>
+                      {errors.barangay && (
+                        <p className="text-red-500 text-sm mt-1">{errors.barangay}</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <label className="block mb-1 text-sm text-gray-700 font-medium">Street No./Purok/House Number <span className="text-red-500">*</span></label>
+                  <Input name="houseNumber" value={form.houseNumber} onChange={handleChange} placeholder="Enter street no., purok, or house number" error={errors.houseNumber} />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {step === 3 && (
+            <div className="space-y-4">
+              <SectionHeader className="text-2xl md:text-3xl text-gray-900">Business Documents</SectionHeader>
+              <p className="text-gray-700 mb-4 text-sm">
+                Please upload your business documents for verification. These documents help us verify that your business is legitimate and complies with Philippine regulations.
+              </p>
+
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                <h4 className="font-semibold text-red-800 mb-2">⚠️ REQUIRED Documents (Must Upload All 3):</h4>
+                <ul className="text-sm text-red-700 space-y-1 font-medium">
+                  <li>✅ Business Registration Certificate (DTI/SEC/CDA)</li>
+                  <li>✅ Mayor's Permit / Business Permit</li>
+                  <li>✅ BIR Certificate of Registration (Form 2303)</li>
+                </ul>
               </div>
 
-              <div className="mt-8 md:mt-6 flex items-center justify-between">
-                {step > 0 ? (
-                  <Button onClick={handleBack} variant="secondary" className="w-28">Back</Button>
-                ) : (
-                  <div />
-                )}
-                {step < steps.length - 1 ? (
-                  step !== 1 ? (
-                    <Button 
-                      onClick={handleNext} 
-                      disabled={loading || (step === 0 && (emailChecking || usernameChecking || emailAvailable === false || usernameAvailable === false))} 
-                      variant="primary" 
-                      className="w-32"
-                    >
-                      {loading ? <Loader size="sm" /> : 
-                       (step === 0 && (emailChecking || usernameChecking)) ? "Checking..." : "Next"}
-                    </Button>
-                  ) : (
-                    <div className="text-sm text-gray-700">{loading ? "Verifying..." : "Enter the 4-character code"}</div>
-                  )
-                ) : (
-                  <Button onClick={handleFinish} disabled={loading} variant="primary" className="w-32">
-                    {loading ? <Loader className="mr-2" size="sm" /> : null}
-                    {loading ? "Processing..." : "Submit Application"}
-                  </Button>
-                )}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                <h4 className="font-semibold text-blue-800 mb-2">Additional Documents (Optional):</h4>
+                <ul className="text-sm text-blue-700 space-y-1">
+                  <li>• Barangay Business Clearance</li>
+                  <li>• Fire Safety Inspection Certificate (if applicable)</li>
+                  <li>• Sanitary Permit (for food businesses)</li>
+                </ul>
               </div>
-            </main>
-          </div>
-        </Card>
-      </div>
-    </GetStartedLayout>
+
+              <DocumentUploadSection 
+                documents={form.documents}
+                documentTypes={form.documentTypes}
+                onDocumentsChange={(documents, types) => {
+                  setForm(f => ({ ...f, documents, documentTypes: types }));
+                }}
+                error={errors.documents || errors.documentTypes}
+              />
+
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-4">
+                <p className="text-sm text-yellow-800">
+                  <strong>Important:</strong> After submitting your documents, please allow 1-3 business days for verification. 
+                  You will receive an email notification once the review is complete.
+                </p>
+              </div>
+
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 mt-4">
+                <h4 className="font-semibold text-green-800 mb-2">💡 Tips for Better Verification:</h4>
+                <ul className="text-sm text-green-700 space-y-1">
+                  <li>• Ensure documents are clear and readable</li>
+                  <li>• Use good lighting when taking photos</li>
+                  <li>• Upload high-quality scans (PDF preferred)</li>
+                  <li>• Make sure all text is legible</li>
+                  <li>• Documents should be current and valid</li>
+                </ul>
+              </div>
+
+              {existingDocuments && existingDocuments.length > 0 && (
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mt-4">
+                  <h4 className="font-semibold text-gray-800 mb-2">Previously Uploaded</h4>
+                  <ul className="space-y-2 text-sm">
+                    {existingDocuments.map((d) => (
+                      <li key={d.document_id} className="flex justify-between">
+                        <span className="text-gray-700">{d.document_type} — {d.document_name}</span>
+                        <span className="text-gray-500">{(d.mime_type || '').split('/').pop()}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  {existingVerification?.verification_status && (
+                    <p className="text-xs text-gray-600 mt-2">Verification status: {existingVerification.verification_status}</p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="mt-8 md:mt-6 flex items-center justify-between">
+          {step > 0 ? (
+            <Button onClick={handleBack} variant="secondary" className="w-28">Back</Button>
+          ) : (
+            <div />
+          )}
+          {step < steps.length - 1 ? (
+            step !== 1 ? (
+              <Button 
+                onClick={handleNext} 
+                disabled={loading || (step === 0 && (emailChecking || usernameChecking || emailAvailable === false || usernameAvailable === false))} 
+                variant="primary" 
+                className="w-32"
+              >
+                {loading ? <Loader size="sm" /> : 
+                 (step === 0 && (emailChecking || usernameChecking)) ? "Checking..." : "Next"}
+              </Button>
+            ) : (
+              <div className="text-sm text-gray-700">{loading ? "Verifying..." : "Enter the 4-character code"}</div>
+            )
+          ) : (
+            <Button onClick={handleFinish} disabled={loading} variant="primary" className="w-32">
+              {loading ? <Loader className="mr-2" size="sm" /> : null}
+              {loading ? "Processing..." : "Submit Application"}
+            </Button>
+          )}
+        </div>
+      </GetStartedLayout>
+    </>
   );
 }
