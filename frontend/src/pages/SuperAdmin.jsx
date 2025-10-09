@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Background from '../components/layout/Background';
 import Button from '../components/common/Button';
+import Logo from '../components/common/Logo';
 import DocumentVerification from '../components/ui/SuperAdmin/DocumentVerification';
 import { api } from '../lib/api';
 
@@ -91,23 +92,25 @@ function SuperAdmin() {
   };
 
   return (
-    <div className="min-h-screen bg-white">
+    <Background variant="gradientBlue" pattern="dots" floatingElements overlay>
       <div className="flex h-screen overflow-hidden">
         <div className="flex-1 flex flex-col h-screen">
-          <header className="flex items-center justify-between px-6 py-6 bg-white border-b border-gray-200 h-[72px] shadow-sm">
+          <header className="flex items-center justify-between px-6 py-6 bg-white/80 border-b border-blue-100 h-[72px]">
             <div className="flex items-center gap-4">
-              <span className="text-3xl font-extrabold text-blue-700 tracking-tight flex items-center gap-3">
-                <span className="bg-blue-600 text-white rounded-xl px-3 py-1 text-xl font-bold">eK</span>
-                Super Admin Dashboard
-              </span>
+              <div className="flex items-center gap-3">
+                <Logo size={40} className="text-blue-700" />
+                <span className="text-3xl font-extrabold text-black tracking-tight">
+                  Super Admin Dashboard
+                </span>
+              </div>
             </div>
             <div className="flex items-center gap-4">
               <button 
                 onClick={() => navigate('/profile')}
-                className="p-3 rounded-full bg-gray-100 shadow-sm hover:bg-gray-200 transition-colors"
+                className="p-3 rounded-full bg-white/60 shadow hover:bg-white/80 transition-colors"
                 title="Profile"
               >
-                <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
               </button>
@@ -117,7 +120,7 @@ function SuperAdmin() {
                   localStorage.removeItem('auth_user');
                   navigate('/');
                 }}
-                className="p-3 rounded-full bg-gray-100 shadow-sm hover:bg-red-100 transition-colors"
+                className="p-3 rounded-full bg-white/60 shadow hover:bg-red-100 transition-colors"
                 title="Logout"
               >
                 <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -129,24 +132,24 @@ function SuperAdmin() {
 
           <main className="flex-1 p-8 overflow-auto">
             {/* Tab Navigation */}
-            <div className="bg-white border border-gray-200 rounded-xl mb-6 shadow-sm">
-              <div className="flex border-b border-gray-200">
+            <div className="bg-white border border-blue-100 rounded-2xl mb-6 shadow-lg">
+              <div className="flex border-b border-blue-100">
                 <button
                   onClick={() => setActiveTab('verification')}
-                  className={`px-6 py-4 font-medium transition-colors ${
+                  className={`px-6 py-4 font-medium ${
                     activeTab === 'verification'
-                      ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
-                      : 'text-gray-600 hover:text-blue-600 hover:bg-gray-50'
+                      ? 'text-blue-700 border-b-2 border-blue-700'
+                      : 'text-gray-600 hover:text-blue-700'
                   }`}
                 >
                   Document Verification
                 </button>
                 <button
                   onClick={() => setActiveTab('stores')}
-                  className={`px-6 py-4 font-medium transition-colors ${
+                  className={`px-6 py-4 font-medium ${
                     activeTab === 'stores'
-                      ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
-                      : 'text-gray-600 hover:text-blue-600 hover:bg-gray-50'
+                      ? 'text-blue-700 border-b-2 border-blue-700'
+                      : 'text-gray-600 hover:text-blue-700'
                   }`}
                 >
                   Store Management
@@ -158,9 +161,9 @@ function SuperAdmin() {
             {activeTab === 'verification' ? (
               <DocumentVerification />
             ) : (
-              <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+              <div className="bg-white border border-blue-100 rounded-2xl p-6 shadow-lg">
                 <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl font-bold text-gray-800">Stores</h2>
+                  <h2 className="text-xl font-bold text-blue-700">Stores</h2>
                   <div className="flex items-center gap-2">
                     <Button label="Refresh" variant="secondary" onClick={fetchStores} />
                   </div>
@@ -173,11 +176,11 @@ function SuperAdmin() {
                 <div className="overflow-x-auto">
                   <table className="min-w-full table-auto border-separate" style={{ borderSpacing: 0 }}>
                     <thead>
-                      <tr className="text-left text-gray-700 bg-gray-50">
-                        <th className="py-4 px-6 border-b border-gray-200 font-semibold">Name</th>
-                        <th className="py-4 px-6 border-b border-gray-200 font-semibold">Email</th>
-                        <th className="py-4 px-6 border-b border-gray-200 font-semibold">Status</th>
-                        <th className="py-4 px-6 border-b border-gray-200 font-semibold">Actions</th>
+                      <tr className="text-left text-blue-700">
+                        <th className="py-4 px-6 border-b border-blue-100">Name</th>
+                        <th className="py-4 px-6 border-b border-blue-100">Email</th>
+                        <th className="py-4 px-6 border-b border-blue-100">Status</th>
+                        <th className="py-4 px-6 border-b border-blue-100">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -189,10 +192,10 @@ function SuperAdmin() {
                         </tr>
                       ) : (
                         stores.map((s) => (
-                          <tr key={s.id} className="align-top hover:bg-gray-50 transition-colors">
-                            <td className="py-5 px-6 border-b border-gray-100 text-gray-800 font-medium">{s.name}</td>
-                            <td className="py-5 px-6 border-b border-gray-100 text-gray-600">{s.email}</td>
-                            <td className="py-5 px-6 border-b border-gray-100">
+                          <tr key={s.id} className="align-top">
+                            <td className="py-5 px-6 border-b border-blue-50 text-black">{s.name}</td>
+                            <td className="py-5 px-6 border-b border-blue-50 text-black">{s.email}</td>
+                            <td className="py-5 px-6 border-b border-blue-50">
                               {s.status === 'approved' ? (
                                 <span className="inline-block bg-green-50 text-green-600 px-3 py-1 rounded-full text-sm font-semibold">Active</span>
                               ) : s.status === 'suspended' ? (
@@ -203,11 +206,11 @@ function SuperAdmin() {
                                 <span className="inline-block bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-sm font-semibold">Pending</span>
                               )}
                             </td>
-                            <td className="py-5 px-6 border-b border-gray-100">
+                            <td className="py-5 px-6 border-b border-blue-50">
                               <div className="flex items-center gap-3">
                                 <button
                                   onClick={() => handleView(s)}
-                                  className="text-blue-600 hover:text-blue-800 hover:underline text-sm font-medium transition-colors"
+                                  className="text-blue-600 hover:underline text-sm"
                                 >
                                   View
                                 </button>
@@ -243,7 +246,7 @@ function SuperAdmin() {
           </main>
         </div>
       </div>
-    </div>
+    </Background>
   );
 }
 

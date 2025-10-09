@@ -120,24 +120,24 @@ const NAV_ITEMS = [
 // Styling constants
 const STYLES = {
   sidebar:
-    "bg-gray-100 border-r border-gray-200 shadow-sm flex flex-col py-4 px-4 w-48 h-screen fixed z-20",
+    "bg-white/20 backdrop-blur-md border-r border-white/30 shadow-xl flex flex-col py-4 px-4 w-48 h-screen fixed z-20",
   logoContainer: "mb-8 flex items-center gap-3 group cursor-pointer px-2",
   logoText:
     "text-gray-800 font-semibold text-lg tracking-wide transition-all duration-300 group-hover:text-gray-900",
   nav: "flex-col gap-10 w-full",
   navItem:
     "group flex items-center w-full py-3 px-3 rounded-lg transition-all duration-200 font-medium text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 relative",
-  navItemActive: "bg-blue-600 text-white shadow-sm",
+  navItemActive: "bg-blue-600/80 backdrop-blur-sm text-white shadow-lg",
   navItemInactive:
-    "bg-transparent text-gray-600 hover:bg-gray-100 hover:text-gray-800",
+    "bg-transparent text-gray-700 hover:bg-white/30 hover:text-gray-900 hover:backdrop-blur-sm",
   iconContainer: "mr-3 relative flex-shrink-0",
   label: "leading-tight",
   tooltip:
     "absolute left-full ml-3 top-1/2 -translate-y-1/2 bg-gray-800 text-white text-xs rounded-md px-2 py-1 shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 z-50 whitespace-nowrap",
   sectionHeader:
-    "text-gray-500 text-xs font-semibold uppercase tracking-wider mb-2 mt-0 px-3",
+    "text-gray-600 text-xs font-semibold uppercase tracking-wider mb-2 mt-0 px-3",
   logoutButton:
-    "mt-auto flex items-center w-full py-3 px-3 rounded-lg transition-all duration-200 font-medium text-sm text-gray-600 hover:bg-gray-200 hover:text-gray-800",
+    "mt-auto flex items-center w-full py-3 px-3 rounded-lg transition-all duration-200 font-medium text-sm text-gray-700 hover:bg-white/30 hover:text-gray-900 hover:backdrop-blur-sm",
   logoutIcon: "mr-3 flex-shrink-0",
 };
 
