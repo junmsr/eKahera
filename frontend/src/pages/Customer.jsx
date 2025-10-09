@@ -5,20 +5,8 @@ import MobileScannerView from "../components/ui/Mobile-Scanner/MobileScannerView
 
 function Customer() {
   return (
-    <PageLayout
-      title="Customer Portal"
-      subtitle="Welcome to eKahera customer services"
-      showNavbar={true}
-      showHeader={true}
-      className="min-h-screen"
-    >
-      <div className="flex flex-col items-center justify-center flex-1 bg-white">
-        <h2 className="text-3xl font-bold mb-8">Welcome, Customer!</h2>
-        <p className="text-lg text-gray-700">
-          This is the customer page. Add your customer features here.
-        </p>
+    <PageLayout>
         <MobileScannerView />
-      </div>
     </PageLayout>
   );
 }

@@ -25,7 +25,13 @@ const FAQ = () => {
   const [openFaq, setOpenFaq] = useState(0);
   return (
     <section className="relative w-full py-24 bg-gray-50 flex justify-center items-center">
-      <div className="max-w-2xl w-full mx-auto flex flex-col items-center px-4">
+      <motion.div
+        className="max-w-2xl w-full mx-auto flex flex-col items-center px-4"
+        initial={{ opacity: 0, y: 28 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, amount: 0.2 }}
+        transition={{ duration: 0.6, ease: 'easeOut' }}
+      >
         <SectionHeader size="xl" align="center" className="mb-8 text-blue-900">FAQs</SectionHeader>
         <div className="flex flex-col items-center w-full">
           <div className="bg-white rounded-2xl shadow-lg p-8 w-full max-w-2xl flex flex-col items-center mb-4">
@@ -64,7 +70,7 @@ const FAQ = () => {
             </AnimatePresence>
           </div>
         </div>
-      </div>
+      </motion.div>
     </section>
   );
 };

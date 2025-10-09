@@ -1,11 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
-import Background from "../../../components/layout/Background";
-import Card from "../../../components/common/Card";
-import Logo from "../../../components/common/Logo";
 import SectionHeader from "../../../components/layout/SectionHeader";
 import Input from "../../../components/common/Input";
 import Button from "../../../components/common/Button";
 import Loader from "../../../components/common/Loader";
+import GetStartedLayout from "./GetStartedLayout";
 import PasswordInput from "../../../components/common/PasswordInput";
 import { getProvinces, getCities, getBarangays } from "../../../data/philippinesLocations";
 
@@ -578,8 +576,15 @@ export default function GetStartedSingle() {
 
   if (success) {
     return (
-      <Background variant="gradientBlue" pattern="dots" overlay floatingElements>
+      <GetStartedLayout
+        step={step}
+        steps={steps}
+        progress={100}
+        loading={false}
+        errors={{}}
+      >
         <div className="flex flex-col items-center justify-center px-4 py-12">
+
           <Card className="rounded-3xl p-10 flex flex-col items-center max-w-2xl">
             <SectionHeader className="text-3xl md:text-4xl text-gray-900 mb-4">
               📄 Application Submitted!
@@ -610,54 +615,24 @@ export default function GetStartedSingle() {
             />
           </Card>
         </div>
-      </Background>
+      </GetStartedLayout>
     );
   }
 
   return (
-    <Background variant="gradientBlue" pattern="dots" overlay floatingElements>
-      <div className="flex justify-center px-4 py-10">
-        <Card className="w-full max-w-5xl overflow-hidden rounded-3xl p-0">
-          <div className="md:flex">
-            <aside className="hidden md:flex md:w-5/12 items-center justify-center bg-gradient-to-br from-blue-600 to-blue-400 p-10 relative">
-              <div className="text-center max-w-xs">
-                <div className="absolute top-8 left-10">
-                  <Logo size={48} />
-                </div>
-                <h3 className="text-white text-2xl font-bold mb-4">Welcome to your business journey!</h3>
-                <p className="text-white/85 text-sm">Let's set up your account in a few easy steps.</p>
-              </div>
-            </aside>
-            <main className="w-full md:w-7/12 p-6 md:p-10 flex flex-col">
-              <div className="mb-6">
-                <div className="flex items-center justify-between">
-                  <div className="w-2/3">
-                    <ProgressBar percent={progress} />
-                  </div>
-                  <div className="text-right">
-                    <div className="text-xs text-gray-600">
-                      {steps.map((s, i) => (
-                        <span key={s.label} className={`inline-block ml-3 ${i === step ? "text-gray-900 font-semibold" : ""}`}>
-                          {s.label}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-                <div className="mt-4">
-                  <Stepper steps={steps} currentStep={step} />
-                </div>
-              </div>
-
-              <div className="flex-1">
-                {errors?.general && (
-                  <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">{errors.general}</div>
-                )}
-
-                <div className="max-w-lg">
+    <GetStartedLayout
+      step={step}
+      steps={steps}
+      progress={progress}
+      loading={loading}
+      errors={errors}
+      onBack={handleBack}
+      onNext={handleNext}
+      onFinish={handleFinish}
+    >
+      <div className="max-w-lg">
                   {step === 0 && (
                     <div className="space-y-4">
-                      <SectionHeader className="text-2xl md:text-3xl text-gray-900">Account Info</SectionHeader>
                       <div className="grid gap-4">
                         <div>
                           <label className="block mb-1 text-sm text-gray-700 font-medium">Email</label>
@@ -747,7 +722,6 @@ export default function GetStartedSingle() {
 
                   {step === 1 && (
                     <div className="space-y-4">
-                      <SectionHeader className="text-2xl md:text-3xl text-gray-900">OTP Verification</SectionHeader>
                       <p className="text-gray-700 mb-2 text-sm">
                         We've sent a 4-character verification code to <strong>{form.email}</strong>.
                       </p>
@@ -839,7 +813,6 @@ export default function GetStartedSingle() {
 
                   {step === 2 && (
                     <div className="space-y-4">
-                      <SectionHeader className="text-2xl md:text-3xl text-gray-900">Business Details</SectionHeader>
                       <div className="grid gap-4">
                         <div>
                           <label className="block mb-1 text-sm text-gray-700 font-medium">Business Name <span className="text-red-500">*</span></label>
@@ -1107,6 +1080,6 @@ export default function GetStartedSingle() {
           </div>
         </Card>
       </div>
-    </Background>
+    </GetStartedLayout>
   );
 }

@@ -65,7 +65,7 @@ function Input({
       />
       {/* Suffix (e.g., password toggle, icons) */}
       {suffix && (
-        <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
+        <div className="absolute inset-y-0 right-3 flex items-center pointer-events-auto">
           {suffix}
         </div>
       )}

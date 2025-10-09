@@ -32,8 +32,8 @@ export default function PageLayout({
     >
       {/* Navbar */}
       {showNavbar && <Navbar />}
-      {/* Spacer to offset fixed navbar */}
-      {showNavbar && <div className="h-16 md:h-20" aria-hidden="true" />}
+      {/* Spacer to offset fixed navbar (disabled for compact top spacing) */}
+      {showNavbar && <div className="h-0" aria-hidden="true" />}
       <div className={`flex min-h-screen relative ${className} ${theme}`}>
         {/* Sidebar */}
         {sidebar && (

@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 
 const features = [
   {
@@ -53,13 +54,20 @@ const Features = () => (
       <h2 className="text-3xl md:text-4xl font-extrabold text-black mb-10 text-center">Features</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
         {features.map((f, i) => (
-          <div key={i} className="bg-white rounded-2xl shadow-lg p-8 flex flex-col items-center border border-blue-100 transition-all duration-200 hover:shadow-2xl hover:-translate-y-2 hover:scale-105 group">
+          <motion.div
+            key={i}
+            initial={{ opacity: 0, y: 24, scale: 0.98 }}
+            whileInView={{ opacity: 1, y: 0, scale: 1 }}
+            viewport={{ once: true, amount: 0.3 }}
+            transition={{ duration: 0.5, ease: 'easeOut', delay: i * 0.06 }}
+            className="bg-white rounded-2xl shadow-lg p-8 flex flex-col items-center border border-blue-100 transition-all duration-300 hover:shadow-2xl hover:-translate-y-2 group"
+          >
             <div className="mb-4 flex items-center justify-center w-16 h-16 rounded-full bg-blue-50 group-hover:bg-blue-100 transition-colors duration-200">
               {f.icon}
             </div>
             <h3 className="font-extrabold text-lg text-black mb-2 text-center">{f.title}</h3>
             <p className="text-gray-600 text-center text-base">{f.desc}</p>
-          </div>
+          </motion.div>
         ))}
       </div>
     </div>

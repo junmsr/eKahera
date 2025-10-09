@@ -1,4 +1,5 @@
 import React from "react";
+import { motion } from "framer-motion";
 
 /**
  * Lightweight section wrapper to keep ARIA + layout boilerplate consistent.
@@ -10,6 +11,14 @@ import React from "react";
  */
 function SectionWrapper({ id, title, children, className = "" }) {
   const headingId = title ? `${id || "section"}-heading` : undefined;
+  const container = {
+    hidden: { opacity: 0, y: 24 },
+    show: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.6, ease: "easeOut" },
+    },
+  };
 
   return (
     <section
@@ -22,7 +31,14 @@ function SectionWrapper({ id, title, children, className = "" }) {
           {title}
         </h2>
       )}
-      {children}
+      <motion.div
+        variants={container}
+        initial="hidden"
+        whileInView="show"
+        viewport={{ once: true, amount: 0.2, margin: "-80px" }}
+      >
+        {children}
+      </motion.div>
     </section>
   );
 }

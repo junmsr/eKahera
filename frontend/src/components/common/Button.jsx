@@ -44,7 +44,7 @@ function Button({
     warning: "bg-gradient-to-r from-yellow-500 to-yellow-700 text-white shadow-md hover:from-yellow-600 hover:to-yellow-800 hover:shadow-lg",
     // Special variants for specific use cases
     close: "absolute top-3 right-3 text-blue-400 hover:text-blue-700 text-2xl font-bold focus:outline-none focus:ring-2 focus:ring-blue-400 rounded-full transition-colors duration-150",
-    passwordToggle: "p-1 bg-transparent border-none shadow-none hover:bg-blue-100 rounded-full transition-colors",
+    passwordToggle: "p-1 bg-transparent border-none shadow-none hover:bg-blue-100 rounded-full transition-colors focus:ring-0 focus:ring-transparent focus:ring-offset-0",
     iconAction: "rounded-full p-1 hover:bg-opacity-80 transition flex items-center",
     stockEntry: "bg-green-100 border border-green-300 rounded-full p-1 hover:bg-green-200 transition flex items-center",
     edit: "bg-blue-100 border border-blue-300 rounded-full p-1 hover:bg-blue-200 transition flex items-center",
