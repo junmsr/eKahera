@@ -336,7 +336,7 @@ function POS() {
         <NavAdmin />
 
         {/* Main Content */}
-        <div className="flex-1 ml-28 flex flex-col h-screen">
+        <div className="flex-1 ml-48 flex flex-col h-screen">
           {/* Header */}
           <header className="flex items-center gap-4 px-6 py-3 bg-white/80 shadow-sm border-b border-blue-100 h-[56px] min-h-[56px] max-h-[56px]">
             <span className="text-2xl font-bold text-blue-700 tracking-tight flex items-center gap-2">
