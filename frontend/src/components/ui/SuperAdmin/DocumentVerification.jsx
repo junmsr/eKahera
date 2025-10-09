@@ -197,37 +197,37 @@ export default function DocumentVerification() {
     <div className="space-y-6">
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="p-4">
+        <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
           <div className="text-center">
             <div className="text-2xl font-bold text-yellow-600">{stats.pending || 0}</div>
             <div className="text-sm text-gray-600">Pending</div>
           </div>
-        </Card>
-        <Card className="p-4">
+        </div>
+        <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
           <div className="text-center">
             <div className="text-2xl font-bold text-green-600">{stats.approved || 0}</div>
             <div className="text-sm text-gray-600">Approved</div>
           </div>
-        </Card>
-        <Card className="p-4">
+        </div>
+        <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
           <div className="text-center">
             <div className="text-2xl font-bold text-red-600">{stats.rejected || 0}</div>
             <div className="text-sm text-gray-600">Rejected</div>
           </div>
-        </Card>
-        <Card className="p-4">
+        </div>
+        <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
           <div className="text-center">
             <div className="text-2xl font-bold text-orange-600">{stats.repass || 0}</div>
             <div className="text-sm text-gray-600">Repass</div>
           </div>
-        </Card>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Pending Verifications List */}
         <div className="lg:col-span-1">
-          <Card className="p-6">
-            <h3 className="text-lg font-semibold mb-4">Pending Verifications</h3>
+          <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+            <h3 className="text-lg font-semibold mb-4 text-gray-800">Pending Verifications</h3>
             {pendingVerifications.length === 0 ? (
               <p className="text-gray-500 text-center py-8">No pending verifications</p>
             ) : (
@@ -238,7 +238,7 @@ export default function DocumentVerification() {
                     className={`p-3 border rounded-lg cursor-pointer transition-colors ${
                       selectedBusiness?.business_id === business.business_id
                         ? 'border-blue-500 bg-blue-50'
-                        : 'border-gray-200 hover:border-gray-300'
+                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                     }`}
                     onClick={() => handleSelectBusiness(business)}
                   >
@@ -252,7 +252,7 @@ export default function DocumentVerification() {
                 ))}
               </div>
             )}
-          </Card>
+          </div>
         </div>
 
         {/* Business Details and Documents */}
@@ -266,7 +266,7 @@ export default function DocumentVerification() {
               actionLoading={actionLoading}
             />
           ) : (
-            <Card className="p-6">
+            <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
               <div className="text-center py-12">
                 <div className="text-gray-400 text-6xl mb-4">📋</div>
                 <h3 className="text-lg font-medium text-gray-900 mb-2">
@@ -276,7 +276,7 @@ export default function DocumentVerification() {
                   Choose a business from the pending verifications list to review their documents.
                 </p>
               </div>
-            </Card>
+            </div>
           )}
         </div>
       </div>
@@ -299,11 +299,11 @@ function BusinessVerificationDetails({
 
   if (!business) {
     return (
-      <Card className="p-6">
+      <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
         <div className="flex justify-center items-center h-32">
           <Loader />
         </div>
-      </Card>
+      </div>
     );
   }
 
@@ -324,8 +324,8 @@ function BusinessVerificationDetails({
   return (
     <div className="space-y-6">
       {/* Business Information */}
-      <Card className="p-6">
-        <h3 className="text-lg font-semibold mb-4">Business Information</h3>
+      <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+        <h3 className="text-lg font-semibold mb-4 text-gray-800">Business Information</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700">Business Name</label>
@@ -352,11 +352,11 @@ function BusinessVerificationDetails({
             </p>
           </div>
         </div>
-      </Card>
+      </div>
 
       {/* Documents */}
-      <Card className="p-6">
-        <h3 className="text-lg font-semibold mb-4">Submitted Documents</h3>
+      <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+        <h3 className="text-lg font-semibold mb-4 text-gray-800">Submitted Documents</h3>
         {business.documents?.length === 0 ? (
           <p className="text-gray-500">No documents uploaded</p>
         ) : (
@@ -432,11 +432,11 @@ function BusinessVerificationDetails({
             ))}
           </div>
         )}
-      </Card>
+      </div>
 
       {/* Verification Actions */}
-      <Card className="p-6">
-        <h3 className="text-lg font-semibold mb-4">Complete Verification</h3>
+      <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+        <h3 className="text-lg font-semibold mb-4 text-gray-800">Complete Verification</h3>
         <div className="flex space-x-3">
           <Button
             onClick={() => onCompleteVerification('approved')}
@@ -466,7 +466,7 @@ function BusinessVerificationDetails({
             All documents must be reviewed before completing verification.
           </p>
         )}
-      </Card>
+      </div>
 
       {/* Reject Modal */}
       {showRejectModal && (

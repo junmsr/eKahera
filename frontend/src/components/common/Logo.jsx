@@ -57,7 +57,7 @@ function Logo({
       />
 
       {/* Typing Text Animation */}
-      <span className="ml-1 font-bold text-white whitespace-nowrap">
+      <span className="ml-1 font-semibold text-white text-shadow-lg whitespace-nowrap">
         {displayText}
         <span className="animate-pulse">|</span> {/* blinking cursor */}
       </span>
