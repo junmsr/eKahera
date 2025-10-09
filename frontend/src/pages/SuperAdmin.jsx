@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Background from '../components/layout/Background';
 import Button from '../components/common/Button';
+import Logo from '../components/common/Logo';
 import DocumentVerification from '../components/ui/SuperAdmin/DocumentVerification';
 import { api } from '../lib/api';
 
@@ -96,10 +97,12 @@ function SuperAdmin() {
         <div className="flex-1 flex flex-col h-screen">
           <header className="flex items-center justify-between px-6 py-6 bg-white/80 border-b border-blue-100 h-[72px]">
             <div className="flex items-center gap-4">
-              <span className="text-3xl font-extrabold text-blue-700 tracking-tight flex items-center gap-3">
-                <span className="bg-blue-600 text-white rounded-xl px-3 py-1 text-xl font-bold">eK</span>
-                Super Admin Dashboard
-              </span>
+              <div className="flex items-center gap-3">
+                <Logo size={40} className="text-blue-700" />
+                <span className="text-3xl font-extrabold text-black tracking-tight">
+                  Super Admin Dashboard
+                </span>
+              </div>
             </div>
             <div className="flex items-center gap-4">
               <button 
@@ -190,8 +193,8 @@ function SuperAdmin() {
                       ) : (
                         stores.map((s) => (
                           <tr key={s.id} className="align-top">
-                            <td className="py-5 px-6 border-b border-blue-50 text-blue-600">{s.name}</td>
-                            <td className="py-5 px-6 border-b border-blue-50 text-blue-600">{s.email}</td>
+                            <td className="py-5 px-6 border-b border-blue-50 text-black">{s.name}</td>
+                            <td className="py-5 px-6 border-b border-blue-50 text-black">{s.email}</td>
                             <td className="py-5 px-6 border-b border-blue-50">
                               {s.status === 'approved' ? (
                                 <span className="inline-block bg-green-50 text-green-600 px-3 py-1 rounded-full text-sm font-semibold">Active</span>
