@@ -1,9 +1,21 @@
-const { Pool } = require('pg');
+const pool = require('../config/database');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const fs = require('fs');
 const path = require('path');
 const { sendApplicationSubmittedNotification } = require('../utils/emailService');
+
+// Load config from config.env file
+const configPath = path.join(__dirname, '..', '..', 'config.env');
+const configContent = fs.readFileSync(configPath, 'utf8');
+const config = {};
+
+configContent.split('\n').forEach(line => {
+  const [key, value] = line.split('=');
+  if (key && value && !key.startsWith('#')) {
+    config[key.trim()] = value.trim();
+  }
+});
 
 // Required document types for business verification (canonical labels)
 const REQUIRED_DOCUMENT_TYPES = [
@@ -17,21 +29,22 @@ const REQUIRED_DOCUMENT_MATCHERS = [
   {
     label: 'Business Registration Certificate',
     tests: [
-      /\b(business\s*registration\s*(certificate|cert)?|dti|sec|cda)\b/i
+      /business.*registration.*cert/i,
+      /\b(dti|sec|cda)\b/i
     ]
   },
   {
     label: 'Mayor\'s Permit',
     tests: [
-      /\b(mayor'?s?\s*permit)\b/i,
-      /\b(business\s*permit)\b/i
+      /mayor.*permit/i,
+      /business.*permit/i
     ]
   },
   {
     label: 'BIR Certificate of Registration',
     tests: [
-      /\b(bir\s*certificate\s*of\s*registration)\b/i,
-      /\b(form\s*2303)\b/i
+      /bir.*certificate.*registration/i,
+      /form.*2303/i
     ]
   }
 ];
@@ -40,13 +53,13 @@ const REQUIRED_DOCUMENT_MATCHERS = [
 const hasRequiredDocuments = async (businessId) => {
   try {
     const documentsQuery = `
-      SELECT DISTINCT document_type 
-      FROM business_documents 
+      SELECT DISTINCT document_type
+      FROM business_documents
       WHERE business_id = $1
     `;
     const result = await pool.query(documentsQuery, [businessId]);
     const uploadedTypes = result.rows.map(row => row.document_type);
-    
+
     // Canonicalize uploaded labels
     const canonicalize = (s) => String(s || '')
       .normalize('NFKD')
@@ -89,27 +102,6 @@ const hasRequiredDocuments = async (businessId) => {
     };
   }
 };
-
-// Load config from config.env file
-const configPath = path.join(__dirname, '..', '..', 'config.env');
-const configContent = fs.readFileSync(configPath, 'utf8');
-const config = {};
-
-configContent.split('\n').forEach(line => {
-  const [key, value] = line.split('=');
-  if (key && value && !key.startsWith('#')) {
-    config[key.trim()] = value.trim();
-  }
-});
-
-const pool = new Pool({
-  host: config.DB_HOST || 'localhost',
-  port: config.DB_PORT || 5432,
-  database: config.DB_NAME,
-  user: config.DB_USER || 'postgres',
-  password: config.DB_PASSWORD,
-  ssl: config.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
-});
 
 // Admin creates a cashier user under their business
 exports.createCashier = async (req, res) => {
@@ -450,7 +442,19 @@ exports.verifyBusinessAccess = async (req, res) => {
     }
 
     const verificationStatus = businessResult.rows[0].verification_status;
-    
+
+    // Check if business is approved
+    if (verificationStatus !== 'approved') {
+      return res.status(403).json({
+        error: 'Business not approved',
+        canAccess: false,
+        documentsUploaded: true,
+        verificationStatus,
+        documentStatus,
+        message: 'Your business has not been approved by the superadmin yet.'
+      });
+    }
+
     res.json({
       canAccess: true,
       documentsUploaded: true,

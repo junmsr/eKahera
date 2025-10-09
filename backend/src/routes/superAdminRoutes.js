@@ -1,10 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const { 
-  getAllStores, 
-  getStoreById, 
-  approveStore, 
-  rejectStore 
+const {
+  getAllStores,
+  getStoreById,
+  approveStore,
+  rejectStore,
+  repassStore
 } = require('../controllers/superAdminController');
 const { authenticate, authorize } = require('../middleware/authMiddleware');
 
@@ -17,5 +18,6 @@ router.get('/stores', getAllStores);
 router.get('/stores/:id', getStoreById);
 router.post('/stores/:id/approve', approveStore);
 router.post('/stores/:id/reject', rejectStore);
+router.post('/stores/:id/repass', repassStore);
 
 module.exports = router;

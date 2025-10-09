@@ -306,7 +306,94 @@ exports.getVerificationStats = async (req, res) => {
   }
 };
 
-// Download document file (SuperAdmin only)
+// Upload documents via URLs (from Supabase)
+exports.uploadDocumentsViaUrls = async (req, res) => {
+  try {
+    const { business_id, documents } = req.body;
+
+    if (!business_id) {
+      return res.status(400).json({ error: 'Business ID is required' });
+    }
+
+    if (!documents || !Array.isArray(documents) || documents.length === 0) {
+      return res.status(400).json({ error: 'No documents provided' });
+    }
+
+    // Verify business exists
+    const businessResult = await pool.query('SELECT * FROM business WHERE business_id = $1', [business_id]);
+    if (businessResult.rowCount === 0) {
+      return res.status(404).json({ error: 'Business not found' });
+    }
+
+    const businessData = businessResult.rows[0];
+    const uploadedDocuments = [];
+
+    // Save each document URL to database
+    for (let i = 0; i < documents.length; i++) {
+      const doc = documents[i];
+
+      const documentData = {
+        business_id: business_id,
+        document_type: doc.documentType,
+        document_name: doc.fileName,
+        file_path: doc.url, // Store URL as file_path
+        file_size: doc.fileSize,
+        mime_type: doc.mimeType
+      };
+
+      const savedDocument = await BusinessDocument.create(documentData);
+      uploadedDocuments.push(savedDocument);
+    }
+
+    // Create or update business verification record
+    await BusinessVerification.create(business_id);
+
+    // Check if all required documents are now uploaded
+    const documentStatus = await hasRequiredDocuments(business_id);
+
+    // Only send notifications and update status if all required documents are uploaded
+    if (documentStatus.hasAllRequired) {
+      // Get SuperAdmin email for notification
+      const superAdminResult = await pool.query(
+        'SELECT email FROM users WHERE role = $1 LIMIT 1',
+        ['superadmin']
+      );
+
+      if (superAdminResult.rowCount > 0) {
+        const superAdminEmail = superAdminResult.rows[0].email;
+        // Send notification to super admin about new application
+        await sendNewApplicationNotification(businessData, superAdminEmail);
+      }
+
+      // Send application submitted confirmation to the business
+      await sendApplicationSubmittedNotification(businessData).catch(error => {
+        console.error('Failed to send application submitted notification:', error);
+      });
+
+      // Update business verification status to submitted
+      await pool.query(
+        'UPDATE business SET verification_status = $1, verification_submitted_at = COALESCE(verification_submitted_at, NOW()), updated_at = NOW() WHERE business_id = $2',
+        ['pending', business_id]
+      );
+    }
+
+    res.status(201).json({
+      message: documentStatus.hasAllRequired
+        ? 'All required documents uploaded successfully. Your application has been submitted for verification.'
+        : `Documents uploaded successfully. Please upload the remaining required documents: ${documentStatus.missingTypes.join(', ')}`,
+      documents: uploadedDocuments,
+      business_id: business_id,
+      documentStatus: documentStatus,
+      allRequiredUploaded: documentStatus.hasAllRequired
+    });
+
+  } catch (error) {
+    console.error('Document upload via URLs error:', error);
+    res.status(500).json({ error: 'Failed to upload documents' });
+  }
+};
+
+// Download document file (SuperAdmin only) - now handles URLs
 exports.downloadDocument = async (req, res) => {
   try {
     const { document_id } = req.params;
@@ -323,11 +410,17 @@ exports.downloadDocument = async (req, res) => {
 
     const filePath = document.file_path;
 
-    if (!fs.existsSync(filePath)) {
-      return res.status(404).json({ error: 'File not found on server' });
+    // Check if it's a URL (Supabase) or local path
+    if (filePath.startsWith('http')) {
+      // Redirect to Supabase URL
+      res.redirect(filePath);
+    } else {
+      // Local file
+      if (!fs.existsSync(filePath)) {
+        return res.status(404).json({ error: 'File not found on server' });
+      }
+      res.download(filePath, document.document_name);
     }
-
-    res.download(filePath, document.document_name);
 
   } catch (error) {
     console.error('Download document error:', error);

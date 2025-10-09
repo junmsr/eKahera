@@ -4,9 +4,14 @@ const documentController = require('../controllers/documentController');
 const { authenticate, authorize } = require('../middleware/authMiddleware');
 
 // Public routes (for business registration)
-router.post('/upload', 
-  documentController.uploadDocuments, 
+router.post('/upload',
+  documentController.uploadDocuments,
   documentController.handleDocumentUpload
+);
+
+// Upload documents via URLs (from Supabase)
+router.post('/upload-urls',
+  documentController.uploadDocumentsViaUrls
 );
 
 // Protected routes (require authentication)

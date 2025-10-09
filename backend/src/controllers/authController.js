@@ -99,7 +99,7 @@ exports.login = async (req, res) => {
   }
 
   try {
-    // Try to find user by email or username
+    // Try to find user by email, username, or business name
     const result = await pool.query(
       `SELECT u.user_id, u.username, u.email, u.password_hash, u.role, u.contact_number,
               u.user_type_id,
@@ -109,7 +109,7 @@ exports.login = async (req, res) => {
        FROM users u
        LEFT JOIN user_type ut ON ut.user_type_id = u.user_type_id
        LEFT JOIN business b ON b.business_id = u.business_id
-       WHERE u.email = $1 OR u.username = $1`,
+       WHERE lower(u.email) = lower($1) OR lower(u.username) = lower($1) OR lower(b.business_name) = lower($1)`,
       [email]
     );
 
@@ -120,6 +120,23 @@ exports.login = async (req, res) => {
     }
 
     const user = result.rows[0];
+
+    // Check business verification status if user belongs to a business
+    if (user.business_id) {
+      const businessResult = await pool.query(
+        'SELECT verification_status FROM business WHERE business_id = $1',
+        [user.business_id]
+      );
+
+      if (businessResult.rows.length > 0) {
+        const businessStatus = businessResult.rows[0].verification_status;
+        if (businessStatus !== 'approved') {
+          return res.status(403).json({
+            error: 'Your business application is still under review. Please wait for approval before logging in.'
+          });
+        }
+      }
+    }
 
     // Check if password_hash exists and verify it
     if (!user.password_hash) {

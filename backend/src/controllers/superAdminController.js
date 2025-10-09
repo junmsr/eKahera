@@ -1,11 +1,12 @@
 const pool = require('../config/database');
 const { logAction } = require('../utils/logger');
+const { sendVerificationStatusNotification } = require('../utils/emailService');
 
 // Get all stores/businesses for SuperAdmin
 exports.getAllStores = async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT 
+      SELECT
         b.business_id as id,
         b.business_name as name,
         b.email,
@@ -16,16 +17,13 @@ exports.getAllStores = async (req, res) => {
         b.mobile,
         b.created_at,
         b.updated_at,
-        CASE 
-          WHEN b.business_id IS NOT NULL THEN 'approved'
-          ELSE 'pending'
-        END as status,
+        b.verification_status as status,
         COUNT(u.user_id) as user_count
       FROM business b
       LEFT JOIN users u ON u.business_id = b.business_id
-      GROUP BY b.business_id, b.business_name, b.email, b.business_type, 
-               b.country, b.business_address, b.house_number, b.mobile, 
-               b.created_at, b.updated_at
+      GROUP BY b.business_id, b.business_name, b.email, b.business_type,
+               b.country, b.business_address, b.house_number, b.mobile,
+               b.created_at, b.updated_at, b.verification_status
       ORDER BY b.created_at DESC
     `);
     
@@ -137,34 +135,59 @@ exports.getStoreById = async (req, res) => {
   }
 };
 
-// Approve a store
 exports.approveStore = async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     // Check if store exists
     const storeResult = await pool.query(
       'SELECT business_id, business_name FROM business WHERE business_id = $1',
       [id]
     );
-    
+
     if (storeResult.rows.length === 0) {
       return res.status(404).json({ error: 'Store not found' });
     }
-    
+
     const store = storeResult.rows[0];
-    
+
+    // Update verification_status to 'approved' and set review columns
+    await pool.query(
+      `UPDATE business SET
+        verification_status = $1,
+        verification_reviewed_at = NOW(),
+        verification_reviewed_by = $2,
+        verification_rejection_reason = NULL,
+        verification_resubmission_notes = NULL,
+        updated_at = NOW()
+      WHERE business_id = $3`,
+      ['approved', req.user.userId, id]
+    );
+
+    // Fetch updated business data to send email
+    const updatedBusinessResult = await pool.query(
+      `SELECT business_id, business_name, email FROM business WHERE business_id = $1`,
+      [id]
+    );
+    const updatedBusiness = updatedBusinessResult.rows[0];
+
+    // Send approval email notification
+    try {
+      await sendVerificationStatusNotification(updatedBusiness, 'approved');
+      console.log(`Approval email sent to ${updatedBusiness.email}`);
+    } catch (emailError) {
+      console.error('Error sending approval email:', emailError);
+    }
+
     // Log the approval action
     logAction({
       userId: req.user.userId,
       businessId: null,
       action: `Approved store: ${store.business_name} (ID: ${id})`
     });
-    
-    // In a real implementation, you might update a status field
-    // For now, we'll just log the action
+
     console.log(`SuperAdmin ${req.user.email} approved store ${store.business_name}`);
-    
+
     res.json({
       message: 'Store approved successfully',
       store: {
@@ -183,30 +206,42 @@ exports.approveStore = async (req, res) => {
 exports.rejectStore = async (req, res) => {
   try {
     const { id } = req.params;
-    
+    const { rejection_reason } = req.body;
+
     // Check if store exists
     const storeResult = await pool.query(
       'SELECT business_id, business_name FROM business WHERE business_id = $1',
       [id]
     );
-    
+
     if (storeResult.rows.length === 0) {
       return res.status(404).json({ error: 'Store not found' });
     }
-    
+
     const store = storeResult.rows[0];
-    
+
+    // Update verification_status to 'rejected' and set review columns
+    await pool.query(
+      `UPDATE business SET
+        verification_status = $1,
+        verification_reviewed_at = NOW(),
+        verification_reviewed_by = $2,
+        verification_rejection_reason = $3,
+        verification_resubmission_notes = NULL,
+        updated_at = NOW()
+      WHERE business_id = $4`,
+      ['rejected', req.user.userId, rejection_reason, id]
+    );
+
     // Log the rejection action
     logAction({
       userId: req.user.userId,
       businessId: null,
-      action: `Rejected store: ${store.business_name} (ID: ${id})`
+      action: `Rejected store: ${store.business_name} (ID: ${id}) - Reason: ${rejection_reason}`
     });
-    
-    // In a real implementation, you might update a status field or delete the store
-    // For now, we'll just log the action
+
     console.log(`SuperAdmin ${req.user.email} rejected store ${store.business_name}`);
-    
+
     res.json({
       message: 'Store rejected successfully',
       store: {
@@ -218,5 +253,59 @@ exports.rejectStore = async (req, res) => {
   } catch (err) {
     console.error('Reject store error:', err);
     res.status(500).json({ error: 'Failed to reject store' });
+  }
+};
+
+// Repass a store for resubmission
+exports.repassStore = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { resubmission_notes } = req.body;
+
+    // Check if store exists
+    const storeResult = await pool.query(
+      'SELECT business_id, business_name FROM business WHERE business_id = $1',
+      [id]
+    );
+
+    if (storeResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Store not found' });
+    }
+
+    const store = storeResult.rows[0];
+
+    // Update verification_status to 'repass' and set review columns
+    await pool.query(
+      `UPDATE business SET
+        verification_status = $1,
+        verification_reviewed_at = NOW(),
+        verification_reviewed_by = $2,
+        verification_rejection_reason = NULL,
+        verification_resubmission_notes = $3,
+        updated_at = NOW()
+      WHERE business_id = $4`,
+      ['repass', req.user.userId, resubmission_notes, id]
+    );
+
+    // Log the repass action
+    logAction({
+      userId: req.user.userId,
+      businessId: null,
+      action: `Repassed store: ${store.business_name} (ID: ${id}) - Notes: ${resubmission_notes}`
+    });
+
+    console.log(`SuperAdmin ${req.user.email} repassed store ${store.business_name}`);
+
+    res.json({
+      message: 'Store repassed for resubmission successfully',
+      store: {
+        id: store.business_id,
+        name: store.business_name,
+        status: 'repass'
+      }
+    });
+  } catch (err) {
+    console.error('Repass store error:', err);
+    res.status(500).json({ error: 'Failed to repass store' });
   }
 };

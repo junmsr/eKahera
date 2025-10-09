@@ -3,9 +3,11 @@ import SectionHeader from "../../../components/layout/SectionHeader";
 import Input from "../../../components/common/Input";
 import Button from "../../../components/common/Button";
 import Loader from "../../../components/common/Loader";
+import Card from "../../../components/common/Card";
 import GetStartedLayout from "./GetStartedLayout";
 import PasswordInput from "../../../components/common/PasswordInput";
 import { getProvinces, getCities, getBarangays } from "../../../data/philippinesLocations";
+import { supabase, DOCUMENTS_BUCKET } from "../../../lib/supabase";
 
 // Inline ProgressBar
 function ProgressBar({ percent }) {
@@ -375,7 +377,7 @@ export default function GetStartedSingle() {
       const canon = (s) => String(s || '')
         .normalize('NFKD')
         .replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^a-z0-9]+/gi, ' ')
+        .replace(/[^a-z0-9']+/gi, ' ')
         .trim();
 
       const uploadedCanon = (form.documentTypes || [])
@@ -530,21 +532,84 @@ export default function GetStartedSingle() {
       // Preload existing documents, if any (resume scenarios)
       await fetchExistingDocuments(businessId, result.token);
 
-      // Step 2: Upload documents
+      // Step 2: Upload documents to Supabase
       setErrors({ general: "Uploading your business documents..." });
-      const formData = new FormData();
-      formData.append('business_id', businessId);
-      formData.append('document_types', JSON.stringify(form.documentTypes));
-      
-      form.documents.forEach((file) => {
-        formData.append('documents', file);
-      });
 
+      const uploadedUrls = [];
+      const uploadErrors = [];
+
+      // Upload each document to Supabase
+      for (let i = 0; i < form.documents.length; i++) {
+        const file = form.documents[i];
+        const documentType = form.documentTypes[i];
+
+        try {
+          // Create unique filename
+          const fileExt = file.name.split('.').pop();
+          const fileName = `${businessId}/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+
+          // Upload to Supabase storage
+          const { data, error } = await supabase.storage
+            .from(DOCUMENTS_BUCKET)
+            .upload(fileName, file, {
+              cacheControl: '3600',
+              upsert: false
+            });
+
+          if (error) {
+            console.error('Supabase upload error:', error);
+            let errorMsg = error.message;
+            if (error.message.includes('Invalid Compact JWS')) {
+              errorMsg = 'Authentication failed. Please check your Supabase configuration.';
+            } else if (error.message.includes('JWT')) {
+              errorMsg = 'Session expired. Please refresh the page and try again.';
+            }
+            uploadErrors.push(`${file.name}: ${errorMsg}`);
+            continue;
+          }
+
+          // Get public URL
+          const { data: urlData } = supabase.storage
+            .from(DOCUMENTS_BUCKET)
+            .getPublicUrl(fileName);
+
+          if (urlData?.publicUrl) {
+            uploadedUrls.push({
+              url: urlData.publicUrl,
+              documentType: documentType,
+              fileName: file.name,
+              fileSize: file.size,
+              mimeType: file.type
+            });
+          } else {
+            uploadErrors.push(`${file.name}: Failed to get public URL`);
+          }
+        } catch (error) {
+          console.error('Upload error for file:', file.name, error);
+          uploadErrors.push(`${file.name}: Upload failed`);
+        }
+      }
+
+      if (uploadErrors.length > 0) {
+        setErrors({ general: `Some documents failed to upload: ${uploadErrors.join(', ')}. Please try again.` });
+        return;
+      }
+
+      if (uploadedUrls.length === 0) {
+        setErrors({ general: "No documents were uploaded successfully. Please try again." });
+        return;
+      }
+
+      // Send document URLs to backend
       const documentResponse = await fetch(
-        "http://localhost:5000/api/documents/upload",
+        "http://localhost:5000/api/documents/upload-urls",
         {
           method: "POST",
-          body: formData,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            business_id: businessId,
+            documents: uploadedUrls
+          }),
         }
       );
 
@@ -1046,34 +1111,6 @@ export default function GetStartedSingle() {
                 </div>
               )}
             </div>
-          )}
-        </div>
-
-        <div className="mt-8 md:mt-6 flex items-center justify-between">
-          {step > 0 ? (
-            <Button onClick={handleBack} variant="secondary" className="w-28">Back</Button>
-          ) : (
-            <div />
-          )}
-          {step < steps.length - 1 ? (
-            step !== 1 ? (
-              <Button 
-                onClick={handleNext} 
-                disabled={loading || (step === 0 && (emailChecking || usernameChecking || emailAvailable === false || usernameAvailable === false))} 
-                variant="primary" 
-                className="w-32"
-              >
-                {loading ? <Loader size="sm" /> : 
-                 (step === 0 && (emailChecking || usernameChecking)) ? "Checking..." : "Next"}
-              </Button>
-            ) : (
-              <div className="text-sm text-gray-700">{loading ? "Verifying..." : "Enter the 4-character code"}</div>
-            )
-          ) : (
-            <Button onClick={handleFinish} disabled={loading} variant="primary" className="w-32">
-              {loading ? <Loader className="mr-2" size="sm" /> : null}
-              {loading ? "Processing..." : "Submit Application"}
-            </Button>
           )}
         </div>
       </GetStartedLayout>
