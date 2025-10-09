@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import NavAdmin from "../components/layout/Nav-Admin";
 import PageLayout from "../components/layout/PageLayout";
-import LogsCard from "../components/ui/Logs/LogsCard";
+import LogsCard from "../components/ui/ContainerLogs/LogsCard";
 import { api } from "../lib/api";
 
 const LogsPage = () => {
