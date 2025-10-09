@@ -25,7 +25,7 @@ export default function PasswordInput({
 
   // Base styles — use dark gray for normal text and gray for placeholder
   const baseStyles =
-    "w-full rounded-xl text-base text-gray-900 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 placeholder:font-semibold placeholder:text-gray-400 bg-white/60 backdrop-blur-md border border-white/30 shadow-sm";
+    "w-full rounded-xl text-base text-gray-900 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 placeholder:text-gray-400 bg-white/60 backdrop-blur-md border border-white/30 shadow-sm";
   
   // Size variants
   const sizeStyles = {

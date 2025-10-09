@@ -3,7 +3,7 @@ import logoImage from '../../assets/images/Logo.png';
 
 /**
  * Logo Component
- * Displays the eKahera logo with customizable size and styling
+ * Displays the eKahera logo with text typing animation (no hover effect)
  */
 function Logo({ 
   size = 35, 
@@ -11,15 +11,24 @@ function Logo({
   variant = 'default'
 }) {
   const [isLoaded, setIsLoaded] = useState(false);
+  const [displayText, setDisplayText] = useState('');
+  const fullText = ' | eKahera';
 
-  // Trigger simple bounce animation when component mounts
+  // Typing effect
   useEffect(() => {
-    const timer = setTimeout(() => setIsLoaded(true), 100);
-    return () => clearTimeout(timer);
+    setIsLoaded(true);
+    let index = 0;
+    const typingInterval = setInterval(() => {
+      setDisplayText(fullText.slice(0, index + 1));
+      index++;
+      if (index === fullText.length) clearInterval(typingInterval);
+    }, 150); // typing speed (ms per letter)
+
+    return () => clearInterval(typingInterval);
   }, []);
 
-  // Base styles with simple animations
-  const baseStyles = `flex items-center justify-center transition-all duration-300 ease-in-out hover:scale-110 group ${
+  // Base styles
+  const baseStyles = `flex items-center justify-center transition-all duration-300 ease-in-out ${
     isLoaded ? 'animate-bounce-in' : 'opacity-0 scale-75'
   }`;
   
@@ -39,17 +48,21 @@ function Logo({
       role="img"
       aria-label="eKahera Logo"
     >
+      {/* Logo Image */}
       <img 
         src={logoImage} 
         alt="eKahera Logo"
         className="object-contain bg-transparent"
         style={{ width: size, height: size }}
       />
-      <span className="logo-text ml-1 font-bold text-blue-600 transition-transform duration-300 ease-in-out group-hover:translate-x-1">
-    eKahera
+
+      {/* Typing Text Animation */}
+      <span className="ml-1 font-bold text-white whitespace-nowrap">
+        {displayText}
+        <span className="animate-pulse">|</span> {/* blinking cursor */}
       </span>
     </div>
   );
 }
 
-export default Logo; 
+export default Logo;

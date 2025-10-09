@@ -97,7 +97,7 @@ export default function Login() {
           className="w-full max-w-4xl flex flex-col md:flex-row overflow-hidden p-0 animate-fadeIn"
         >
           {/* Left: Branding Panel */}
-          <aside className="hidden md:flex flex-col justify-center items-center bg-gradient-to-br from-blue-500 via-blue-300 to-blue-500 w-1/2 p-15 gap-6 relative overflow-hidden">
+          <aside className="hidden md:flex flex-col rounded-xl justify-center items-center bg-gradient-to-br from-blue-500 via-blue-300 to-blue-500 w-1/2 p-15 gap-6 relative overflow-hidden">
             <div className="absolute inset-0 opacity-10 -z-10 pointer-events-none">
               <div className="w-full h-full bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.3)_1px,transparent_0)] bg-[length:20px_20px]" />
             </div>
