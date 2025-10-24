@@ -113,18 +113,16 @@ function CashLedgerModal({ isOpen, onClose }) {
           {selectedPaymentType ? `${selectedPaymentType} Transactions` : 'Transactions'}
         </div>
 
-        {/* Back to summary when viewing a specific payment type */}
-        {selectedPaymentType && (
-          <div className="w-full mb-2">
-            <button
-              type="button"
-              onClick={() => { setSelectedPaymentType(null); setTab('SUMMARY'); }}
-              className="text-sm text-blue-600 hover:underline"
-            >
-              ← Back to summary
-            </button>
-          </div>
-        )}
+        {/* Back to summary - always available on the Transactions page */}
+        <div className="w-full mb-2">
+          <button
+            type="button"
+            onClick={() => { setSelectedPaymentType(null); setTab('SUMMARY'); }}
+            className="text-sm text-blue-600 hover:underline"
+          >
+            ← Back to summary
+          </button>
+        </div>
 
         <div className="w-full max-h-96 overflow-y-auto">
           <table className="w-full text-xs text-left">
