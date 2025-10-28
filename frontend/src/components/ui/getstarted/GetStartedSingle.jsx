@@ -193,7 +193,7 @@ function DocumentUploadSection({ documents, documentTypes, onDocumentsChange, er
   );
 }
 
-export default function GetStartedSingle() {
+export default function GetStartedSingle({ onOpenTerms, onOpenPrivacy }) {
   const steps = [
     { label: "Account Info", icon: "👤" },
     { label: "OTP Verification", icon: "🔒" },
@@ -221,6 +221,8 @@ export default function GetStartedSingle() {
     otp: "",
     documents: [],
     documentTypes: [],
+    acceptTerms: false,
+    acceptPrivacy: false,
   });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
@@ -393,6 +395,9 @@ export default function GetStartedSingle() {
       const missing = required.filter(r => !matched.get(r.label)).map(r => r.label);
       if (missing.length > 0) {
         err.documents = `Missing required documents: ${missing.join(', ')}. Please upload all three required documents.`;
+      }
+      if (!form.acceptTerms || !form.acceptPrivacy) {
+        err.accept = "Please accept the Terms and Conditions and the Privacy Policy.";
       }
     }
     setErrors(err);
@@ -1049,33 +1054,46 @@ export default function GetStartedSingle() {
           )}
         </div>
 
-        <div className="mt-8 md:mt-6 flex items-center justify-between">
-          {step > 0 ? (
-            <Button onClick={handleBack} variant="secondary" className="w-28">Back</Button>
-          ) : (
-            <div />
-          )}
-          {step < steps.length - 1 ? (
-            step !== 1 ? (
-              <Button 
-                onClick={handleNext} 
-                disabled={loading || (step === 0 && (emailChecking || usernameChecking || emailAvailable === false || usernameAvailable === false))} 
-                variant="primary" 
-                className="w-32"
-              >
-                {loading ? <Loader size="sm" /> : 
-                 (step === 0 && (emailChecking || usernameChecking)) ? "Checking..." : "Next"}
-              </Button>
-            ) : (
-              <div className="text-sm text-gray-700">{loading ? "Verifying..." : "Enter the 4-character code"}</div>
-            )
-          ) : (
-            <Button onClick={handleFinish} disabled={loading} variant="primary" className="w-32">
-              {loading ? <Loader className="mr-2" size="sm" /> : null}
-              {loading ? "Processing..." : "Submit Application"}
-            </Button>
-          )}
-        </div>
+        {step === 3 && (
+          <div className="mt-6 space-y-3 max-w-lg">
+            <div className="flex items-start gap-2">
+              <input
+                id="acceptTerms"
+                type="checkbox"
+                checked={form.acceptTerms}
+                onChange={(e) => setForm(f => ({ ...f, acceptTerms: e.target.checked }))}
+                className="mt-1 w-4 h-4 text-blue-600 bg-white border-gray-300 rounded focus:ring-blue-500"
+              />
+              <label htmlFor="acceptTerms" className="text-sm text-gray-700">
+                I agree to the {" "}
+                <button type="button" onClick={onOpenTerms} className="text-blue-700 underline underline-offset-2 hover:text-blue-800">
+                  Terms and Conditions
+                </button>.
+              </label>
+            </div>
+
+            <div className="flex items-start gap-2">
+              <input
+                id="acceptPrivacy"
+                type="checkbox"
+                checked={form.acceptPrivacy}
+                onChange={(e) => setForm(f => ({ ...f, acceptPrivacy: e.target.checked }))}
+                className="mt-1 w-4 h-4 text-blue-600 bg-white border-gray-300 rounded focus:ring-blue-500"
+              />
+              <label htmlFor="acceptPrivacy" className="text-sm text-gray-700">
+                I have read the {" "}
+                <button type="button" onClick={onOpenPrivacy} className="text-blue-700 underline underline-offset-2 hover:text-blue-800">
+                  Privacy Policy
+                </button>.
+              </label>
+            </div>
+
+            {errors.accept && (
+              <p className="text-red-500 text-sm">{errors.accept}</p>
+            )}
+          </div>
+        )}
+
       </GetStartedLayout>
     </>
   );
