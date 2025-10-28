@@ -22,53 +22,54 @@ const faqs = [
 ];
 
 const FAQ = () => {
-  const [openFaq, setOpenFaq] = useState(0);
+  const [openIndex, setOpenIndex] = useState(0);
+  const toggle = (idx) => setOpenIndex((prev) => (prev === idx ? -1 : idx));
   return (
-    <section className="relative w-full py-24 bg-gray-50 flex justify-center items-center">
+    <section className="relative w-full py-28 bg-gray-50 flex justify-center items-center">
       <motion.div
-        className="max-w-2xl w-full mx-auto flex flex-col items-center px-4"
+        className="max-w-4xl w-full mx-auto flex flex-col items-center px-6"
         initial={{ opacity: 0, y: 28 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, amount: 0.2 }}
         transition={{ duration: 0.6, ease: 'easeOut' }}
       >
-        <SectionHeader size="xl" align="center" className="mb-8 text-blue-900">FAQs</SectionHeader>
-        <div className="flex flex-col items-center w-full">
-          <div className="bg-white rounded-2xl shadow-lg p-8 w-full max-w-2xl flex flex-col items-center mb-4">
-            <div className="flex w-full items-center justify-between mb-4">
-              <button
-                className="p-2 rounded-full hover:bg-blue-50 transition disabled:opacity-40"
-                onClick={() => setOpenFaq(openFaq > 0 ? openFaq - 1 : faqs.length - 1)}
-                aria-label="Previous question"
-                disabled={faqs.length <= 1}
-              >
-                <svg className="w-6 h-6" fill="none" stroke="#1976ed" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
-              </button>
-              <span className="flex-1 text-lg md:text-xl font-bold text-blue-900 text-center px-2">
-                {faqs[openFaq].q}
-              </span>
-              <button
-                className="p-2 rounded-full hover:bg-blue-50 transition disabled:opacity-40"
-                onClick={() => setOpenFaq(openFaq < faqs.length - 1 ? openFaq + 1 : 0)}
-                aria-label="Next question"
-                disabled={faqs.length <= 1}
-              >
-                <svg className="w-6 h-6" fill="none" stroke="#1976ed" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
-              </button>
-            </div>
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={openFaq}
-                className="w-full bg-white rounded-xl p-6 text-blue-900 text-lg text-center font-medium"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.4, ease: 'easeInOut' }}
-              >
-                {faqs[openFaq].a}
-              </motion.div>
-            </AnimatePresence>
-          </div>
+        <SectionHeader size="xl" align="center" className="mb-9 text-slate-900">Frequently Asked Questions</SectionHeader>
+        <div className="w-full rounded-2xl bg-white/60 backdrop-blur border border-blue-100 shadow-[0_10px_40px_rgba(37,99,235,0.05)] divide-y divide-slate-100">
+          {faqs.map((item, idx) => {
+            const isOpen = idx === openIndex;
+            return (
+              <div key={item.q} className="group">
+                <button
+                  onClick={() => toggle(idx)}
+                  className="w-full flex items-center justify-between gap-5 px-6 md:px-7 py-6 text-left hover:bg-blue-50/40 transition-colors"
+                  aria-expanded={isOpen}
+                >
+                  <span className="text-slate-900 font-normal text-lg md:text-xl">{item.q}</span>
+                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-blue-200 text-blue-600 bg-white group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                    {isOpen ? (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14"/></svg>
+                    ) : (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14"/></svg>
+                    )}
+                  </span>
+                </button>
+                <AnimatePresence initial={false}>
+                  {isOpen && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.25, ease: 'easeOut' }}
+                    >
+                      <div className="px-6 md:px-7 pb-6 text-slate-700 md:text-lg text-base leading-relaxed">
+                        {item.a}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            );
+          })}
         </div>
       </motion.div>
     </section>

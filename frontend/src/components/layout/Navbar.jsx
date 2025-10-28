@@ -12,8 +12,7 @@ function Navbar({ className = "" }) {
   const navItems = [
     { label: "Home", path: "/" },
     { label: "Features", path: "#features" },
-    { label: "Services", path: "#services" },
-    { label: "About Us", path: "#about" },
+    { label: "About", path: "#about" },
     { label: "FAQ", path: "#faq" },
   ];
 
@@ -38,8 +37,8 @@ function Navbar({ className = "" }) {
   return (
     <nav
       id="main-navbar"
-      className={`site-navbar-base flex items-center justify-between px-4 py-2 bg-white border border-blue-100 shadow-xl rounded-full fixed top-0 left-1/2 transform -translate-x-1/2 w-[95vw] max-w-2xl z-50 ${className}`}
-      style={{ fontFamily: "Inter, sans-serif", fontWeight: 500 }}
+      className={`site-navbar-base flex items-center justify-between px-5 py-3 bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/70 border border-blue-100 shadow-lg rounded-full fixed top-0 left-1/2 transform -translate-x-1/2 w-[95vw] max-w-4xl z-50 ${className}`}
+      style={{ fontFamily: "Inter, sans-serif", fontWeight: 600 }}
       role="navigation"
       aria-label="Primary"
     >
@@ -50,27 +49,25 @@ function Navbar({ className = "" }) {
       `}</style>
 
       {/* Logo */}
-      <div className="flex items-center space-x-1">
+      <div className="flex items-center space-x-2">
         <Link to="/" aria-label="eKahera home" className="flex items-center">
           {/* Use centralized Logo component and mark it as the nav logo */}
-          <Logo className="nav-logo h-8 w-auto" />
+          <Logo size={42} className="nav-logo w-auto" />
         </Link>
       </div>
 
       {/* Desktop Navigation Menu */}
-      <div className="hidden md:flex flex-1 items-center justify-center space-x-6" role="menubar">
+      <div className="hidden md:flex flex-1 items-center justify-center space-x-7" role="menubar">
         {navItems.map((item) => (
           <a
             key={item.label}
             href={item.path}
-            className={`relative text-black hover:text-blue-600 transition-colors text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 ${
-              location.hash === item.path ? "font-bold" : "font-medium"
-            }`}
+            className={`group relative text-slate-800 hover:text-blue-700 transition-colors text-base px-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400`}
             style={{ fontFamily: "Inter, sans-serif" }}
             role="menuitem"
           >
             {item.label}
-            <span className="absolute left-0 -bottom-1 w-0 h-0.5 bg-blue-600 transition-all duration-300 hover:w-full" />
+            <span className="absolute left-0 -bottom-1 h-0.5 bg-blue-600 transition-all duration-300 w-0 group-hover:w-full" />
           </a>
         ))}
       </div>
@@ -79,7 +76,7 @@ function Navbar({ className = "" }) {
       <div className="hidden md:flex items-center">
         <a
           href="/get-started"
-          className="bg-blue-600 text-white font-semibold px-5 py-1.5 rounded-full shadow hover:bg-blue-700 transition-all text-sm"
+          className="text-white font-semibold px-6 py-2 rounded-full shadow-md bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 focus:from-blue-700 focus:to-blue-600 transition-all text-base"
           style={{ fontFamily: "Inter, sans-serif" }}
         >
           Get Started
@@ -95,12 +92,12 @@ function Navbar({ className = "" }) {
 
       {/* Mobile Menu Dropdown */}
       {isMenuOpen && (
-        <div id="mobile-menu" className="md:hidden absolute top-full left-1/2 transform -translate-x-1/2 w-[90vw] max-w-xs bg-white shadow-lg z-50 flex flex-col items-start px-6 py-4 space-y-4 rounded-xl border border-blue-100 mt-2" role="menu">
+        <div id="mobile-menu" className="md:hidden absolute top-full left-1/2 transform -translate-x-1/2 w-[90vw] max-w-sm bg-white/95 backdrop-blur shadow-lg z-50 flex flex-col items-start px-6 py-5 space-y-5 rounded-xl border border-blue-100 mt-2" role="menu">
           {navItems.map((item) => (
             <a
               key={item.label}
               href={item.path}
-              className="text-gray-700 hover:text-blue-600 font-medium w-full transition-colors"
+            className="text-gray-800 hover:text-blue-700 font-medium text-base w-full transition-colors"
               style={{ fontFamily: "Inter, sans-serif" }}
               onClick={() => setIsMenuOpen(false)}
               role="menuitem"
@@ -110,7 +107,7 @@ function Navbar({ className = "" }) {
           ))}
           <a
             href="/get-started"
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full font-medium cursor-pointer w-full text-center transition-colors"
+            className="text-white px-7 py-3 rounded-full font-semibold text-base cursor-pointer w-full text-center transition-colors bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600"
             style={{ fontFamily: "Inter, sans-serif" }}
             onClick={() => setIsMenuOpen(false)}
             role="menuitem"
