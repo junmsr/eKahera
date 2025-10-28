@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+/*  */import React, { useState, useEffect } from 'react';
 import Button from '../../common/Button';
 import Card from '../../common/Card';
 import Loader from '../../common/Loader';
@@ -18,7 +18,7 @@ export default function DocumentVerification() {
 
   const fetchPendingVerifications = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('auth_token');
       const response = await fetch('http://localhost:5000/api/documents/pending', {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -39,7 +39,7 @@ export default function DocumentVerification() {
 
   const fetchStats = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('auth_token');
       const response = await fetch('http://localhost:5000/api/documents/stats', {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -49,7 +49,14 @@ export default function DocumentVerification() {
 
       if (response.ok) {
         const data = await response.json();
-        setStats(data);
+        // Filter stats to only include businesses with documents
+        const filteredStats = {
+          pending: data.pending || 0,
+          approved: data.approved || 0,
+          rejected: data.rejected || 0,
+          repass: data.repass || 0
+        };
+        setStats(filteredStats);
       }
     } catch (error) {
       console.error('Error fetching stats:', error);
@@ -58,7 +65,7 @@ export default function DocumentVerification() {
 
   const fetchBusinessDetails = async (businessId) => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('auth_token');
       const response = await fetch(
         `http://localhost:5000/api/documents/business/${businessId}/verification`,
         {
@@ -86,7 +93,7 @@ export default function DocumentVerification() {
   const handleDocumentAction = async (documentId, action, notes = '') => {
     setActionLoading(true);
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('auth_token');
       const response = await fetch(
         `http://localhost:5000/api/documents/document/${documentId}/verify`,
         {
@@ -120,7 +127,7 @@ export default function DocumentVerification() {
   const handleCompleteVerification = async (status, reason = '', notes = '') => {
     setActionLoading(true);
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('auth_token');
       const response = await fetch(
         `http://localhost:5000/api/documents/business/${selectedBusiness.business_id}/complete`,
         {
@@ -156,7 +163,7 @@ export default function DocumentVerification() {
 
   const downloadDocument = async (documentId, fileName) => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('auth_token');
       const response = await fetch(
         `http://localhost:5000/api/documents/download/${documentId}`,
         {
@@ -196,7 +203,13 @@ export default function DocumentVerification() {
   return (
     <div className="space-y-6">
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <Card className="p-4">
+          <div className="text-center">
+            <div className="text-2xl font-bold text-blue-600">{(stats.pending || 0) + (stats.approved || 0) + (stats.rejected || 0) + (stats.repass || 0)}</div>
+            <div className="text-sm text-gray-600">Total Businesses</div>
+          </div>
+        </Card>
         <Card className="p-4">
           <div className="text-center">
             <div className="text-2xl font-bold text-yellow-600">{stats.pending || 0}</div>
@@ -227,9 +240,9 @@ export default function DocumentVerification() {
         {/* Pending Verifications List */}
         <div className="lg:col-span-1">
           <Card className="p-6">
-            <h3 className="text-lg font-semibold mb-4">Pending Verifications</h3>
+            <h3 className="text-lg font-semibold mb-4">All Businesses with Documents</h3>
             {pendingVerifications.length === 0 ? (
-              <p className="text-gray-500 text-center py-8">No pending verifications</p>
+              <p className="text-gray-500 text-center py-8">No businesses with documents</p>
             ) : (
               <div className="space-y-3">
                 {pendingVerifications.map((business) => (
@@ -245,8 +258,10 @@ export default function DocumentVerification() {
                     <div className="font-medium">{business.business_name}</div>
                     <div className="text-sm text-gray-600">{business.business_type}</div>
                     <div className="text-xs text-gray-500">
-                      {business.total_documents} documents • 
-                      Submitted {new Date(business.submitted_at).toLocaleDateString()}
+                      {business.total_documents} documents • Status: {business.verification_status}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      Submitted {business.verification_submitted_at ? new Date(business.verification_submitted_at).toLocaleDateString() : 'N/A'}
                     </div>
                   </div>
                 ))}
@@ -273,7 +288,7 @@ export default function DocumentVerification() {
                   Select a Business to Review
                 </h3>
                 <p className="text-gray-500">
-                  Choose a business from the pending verifications list to review their documents.
+                  Choose a business from the list to review their documents.
                 </p>
               </div>
             </Card>
@@ -285,12 +300,12 @@ export default function DocumentVerification() {
 }
 
 // Business Verification Details Component
-function BusinessVerificationDetails({ 
-  business, 
-  onDocumentAction, 
-  onCompleteVerification, 
+function BusinessVerificationDetails({
+  business,
+  onDocumentAction,
+  onCompleteVerification,
   onDownloadDocument,
-  actionLoading 
+  actionLoading
 }) {
   const [rejectionReason, setRejectionReason] = useState('');
   const [resubmissionNotes, setResubmissionNotes] = useState('');
@@ -317,7 +332,7 @@ function BusinessVerificationDetails({
   };
 
   const allDocumentsApproved = business.documents?.every(doc => doc.verification_status === 'approved');
-  const hasRejectedOrRepass = business.documents?.some(doc => 
+  const hasRejectedOrRepass = business.documents?.some(doc =>
     doc.verification_status === 'rejected' || doc.verification_status === 'repass'
   );
 
@@ -460,7 +475,7 @@ function BusinessVerificationDetails({
             Request Resubmission
           </Button>
         </div>
-        
+
         {!allDocumentsApproved && !hasRejectedOrRepass && (
           <p className="text-sm text-gray-600 mt-2">
             All documents must be reviewed before completing verification.

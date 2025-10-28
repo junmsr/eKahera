@@ -5,6 +5,7 @@ import Button from '../components/common/Button';
 import Logo from '../components/common/Logo';
 import DocumentVerification from '../components/ui/SuperAdmin/DocumentVerification';
 import { api } from '../lib/api';
+import Modal from '../components/modals/Modal';
 
 function SuperAdmin() {
   const [activeTab, setActiveTab] = useState('verification');
@@ -18,6 +19,9 @@ function SuperAdmin() {
   const [loading, setLoading] = useState(false);
   const [actionLoadingId, setActionLoadingId] = useState(null);
   const [error, setError] = useState('');
+  const [deleteModal, setDeleteModal] = useState({ isOpen: false, store: null });
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const navigate = useNavigate();
   const token = localStorage.getItem('auth_token');
 
@@ -89,6 +93,38 @@ function SuperAdmin() {
 
   const handleView = (store) => {
     navigate(`/superadmin/stores/${store.id}`);
+  };
+
+  const handleDelete = (store) => {
+    setDeleteModal({ isOpen: true, store });
+    setDeletePassword('');
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteModal.store || !deletePassword) return;
+
+    setDeleteLoading(true);
+    try {
+      await api(`/api/superadmin/stores/${deleteModal.store.id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ password: deletePassword }),
+      });
+
+      // Remove store from local state
+      setStores((prev) => prev.filter((s) => s.id !== deleteModal.store.id));
+      setDeleteModal({ isOpen: false, store: null });
+      setError('');
+    } catch (err) {
+      setError('Failed to delete store: ' + (err.message || 'Unknown error'));
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  const closeDeleteModal = () => {
+    setDeleteModal({ isOpen: false, store: null });
+    setDeletePassword('');
   };
 
   return (
@@ -232,6 +268,15 @@ function SuperAdmin() {
                                   onClick={() => handleReject(s)}
                                   disabled={s.status === 'rejected' || actionLoadingId === s.id}
                                 />
+
+                                <Button
+                                  label="Delete"
+                                  size="sm"
+                                  variant="danger"
+                                  className="rounded-full px-4 bg-red-600 hover:bg-red-700"
+                                  onClick={() => handleDelete(s)}
+                                  disabled={actionLoadingId === s.id}
+                                />
                               </div>
                             </td>
                           </tr>
@@ -246,6 +291,55 @@ function SuperAdmin() {
           </main>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={deleteModal.isOpen}
+        onClose={closeDeleteModal}
+        title="Confirm Store Deletion"
+      >
+        <div className="p-6">
+          <div className="mb-4">
+            <p className="text-gray-700 mb-2">
+              Are you sure you want to delete the store <strong>{deleteModal.store?.name}</strong>?
+            </p>
+            <p className="text-red-600 text-sm">
+              This action cannot be undone. All associated data including users, products, inventory, and sales records will be permanently deleted.
+            </p>
+          </div>
+
+          <div className="mb-4">
+            <label htmlFor="deletePassword" className="block text-sm font-medium text-gray-700 mb-2">
+              Enter your password to confirm deletion:
+            </label>
+            <input
+              type="password"
+              id="deletePassword"
+              value={deletePassword}
+              onChange={(e) => setDeletePassword(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+              placeholder="Enter your password"
+              disabled={deleteLoading}
+            />
+          </div>
+
+          <div className="flex justify-end gap-3">
+            <Button
+              label="Cancel"
+              variant="secondary"
+              onClick={closeDeleteModal}
+              disabled={deleteLoading}
+            />
+            <Button
+              label={deleteLoading ? 'Deleting...' : 'Delete Store'}
+              variant="danger"
+              onClick={confirmDelete}
+              disabled={!deletePassword || deleteLoading}
+              className="bg-red-600 hover:bg-red-700"
+            />
+          </div>
+        </div>
+      </Modal>
     </Background>
   );
 }

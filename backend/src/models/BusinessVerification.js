@@ -2,15 +2,15 @@ const pool = require('../config/database');
 
 class BusinessVerification {
   static async create(businessId) {
-    // Since verification is tracked in the business table, 
+    // Since verification is tracked in the business table,
     // we just need to ensure the business exists and update the submission timestamp
     const query = `
-      UPDATE business 
+      UPDATE business
       SET verification_submitted_at = COALESCE(verification_submitted_at, NOW()),
           updated_at = NOW()
       WHERE business_id = $1
-      RETURNING business_id, verification_status, verification_submitted_at, 
-              verification_reviewed_at, verification_reviewed_by, 
+      RETURNING business_id, verification_status, verification_submitted_at,
+              verification_reviewed_at, verification_reviewed_by,
               verification_rejection_reason, verification_resubmission_notes
     `;
 
@@ -29,14 +29,14 @@ class BusinessVerification {
       LEFT JOIN users u ON b.verification_reviewed_by = u.user_id
       WHERE b.business_id = $1
     `;
-    
+
     const result = await pool.query(query, [businessId]);
     return result.rows[0];
   }
 
   static async updateStatus(businessId, status, reviewedBy, rejectionReason = null, resubmissionNotes = null) {
     const query = `
-      UPDATE business 
+      UPDATE business
       SET verification_status = $1,
           verification_reviewed_by = $2,
           verification_reviewed_at = NOW(),
@@ -67,30 +67,79 @@ class BusinessVerification {
              COUNT(CASE WHEN bd.verification_status = 'pending' THEN 1 END) as pending_documents
       FROM business b
       LEFT JOIN business_documents bd ON b.business_id = bd.business_id
-      WHERE b.verification_status = 'pending'
-      GROUP BY b.business_id, b.business_name, b.email, b.business_type, 
+      WHERE b.verification_status = 'pending' AND bd.document_id IS NOT NULL
+      GROUP BY b.business_id, b.business_name, b.email, b.business_type,
                b.business_address, b.mobile, b.created_at, b.verification_status,
                b.verification_submitted_at, b.verification_reviewed_at,
-               b.verification_reviewed_by, b.verification_rejection_reason, 
+               b.verification_reviewed_by, b.verification_rejection_reason,
                b.verification_resubmission_notes
       ORDER BY b.verification_submitted_at ASC
     `;
-    
+
+    const result = await pool.query(query);
+    return result.rows;
+  }
+
+  static async getAllBusinessesForVerification() {
+    const query = `
+      SELECT b.business_id, b.business_name, b.email as business_email, b.business_type,
+             b.business_address, b.mobile, b.created_at as business_created_at,
+             b.verification_status, b.verification_submitted_at, b.verification_reviewed_at,
+             b.verification_reviewed_by, b.verification_rejection_reason, b.verification_resubmission_notes,
+             COUNT(bd.document_id) as total_documents,
+             COUNT(CASE WHEN bd.verification_status = 'approved' THEN 1 END) as approved_documents,
+             COUNT(CASE WHEN bd.verification_status = 'rejected' THEN 1 END) as rejected_documents,
+             COUNT(CASE WHEN bd.verification_status = 'pending' THEN 1 END) as pending_documents
+      FROM business b
+      LEFT JOIN business_documents bd ON b.business_id = bd.business_id
+      WHERE b.verification_status IN ('pending', 'approved', 'rejected', 'repass') AND bd.document_id IS NOT NULL
+      GROUP BY b.business_id, b.business_name, b.email, b.business_type,
+               b.business_address, b.mobile, b.created_at, b.verification_status,
+               b.verification_submitted_at, b.verification_reviewed_at,
+               b.verification_reviewed_by, b.verification_rejection_reason,
+               b.verification_resubmission_notes
+      ORDER BY
+        CASE
+          WHEN b.verification_status = 'pending' THEN 1
+          WHEN b.verification_status = 'repass' THEN 2
+          WHEN b.verification_status = 'approved' THEN 3
+          WHEN b.verification_status = 'rejected' THEN 4
+        END,
+        b.verification_submitted_at ASC
+    `;
+
     const result = await pool.query(query);
     return result.rows;
   }
 
   static async getVerificationStats() {
     const query = `
-      SELECT 
-        verification_status,
-        COUNT(*) as count
-      FROM business
-      GROUP BY verification_status
+      SELECT
+        b.verification_status,
+        COUNT(DISTINCT b.business_id) as count
+      FROM business b
+      JOIN business_documents bd ON b.business_id = bd.business_id
+      WHERE b.verification_status IN ('pending', 'approved', 'rejected', 'repass')
+      GROUP BY b.verification_status
     `;
-    
+
     const result = await pool.query(query);
     return result.rows;
+  }
+
+  static async updatePendingStatusForBusinessesWithDocuments() {
+    const query = `
+      UPDATE business
+      SET verification_status = 'pending',
+          verification_submitted_at = COALESCE(verification_submitted_at, NOW()),
+          updated_at = NOW()
+      WHERE business_id IN (
+        SELECT DISTINCT business_id
+        FROM business_documents
+      ) AND (verification_status IS NULL OR verification_status NOT IN ('approved', 'rejected', 'repass'))
+    `;
+    const result = await pool.query(query);
+    return result.rowCount;
   }
 
   static async getBusinessWithDocuments(businessId) {
@@ -106,8 +155,8 @@ class BusinessVerification {
     `;
 
     const documentsQuery = `
-      SELECT * FROM business_documents 
-      WHERE business_id = $1 
+      SELECT * FROM business_documents
+      WHERE business_id = $1
       ORDER BY uploaded_at DESC
     `;
 

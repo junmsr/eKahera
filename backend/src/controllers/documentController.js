@@ -6,6 +6,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const pool = require('../config/database');
+const supabaseStorage = require('../utils/supabaseStorage');
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
@@ -60,8 +61,8 @@ exports.handleDocumentUpload = async (req, res) => {
     // Parse document types if it's a string
     let parsedDocumentTypes;
     try {
-      parsedDocumentTypes = typeof document_types === 'string' 
-        ? JSON.parse(document_types) 
+      parsedDocumentTypes = typeof document_types === 'string'
+        ? JSON.parse(document_types)
         : document_types;
     } catch (error) {
       return res.status(400).json({ error: 'Invalid document types format' });
@@ -80,22 +81,41 @@ exports.handleDocumentUpload = async (req, res) => {
     const businessData = businessResult.rows[0];
     const uploadedDocuments = [];
 
-    // Save each document to database
+    // Upload each document to Supabase Storage and save to database
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       const documentType = parsedDocumentTypes[i];
+
+      // Read file buffer
+      const fileBuffer = fs.readFileSync(file.path);
+
+      // Upload to Supabase Storage
+      const uploadResult = await supabaseStorage.uploadFile(
+        fileBuffer,
+        file.originalname,
+        file.mimetype,
+        business_id
+      );
+
+      if (!uploadResult.success) {
+        console.error('Failed to upload to Supabase:', uploadResult.error);
+        return res.status(500).json({ error: 'Failed to upload document to storage' });
+      }
 
       const documentData = {
         business_id: business_id,
         document_type: documentType,
         document_name: file.originalname,
-        file_path: file.path,
+        file_path: uploadResult.url, // Store Supabase URL
         file_size: file.size,
         mime_type: file.mimetype
       };
 
       const savedDocument = await BusinessDocument.create(documentData);
       uploadedDocuments.push(savedDocument);
+
+      // Clean up local file
+      fs.unlinkSync(file.path);
     }
 
     // Create or update business verification record
@@ -103,7 +123,7 @@ exports.handleDocumentUpload = async (req, res) => {
 
     // Check if all required documents are now uploaded
     const documentStatus = await hasRequiredDocuments(business_id);
-    
+
     // Only send notifications and update status if all required documents are uploaded
     if (documentStatus.hasAllRequired) {
       // Get SuperAdmin email for notification
@@ -123,7 +143,7 @@ exports.handleDocumentUpload = async (req, res) => {
         console.error('Failed to send application submitted notification:', error);
       });
 
-      // Update business verification status to submitted  
+      // Update business verification status to submitted
       await pool.query(
         'UPDATE business SET verification_status = $1, verification_submitted_at = COALESCE(verification_submitted_at, NOW()), updated_at = NOW() WHERE business_id = $2',
         ['pending', business_id]
@@ -131,7 +151,7 @@ exports.handleDocumentUpload = async (req, res) => {
     }
 
     res.status(201).json({
-      message: documentStatus.hasAllRequired 
+      message: documentStatus.hasAllRequired
         ? 'All required documents uploaded successfully. Your application has been submitted for verification.'
         : `Documents uploaded successfully. Please upload the remaining required documents: ${documentStatus.missingTypes.join(', ')}`,
       documents: uploadedDocuments,
@@ -172,7 +192,10 @@ exports.getBusinessDocuments = async (req, res) => {
 // Get all pending verifications (SuperAdmin only)
 exports.getPendingVerifications = async (req, res) => {
   try {
-    const verifications = await BusinessVerification.getAllPendingVerifications();
+    // Ensure businesses with documents are set to pending status
+    await BusinessVerification.updatePendingStatusForBusinessesWithDocuments();
+
+    const verifications = await BusinessVerification.getAllBusinessesForVerification();
     res.json(verifications);
   } catch (error) {
     console.error('Get pending verifications error:', error);
@@ -283,7 +306,7 @@ exports.completeBusinessVerification = async (req, res) => {
 exports.getVerificationStats = async (req, res) => {
   try {
     const stats = await BusinessVerification.getVerificationStats();
-    
+
     // Format stats for easier consumption
     const formattedStats = {
       pending: 0,

@@ -5,7 +5,8 @@ const {
   getStoreById,
   approveStore,
   rejectStore,
-  repassStore
+  repassStore,
+  deleteStore
 } = require('../controllers/superAdminController');
 const { authenticate, authorize } = require('../middleware/authMiddleware');
 
@@ -19,5 +20,6 @@ router.get('/stores/:id', getStoreById);
 router.post('/stores/:id/approve', approveStore);
 router.post('/stores/:id/reject', rejectStore);
 router.post('/stores/:id/repass', repassStore);
+router.delete('/stores/:id', deleteStore);
 
 module.exports = router;

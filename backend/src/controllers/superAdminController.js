@@ -1,6 +1,7 @@
 const pool = require('../config/database');
 const { logAction } = require('../utils/logger');
 const { sendVerificationStatusNotification } = require('../utils/emailService');
+const bcrypt = require('bcryptjs');
 
 // Get all stores/businesses for SuperAdmin
 exports.getAllStores = async (req, res) => {
@@ -307,5 +308,102 @@ exports.repassStore = async (req, res) => {
   } catch (err) {
     console.error('Repass store error:', err);
     res.status(500).json({ error: 'Failed to repass store' });
+  }
+};
+
+// Delete a store (with password verification)
+exports.deleteStore = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { password } = req.body;
+
+    if (!password) {
+      return res.status(400).json({ error: 'Password is required for deletion' });
+    }
+
+    // Verify superadmin password
+    const superAdminResult = await pool.query(
+      'SELECT password_hash FROM users WHERE user_id = $1 AND role = $2',
+      [req.user.userId, 'superadmin']
+    );
+
+    if (superAdminResult.rows.length === 0) {
+      return res.status(403).json({ error: 'Unauthorized: SuperAdmin access required' });
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, superAdminResult.rows[0].password_hash);
+    if (!isPasswordValid) {
+      return res.status(401).json({ error: 'Invalid password' });
+    }
+
+    // Check if store exists
+    const storeResult = await pool.query(
+      'SELECT business_id, business_name FROM business WHERE business_id = $1',
+      [id]
+    );
+
+    if (storeResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Store not found' });
+    }
+
+    const store = storeResult.rows[0];
+
+    // Start transaction for cascading delete
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      // Delete related data in order (to handle foreign key constraints)
+      // Delete logs
+      await client.query('DELETE FROM logs WHERE business_id = $1', [id]);
+
+      // Delete transactions (this will cascade to transaction_items, transaction_payment, returns, returned_items)
+      await client.query('DELETE FROM transactions WHERE business_id = $1', [id]);
+
+      // Delete inventory
+      await client.query('DELETE FROM inventory WHERE business_id = $1', [id]);
+
+      // Delete products
+      await client.query('DELETE FROM products WHERE business_id = $1', [id]);
+
+      // Delete business documents
+      await client.query('DELETE FROM business_documents WHERE business_id = $1', [id]);
+
+      // Delete email notifications
+      await client.query('DELETE FROM email_notifications WHERE business_id = $1', [id]);
+
+      // Delete users (this will cascade to related tables)
+      await client.query('DELETE FROM users WHERE business_id = $1', [id]);
+
+      // Finally delete the business
+      await client.query('DELETE FROM business WHERE business_id = $1', [id]);
+
+      await client.query('COMMIT');
+
+      // Log the deletion action
+      logAction({
+        userId: req.user.userId,
+        businessId: null,
+        action: `Deleted store: ${store.business_name} (ID: ${id})`
+      });
+
+      console.log(`SuperAdmin ${req.user.email} deleted store ${store.business_name}`);
+
+      res.json({
+        message: 'Store deleted successfully',
+        store: {
+          id: store.business_id,
+          name: store.business_name
+        }
+      });
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  } catch (err) {
+    console.error('Delete store error:', err);
+    res.status(500).json({ error: 'Failed to delete store' });
   }
 };
