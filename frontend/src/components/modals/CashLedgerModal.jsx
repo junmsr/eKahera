@@ -4,6 +4,8 @@ import Modal from "./Modal";
 function CashLedgerModal({ isOpen, onClose }) {
   // Tab state: "SUMMARY" or "TRANSACTIONS"
   const [tab, setTab] = useState("SUMMARY");
+  // Track which payment type is selected for filtered transactions view
+  const [selectedPaymentType, setSelectedPaymentType] = useState(null);
 
   // Dummy transactions data for demo
   const transactions = [
@@ -21,22 +23,25 @@ function CashLedgerModal({ isOpen, onClose }) {
 
   // Responsive tab navigation
   const renderTabs = () => (
-    <div className="flex w-full justify-around mt-8 border-t pt-3">
-      <button
-        className={`flex flex-col items-center transition ${tab === "SUMMARY" ? "text-blue-700 font-bold" : "text-gray-500 hover:text-blue-700"}`}
-        onClick={() => setTab("SUMMARY")}
-      >
-        <span className="material-icons text-xl mb-1">description</span>
-        <span className="text-xs font-medium">Summary</span>
-      </button>
-      <button
-        className={`flex flex-col items-center transition ${tab === "TRANSACTIONS" ? "text-blue-700 font-bold" : "text-gray-500 hover:text-blue-700"}`}
-        onClick={() => setTab("TRANSACTIONS")}
-      >
-        <span className="material-icons text-xl mb-1">swap_horiz</span>
-        <span className="text-xs font-medium">Transactions</span>
-      </button>
-    </div>
+    // Hide tabs when viewing a specific payment type (redundant UI)
+    selectedPaymentType ? null : (
+      <div className="flex w-full justify-around mt-8 border-t pt-3">
+        <button
+          className={`flex flex-col items-center transition ${tab === "SUMMARY" ? "text-blue-700 font-bold" : "text-gray-500 hover:text-blue-700"}`}
+          onClick={() => setTab("SUMMARY")}
+        >
+          <span className="material-icons text-xl mb-1">description</span>
+          <span className="text-xs font-medium">Summary</span>
+        </button>
+        <button
+          className={`flex flex-col items-center transition ${tab === "TRANSACTIONS" ? "text-blue-700 font-bold" : "text-gray-500 hover:text-blue-700"}`}
+          onClick={() => setTab("TRANSACTIONS")}
+        >
+          <span className="material-icons text-xl mb-1">swap_horiz</span>
+          <span className="text-xs font-medium">Transactions</span>
+        </button>
+      </div>
+    )
   );
 
   // Summary Page Component
@@ -76,7 +81,15 @@ function CashLedgerModal({ isOpen, onClose }) {
         </div>
         <div className="flex flex-col gap-2">
           {paymentTypes.map((type) => (
-            <button key={type.name} className="flex justify-between items-center bg-white rounded-xl shadow px-4 py-2 font-medium text-sm hover:bg-blue-50 transition">
+            <button
+              key={type.name}
+              className="flex justify-between items-center bg-white rounded-xl shadow px-4 py-2 font-medium text-sm hover:bg-blue-50 transition"
+              onClick={() => {
+                // Open transactions tab filtered by the clicked payment type
+                setSelectedPaymentType(type.name);
+                setTab('TRANSACTIONS');
+              }}
+            >
               <span>{type.name}</span>
               <span className="font-bold">₱{type.balance.toFixed(2)}</span>
               <span className="material-icons text-gray-400 ml-2 text-base">chevron_right</span>
@@ -88,38 +101,58 @@ function CashLedgerModal({ isOpen, onClose }) {
     );
   };
 
-  // Transactions Page
-  const renderTransactions = () => (
-    <div className="w-full flex flex-col items-center mt-2">
-      <div className="w-full mb-3 text-blue-700 font-semibold text-lg text-center">Transactions</div>
-      <div className="w-full max-h-96 overflow-y-auto">
-        <table className="w-full text-xs text-left">
-          <thead>
-            <tr className="text-gray-600 border-b">
-              <th className="py-2 px-2">Date/Time</th>
-              <th className="py-2 px-2">Type</th>
-              <th className="py-2 px-2 text-right">Amount</th>
-            </tr>
-          </thead>
-          <tbody>
-            {transactions.length === 0 ? (
-              <tr>
-                <td colSpan={3} className="text-center py-4 text-gray-400">No transactions found.</td>
+  // Transactions Page (optionally filtered by selectedPaymentType)
+  const renderTransactions = () => {
+    const filtered = selectedPaymentType
+      ? transactions.filter(t => t.type === selectedPaymentType)
+      : transactions;
+
+    return (
+      <div className="w-full flex flex-col items-center mt-2">
+        <div className="w-full mb-3 text-blue-700 font-semibold text-lg text-center">
+          {selectedPaymentType ? `${selectedPaymentType} Transactions` : 'Transactions'}
+        </div>
+
+        {/* Back to summary - always available on the Transactions page */}
+        <div className="w-full mb-2">
+          <button
+            type="button"
+            onClick={() => { setSelectedPaymentType(null); setTab('SUMMARY'); }}
+            className="text-sm text-blue-600 hover:underline"
+          >
+            ← Back to summary
+          </button>
+        </div>
+
+        <div className="w-full max-h-96 overflow-y-auto">
+          <table className="w-full text-xs text-left">
+            <thead>
+              <tr className="text-gray-600 border-b">
+                <th className="py-2 px-2">Date/Time</th>
+                <th className="py-2 px-2">Type</th>
+                <th className="py-2 px-2 text-right">Amount</th>
               </tr>
-            ) : (
-              transactions.map(tx => (
-                <tr key={tx.id} className="border-b hover:bg-blue-50 transition">
-                  <td className="py-2 px-2">{tx.date}</td>
-                  <td className="py-2 px-2">{tx.type}</td>
-                  <td className="py-2 px-2 text-right font-bold text-blue-700">₱{tx.amount.toFixed(2)}</td>
+            </thead>
+            <tbody>
+              {filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={3} className="text-center py-4 text-gray-400">No transactions found.</td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : (
+                filtered.map(tx => (
+                  <tr key={tx.id} className="border-b hover:bg-blue-50 transition">
+                    <td className="py-2 px-2">{tx.date}</td>
+                    <td className="py-2 px-2">{tx.type}</td>
+                    <td className="py-2 px-2 text-right font-bold text-blue-700">₱{tx.amount.toFixed(2)}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Cash Ledger" className="max-w-2xl">

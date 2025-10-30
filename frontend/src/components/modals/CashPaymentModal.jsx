@@ -1,10 +1,37 @@
 import React, { useState } from "react";
 import Button from "../common/Button";
+import CashPaymentCompleteModal from "./CashPaymentCompleteModal";
 
 function CashPaymentModal({ isOpen, onClose, total, onConfirm }) {
   const [amountReceived, setAmountReceived] = useState("");
+  const [showComplete, setShowComplete] = useState(false);
+  const [completeData, setCompleteData] = useState(null);
 
-  if (!isOpen) return null;
+  // Keep component mounted if completion modal should be shown even when parent closes isOpen
+  if (!isOpen && !showComplete) return null;
+
+  // When the payment is completed, replace this modal with the completion modal
+  if (showComplete) {
+    return (
+      <CashPaymentCompleteModal
+        isOpen={showComplete}
+        onClose={() => {
+          setShowComplete(false);
+          if (onClose) onClose();
+        }}
+        change={completeData?.change}
+        payable={completeData?.payable}
+        onNewEntry={() => {
+          setShowComplete(false);
+          if (onClose) onClose();
+        }}
+        onReceipt={() => {
+          // placeholder: can wire receipt logic here
+          alert("Receipt generated");
+        }}
+      />
+    );
+  }
 
   const handleQuickAmount = (val) => setAmountReceived(val.toString());
 
@@ -68,10 +95,18 @@ function CashPaymentModal({ isOpen, onClose, total, onConfirm }) {
               alert("Amount received must be greater than or equal to total.");
               return;
             }
-            onConfirm(Number(amountReceived));
-            onClose();
+            const received = Number(amountReceived);
+            // notify parent/payment handler
+            if (onConfirm) onConfirm(received);
+
+            // compute change and show completion modal
+            const change = received - total;
+            setCompleteData({ change, payable: total });
+            setShowComplete(true);
           }}
         />
+        
+        {/* completion modal is rendered in place of this modal when showComplete is true */}
       </div>
     </div>
   );
