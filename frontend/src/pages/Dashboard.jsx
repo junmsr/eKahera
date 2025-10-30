@@ -335,14 +335,9 @@ export default function Dashboard() {
       subtitle="Overview of your business performance"
       sidebar={<NavAdmin active={activeNav} onNavigate={setActiveNav} />}
       headerActions={headerActions}
-      className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 min-h-screen relative overflow-hidden"
+      className="bg-white min-h-screen relative overflow-hidden"
     >
-      {/* Animated Background Elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-400/20 to-purple-400/20 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute top-1/2 -left-40 w-96 h-96 bg-gradient-to-tr from-indigo-400/20 to-blue-400/20 rounded-full blur-3xl animate-pulse" style={{animationDelay: '1s'}}></div>
-        <div className="absolute bottom-0 right-1/4 w-64 h-64 bg-gradient-to-tl from-purple-400/20 to-pink-400/20 rounded-full blur-3xl animate-pulse" style={{animationDelay: '2s'}}></div>
-      </div>
+      {/* Background: removed large blue/purple gradient blobs for a cleaner look */}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 p-6 relative z-10">
@@ -362,19 +357,35 @@ export default function Dashboard() {
         <SalesPieChart data={pieData} />
         <EngagementChart data={chartData} />
         <Card className="bg-gradient-to-br from-red-50/80 to-orange-50/80 backdrop-blur-md border border-red-200/50 shadow-xl hover:shadow-2xl hover:scale-[1.02] transition-all duration-500 p-6 group">
-          <SectionHeader size="md" align="left" className="text-gray-900 mb-6 font-bold">
+          <SectionHeader
+            size="md"
+            align="left"
+            className="text-gray-900 mb-6 font-bold"
+          >
             Acquisition Overview
           </SectionHeader>
           <div className="flex flex-col gap-4">
             <div className="flex items-center gap-4">
               <div className="w-16 h-16 bg-gradient-to-br from-red-100 to-orange-100 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
-                <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
+                <svg
+                  className="w-8 h-8 text-red-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2.5}
+                    d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"
+                  />
                 </svg>
               </div>
               <div>
                 <span className="text-3xl font-bold text-red-600">-20%</span>
-                <p className="text-sm text-gray-600 font-medium">Down 20% this period</p>
+                <p className="text-sm text-gray-600 font-medium">
+                  Down 20% this period
+                </p>
               </div>
             </div>
             <div className="w-full bg-red-100/50 rounded-full h-2">
@@ -392,8 +403,18 @@ export default function Dashboard() {
           <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-2xl w-full max-w-md p-8 border border-white/50">
             <div className="flex items-center gap-3 mb-6">
               <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-blue-700 rounded-full flex items-center justify-center">
-                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                <svg
+                  className="w-5 h-5 text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                  />
                 </svg>
               </div>
               <h2 className="text-2xl font-bold text-gray-900">
@@ -403,7 +424,9 @@ export default function Dashboard() {
 
             <div className="space-y-4">
               <div>
-                <label className="block mb-2 text-sm font-semibold text-gray-700">Username</label>
+                <label className="block mb-2 text-sm font-semibold text-gray-700">
+                  Username
+                </label>
                 <input
                   type="text"
                   value={username}
@@ -413,7 +436,9 @@ export default function Dashboard() {
               </div>
 
               <div>
-                <label className="block mb-2 text-sm font-semibold text-gray-700">Password</label>
+                <label className="block mb-2 text-sm font-semibold text-gray-700">
+                  Password
+                </label>
                 <input
                   type="password"
                   value={password}
