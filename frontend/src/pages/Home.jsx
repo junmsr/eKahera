@@ -5,10 +5,8 @@ import HomeHero from "../components/ui/home/HomeHero";
 import Features from "../components/ui/home/Features";
 import AboutUs from "../components/ui/home/AboutUs";
 import FAQ from "../components/ui/home/FAQ";
-import vector1 from "../assets/images/vector1.png";
-import vector2 from "../assets/images/vector2.png";
 import SectionWrapper from "../components/ui/home/SectionWrapper";
-import ImageDivider from "../components/ui/home/ImageDivider";
+// Removed vector image dividers
 import SvgDivider from "../components/ui/home/SvgDivider";
 import SkipLink from "../components/ui/home/SkipLink";
 
@@ -50,8 +48,7 @@ function Home() {
       />
 
       <main id="main-content" role="main" className="flex-1">
-        {/* Features Section with Vector Divider */}
-        <ImageDivider src={vector1} overlay className="drop-shadow-2xl" />
+        {/* Features Section */}
         <SectionWrapper id="features" title="Key features">
           <Features />
         </SectionWrapper>
@@ -61,7 +58,7 @@ function Home() {
           <AboutUs />
         </SectionWrapper>
 
-        {/* FAQ Section with Dividers */}
+        {/* FAQ Section with SVG Divider */}
         <SvgDivider />
         <SectionWrapper
           id="faq"
@@ -71,8 +68,6 @@ function Home() {
           <FAQ />
         </SectionWrapper>
 
-        {/* Bottom Vector Divider */}
-        <ImageDivider src={vector2} overlay={false} />
       </main>
       {/* Footer is provided by PageLayout when showFooter is true */}
     </PageLayout>

@@ -40,6 +40,9 @@ function POS() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const notificationRef = useRef(null);
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+  const touchStartXRef = useRef(null);
+  const touchActiveRef = useRef(false);
 
   const token = localStorage.getItem("auth_token");
   const user = JSON.parse(localStorage.getItem("auth_user") || "{}");
@@ -331,12 +334,57 @@ function POS() {
 
   return (
     <Background variant="gradientBlue" pattern="dots" floatingElements overlay>
-      <div className="flex h-screen overflow-hidden">
+      <div
+        className="flex min-h-screen overflow-y-auto md:overflow-hidden"
+        onTouchStart={(e) => {
+          if (window.innerWidth >= 768) return;
+          const x = e.touches?.[0]?.clientX ?? 0;
+          // Start tracking if swipe begins near left edge or drawer is open
+          if (!isMobileNavOpen && x <= 24) {
+            touchActiveRef.current = true;
+            touchStartXRef.current = x;
+          } else if (isMobileNavOpen) {
+            touchActiveRef.current = true;
+            touchStartXRef.current = x;
+          }
+        }}
+        onTouchMove={(e) => {
+          if (!touchActiveRef.current) return;
+          const x = e.touches?.[0]?.clientX ?? 0;
+          const delta = x - (touchStartXRef.current ?? x);
+          // Open when swiping right from edge; close when swiping left while open
+          if (!isMobileNavOpen && delta > 60) {
+            setIsMobileNavOpen(true);
+            touchActiveRef.current = false;
+            touchStartXRef.current = null;
+          } else if (isMobileNavOpen && delta < -60) {
+            setIsMobileNavOpen(false);
+            touchActiveRef.current = false;
+            touchStartXRef.current = null;
+          }
+        }}
+        onTouchEnd={() => {
+          touchActiveRef.current = false;
+          touchStartXRef.current = null;
+        }}
+      >
         {/* Sidebar */}
-        <NavAdmin />
+        <div className="hidden md:block">
+          <NavAdmin />
+        </div>
+        {/* Mobile Off-canvas Nav */}
+        <div className={`md:hidden fixed inset-y-0 left-0 z-50 w-64 max-w-[80vw] bg-white shadow-xl transform transition-transform duration-300 ${isMobileNavOpen ? "translate-x-0" : "-translate-x-full"}`}>
+          <NavAdmin />
+        </div>
+        {isMobileNavOpen && (
+          <div
+            className="md:hidden fixed inset-0 bg-black/30 z-40"
+            onClick={() => setIsMobileNavOpen(false)}
+          />
+        )}
 
         {/* Main Content */}
-        <div className="flex-1 ml-48 flex flex-col h-screen">
+        <div className="flex-1 md:ml-48 ml-0 flex flex-col min-h-screen">
           {/* Header */}
           <header className="flex items-center gap-4 px-6 py-3 bg-white/80 shadow-sm border-b border-blue-100 h-[56px] min-h-[56px] max-h-[56px]">
             <span className="text-2xl font-bold text-blue-700 tracking-tight flex items-center gap-2">
@@ -352,12 +400,7 @@ function POS() {
           {/* Main Area */}
           <main className="flex-1 bg-transparent overflow-hidden p-4">
             <div
-              className="grid gap-8 h-full"
-              style={{
-                gridTemplateColumns: "1fr 2fr",
-                gridTemplateRows: "325px 325px 1fr 120px",
-                height: "100%",
-              }}
+              className="grid gap-4 md:gap-8 h-full grid-cols-1 md:[grid-template-columns:1fr_2fr] md:[grid-template-rows:325px_325px_1fr_120px]"
             >
               {/* ScannerCard */}
               <div className="row-span-1 col-span-1">
@@ -375,7 +418,7 @@ function POS() {
               </div>
 
               {/* CartTableCard */}
-              <div className="row-span-3 col-start-2 row-start-1 flex flex-col h-full">
+              <div className="md:row-span-3 md:col-start-2 md:row-start-1 flex flex-col h-full">
                 <CartTableCard cart={cart} handleRemove={handleRemove} total={total} className="flex-1" />
 
                 {/* Action Buttons */}
@@ -425,7 +468,7 @@ function POS() {
               </div>
 
               {/* SkuFormCard */}
-              <div className="row-start-2 col-start-1 mb-0">
+              <div className="md:row-start-2 md:col-start-1 mb-0">
                 <SkuFormCard
                   sku={sku}
                   setSku={setSku}
@@ -437,7 +480,7 @@ function POS() {
               </div>
 
               {/* TransactionCard */}
-              <div className="row-start-3 col-start-1 -mt-16">
+              <div className="md:row-start-3 md:col-start-1 md:-mt-16">
                 <TransactionCard transactionNumber={transactionNumber} transactionId={transactionId} />
               </div>
             </div>

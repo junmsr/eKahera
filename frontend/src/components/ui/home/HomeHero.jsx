@@ -1,11 +1,11 @@
 import React from "react";
 import heroIllustration from "../../../assets/images/hero-illustration.png";
 import { useNavigate } from "react-router-dom";
-import { motion, useViewportScroll, useTransform } from "framer-motion";
+import { motion, useScroll, useTransform } from "framer-motion";
 
 function HomeHero({ onCustomerClick, onStaffClick }) {
   const navigate = useNavigate();
-  const { scrollY } = useViewportScroll();
+  const { scrollY } = useScroll();
   // Subtle parallax for the illustration
   const parallaxY = useTransform(scrollY, [0, 300], [0, -20]);
 
@@ -27,8 +27,8 @@ function HomeHero({ onCustomerClick, onStaffClick }) {
 
   return (
     <section
-      className="relative w-full min-h-[calc(100vh-48px)] md:min-h-[calc(100vh-64px)] flex flex-col items-center justify-start px-1 pt-1 md:pt-30 pb-0 overflow-hidden"
-      style={{ fontFamily: "Inter, sans-serif", background: "#f9fafb" }}
+      className="relative w-full min-h-[calc(100vh-56px)] md:min-h-[calc(100vh-72px)] flex flex-col items-center justify-center px-1 md:px-8 pt-24 md:pt-40 pb-2 overflow-hidden"
+      style={{ fontFamily: "Inter, sans-serif", background: "linear-gradient(180deg, #ffffff 0%, #f8fbff 60%, #f2f6ff 100%)" }}
     >
       {/* Animated background blobs */}
       <motion.div
@@ -47,11 +47,11 @@ function HomeHero({ onCustomerClick, onStaffClick }) {
         variants={container}
         initial="hidden"
         animate="show"
-        className="relative z-10 flex flex-col md:flex-row items-center justify-between w-full max-w-6xl mx-auto gap-6 md:gap-10 flex-1"
+        className="relative z-10 flex flex-col-reverse md:flex-row items-center justify-center w-full max-w-6xl mx-auto gap-10 md:gap-12 flex-1"
       >
         {/* Left Column: Heading and Button */}
         <motion.div
-          className="flex-1 flex flex-col justify-center items-start h-full md:pr-8"
+          className="flex-1 flex-col justify-center items-start h-full md:pr-10"
           variants={fadeUp}
         >
           {/* Badge/Tagline */}
@@ -60,48 +60,51 @@ function HomeHero({ onCustomerClick, onStaffClick }) {
           </motion.span>
           <motion.h1
             variants={fadeUp}
-            className="text-4xl md:text-6xl font-extrabold text-black mb-4 leading-tight tracking-tight"
+            className="text-[40px] leading-[1.05] md:text-7xl md:leading-[1.03] font-extrabold text-slate-900 mb-10 tracking-tight"
             style={{ fontFamily: "Inter, sans-serif" }}
           >
-            Smart Sales.
-            <br />
-            Simple Checkout.
+            Smart POS for Every Business.
           </motion.h1>
           <motion.div
             variants={fadeUp}
-            className="text-gray-700 text-lg md:text-2xl mb-8 font-normal max-w-xl"
+            className="text-slate-700 text-xl md:text-2xl mb-10 font-normal max-w-2xl"
             style={{ fontFamily: "Inter, sans-serif" }}
           >
-            A Smart POS for Every Business — Multi-Store, Multi-User, All in One
-            Platform.
+            Streamline checkout, manage inventory, and track sales in real time with a secure, scalable POS built for growth.
           </motion.div>
-          <motion.div variants={fadeUp} className="flex flex-row gap-4 w-full md:w-auto">
-            <button
-              onClick={handleCustomer}
-              className="bg-white text-blue-700 font-semibold px-7 py-3 rounded shadow border border-blue-200 hover:bg-blue-50 hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 text-base flex items-center gap-2"
-              style={{ fontFamily: "Inter, sans-serif" }}
-            >
-              Customer
-            </button>
-            <button
-              onClick={handleStaff}
-              className="bg-gradient-to-r from-blue-600 to-blue-400 text-white font-semibold px-7 py-3 rounded shadow-lg hover:from-blue-700 hover:to-blue-500 hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 text-base flex items-center gap-2"
-              style={{ fontFamily: "Inter, sans-serif" }}
-            >
-              Admin / Cashier
-            </button>
+          <motion.div variants={fadeUp} className="flex flex-col sm:flex-row gap-4 sm:gap-5 w-full md:w-auto">
+            <div className="flex flex-col">
+              <button
+                onClick={handleStaff}
+                className="bg-gradient-to-r from-blue-600 to-blue-500 text-white font-semibold px-8 py-3.5 rounded-xl shadow-md hover:from-blue-700 hover:to-blue-600 hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 text-lg flex items-center gap-2"
+                style={{ fontFamily: "Inter, sans-serif" }}
+              >
+                Get Started
+              </button>
+              <span className="text-sm text-slate-500 mt-1">Try the Admin/Cashier experience</span>
+            </div>
+            <div className="flex flex-col">
+              <button
+                onClick={handleCustomer}
+                className="bg-white text-blue-700 font-semibold px-8 py-3.5 rounded-xl shadow border border-blue-200 hover:bg-blue-50 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 text-lg flex items-center gap-2"
+                style={{ fontFamily: "Inter, sans-serif" }}
+              >
+                Explore as Customer
+              </button>
+              <span className="text-sm text-slate-500 mt-1">See the shopping flow</span>
+            </div>
           </motion.div>
         </motion.div>
 
         {/* Right Column: Hero Illustration with floating animation */}
         <motion.div
-          className="flex-1 flex items-center justify-center h-full mt-8 md:mt-0"
+          className="flex-1 flex items-center justify-center h-full mt-4 md:mt-0"
           variants={fadeUp}
         >
           <motion.img
             src={heroIllustration}
             alt="Digital payment illustration"
-            className="w-[18rem] md:w-[30rem] max-w-full drop-shadow-2xl will-change-transform"
+            className="w-[18rem] md:w-[30rem] lg:w-[34rem] max-w-full drop-shadow-2xl will-change-transform"
             style={{ objectFit: "contain", y: parallaxY }}
             animate={{ y: [0, -16, 0], rotateZ: [0, 0.3, 0] }}
             transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut" }}
