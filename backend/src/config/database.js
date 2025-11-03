@@ -19,9 +19,13 @@ const poolConfig = config.DATABASE_URL
   ? {
       connectionString: config.DATABASE_URL,
       ssl: { rejectUnauthorized: false },
-      max: 5, // small pool for free-tier
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 10000,
+      max: 10, // increased pool size for better resilience
+      min: 1, // maintain at least 1 connection
+      idleTimeoutMillis: 60000, // increased idle timeout
+      connectionTimeoutMillis: 20000, // increased connection timeout
+      keepAlive: true,
+      keepAliveInitialDelayMillis: 10000,
+      allowExitOnIdle: true, // allow pool to close when idle
     }
   : {
       host: config.DB_HOST || 'localhost',
@@ -30,13 +34,28 @@ const poolConfig = config.DATABASE_URL
       user: config.DB_USER || 'postgres',
       password: config.DB_PASSWORD,
       ssl: { rejectUnauthorized: false },
-      max: 5,
+      max: 10, // increased pool size
+      min: 1, // maintain at least 1 connection
+      idleTimeoutMillis: 60000, // increased idle timeout
+      connectionTimeoutMillis: 20000, // increased connection timeout
+      keepAlive: true,
+      keepAliveInitialDelayMillis: 10000,
+      allowExitOnIdle: true,
     };
 
 const pool = new Pool(poolConfig);
 
-pool.on('error', (err) => {
-  console.error('Unexpected DB connection error:', err.message);
+pool.on('error', (err, client) => {
+  console.error('Unexpected DB connection error:', err.message, err.code);
+  // Don't exit the process, just log the error
+});
+
+pool.on('connect', (client) => {
+  console.log('New database connection established');
+});
+
+pool.on('remove', (client) => {
+  console.log('Database connection removed from pool');
 });
 
 module.exports = pool;

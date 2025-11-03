@@ -13,7 +13,7 @@ import SkipLink from "../components/ui/home/SkipLink";
 function Home() {
   const navigate = useNavigate();
 
-  const handleCustomerPortal = () => navigate("/customer");
+  const handleCustomerPortal = () => navigate("/customer-enter");
   const handleStaffPortal = () => navigate("/login");
   const handleMobileScanner = () => navigate("/mobile-scanner");
 

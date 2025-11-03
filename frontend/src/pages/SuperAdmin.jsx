@@ -153,7 +153,7 @@ function SuperAdmin() {
               <button 
                 onClick={() => {
                   localStorage.removeItem('auth_token');
-                  localStorage.removeItem('auth_user');
+                  localStorage.removeItem('user');
                   navigate('/');
                 }}
                 className="p-3 rounded-full bg-white/60 shadow hover:bg-red-100 transition-colors"

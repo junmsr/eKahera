@@ -100,4 +100,32 @@ exports.getSalesByCategory = async (req, res) => {
   }
 };
 
+// Distinct customers per day (based on transactions.customer_user_id)
+exports.getCustomersTimeseries = async (req, res) => {
+  try {
+    const role = (req.user?.role || '').toLowerCase();
+    const businessId = role === 'superadmin' ? (req.query?.business_id ? Number(req.query.business_id) : null) : (req.user?.businessId || null);
+    const days = Math.max(1, Math.min(180, Number(req.query?.days) || 30));
+    if (!businessId) return res.json([]);
+
+    const tsRes = await pool.query(
+      `SELECT to_char(d::date, 'YYYY-MM-DD') AS day,
+              COALESCE(cnt, 0) AS customers
+       FROM generate_series(NOW()::date - ($2::int - 1) * INTERVAL '1 day', NOW()::date, INTERVAL '1 day') AS d
+       LEFT JOIN (
+         SELECT date_trunc('day', created_at) AS day_key,
+                COUNT(DISTINCT customer_user_id) AS cnt
+         FROM transactions
+         WHERE business_id = $1
+         GROUP BY day_key
+       ) t ON t.day_key = d
+       ORDER BY d`,
+      [businessId, days]
+    );
+    res.json(tsRes.rows.map(r => ({ name: r.day, customers: Number(r.customers) })));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
 

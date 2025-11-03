@@ -100,6 +100,7 @@ exports.login = async (req, res) => {
 
   try {
     // Try to find user by email, username, or business name
+    // When matching by business name, prioritize admin users
     const result = await pool.query(
       `SELECT u.user_id, u.username, u.email, u.password_hash, u.role, u.contact_number,
               u.user_type_id,
@@ -109,7 +110,16 @@ exports.login = async (req, res) => {
        FROM users u
        LEFT JOIN user_type ut ON ut.user_type_id = u.user_type_id
        LEFT JOIN business b ON b.business_id = u.business_id
-       WHERE lower(u.email) = lower($1) OR lower(u.username) = lower($1) OR lower(b.business_name) = lower($1)`,
+       WHERE lower(u.email) = lower($1) OR lower(u.username) = lower($1) OR lower(b.business_name) = lower($1)
+       ORDER BY
+         CASE
+           WHEN lower(u.username) = lower($1) THEN 1
+           WHEN lower(u.email) = lower($1) THEN 2
+           WHEN lower(b.business_name) = lower($1) AND lower(ut.user_type_name) = 'admin' THEN 3
+           WHEN lower(b.business_name) = lower($1) AND lower(ut.user_type_name) = 'business_owner' THEN 4
+           WHEN lower(b.business_name) = lower($1) THEN 5
+           ELSE 6
+         END`,
       [email]
     );
 
@@ -199,6 +209,8 @@ exports.login = async (req, res) => {
       }
     }
 
+
+
     // Log login action (best effort)
     logAction({ userId: user.user_id, businessId: user.business_id || null, action: 'Login' });
 
@@ -235,7 +247,7 @@ exports.createInitialSuperAdmin = async (req, res) => {
   if (!name || !email || !password || !confirmPassword) {
     return res.status(400).json({ 
       error: 'Name, email, password, and password confirmation are required' 
-    });
+    });nt
   }
   
   if (password !== confirmPassword) {

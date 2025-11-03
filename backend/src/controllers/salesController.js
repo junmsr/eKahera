@@ -167,6 +167,14 @@ exports.publicCheckout = async (req, res) => {
     const transaction_number = `T-${businessPart}-${timePart}-${randPart}`;
 
     await client.query('COMMIT');
+    // Log sale for visibility in logs dashboard
+    try {
+      logAction({
+        userId: customer_user_id || null,
+        businessId: business_id,
+        action: `Public checkout transaction_id=${transaction_id} total=${total}`
+      });
+    } catch (_) {}
     res.status(201).json({ transaction_id, transaction_number, total });
   } catch (err) {
     await client.query('ROLLBACK');

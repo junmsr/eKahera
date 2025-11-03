@@ -1,6 +1,6 @@
 import React from "react";
 
-const LogsCard = ({ title, logs, searchQuery }) => {
+const LogsCard = ({ title, logs = [], searchQuery = "" }) => {
   const cardStyle = {
     flex: "1",
     backgroundColor: "#fff",
@@ -32,12 +32,14 @@ const LogsCard = ({ title, logs, searchQuery }) => {
     borderBottom: "1px solid #eee",
   };
 
-  const filteredLogs = logs.filter((log) =>
-    Object.values(log)
+  const filteredLogs = logs.filter((log) => {
+    const haystack = Object.values(log)
+      .map((v) => String(v ?? ""))
       .join(" ")
-      .toLowerCase()
-      .includes(searchQuery.toLowerCase())
-  );
+      .toLowerCase();
+    const needle = String(searchQuery || "").toLowerCase();
+    return haystack.includes(needle);
+  });
 
   return (
     <div style={cardStyle}>

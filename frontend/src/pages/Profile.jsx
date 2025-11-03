@@ -4,6 +4,7 @@ import NavAdmin from "../components/layout/Nav-Admin";
 import Card from "../components/common/Card";
 import Loader from "../components/common/Loader";
 import { api } from "../lib/api";
+import Button from "../components/common/Button";
 
 /**
  * Profile Page Component
@@ -186,6 +187,52 @@ const Profile = () => {
                   <div className="bg-gray-50 px-3 py-2 rounded-lg border">
                     {formatDate(profileData?.user?.updated_at)}
                   </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Store Entry QR for Customers */}
+            <div className="mt-8">
+              <div className="text-lg font-semibold text-gray-900 mb-2">Store Entry QR</div>
+              <div className="text-gray-600 mb-3">Customers scan this to start self-checkout in your store.</div>
+              <div className="flex items-start gap-4 flex-wrap">
+                <img
+                  src={(function(){
+                    const businessId = profileData?.business?.business_id || profileData?.user?.businessId || JSON.parse(localStorage.getItem('user')||'{}')?.businessId;
+                    const url = new URL(window.location.origin + '/enter-store');
+                    if (businessId) url.searchParams.set('business_id', String(businessId));
+                    const data = encodeURIComponent(url.toString());
+                    return `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${data}&qzone=2&format=png&_=${Date.now()}`;
+                  })()}
+                  alt="Store Entry QR"
+                  className="w-[260px] h-[260px] border rounded-xl bg-white"
+                />
+                <div className="space-y-2">
+                  <div className="text-sm text-gray-700 break-all">
+                    {(function(){
+                      const businessId = profileData?.business?.business_id || profileData?.user?.businessId || JSON.parse(localStorage.getItem('user')||'{}')?.businessId;
+                      const url = new URL(window.location.origin + '/enter-store');
+                      if (businessId) url.searchParams.set('business_id', String(businessId));
+                      return url.toString();
+                    })()}
+                  </div>
+                  <Button
+                    label="Download PNG"
+                    variant="primary"
+                    onClick={() => {
+                      const businessId = profileData?.business?.business_id || profileData?.user?.businessId || JSON.parse(localStorage.getItem('user')||'{}')?.businessId;
+                      const url = new URL(window.location.origin + '/enter-store');
+                      if (businessId) url.searchParams.set('business_id', String(businessId));
+                      const data = encodeURIComponent(url.toString());
+                      const src = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${data}&qzone=2&format=png&_=${Date.now()}`;
+                      const a = document.createElement('a');
+                      a.href = src;
+                      a.download = `store-${businessId||'qr'}.png`;
+                      a.target = '_blank';
+                      a.rel = 'noopener';
+                      a.click();
+                    }}
+                  />
                 </div>
               </div>
             </div>

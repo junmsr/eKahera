@@ -67,7 +67,7 @@ export default function Login() {
         body: JSON.stringify({ email: form.email, password: form.password }),
       });
       localStorage.setItem('auth_token', token);
-      localStorage.setItem('auth_user', JSON.stringify(user));
+      localStorage.setItem('user', JSON.stringify(user));
       const role = (user?.role || '').toLowerCase();
       if (role === 'cashier') {
         navigate('/cashier-pos');

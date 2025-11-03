@@ -160,12 +160,12 @@ function SalesPieChart({ data }) {
         <PieChart>
           <Pie
             data={data}
-            dataKey="value"
+            dataKey="percent"
             nameKey="name"
             cx="50%"
             cy="50%"
             outerRadius={60}
-            label
+            label={(entry) => `${entry.name} (${Number(entry.percent || 0).toFixed(1)}%)`}
           >
             {data.map((entry, idx) => (
               <Cell
@@ -176,6 +176,7 @@ function SalesPieChart({ data }) {
           </Pie>
           <Legend />
           <Tooltip
+            formatter={(value, name, props) => [`${Number(value).toFixed(1)}%`, props?.payload?.name]}
             contentStyle={{ background: "#f3e8ff", borderColor: "#2563eb" }}
           />
         </PieChart>
@@ -235,6 +236,8 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(false);
   const [chartData, setChartData] = useState([]);
   const [pieData, setPieData] = useState([]);
+  const [acqChange, setAcqChange] = useState(0);
+  const [acqProgress, setAcqProgress] = useState(0);
 
   // Admin modal state
   const [showAdminModal, setShowAdminModal] = useState(false);
@@ -256,9 +259,28 @@ export default function Dashboard() {
         }`,
         { headers: authHeaders(token) }
       );
+      const customersTs = await api(
+        `/api/stats/customers-timeseries?days=${
+          range === "week" ? 7 : range === "month" ? 30 : 365
+        }`,
+        { headers: authHeaders(token) }
+      );
       const pie = await api("/api/stats/sales-by-category", {
         headers: authHeaders(token),
       });
+      // Derive additional series so graphs actually render useful values
+      const maxVal = timeseries.reduce((m, d) => Math.max(m, Number(d.value || 0)), 0) || 1;
+      const customersMap = new Map(customersTs.map((c) => [c.name, Number(c.customers || 0)]));
+      const derived = timeseries.map((d) => {
+        const v = Number(d.value || 0);
+        const engagement = Math.round((v / maxVal) * 100); // 0-100 scale
+        const customers = customersMap.get(d.name) ?? Math.max(0, Math.round(v / 100));
+        return { ...d, engagement, customers };
+      });
+      const pieTotal = pie.reduce((s, p) => s + Number(p.value || 0), 0) || 0;
+      const piePercent = pieTotal > 0
+        ? pie.map(p => ({ ...p, percent: (Number(p.value || 0) / pieTotal) * 100 }))
+        : pie.map(p => ({ ...p, percent: 0 }));
       setStats([
         {
           ...initialStats[0],
@@ -273,14 +295,18 @@ export default function Dashboard() {
           change: summary.growthRate,
         },
       ]);
-      setChartData(
-        timeseries.map((d) => ({ ...d, customers: 0, engagement: 0 }))
-      );
-      setPieData(pie);
+      setChartData(derived);
+      setPieData(piePercent);
+      // Acquisition Overview: use growthRate as acquisition change indicator
+      const change = Number(summary.growthRate || 0);
+      setAcqChange(change);
+      setAcqProgress(Math.max(0, Math.min(100, Math.abs(change))));
     } catch (err) {
       setStats(initialStats);
       setChartData([]);
       setPieData([]);
+      setAcqChange(0);
+      setAcqProgress(0);
     } finally {
       setLoading(false);
     }
@@ -373,12 +399,19 @@ export default function Dashboard() {
                 </svg>
               </div>
               <div>
-                <span className="text-3xl font-bold text-red-600">-20%</span>
-                <p className="text-sm text-gray-600 font-medium">Down 20% this period</p>
+                <span className={`text-3xl font-bold ${acqChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {acqChange >= 0 ? '+' : ''}{Math.round(acqChange)}%
+                </span>
+                <p className="text-sm text-gray-600 font-medium">
+                  {acqChange >= 0 ? 'Up' : 'Down'} {Math.abs(Math.round(acqChange))}% this period
+                </p>
               </div>
             </div>
             <div className="w-full bg-red-100/50 rounded-full h-2">
-              <div className="bg-gradient-to-r from-red-500 to-orange-500 h-2 rounded-full w-1/5 transition-all duration-1000"></div>
+              <div
+                className={`h-2 rounded-full transition-all duration-700 ${acqChange >= 0 ? 'bg-gradient-to-r from-green-500 to-emerald-500' : 'bg-gradient-to-r from-red-500 to-orange-500'}`}
+                style={{ width: `${acqProgress}%` }}
+              ></div>
             </div>
           </div>
         </Card>

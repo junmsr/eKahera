@@ -103,8 +103,23 @@ const hasRequiredDocuments = async (businessId) => {
   }
 };
 
+// Helper function to retry database operations
+const retryDbOperation = async (operation, maxRetries = 3, delay = 1000) => {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      console.error(`DB operation failed (attempt ${attempt}/${maxRetries}):`, error.message);
+      if (attempt === maxRetries) throw error;
+      // Wait before retrying
+      await new Promise(resolve => setTimeout(resolve, delay * attempt));
+    }
+  }
+};
+
 // Admin creates a cashier user under their business
 exports.createCashier = async (req, res) => {
+  let client;
   try {
     const adminUserId = req.user.userId;
     const adminBusinessId = req.user.businessId;
@@ -117,30 +132,56 @@ exports.createCashier = async (req, res) => {
       return res.status(400).json({ error: 'username and password are required' });
     }
 
-    // Check duplicates
-    const exists = await pool.query('SELECT 1 FROM users WHERE username = $1 OR email = $2', [username, email || null]);
+    // Get a client from the pool for transaction with timeout and retry
+    client = await retryDbOperation(async () => {
+      const client = await pool.connect();
+      await client.query('SET statement_timeout = 20000'); // increased timeout to 20 seconds
+      return client;
+    });
+
+    // Check duplicates with retry
+    const exists = await retryDbOperation(async () =>
+      await client.query('SELECT 1 FROM users WHERE username = $1 OR email = $2', [username, email || null])
+    );
     if (exists.rowCount > 0) {
+      client.release();
       return res.status(409).json({ error: 'Username or email already exists' });
     }
 
     const saltRounds = 10;
     const passwordHash = await bcrypt.hash(password, saltRounds);
 
-    const roleRes = await pool.query('SELECT user_type_id FROM user_type WHERE lower(user_type_name) = $1', ['cashier']);
+    // Get cashier type with retry
+    const roleRes = await retryDbOperation(async () =>
+      await client.query('SELECT user_type_id FROM user_type WHERE lower(user_type_name) = $1', ['cashier'])
+    );
     const cashierTypeId = roleRes.rows[0]?.user_type_id || null;
 
-    const ins = await pool.query(
-      `INSERT INTO users (username, email, password_hash, contact_number, user_type_id, role, business_id, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, 'cashier', $6, NOW(), NOW())
-       RETURNING user_id, username, business_id`,
-      [username, email || null, passwordHash, contact_number || null, cashierTypeId, adminBusinessId]
+    // Insert cashier with retry
+    const ins = await retryDbOperation(async () =>
+      await client.query(
+        `INSERT INTO users (username, email, password_hash, contact_number, user_type_id, role, business_id, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, 'cashier', $6, NOW(), NOW())
+         RETURNING user_id, username, business_id`,
+        [username, email || null, passwordHash, contact_number || null, cashierTypeId, adminBusinessId]
+      )
     );
+
+    client.release();
 
     res.status(201).json({
       message: 'Cashier created',
       cashier: ins.rows[0]
     });
   } catch (err) {
+    if (client) {
+      try {
+        client.release();
+      } catch (releaseErr) {
+        console.error('Error releasing client:', releaseErr);
+      }
+    }
+    console.error('Create cashier error:', err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -157,7 +198,23 @@ exports.listCashiers = async (req, res) => {
        ORDER BY u.created_at DESC`,
       [businessId]
     );
-    res.json(rows.rows);
+
+    // Check login status for each cashier (active if logged in within last 24 hours)
+    const cashiersWithStatus = await Promise.all(rows.rows.map(async (cashier) => {
+      const loginCheck = await pool.query(
+        `SELECT 1 FROM logs
+         WHERE user_id = $1 AND action = 'Login' AND date_time > NOW() - INTERVAL '24 hours'
+         ORDER BY date_time DESC LIMIT 1`,
+        [cashier.user_id]
+      );
+
+      return {
+        ...cashier,
+        status: loginCheck.rows.length > 0 ? 'ACTIVE' : 'INACTIVE'
+      };
+    }));
+
+    res.json(cashiersWithStatus);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

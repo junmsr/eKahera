@@ -79,7 +79,7 @@ function HomeHero({ onCustomerClick, onStaffClick }) {
                 className="bg-gradient-to-r from-blue-600 to-blue-500 text-white font-semibold px-8 py-3.5 rounded-xl shadow-md hover:from-blue-700 hover:to-blue-600 hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 text-lg flex items-center gap-2"
                 style={{ fontFamily: "Inter, sans-serif" }}
               >
-                Get Started
+                Log In
               </button>
               <span className="text-sm text-slate-500 mt-1">Try the Admin/Cashier experience</span>
             </div>

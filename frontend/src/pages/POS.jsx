@@ -14,6 +14,7 @@ import CashLedgerModal from "../components/modals/CashLedgerModal";
 import ProductReplacementModal from "../components/modals/ProductReplacementModal";
 import CheckoutModal from "../components/modals/CheckoutModal";
 import CashPaymentModal from "../components/modals/CashPaymentModal";
+import ScanCustomerCartModal from "../components/modals/ScanCustomerCartModal";
 import ProfileModal from "../components/modals/ProfileModal";
 import { BiBell, BiSync, BiUser } from "react-icons/bi";
 import { MdClose } from "react-icons/md";
@@ -28,6 +29,7 @@ function POS() {
   const [showRefund, setShowRefund] = useState(false);
   const [showDiscount, setShowDiscount] = useState(false);
   const [showPriceCheck, setShowPriceCheck] = useState(false);
+  const [showImportCart, setShowImportCart] = useState(false);
   const [showCashLedger, setShowCashLedger] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
   const [showCashModal, setShowCashModal] = useState(false);
@@ -45,7 +47,7 @@ function POS() {
   const touchActiveRef = useRef(false);
 
   const token = localStorage.getItem("auth_token");
-  const user = JSON.parse(localStorage.getItem("auth_user") || "{}");
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
   const hasFinalizedRef = React.useRef(false);
 
   // Generate a client-side provisional transaction number when POS opens
@@ -89,6 +91,13 @@ function POS() {
             if (resp?.transaction_number) setTransactionNumber(resp.transaction_number);
             if (resp?.transaction_id) setTransactionId(resp.transaction_id);
             setCart([]);
+            try {
+              const url = new URL(window.location.origin + '/receipt');
+              if (resp?.transaction_number) url.searchParams.set('tn', resp.transaction_number);
+              if (resp?.transaction_id) url.searchParams.set('tid', String(resp.transaction_id));
+              if (resp?.total != null) url.searchParams.set('total', String(resp.total));
+              window.location.href = url.toString();
+            } catch (_) {}
           } catch (e) {
             setError(e.message || 'Failed to record GCASH payment');
           } finally {
@@ -189,6 +198,13 @@ function POS() {
       if (resp?.transaction_number) setTransactionNumber(resp.transaction_number);
       if (resp?.transaction_id) setTransactionId(resp.transaction_id);
       setCart([]);
+      try {
+        const url = new URL(window.location.origin + '/receipt');
+        if (resp?.transaction_number) url.searchParams.set('tn', resp.transaction_number);
+        if (resp?.transaction_id) url.searchParams.set('tid', String(resp.transaction_id));
+        if (resp?.total != null) url.searchParams.set('total', String(resp.total));
+        navigate(url.pathname + url.search);
+      } catch (_) {}
       // Start a fresh provisional transaction number after successful checkout
       const businessId = user?.businessId || user?.business_id || 'BIZ';
       const timePart = new Date().toISOString().replace(/[-:T.Z]/g, '').slice(0, 14);
@@ -449,6 +465,14 @@ function POS() {
                     onClick={() => setShowCheckout(true)}
                   />
                   <Button
+                    label="IMPORT CUSTOMER CART"
+                    size="lg"
+                    className="w-full h-16 text-base font-bold"
+                    onClick={() => setShowImportCart(true)}
+                    variant="secondary"
+                    microinteraction
+                  />
+                  <Button
                     label="REFUND"
                     size="lg"
                     className="w-full h-16 text-base font-bold"
@@ -560,6 +584,25 @@ function POS() {
             isOpen={showProfileModal}
             onClose={() => setShowProfileModal(false)}
             userData={user}
+          />
+          <ScanCustomerCartModal
+            isOpen={showImportCart}
+            onClose={() => setShowImportCart(false)}
+            onImport={(items) => {
+              // Merge imported items into current cart
+              setCart((prev) => {
+                const bySku = new Map(prev.map(i => [i.sku, i]));
+                for (const it of items) {
+                  const existing = bySku.get(it.sku);
+                  if (existing) {
+                    existing.quantity += it.quantity;
+                  } else {
+                    bySku.set(it.sku, { ...it });
+                  }
+                }
+                return Array.from(bySku.values());
+              });
+            }}
           />
         </div>
       </div>

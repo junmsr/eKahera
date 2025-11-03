@@ -16,7 +16,7 @@ function Cashiers() {
   const [editIndex, setEditIndex] = useState(null);
   const [form, setForm] = useState({
     name: "",
-    id: "",
+    password: "",
     number: "",
     email: "",
     status: "ACTIVE",
@@ -32,7 +32,7 @@ function Cashiers() {
         const list = await api('/api/business/cashiers', { headers: authHeaders(token) });
         const mapped = (list || []).map(r => ({
           name: r.username || '-',
-          id: r.id || '-',
+          id: r.user_id || '-',
           number: r.contact_number || '-',
           email: r.email || '-',
           status: 'ACTIVE',
@@ -49,7 +49,7 @@ function Cashiers() {
 
   // Handle Add Cashier
   const handleAddCashier = () => {
-    setForm({ name: "", id: "", number: "", email: "", status: "ACTIVE" });
+    setForm({ name: "", password: "", number: "", email: "", status: "ACTIVE" });
     setShowAddModal(true);
   };
 
@@ -64,7 +64,7 @@ function Cashiers() {
         headers: { 'Content-Type': 'application/json', ...authHeaders(token) },
         body: JSON.stringify({
           username: (form.name || '').trim(),
-          cashier_id: (form.id || '').trim(),
+          password: (form.password || '').trim(),
           contact_number: (form.number || '').trim() || null,
           email: (form.email || '').trim() || null,
         })
@@ -73,7 +73,7 @@ function Cashiers() {
       const list = await api('/api/business/cashiers', { headers: authHeaders(token) });
       const mapped = (list || []).map(r => ({
         name: r.username || '-',
-        id: r.id || '-',
+        id: r.user_id || '-',
         number: r.contact_number || '-',
         email: r.email || '-',
         status: 'ACTIVE',
@@ -197,11 +197,11 @@ function Cashiers() {
             required
           />
           <input
-            type="text"
+            type="password"
             className="border rounded px-3 py-2"
-            placeholder="Cashier ID"
-            value={form.id}
-            onChange={(e) => setForm({ ...form, id: e.target.value })}
+            placeholder="Password"
+            value={form.password}
+            onChange={(e) => setForm({ ...form, password: e.target.value })}
             required
           />
           <input
@@ -255,11 +255,11 @@ function Cashiers() {
             required
           />
           <input
-            type="text"
+            type="password"
             className="border rounded px-3 py-2"
-            placeholder="Cashier ID"
-            value={form.id}
-            onChange={(e) => setForm({ ...form, id: e.target.value })}
+            placeholder="Password"
+            value={form.password}
+            onChange={(e) => setForm({ ...form, password: e.target.value })}
             required
           />
           <input
