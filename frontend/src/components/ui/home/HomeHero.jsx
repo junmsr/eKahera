@@ -13,12 +13,16 @@ function HomeHero({ onCustomerClick, onStaffClick }) {
     hidden: { opacity: 0 },
     show: {
       opacity: 1,
-      transition: { staggerChildren: 0.1, delayChildren: 0.1 },
+      transition: { staggerChildren: 0.15, delayChildren: 0.2 },
     },
   };
   const fadeUp = {
-    hidden: { opacity: 0, y: 24 },
-    show: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" } },
+    hidden: { opacity: 0, y: 30 },
+    show: { 
+      opacity: 1, 
+      y: 0, 
+      transition: { duration: 0.7, ease: [0.16, 1, 0.3, 1] } 
+    },
   };
 
   // If parent didn't provide handlers, fall back to navigation
@@ -27,101 +31,192 @@ function HomeHero({ onCustomerClick, onStaffClick }) {
 
   return (
     <section
-      className="relative w-full min-h-[calc(100vh-56px)] md:min-h-[calc(100vh-72px)] flex flex-col items-center justify-center px-1 md:px-8 pt-24 md:pt-40 pb-2 overflow-hidden bg-white"
-      style={{ fontFamily: "Inter, sans-serif", background: "#ffffff" }}
+      className="relative w-full min-h-[calc(100vh-56px)] md:min-h-[calc(100vh-72px)] flex flex-col items-center justify-center px-4 md:px-6 lg:px-8 pt-24 md:pt-32 pb-16 md:pb-24 overflow-x-hidden"
+      style={{ fontFamily: "Inter, sans-serif" }}
     >
-      {/* Animated background blobs */}
+      {/* Animated gradient mesh background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-indigo-50/30 to-purple-50/20" />
+      
+      {/* Multiple animated gradient orbs */}
       <motion.div
-        className="absolute -top-40 -left-40 w-[42rem] h-[42rem] rounded-full bg-white opacity-30 blur-3xl z-0"
-        initial={{ scale: 0.9, opacity: 0.25 }}
-        animate={{ scale: [0.95, 1.05, 0.95], opacity: [0.25, 0.4, 0.25] }}
-        transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+        className="absolute -top-32 -left-32 w-[500px] h-[500px] rounded-full bg-gradient-to-br from-blue-400/40 to-cyan-400/30 blur-3xl z-0"
+        animate={{
+          x: [0, 100, 0],
+          y: [0, 50, 0],
+          scale: [1, 1.2, 1],
+        }}
+        transition={{
+          duration: 20,
+          repeat: Infinity,
+          ease: "easeInOut",
+        }}
       />
       <motion.div
-        className="absolute top-1/2 -right-40 w-[36rem] h-[36rem] rounded-full bg-white opacity-22 blur-3xl z-0"
-        initial={{ scale: 1, opacity: 0.22 }}
-        animate={{ scale: [1, 1.06, 1], opacity: [0.22, 0.34, 0.22] }}
-        transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
+        className="absolute top-1/3 -right-32 w-[600px] h-[600px] rounded-full bg-gradient-to-bl from-purple-400/35 to-pink-400/25 blur-3xl z-0"
+        animate={{
+          x: [0, -80, 0],
+          y: [0, -60, 0],
+          scale: [1, 1.15, 1],
+        }}
+        transition={{
+          duration: 25,
+          repeat: Infinity,
+          ease: "easeInOut",
+        }}
       />
+      <motion.div
+        className="absolute bottom-0 left-1/4 w-[400px] h-[400px] rounded-full bg-gradient-to-tr from-indigo-400/30 to-blue-400/20 blur-3xl z-0"
+        animate={{
+          x: [0, 60, 0],
+          y: [0, -40, 0],
+          scale: [1, 1.1, 1],
+        }}
+        transition={{
+          duration: 18,
+          repeat: Infinity,
+          ease: "easeInOut",
+        }}
+      />
+
+      {/* Grid pattern overlay */}
+      <div className="absolute inset-0 bg-[linear-gradient(rgba(59,130,246,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(59,130,246,0.03)_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_0%,#000_70%,transparent_110%)]" />
+
+      {/* Main content container */}
       <motion.div
         variants={container}
         initial="hidden"
         animate="show"
-        className="relative z-10 flex flex-col-reverse md:flex-row items-center justify-center w-full max-w-full px-4 md:px-8 mx-auto gap-10 md:gap-12 flex-1"
+        className="relative z-10 w-full max-w-[95rem] mx-auto"
       >
-        {/* Left Column: Heading and Button */}
-        <motion.div
-          className="flex-1 flex-col justify-center items-start h-full md:pr-10"
-          variants={fadeUp}
-        >
-          {/* Badge/Tagline */}
-          <motion.span
-            variants={fadeUp}
-            className="inline-block mb-3 px-3 py-1 rounded-full bg-white text-blue-700 text-xs font-semibold tracking-wide shadow-sm border border-blue-100"
-          >
-            For Modern Businesses
-          </motion.span>
-          <motion.h1
-            variants={fadeUp}
-            className="text-[40px] leading-[1.05] md:text-7xl md:leading-[1.03] font-extrabold text-slate-900 mb-10 tracking-tight"
-            style={{ fontFamily: "Inter, sans-serif" }}
-          >
-            Smart POS for Every Business.
-          </motion.h1>
+        <div className="relative flex flex-col lg:flex-row items-center lg:items-start justify-between gap-12 lg:gap-16 lg:pr-0">
+          {/* Left Column: Heading and CTA */}
           <motion.div
+            className="flex-1 flex flex-col justify-center items-start max-w-2xl lg:max-w-none lg:w-[55%] pt-8 lg:pt-12"
             variants={fadeUp}
-            className="text-black text-xl md:text-2xl mb-10 font-normal max-w-2xl"
-            style={{ fontFamily: "Inter, sans-serif" }}
           >
-            Streamline checkout, manage inventory, and track sales in real time
-            with a secure, scalable POS built for growth.
-          </motion.div>
-          <motion.div
-            variants={fadeUp}
-            className="flex flex-col sm:flex-row gap-4 sm:gap-5 w-full md:w-auto"
-          >
-            <div className="flex flex-col">
-              <button
-                onClick={handleStaff}
-                className="bg-blue-700 text-white font-semibold px-8 py-3.5 rounded-xl shadow-md border border-blue-600 hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 text-lg flex items-center"
-                style={{ fontFamily: "Inter, sans-serif" }}
+            {/* Glassmorphism Badge */}
+            <motion.div
+              variants={fadeUp}
+              className="group relative mb-6"
+            >
+              <motion.span
+                className="inline-flex items-center px-4 py-2 rounded-full backdrop-blur-md bg-white/70 border border-white/20 shadow-lg shadow-blue-500/10 text-blue-700 text-sm font-semibold tracking-wide"
+                whileHover={{ scale: 1.05 }}
+                transition={{ type: "spring", stiffness: 400, damping: 17 }}
               >
-                Log In
-              </button>
-              <span className="text-sm text-black mt-1">
-                Try the Admin/Cashier experience
+                <span className="relative flex h-2 w-2 mr-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+                </span>
+                For Modern Businesses
+              </motion.span>
+            </motion.div>
+            
+            {/* Gradient Heading */}
+            <motion.h1
+              variants={fadeUp}
+              className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl leading-[1.05] font-extrabold mb-6 md:mb-8 tracking-tight"
+              style={{ fontFamily: "Inter, sans-serif" }}
+            >
+              <span className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 bg-clip-text text-transparent">
+                Smart POS for
               </span>
-            </div>
-            <div className="flex flex-col">
-              <button
-                onClick={handleCustomer}
-                className="bg-white text-blue-700 font-semibold px-8 py-3.5 rounded-xl shadow border border-blue-200 hover:bg-blue-50 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 text-lg flex items-center gap-2"
-                style={{ fontFamily: "Inter, sans-serif" }}
-              >
-                Explore as Customer
-              </button>
-              <span className="text-sm text-black mt-1">
-                See the shopping flow
+              <br />
+              <span className="bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 bg-clip-text text-transparent">
+                Every Business.
               </span>
-            </div>
+            </motion.h1>
+            
+            {/* Description with better typography */}
+            <motion.p
+              variants={fadeUp}
+              className="text-lg sm:text-xl md:text-2xl text-slate-600 mb-10 md:mb-12 font-normal leading-relaxed max-w-xl"
+              style={{ fontFamily: "Inter, sans-serif" }}
+            >
+              Streamline checkout, manage inventory, and track sales in real time
+              with a secure, scalable POS built for growth.
+            </motion.p>
+            
+            {/* Enhanced CTA Buttons */}
+            <motion.div
+              variants={fadeUp}
+              className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto"
+            >
+              {/* Primary Button with gradient */}
+              <div className="flex flex-col group">
+                <motion.button
+                  onClick={handleStaff}
+                  className="relative overflow-hidden bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold px-8 py-4 rounded-2xl shadow-xl shadow-blue-500/25 border border-blue-500/20 text-base sm:text-lg flex items-center justify-center min-w-[180px] transition-all duration-300"
+                  style={{ fontFamily: "Inter, sans-serif" }}
+                  whileHover={{ 
+                    scale: 1.02,
+                    boxShadow: "0 20px 25px -5px rgba(37, 99, 235, 0.3), 0 10px 10px -5px rgba(37, 99, 235, 0.2)"
+                  }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <span className="relative z-10 flex items-center gap-2">
+                    <span>Log In</span>
+                    <motion.svg
+                      className="w-5 h-5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      animate={{ x: [0, 4, 0] }}
+                      transition={{ duration: 1.5, repeat: Infinity }}
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                    </motion.svg>
+                  </span>
+                  <motion.div
+                    className="absolute inset-0 bg-gradient-to-r from-blue-700 to-blue-800"
+                    initial={{ x: "-100%" }}
+                    whileHover={{ x: "0%" }}
+                    transition={{ duration: 0.3 }}
+                  />
+                </motion.button>
+                <span className="text-xs sm:text-sm text-slate-500 mt-2.5 text-center sm:text-left font-medium">
+                  Try the Admin/Cashier experience
+                </span>
+              </div>
+              
+              {/* Secondary Button with glassmorphism */}
+              <div className="flex flex-col group">
+                <motion.button
+                  onClick={handleCustomer}
+                  className="relative overflow-hidden backdrop-blur-md bg-white/80 border-2 border-blue-200/50 text-blue-700 font-semibold px-8 py-4 rounded-2xl shadow-lg shadow-blue-500/10 text-base sm:text-lg flex items-center justify-center gap-2 min-w-[180px] transition-all duration-300"
+                  style={{ fontFamily: "Inter, sans-serif" }}
+                  whileHover={{ 
+                    scale: 1.02,
+                    backgroundColor: "rgba(255, 255, 255, 0.95)",
+                    borderColor: "rgba(59, 130, 246, 0.6)",
+                    boxShadow: "0 20px 25px -5px rgba(59, 130, 246, 0.15), 0 10px 10px -5px rgba(59, 130, 246, 0.1)"
+                  }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <span className="relative z-10">Explore as Customer</span>
+                </motion.button>
+                <span className="text-xs sm:text-sm text-slate-500 mt-2.5 text-center sm:text-left font-medium">
+                  See the shopping flow
+                </span>
+              </div>
+            </motion.div>
           </motion.div>
-        </motion.div>
 
-        {/* Right Column: Hero Illustration with floating animation */}
-        <motion.div
-          className="flex-2 flex items-center justify-center md:justify-end h-full mt-4 md:mt-0 relative"
-          variants={fadeUp}
-        >
-          <motion.img
-            src={heroIllustration}
-            alt="Digital payment illustration"
-            /* scale image responsively using viewport widths so it never overflows the screen */
-            className="w-[100rem] md:w-[100vw] lg:w-[40vw] max-w-full drop-shadow-2xl will-change-transform"
-            style={{ objectFit: "contain", y: parallaxY }}
-            animate={{ y: [0, -16, 0], rotateZ: [0, 0.3, 0] }}
-            transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut" }}
-          />
-        </motion.div>
+          {/* Right Column: Hero Illustration with floating animation */}
+          <motion.div
+            className="flex-shrink-0 w-full sm:w-[85%] lg:w-[45%] flex items-center justify-center lg:justify-end h-full mt-4 lg:mt-0 relative lg:translate-x-8 xl:translate-x-12"
+            variants={fadeUp}
+          >
+            <motion.img
+              src={heroIllustration}
+              alt="Digital payment illustration"
+              className="w-full h-auto max-w-full lg:max-w-none drop-shadow-2xl will-change-transform"
+              style={{ objectFit: "contain", y: parallaxY }}
+              animate={{ y: [0, -16, 0], rotateZ: [0, 0.3, 0] }}
+              transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut" }}
+            />
+          </motion.div>
+        </div>
       </motion.div>
     </section>
   );

@@ -117,10 +117,11 @@ function Cashiers() {
       sidebar={<NavAdmin />}
       className="h-screen bg-white"
     >
-      <div className="flex-1 bg-transparent overflow-hidden p-8">
+      <div className="flex-1 bg-transparent overflow-hidden p-4 sm:p-8">
         <div className="flex flex-col items-center">
           <div className="w-full max-w-5xl bg-white rounded-2xl shadow-lg border border-blue-400 p-0">
-            <table className="w-full text-left rounded-xl overflow-hidden">
+            <div className="w-full overflow-x-auto">
+            <table className="w-full min-w-[720px] text-left rounded-xl overflow-hidden">
               <thead>
                 <tr className="bg-white text-gray-700 font-semibold text-base border-b border-blue-200">
                   <th className="py-4 px-6">Name</th>
@@ -169,6 +170,7 @@ function Cashiers() {
                 </tr>
               </tbody>
             </table>
+            </div>
           </div>
           {/* Add Cashier Button */}
           <Button
