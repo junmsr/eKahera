@@ -284,7 +284,7 @@ function POS() {
   }, []);
 
   const headerActions = (
-    <div className="flex items-center gap-4">
+    <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
       <button
         className="p-2 rounded-full hover:bg-gray-400 transition-colors"
         onClick={() => {
@@ -484,7 +484,7 @@ function POS() {
                 />
 
                 {/* Action Buttons */}
-                <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 mt-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-3 mt-4">
                   <Button
                     label="CASH LEDGER"
                     size="lg"

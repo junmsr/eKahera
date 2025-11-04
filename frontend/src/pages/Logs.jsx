@@ -72,7 +72,7 @@ const LogsPage = () => {
           onChange={(e) => setSearchQuery(e.target.value)}
           style={searchBarStyle}
         />
-        <div style={{ display: "flex", gap: "2rem" }}>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <LogsCard title="CASHIER" logs={filteredCashierLogs} />
           <LogsCard title="ADMIN" logs={filteredAdminLogs} />
         </div>

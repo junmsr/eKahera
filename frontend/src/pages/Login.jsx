@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { motion } from "framer-motion";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../lib/api";
 
@@ -6,6 +7,7 @@ import { api } from "../lib/api";
 import Background from "../components/layout/Background";
 import Card from "../components/common/Card";
 import SectionHeader from "../components/layout/SectionHeader";
+ 
 import Input from "../components/common/Input";
 import PasswordInput from "../components/common/PasswordInput";
 import Button from "../components/common/Button";
@@ -90,13 +92,28 @@ export default function Login() {
 
   return (
     <Background variant="gradientBlue" pattern="dots" overlay floatingElements>
+      {/* Gradient overlay per request */}
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-indigo-50/30 to-purple-50/20 pointer-events-none" />
+
+      {/* Animated background orbs */}
+      <motion.div
+        className="absolute -top-24 -left-24 w-[28rem] h-[28rem] rounded-full bg-gradient-to-br from-blue-400/15 to-cyan-400/10 blur-3xl"
+        animate={{ scale: [1, 1.08, 1], opacity: [0.35, 0.5, 0.35] }}
+        transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+      />
+      <motion.div
+        className="absolute bottom-0 -right-24 w-[30rem] h-[30rem] rounded-full bg-gradient-to-bl from-indigo-400/15 to-purple-400/10 blur-3xl"
+        animate={{ scale: [1, 1.12, 1], opacity: [0.3, 0.45, 0.3] }}
+        transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
+      />
+
       <main className="flex h-screen items-center justify-center px-2 relative z-10 overflow-hidden">
         <Card
           variant="glass"
-          className="w-full max-w-4xl flex flex-col md:flex-row overflow-hidden p-0 animate-fadeIn"
+          className="w-full max-w-4xl flex flex-col md:flex-row overflow-hidden p-0 animate-fadeIn rounded-2xl shadow-xl"
         >
           {/* Left: Illustration / Branding Panel (modernized) */}
-          <aside className="hidden md:flex items-center rounded-l-xl bg-gradient-to-br from-indigo-500 via-blue-400 to-sky-400 w-1/2 p-10 relative overflow-hidden">
+          <aside className="hidden md:flex items-center rounded-l-2xl bg-gradient-to-br from-indigo-500 via-blue-400 to-sky-400 w-1/2 p-10 relative overflow-hidden">
             <div className="absolute inset-0 opacity-7 -z-10 pointer-events-none">
               <div className="w-full h-full bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.25)_1px,transparent_0)] bg-[length:24px_24px]" />
             </div>
@@ -109,13 +126,16 @@ export default function Login() {
                 Sign in to continue managing transactions, inventory and sales
                 from anywhere.
               </p>
-
+              <div className="inline-flex items-center gap-2 rounded-full bg-white/15 text-white/90 px-3 py-1 text-xs backdrop-blur-sm ring-1 ring-white/20">
+                <span className="inline-block h-2 w-2 rounded-full bg-emerald-300 animate-pulse" />
+                Secure area • eKahera
+              </div>
               {/* Illustration removed per request */}
             </div>
           </aside>
 
           {/* Right: Login Form Panel */}
-          <section className="w-full md:w-1/2 flex flex-col justify-center items-center p-6 md:p-12 bg-white/95 backdrop-blur-sm">
+          <section className="w-full md:w-1/2 flex flex-col justify-center items-center p-6 md:p-12 bg-white/90 backdrop-blur-xl">
             <div className="w-full max-w-md">
               <div className="flex flex-col items-center mb-6">
                 <SectionHeader
@@ -158,6 +178,8 @@ export default function Login() {
                     className="pr-12"
                   />
                 </div>
+
+                
 
                 <div className="flex items-center justify-end mt-1">
                   <div className="text-sm text-gray-500">

@@ -21,6 +21,7 @@ import PageLayout from "../components/layout/PageLayout";
 import NavAdmin from "../components/layout/Nav-Admin";
 import StatsCard from "../components/ui/Dashboard/StatsCard";
 import ChartCard from "../components/ui/Dashboard/ChartCard";
+import DashboardStatsCard from "../components/ui/Dashboard/DashboardStatsCard";
 import Card from "../components/common/Card";
 import Button from "../components/common/Button";
 import SectionHeader from "../components/layout/SectionHeader";
@@ -123,106 +124,119 @@ function randomizeStats(stats) {
 }
 
 // Chart Components
-function VisitorsChart({ data }) {
+function VisitorsChart({ data, className = "" }) {
   return (
     <ChartCard
       title="Visitors for the last 6 months"
-      className="bg-white border border-gray-200"
+      className={`bg-white border border-gray-200 ${className}`}
     >
-      <ResponsiveContainer width="100%" height={180}>
-        <LineChart
-          data={data}
-          margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
-        >
-          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-          <XAxis dataKey="name" tick={{ fill: "#374151" }} />
-          <YAxis tick={{ fill: "#374151" }} />
-          <Tooltip
-            contentStyle={{ background: "#fff", borderColor: "#e5e7eb" }}
-          />
-          <Line
-            type="monotone"
-            dataKey="value"
-            stroke="#2563eb"
-            strokeWidth={2}
-            dot={{ r: 4, fill: "#2563eb" }}
-          />
-        </LineChart>
-      </ResponsiveContainer>
-    </ChartCard>
-  );
-}
-
-function SalesPieChart({ data }) {
-  return (
-    <ChartCard title="Sales by Product Category">
-      <ResponsiveContainer width="100%" height={180}>
-        <PieChart>
-          <Pie
+      <div className="h-52 sm:h-56 md:h-64 xl:h-72">
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart
             data={data}
-            dataKey="percent"
-            nameKey="name"
-            cx="50%"
-            cy="50%"
-            outerRadius={60}
-            label={(entry) => `${entry.name} (${Number(entry.percent || 0).toFixed(1)}%)`}
+            margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
           >
-            {data.map((entry, idx) => (
-              <Cell
-                key={`cell-${idx}`}
-                fill={BLUE_COLORS[idx % BLUE_COLORS.length]}
-              />
-            ))}
-          </Pie>
-          <Legend />
-          <Tooltip
-            formatter={(value, name, props) => [`${Number(value).toFixed(1)}%`, props?.payload?.name]}
-            contentStyle={{ background: "#f3e8ff", borderColor: "#2563eb" }}
-          />
-        </PieChart>
-      </ResponsiveContainer>
+            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+            <XAxis dataKey="name" tick={{ fill: "#374151" }} />
+            <YAxis tick={{ fill: "#374151" }} />
+            <Tooltip
+              contentStyle={{ background: "#fff", borderColor: "#e5e7eb" }}
+            />
+            <Line
+              type="monotone"
+              dataKey="value"
+              stroke="#2563eb"
+              strokeWidth={2}
+              dot={{ r: 4, fill: "#2563eb" }}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
     </ChartCard>
   );
 }
 
-function EngagementChart({ data }) {
+function SalesPieChart({ data, className = "" }) {
   return (
-    <ChartCard title="Engagement exceed targets">
-      <ResponsiveContainer width="100%" height={180}>
-        <BarChart
-          data={data}
-          margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
-        >
-          <CartesianGrid strokeDasharray="3 3" stroke="#e9d5ff" />
-          <XAxis dataKey="name" tick={{ fill: "#2563eb", fontWeight: 700 }} />
-          <YAxis tick={{ fill: "#2563eb", fontWeight: 700 }} />
-          <Tooltip
-            contentStyle={{ background: "#f3e8ff", borderColor: "#2563eb" }}
-          />
-          <Bar dataKey="engagement" fill="#2563eb" radius={[8, 8, 0, 0]} />
-        </BarChart>
-      </ResponsiveContainer>
+    <ChartCard title="Sales by Product Category" className={className}>
+      <div className="h-52 sm:h-56 md:h-64 xl:h-72">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={data}
+              dataKey="percent"
+              nameKey="name"
+              cx="50%"
+              cy="50%"
+              outerRadius={60}
+              label={(entry) =>
+                `${entry.name} (${Number(entry.percent || 0).toFixed(1)}%)`
+              }
+            >
+              {data.map((entry, idx) => (
+                <Cell
+                  key={`cell-${idx}`}
+                  fill={BLUE_COLORS[idx % BLUE_COLORS.length]}
+                />
+              ))}
+            </Pie>
+            <Legend />
+            <Tooltip
+              formatter={(value, name, props) => [
+                `${Number(value).toFixed(1)}%`,
+                props?.payload?.name,
+              ]}
+              contentStyle={{ background: "#f3e8ff", borderColor: "#2563eb" }}
+            />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
     </ChartCard>
   );
 }
 
-function CustomersChart({ data }) {
+function EngagementChart({ data, className = "" }) {
   return (
-    <ChartCard title="Customers">
-      <ResponsiveContainer width="100%" height={180}>
-        <BarChart
-          data={data}
-          margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
-        >
-          <CartesianGrid strokeDasharray="3 3" stroke="#e9d5ff" />
-          <XAxis dataKey="name" tick={{ fill: "#2563eb", fontWeight: 700 }} />
-          <YAxis tick={{ fill: "#2563eb", fontWeight: 700 }} />
-          <Tooltip
-            contentStyle={{ background: "#f3e8ff", borderColor: "#2563eb" }}
-          />
-          <Bar dataKey="customers" fill="#2563eb" radius={[8, 8, 0, 0]} />
-        </BarChart>
-      </ResponsiveContainer>
+    <ChartCard title="Engagement exceed targets" className={className}>
+      <div className="h-52 sm:h-56 md:h-64 xl:h-72">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart
+            data={data}
+            margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
+          >
+            <CartesianGrid strokeDasharray="3 3" stroke="#e9d5ff" />
+            <XAxis dataKey="name" tick={{ fill: "#2563eb", fontWeight: 700 }} />
+            <YAxis tick={{ fill: "#2563eb", fontWeight: 700 }} />
+            <Tooltip
+              contentStyle={{ background: "#f3e8ff", borderColor: "#2563eb" }}
+            />
+            <Bar dataKey="engagement" fill="#2563eb" radius={[8, 8, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </ChartCard>
+  );
+}
+
+function CustomersChart({ data, className = "" }) {
+  return (
+    <ChartCard title="Customers" className={className}>
+      <div className="h-52 sm:h-56 md:h-64 xl:h-72">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart
+            data={data}
+            margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
+          >
+            <CartesianGrid strokeDasharray="3 3" stroke="#e9d5ff" />
+            <XAxis dataKey="name" tick={{ fill: "#2563eb", fontWeight: 700 }} />
+            <YAxis tick={{ fill: "#2563eb", fontWeight: 700 }} />
+            <Tooltip
+              contentStyle={{ background: "#f3e8ff", borderColor: "#2563eb" }}
+            />
+            <Bar dataKey="customers" fill="#2563eb" radius={[8, 8, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
     </ChartCard>
   );
 }
@@ -238,6 +252,11 @@ export default function Dashboard() {
   const [pieData, setPieData] = useState([]);
   const [acqChange, setAcqChange] = useState(0);
   const [acqProgress, setAcqProgress] = useState(0);
+  const [highlight, setHighlight] = useState({
+    sales: 0,
+    transactions: 0,
+    topProduct: "-",
+  });
 
   // Admin modal state
   const [showAdminModal, setShowAdminModal] = useState(false);
@@ -269,18 +288,26 @@ export default function Dashboard() {
         headers: authHeaders(token),
       });
       // Derive additional series so graphs actually render useful values
-      const maxVal = timeseries.reduce((m, d) => Math.max(m, Number(d.value || 0)), 0) || 1;
-      const customersMap = new Map(customersTs.map((c) => [c.name, Number(c.customers || 0)]));
+      const maxVal =
+        timeseries.reduce((m, d) => Math.max(m, Number(d.value || 0)), 0) || 1;
+      const customersMap = new Map(
+        customersTs.map((c) => [c.name, Number(c.customers || 0)])
+      );
       const derived = timeseries.map((d) => {
         const v = Number(d.value || 0);
         const engagement = Math.round((v / maxVal) * 100); // 0-100 scale
-        const customers = customersMap.get(d.name) ?? Math.max(0, Math.round(v / 100));
+        const customers =
+          customersMap.get(d.name) ?? Math.max(0, Math.round(v / 100));
         return { ...d, engagement, customers };
       });
       const pieTotal = pie.reduce((s, p) => s + Number(p.value || 0), 0) || 0;
-      const piePercent = pieTotal > 0
-        ? pie.map(p => ({ ...p, percent: (Number(p.value || 0) / pieTotal) * 100 }))
-        : pie.map(p => ({ ...p, percent: 0 }));
+      const piePercent =
+        pieTotal > 0
+          ? pie.map((p) => ({
+              ...p,
+              percent: (Number(p.value || 0) / pieTotal) * 100,
+            }))
+          : pie.map((p) => ({ ...p, percent: 0 }));
       setStats([
         {
           ...initialStats[0],
@@ -297,6 +324,17 @@ export default function Dashboard() {
       ]);
       setChartData(derived);
       setPieData(piePercent);
+      const totalTx = timeseries.reduce((s, d) => s + Number(d.value || 0), 0);
+      const top =
+        (pie || [])
+          .slice()
+          .sort((a, b) => Number(b.value || 0) - Number(a.value || 0))[0]
+          ?.name || "-";
+      setHighlight({
+        sales: Number(summary.totalRevenue || 0),
+        transactions: totalTx,
+        topProduct: top,
+      });
       // Acquisition Overview: use growthRate as acquisition change indicator
       const change = Number(summary.growthRate || 0);
       setAcqChange(change);
@@ -320,17 +358,17 @@ export default function Dashboard() {
 
   // Header actions
   const headerActions = (
-    <div className="flex items-center gap-4">
+    <div className="flex flex-wrap items-center gap-3 sm:gap-4">
       <button
         onClick={fetchData}
         disabled={loading}
-        className="bg-white/80 backdrop-blur-sm hover:bg-white text-gray-700 px-4 py-2.5 rounded-xl border border-white/50 text-sm font-medium transition-all duration-200 hover:shadow-md hover:scale-[1.02]"
+        className="bg-white/80 backdrop-blur-sm hover:bg-white text-gray-700 px-4 py-2.5 rounded-xl border border-white/50 text-sm font-medium transition-all duration-200 hover:shadow-md hover:scale-[1.02] w-full sm:w-auto"
       >
         {loading ? "Refreshing..." : "Refresh"}
       </button>
 
       <select
-        className="bg-white/80 backdrop-blur-sm hover:bg-white text-gray-700 px-4 py-2.5 rounded-xl border border-white/50 text-sm font-medium transition-all duration-200 outline-none cursor-pointer hover:shadow-md"
+        className="bg-white/80 backdrop-blur-sm hover:bg-white text-gray-700 px-4 py-2.5 rounded-xl border border-white/50 text-sm font-medium transition-all duration-200 outline-none cursor-pointer hover:shadow-md w-full sm:w-auto"
         value={range}
         onChange={(e) => setRange(e.target.value)}
         disabled={loading}
@@ -345,7 +383,7 @@ export default function Dashboard() {
       {/* Admin Button */}
       <button
         onClick={() => setShowAdminModal(true)}
-        className="flex items-center gap-3 bg-white/80 backdrop-blur-sm px-4 py-2.5 rounded-xl border border-white/50 hover:bg-white transition-all duration-200 hover:shadow-md hover:scale-[1.02]"
+        className="flex items-center gap-3 bg-white/80 backdrop-blur-sm px-4 py-2.5 rounded-xl border border-white/50 hover:bg-white transition-all duration-200 hover:shadow-md hover:scale-[1.02] w-full sm:w-auto"
       >
         <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-full flex items-center justify-center text-sm font-medium shadow-lg">
           A
@@ -361,28 +399,40 @@ export default function Dashboard() {
       subtitle="Overview of your business performance"
       sidebar={<NavAdmin active={activeNav} onNavigate={setActiveNav} />}
       headerActions={headerActions}
-      className="bg-white min-h-screen relative overflow-hidden"
+      className="bg-white min-h-screen relative overflow-hidden px-2 sm:px-4"
     >
       {/* Background: removed large blue/purple gradient blobs for a cleaner look */}
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 p-6 relative z-10">
-        {stats.map((stat) => (
+      <div className="grid grid-cols-12 gap-4 sm:gap-6 p-4 sm:p-6 relative z-10">
+        {stats.map((stat, idx) => (
           <StatsCard
             key={stat.label}
             {...stat}
             loading={loading}
-            className="bg-white/80 backdrop-blur-md border border-white/60 shadow-xl hover:shadow-2xl hover:scale-[1.03] hover:-translate-y-1 transition-all duration-500 group"
+            className={`bg-white/80 backdrop-blur-md border border-white/60 shadow-xl hover:shadow-2xl hover:scale-[1.03] hover:-translate-y-1 transition-all duration-500 group col-span-12 ${
+              idx === 0
+                ? "sm:col-span-6 lg:col-span-6"
+                : "sm:col-span-6 lg:col-span-2"
+            }`}
           />
         ))}
       </div>
 
+      {/* Highlight strip */}
+      <div className="px-4 sm:px-6">
+        <DashboardStatsCard stats={highlight} className="mb-2" />
+      </div>
+
       {/* Charts Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6 relative z-10">
-        <VisitorsChart data={chartData} />
-        <SalesPieChart data={pieData} />
-        <EngagementChart data={chartData} />
-        <Card className="bg-gradient-to-br from-red-50/80 to-orange-50/80 backdrop-blur-md border border-red-200/50 shadow-xl hover:shadow-2xl hover:scale-[1.02] transition-all duration-500 p-6 group">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 auto-rows-[minmax(12rem,auto)] gap-4 sm:gap-6 p-4 sm:p-6 relative z-10">
+        <VisitorsChart
+          data={chartData}
+          className="lg:col-span-4 lg:row-span-2"
+        />
+        <SalesPieChart data={pieData} className="lg:col-span-2 lg:row-span-2" />
+        <EngagementChart data={chartData} className="lg:col-span-3" />
+        <Card className="bg-gradient-to-br from-red-50/80 to-orange-50/80 backdrop-blur-md border border-red-200/50 shadow-xl hover:shadow-2xl hover:scale-[1.02] transition-all duration-500 p-6 group lg:col-span-3">
           <SectionHeader
             size="md"
             align="left"
@@ -408,23 +458,33 @@ export default function Dashboard() {
                 </svg>
               </div>
               <div>
-                <span className={`text-3xl font-bold ${acqChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {acqChange >= 0 ? '+' : ''}{Math.round(acqChange)}%
+                <span
+                  className={`text-3xl font-bold ${
+                    acqChange >= 0 ? "text-green-600" : "text-red-600"
+                  }`}
+                >
+                  {acqChange >= 0 ? "+" : ""}
+                  {Math.round(acqChange)}%
                 </span>
                 <p className="text-sm text-gray-600 font-medium">
-                  {acqChange >= 0 ? 'Up' : 'Down'} {Math.abs(Math.round(acqChange))}% this period
+                  {acqChange >= 0 ? "Up" : "Down"}{" "}
+                  {Math.abs(Math.round(acqChange))}% this period
                 </p>
               </div>
             </div>
             <div className="w-full bg-red-100/50 rounded-full h-2">
               <div
-                className={`h-2 rounded-full transition-all duration-700 ${acqChange >= 0 ? 'bg-gradient-to-r from-green-500 to-emerald-500' : 'bg-gradient-to-r from-red-500 to-orange-500'}`}
+                className={`h-2 rounded-full transition-all duration-700 ${
+                  acqChange >= 0
+                    ? "bg-gradient-to-r from-green-500 to-emerald-500"
+                    : "bg-gradient-to-r from-red-500 to-orange-500"
+                }`}
                 style={{ width: `${acqProgress}%` }}
               ></div>
             </div>
           </div>
         </Card>
-        <CustomersChart data={chartData} />
+        <CustomersChart data={chartData} className="lg:col-span-3" />
       </div>
 
       {/* Admin Modal */}
