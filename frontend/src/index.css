@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
-html, body{
+html,
+body {
   margin: 0;
   padding: 0;
   font-family: "Space Grotesk", sans-serif;
@@ -9,7 +10,7 @@ html, body{
   background-repeat: unset;
   background-size: unset;
   color: #000000;
-  overflow-x: hidden ;
+  overflow-x: hidden;
   scroll-behavior: smooth;
   min-height: 100vh;
   width: 100vw;
@@ -24,16 +25,16 @@ html, body{
   color: #111827;
   width: 70%;
   margin: 1rem auto 0 auto;
-  transition:
-    width 0.3s cubic-bezier(.4,0,.2,1),
-    margin-top 0.3s cubic-bezier(.4,0,.2,1),
-    border-radius 0.3s cubic-bezier(.4,0,.2,1),
-    top 0.3s cubic-bezier(.4,0,.2,1);
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    margin-top 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    border-radius 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    top 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* Fluid glass morphism navbar styles */
 .glass-navbar {
-  background: linear-gradient(135deg, 
+  background: linear-gradient(
+    135deg,
     rgba(191, 219, 254, 0.25) 0%,
     rgba(191, 219, 254, 0.1) 25%,
     rgba(191, 219, 254, 0.3) 50%,
@@ -43,8 +44,7 @@ html, body{
   backdrop-filter: blur(15px);
   -webkit-backdrop-filter: blur(15px);
   border: 1px solid rgba(191, 219, 254, 0.3);
-  box-shadow: 
-    0 8px 32px 0 rgba(59, 130, 246, 0.37),
+  box-shadow: 0 8px 32px 0 rgba(59, 130, 246, 0.37),
     inset 0 1px 0 rgba(191, 219, 254, 0.4);
   color: #1a1a1a;
   position: relative;
@@ -55,14 +55,15 @@ html, body{
 }
 
 .glass-navbar::before {
-  content: '';
+  content: "";
   position: absolute;
   top: -50%;
   left: -50%;
   width: 200%;
   height: 200%;
-  background: radial-gradient(ellipse at center, 
-    rgba(255, 255, 255, 0.15) 0%, 
+  background: radial-gradient(
+    ellipse at center,
+    rgba(255, 255, 255, 0.15) 0%,
     rgba(255, 255, 255, 0.05) 30%,
     transparent 70%
   );
@@ -71,15 +72,16 @@ html, body{
 }
 
 .glass-navbar::after {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(45deg, 
-    transparent 30%, 
-    rgba(255, 255, 255, 0.08) 50%, 
+  background: linear-gradient(
+    45deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.08) 50%,
     transparent 70%
   );
   animation: fluid-flow 6s ease-in-out infinite;
@@ -87,7 +89,8 @@ html, body{
 }
 
 .glass-navbar:hover {
-  background: linear-gradient(135deg, 
+  background: linear-gradient(
+    135deg,
     rgba(255, 255, 255, 0.4) 0%,
     rgba(255, 255, 255, 0.2) 25%,
     rgba(255, 255, 255, 0.5) 50%,
@@ -96,8 +99,7 @@ html, body{
   );
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  box-shadow: 
-    0 12px 40px 0 rgba(31, 38, 135, 0.5),
+  box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.5),
     inset 0 1px 0 rgba(255, 255, 255, 0.4);
   transform: translateY(-2px);
   animation-duration: 3s;
@@ -113,7 +115,8 @@ html, body{
 
 /* Fluid glass mobile menu */
 .glass-mobile-menu {
-  background: linear-gradient(135deg, 
+  background: linear-gradient(
+    135deg,
     rgba(255, 255, 255, 0.3) 0%,
     rgba(255, 255, 255, 0.15) 50%,
     rgba(255, 255, 255, 0.25) 100%
@@ -121,8 +124,7 @@ html, body{
   backdrop-filter: blur(15px);
   -webkit-backdrop-filter: blur(15px);
   border: 1px solid rgba(255, 255, 255, 0.25);
-  box-shadow: 
-    0 8px 32px 0 rgba(31, 38, 135, 0.4),
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.4),
     inset 0 1px 0 rgba(255, 255, 255, 0.3);
   position: relative;
   overflow: hidden;
@@ -130,14 +132,15 @@ html, body{
 }
 
 .glass-mobile-menu::before {
-  content: '';
+  content: "";
   position: absolute;
   top: -50%;
   left: -50%;
   width: 200%;
   height: 200%;
-  background: radial-gradient(circle, 
-    rgba(255, 255, 255, 0.1) 0%, 
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.1) 0%,
     transparent 70%
   );
   animation: fluid-pulse 4s ease-in-out infinite;
@@ -146,7 +149,8 @@ html, body{
 
 /* Fluid glass button styles */
 .glass-button {
-  background: linear-gradient(135deg, 
+  background: linear-gradient(
+    135deg,
     rgba(255, 255, 255, 0.25) 0%,
     rgba(255, 255, 255, 0.1) 50%,
     rgba(255, 255, 255, 0.2) 100%
@@ -154,8 +158,7 @@ html, body{
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.3);
-  box-shadow: 
-    0 4px 16px 0 rgba(31, 38, 135, 0.25),
+  box-shadow: 0 4px 16px 0 rgba(31, 38, 135, 0.25),
     inset 0 1px 0 rgba(255, 255, 255, 0.2);
   position: relative;
   overflow: hidden;
@@ -164,15 +167,16 @@ html, body{
 }
 
 .glass-button::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, 
-    transparent, 
-    rgba(255, 255, 255, 0.2), 
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.2),
     transparent
   );
   transition: left 0.6s ease;
@@ -183,7 +187,8 @@ html, body{
 }
 
 .glass-button-hover {
-  background: linear-gradient(135deg, 
+  background: linear-gradient(
+    135deg,
     rgba(255, 255, 255, 0.4) 0%,
     rgba(255, 255, 255, 0.2) 50%,
     rgba(255, 255, 255, 0.35) 100%
@@ -191,14 +196,13 @@ html, body{
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.4);
-  box-shadow: 
-    0 8px 24px 0 rgba(31, 38, 135, 0.4),
+  box-shadow: 0 8px 24px 0 rgba(31, 38, 135, 0.4),
     inset 0 1px 0 rgba(255, 255, 255, 0.3);
   transform: translateY(-2px) scale(1.02);
   animation-duration: 2s;
 }
 
-button{
+button {
   cursor: pointer;
 }
 
@@ -208,7 +212,8 @@ button{
   border-top-left-radius: 0 !important;
   border-top-right-radius: 0 !important;
   top: 0 !important;
-  background: linear-gradient(135deg, 
+  background: linear-gradient(
+    135deg,
     rgba(255, 255, 255, 0.4) 0%,
     rgba(255, 255, 255, 0.2) 25%,
     rgba(255, 255, 255, 0.5) 50%,
@@ -218,8 +223,7 @@ button{
   backdrop-filter: blur(20px) !important;
   -webkit-backdrop-filter: blur(20px) !important;
   border: 1px solid rgba(255, 255, 255, 0.3) !important;
-  box-shadow: 
-    0 8px 32px 0 rgba(31, 38, 135, 0.5),
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.5),
     inset 0 1px 0 rgba(255, 255, 255, 0.4) !important;
   animation: fluid-scroll-flow 6s ease-in-out infinite !important;
 }
@@ -279,23 +283,26 @@ img {
 
 /* Blinking cursor animation for the pipe character */
 @keyframes blink-cursor {
-  0%, 50% {
+  0%,
+  50% {
     opacity: 1;
   }
-  51%, 100% {
+  51%,
+  100% {
     opacity: 0;
   }
 }
 
 .logo-text::before {
-  content: '|';
+  content: "|";
   animation: blink-cursor 1s infinite;
   margin-right: 2px;
 }
 
 /* Fluid glass animation keyframes */
 @keyframes fluid-wave {
-  0%, 100% {
+  0%,
+  100% {
     background-position: 0% 50%;
   }
   25% {
@@ -328,7 +335,8 @@ img {
 }
 
 @keyframes fluid-ripple {
-  0%, 100% {
+  0%,
+  100% {
     transform: scale(1);
     border-radius: 12px;
   }
@@ -339,7 +347,8 @@ img {
 }
 
 @keyframes fluid-pulse {
-  0%, 100% {
+  0%,
+  100% {
     transform: scale(0.8);
     opacity: 0.3;
   }
@@ -350,7 +359,8 @@ img {
 }
 
 @keyframes fluid-button-flow {
-  0%, 100% {
+  0%,
+  100% {
     background-position: 0% 50%;
   }
   50% {
@@ -359,7 +369,8 @@ img {
 }
 
 @keyframes fluid-scroll-flow {
-  0%, 100% {
+  0%,
+  100% {
     background-position: 0% 50%;
   }
   25% {
@@ -373,9 +384,23 @@ img {
   }
 }
 
-@media screen and (max-width: 768px){
+@media screen and (max-width: 768px) {
   .site-navbar-base {
     width: 100%;
     margin-left: 0;
   }
+}
+
+/* Hide native browser password reveal/clear icons to avoid duplicate toggles
+   (covers Edge/IE and common WebKit/Blink pseudo-elements) */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+  display: none;
+}
+
+input[type="password"]::-webkit-textfield-decoration-container,
+input[type="password"]::-webkit-credentials-auto-fill-button,
+input[type="password"]::-webkit-clear-button,
+input[type="password"]::-webkit-reveal {
+  display: none !important;
 }

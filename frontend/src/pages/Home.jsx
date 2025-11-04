@@ -36,7 +36,7 @@ function Home() {
       showHeader={false}
       navbarVariant="default"
       footerVariant="default"
-      className="overflow-x-hidden bg-gray-50 min-h-screen flex flex-col"
+      className="overflow-x-hidden bg-white min-h-screen flex flex-col"
     >
       <SkipLink />
 
@@ -46,20 +46,26 @@ function Home() {
         onStaffClick={handleStaffPortal}
         onMobileScannerClick={handleMobileScanner}
       />
-
       <main id="main-content" role="main" className="flex-1">
+        {/* Divider between Hero and Features */}
+        <SvgDivider className="my-8" />
+
         {/* Features Section */}
         <SectionWrapper id="features" title="Key features">
           <Features />
         </SectionWrapper>
+
+        {/* Divider between Features and About */}
+        <SvgDivider className="my-8" />
 
         {/* About Us Section */}
         <SectionWrapper id="about" title="About us">
           <AboutUs />
         </SectionWrapper>
 
-        {/* FAQ Section with SVG Divider */}
-        <SvgDivider />
+        {/* Divider between About and FAQ */}
+        <SvgDivider className="my-8" />
+
         <SectionWrapper
           id="faq"
           title="Frequently asked questions"
@@ -67,7 +73,6 @@ function Home() {
         >
           <FAQ />
         </SectionWrapper>
-
       </main>
       {/* Footer is provided by PageLayout when showFooter is true */}
     </PageLayout>

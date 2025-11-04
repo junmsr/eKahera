@@ -6,7 +6,7 @@ import TransactionCard from "../components/ui/POS/TransactionCard";
 import CartTableCard from "../components/ui/POS/CartTableCard";
 import Button from "../components/common/Button";
 import NavAdmin from "../components/layout/Nav-Admin";
-import Background from "../components/layout/Background";
+// Background gradient removed for a neutral look
 import { api, createGcashCheckout } from "../lib/api";
 import PriceCheckModal from "../components/modals/PriceCheckModal";
 import DiscountModal from "../components/modals/DiscountModal";
@@ -53,34 +53,37 @@ function POS() {
   // Generate a client-side provisional transaction number when POS opens
   useEffect(() => {
     if (!transactionNumber) {
-      const businessId = user?.businessId || user?.business_id || 'BIZ';
-      const timePart = new Date().toISOString().replace(/[-:T.Z]/g, '').slice(0, 14);
+      const businessId = user?.businessId || user?.business_id || "BIZ";
+      const timePart = new Date()
+        .toISOString()
+        .replace(/[-:T.Z]/g, "")
+        .slice(0, 14);
       const randPart = Math.floor(1000 + Math.random() * 9000);
       setTransactionNumber(`T-${businessId}-${timePart}-${randPart}`);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // On mount, if returned from PayMongo success/cancel, finalize or cleanup
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const status = params.get('payment');
-    const pending = localStorage.getItem('pending_gcash_cart');
-    if (status === 'success' && pending) {
+    const status = params.get("payment");
+    const pending = localStorage.getItem("pending_gcash_cart");
+    if (status === "success" && pending) {
       try {
         const parsed = JSON.parse(pending);
         // finalize checkout using saved items
         (async () => {
           if (hasFinalizedRef.current) return;
-          const guardKey = 'gcash_finalize_done';
-          if (sessionStorage.getItem(guardKey) === '1') return;
+          const guardKey = "gcash_finalize_done";
+          if (sessionStorage.getItem(guardKey) === "1") return;
           hasFinalizedRef.current = true;
-          sessionStorage.setItem(guardKey, '1');
+          sessionStorage.setItem(guardKey, "1");
           try {
             setError("");
             const body = {
               items: parsed.items || [],
-              payment_type: 'gcash',
+              payment_type: "gcash",
               money_received: parsed.total || null,
             };
             const resp = await api("/api/sales/checkout", {
@@ -88,7 +91,8 @@ function POS() {
               headers: { Authorization: `Bearer ${token}` },
               body: JSON.stringify(body),
             });
-            if (resp?.transaction_number) setTransactionNumber(resp.transaction_number);
+            if (resp?.transaction_number)
+              setTransactionNumber(resp.transaction_number);
             if (resp?.transaction_id) setTransactionId(resp.transaction_id);
             setCart([]);
             try {
@@ -99,23 +103,23 @@ function POS() {
               window.location.href = url.toString();
             } catch (_) {}
           } catch (e) {
-            setError(e.message || 'Failed to record GCASH payment');
+            setError(e.message || "Failed to record GCASH payment");
           } finally {
-            localStorage.removeItem('pending_gcash_cart');
+            localStorage.removeItem("pending_gcash_cart");
             // remove query param
             const url = new URL(window.location.href);
-            url.searchParams.delete('payment');
-            window.history.replaceState({}, '', url.toString());
+            url.searchParams.delete("payment");
+            window.history.replaceState({}, "", url.toString());
           }
         })();
       } catch (_) {
-        localStorage.removeItem('pending_gcash_cart');
+        localStorage.removeItem("pending_gcash_cart");
       }
-    } else if (status === 'cancel') {
-      localStorage.removeItem('pending_gcash_cart');
+    } else if (status === "cancel") {
+      localStorage.removeItem("pending_gcash_cart");
       const url = new URL(window.location.href);
-      url.searchParams.delete('payment');
-      window.history.replaceState({}, '', url.toString());
+      url.searchParams.delete("payment");
+      window.history.replaceState({}, "", url.toString());
     }
   }, []);
 
@@ -123,26 +127,37 @@ function POS() {
     if (!skuValue || qty < 1) return;
     setError("");
     try {
-      const product = await api(`/api/products/sku/${encodeURIComponent(skuValue)}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const product = await api(
+        `/api/products/sku/${encodeURIComponent(skuValue)}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
       const price = Number(product.selling_price || 0);
       const stockQty = Number(product.stock_quantity ?? 0);
       if (stockQty <= 0) {
-        setError(`Stock for ${product.product_name} (SKU ${product.sku}) is 0.`);
+        setError(
+          `Stock for ${product.product_name} (SKU ${product.sku}) is 0.`
+        );
         return;
       }
       if (qty > stockQty) {
-        setError(`Insufficient stock. Available: ${stockQty}, requested: ${qty}.`);
+        setError(
+          `Insufficient stock. Available: ${stockQty}, requested: ${qty}.`
+        );
         return;
       }
       setCart((prev) => {
-        const existingIdx = prev.findIndex((i) => i.product_id === product.product_id);
+        const existingIdx = prev.findIndex(
+          (i) => i.product_id === product.product_id
+        );
         if (existingIdx >= 0) {
           const next = [...prev];
           const newQty = next[existingIdx].quantity + qty;
           if (newQty > stockQty) {
-            setError(`Insufficient stock. Available: ${stockQty}, requested: ${newQty}.`);
+            setError(
+              `Insufficient stock. Available: ${stockQty}, requested: ${newQty}.`
+            );
             return prev;
           }
           next[existingIdx] = { ...next[existingIdx], quantity: newQty };
@@ -173,7 +188,10 @@ function POS() {
 
   const handleRemove = (idx) => setCart(cart.filter((_, i) => i !== idx));
 
-  const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const subtotal = cart.reduce(
+    (sum, item) => sum + item.price * item.quantity,
+    0
+  );
 
   // Placeholder for appliedDiscount state and discount calculation if needed
   // const [appliedDiscount, setAppliedDiscount] = useState(null);
@@ -181,12 +199,18 @@ function POS() {
   // For now, total equals subtotal
   const total = subtotal;
 
-  const handleCheckout = async (paymentType = "cash", moneyReceived = total) => {
+  const handleCheckout = async (
+    paymentType = "cash",
+    moneyReceived = total
+  ) => {
     if (cart.length === 0) return;
     setError("");
     try {
       const body = {
-        items: cart.map((i) => ({ product_id: i.product_id, quantity: i.quantity })),
+        items: cart.map((i) => ({
+          product_id: i.product_id,
+          quantity: i.quantity,
+        })),
         payment_type: paymentType,
         money_received: moneyReceived,
       };
@@ -195,7 +219,8 @@ function POS() {
         headers: { Authorization: `Bearer ${token}` },
         body: JSON.stringify(body),
       });
-      if (resp?.transaction_number) setTransactionNumber(resp.transaction_number);
+      if (resp?.transaction_number)
+        setTransactionNumber(resp.transaction_number);
       if (resp?.transaction_id) setTransactionId(resp.transaction_id);
       setCart([]);
       try {
@@ -206,8 +231,11 @@ function POS() {
         navigate(url.pathname + url.search);
       } catch (_) {}
       // Start a fresh provisional transaction number after successful checkout
-      const businessId = user?.businessId || user?.business_id || 'BIZ';
-      const timePart = new Date().toISOString().replace(/[-:T.Z]/g, '').slice(0, 14);
+      const businessId = user?.businessId || user?.business_id || "BIZ";
+      const timePart = new Date()
+        .toISOString()
+        .replace(/[-:T.Z]/g, "")
+        .slice(0, 14);
       const randPart = Math.floor(1000 + Math.random() * 9000);
       setTransactionNumber(`T-${businessId}-${timePart}-${randPart}`);
       // setAppliedDiscount(null); // if using discount
@@ -244,7 +272,10 @@ function POS() {
   // Close dropdown when clicking outside notifications
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (notificationRef.current && !notificationRef.current.contains(event.target)) {
+      if (
+        notificationRef.current &&
+        !notificationRef.current.contains(event.target)
+      ) {
         setShowNotifications(false);
       }
     };
@@ -298,14 +329,22 @@ function POS() {
                     }`}
                   >
                     <div className="flex justify-between items-start">
-                      <h4 className="font-medium text-gray-900">{notification.title}</h4>
-                      <span className="text-xs text-gray-500">{notification.time}</span>
+                      <h4 className="font-medium text-gray-900">
+                        {notification.title}
+                      </h4>
+                      <span className="text-xs text-gray-500">
+                        {notification.time}
+                      </span>
                     </div>
-                    <p className="text-sm text-gray-600 mt-1">{notification.message}</p>
+                    <p className="text-sm text-gray-600 mt-1">
+                      {notification.message}
+                    </p>
                   </div>
                 ))
               ) : (
-                <div className="p-4 text-center text-gray-500">No notifications</div>
+                <div className="p-4 text-center text-gray-500">
+                  No notifications
+                </div>
               )}
             </div>
             {notifications.length > 0 && (
@@ -349,7 +388,7 @@ function POS() {
   );
 
   return (
-    <Background variant="gradientBlue" pattern="dots" floatingElements overlay>
+    <div className="bg-white min-h-screen">
       <div
         className="flex min-h-screen overflow-y-auto md:overflow-hidden"
         onTouchStart={(e) => {
@@ -389,7 +428,11 @@ function POS() {
           <NavAdmin />
         </div>
         {/* Mobile Off-canvas Nav */}
-        <div className={`md:hidden fixed inset-y-0 left-0 z-50 w-64 max-w-[80vw] bg-white shadow-xl transform transition-transform duration-300 ${isMobileNavOpen ? "translate-x-0" : "-translate-x-full"}`}>
+        <div
+          className={`md:hidden fixed inset-y-0 left-0 z-50 w-64 max-w-[80vw] bg-white shadow-xl transform transition-transform duration-300 ${
+            isMobileNavOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
+        >
           <NavAdmin />
         </div>
         {isMobileNavOpen && (
@@ -415,9 +458,7 @@ function POS() {
 
           {/* Main Area */}
           <main className="flex-1 bg-transparent overflow-hidden p-4">
-            <div
-              className="grid gap-4 md:gap-8 h-full grid-cols-1 md:[grid-template-columns:1fr_2fr] md:[grid-template-rows:325px_325px_1fr_120px]"
-            >
+            <div className="grid gap-4 md:gap-8 h-full grid-cols-1 md:[grid-template-columns:1fr_2fr] md:[grid-template-rows:325px_325px_1fr_120px]">
               {/* ScannerCard */}
               <div className="row-span-1 col-span-1">
                 <ScannerCard
@@ -435,7 +476,12 @@ function POS() {
 
               {/* CartTableCard */}
               <div className="md:row-span-3 md:col-start-2 md:row-start-1 flex flex-col h-full">
-                <CartTableCard cart={cart} handleRemove={handleRemove} total={total} className="flex-1" />
+                <CartTableCard
+                  cart={cart}
+                  handleRemove={handleRemove}
+                  total={total}
+                  className="flex-1"
+                />
 
                 {/* Action Buttons */}
                 <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 mt-4">
@@ -500,12 +546,17 @@ function POS() {
                   setQuantity={setQuantity}
                   handleAddToCart={handleAddToCart}
                 />
-                {error && <div className="text-red-600 text-sm mt-2">{error}</div>}
+                {error && (
+                  <div className="text-red-600 text-sm mt-2">{error}</div>
+                )}
               </div>
 
               {/* TransactionCard */}
               <div className="md:row-start-3 md:col-start-1 md:-mt-16">
-                <TransactionCard transactionNumber={transactionNumber} transactionId={transactionId} />
+                <TransactionCard
+                  transactionNumber={transactionNumber}
+                  transactionId={transactionId}
+                />
               </div>
             </div>
           </main>
@@ -520,8 +571,14 @@ function POS() {
               setShowDiscount(false);
             }}
           />
-          <PriceCheckModal isOpen={showPriceCheck} onClose={() => setShowPriceCheck(false)} />
-          <CashLedgerModal isOpen={showCashLedger} onClose={() => setShowCashLedger(false)} />
+          <PriceCheckModal
+            isOpen={showPriceCheck}
+            onClose={() => setShowPriceCheck(false)}
+          />
+          <CashLedgerModal
+            isOpen={showCashLedger}
+            onClose={() => setShowCashLedger(false)}
+          />
           <ProductReplacementModal
             isOpen={showRefund}
             onClose={() => setShowRefund(false)}
@@ -544,24 +601,33 @@ function POS() {
                 if (method === "gcash") {
                   (async () => {
                     try {
-                      const successUrl = window.location.origin + "/pos?payment=success";
-                      const cancelUrl = window.location.origin + "/pos?payment=cancel";
+                      const successUrl =
+                        window.location.origin + "/pos?payment=success";
+                      const cancelUrl =
+                        window.location.origin + "/pos?payment=cancel";
                       // persist cart to finalize after redirect back
-                      localStorage.setItem('pending_gcash_cart', JSON.stringify({
-                        items: cart.map((i) => ({ product_id: i.product_id, quantity: i.quantity })),
-                        total
-                      }));
+                      localStorage.setItem(
+                        "pending_gcash_cart",
+                        JSON.stringify({
+                          items: cart.map((i) => ({
+                            product_id: i.product_id,
+                            quantity: i.quantity,
+                          })),
+                          total,
+                        })
+                      );
                       const { checkoutUrl } = await createGcashCheckout({
                         amount: Number(total || 0),
                         description: "POS Order",
-                        referenceNumber: transactionNumber || `POS-${Date.now()}`,
+                        referenceNumber:
+                          transactionNumber || `POS-${Date.now()}`,
                         cancelUrl,
-                        successUrl
+                        successUrl,
                       });
                       window.location.href = checkoutUrl;
                     } catch (e) {
                       setError(e.message || "Failed to init GCash");
-                      localStorage.removeItem('pending_gcash_cart');
+                      localStorage.removeItem("pending_gcash_cart");
                     }
                   })();
                 } else {
@@ -606,7 +672,7 @@ function POS() {
           />
         </div>
       </div>
-    </Background>
+    </div>
   );
 }
 
