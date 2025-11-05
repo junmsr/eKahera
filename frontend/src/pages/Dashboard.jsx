@@ -130,7 +130,7 @@ function VisitorsChart({ data, className = "" }) {
       title="Visitors for the last 6 months"
       className={`bg-white border border-gray-200 ${className}`}
     >
-      <div className="h-52 sm:h-56 md:h-64 xl:h-72">
+      <div className="h-48 sm:h-56 md:h-64 xl:h-72">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart
             data={data}
@@ -159,7 +159,7 @@ function VisitorsChart({ data, className = "" }) {
 function SalesPieChart({ data, className = "" }) {
   return (
     <ChartCard title="Sales by Product Category" className={className}>
-      <div className="h-52 sm:h-56 md:h-64 xl:h-72">
+      <div className="h-48 sm:h-56 md:h-64 xl:h-72">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
@@ -198,7 +198,7 @@ function SalesPieChart({ data, className = "" }) {
 function EngagementChart({ data, className = "" }) {
   return (
     <ChartCard title="Engagement exceed targets" className={className}>
-      <div className="h-52 sm:h-56 md:h-64 xl:h-72">
+      <div className="h-48 sm:h-56 md:h-64 xl:h-72">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
             data={data}
@@ -221,7 +221,7 @@ function EngagementChart({ data, className = "" }) {
 function CustomersChart({ data, className = "" }) {
   return (
     <ChartCard title="Customers" className={className}>
-      <div className="h-52 sm:h-56 md:h-64 xl:h-72">
+      <div className="h-48 sm:h-56 md:h-64 xl:h-72">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
             data={data}
@@ -404,16 +404,16 @@ export default function Dashboard() {
       {/* Background: removed large blue/purple gradient blobs for a cleaner look */}
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-12 gap-4 sm:gap-6 p-4 sm:p-6 relative z-10">
+      <div className="grid grid-cols-12 gap-3 sm:gap-4 md:gap-5 lg:gap-6 p-3 sm:p-4 md:p-6 relative z-10">
         {stats.map((stat, idx) => (
           <StatsCard
             key={stat.label}
             {...stat}
             loading={loading}
-            className={`bg-white/80 backdrop-blur-md border border-white/60 shadow-xl hover:shadow-2xl hover:scale-[1.03] hover:-translate-y-1 transition-all duration-500 group col-span-12 ${
+            className={`col-span-12 ${
               idx === 0
-                ? "sm:col-span-6 lg:col-span-6"
-                : "sm:col-span-6 lg:col-span-2"
+                ? "sm:col-span-6 xl:col-span-6"
+                : "sm:col-span-6 xl:col-span-2"
             }`}
           />
         ))}
@@ -425,14 +425,14 @@ export default function Dashboard() {
       </div>
 
       {/* Charts Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 auto-rows-[minmax(12rem,auto)] gap-4 sm:gap-6 p-4 sm:p-6 relative z-10">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 auto-rows-[minmax(11rem,auto)] md:auto-rows-[minmax(12rem,auto)] lg:auto-rows-[minmax(13rem,auto)] gap-3 sm:gap-4 md:gap-5 lg:gap-6 p-3 sm:p-4 md:p-6 relative z-10">
         <VisitorsChart
           data={chartData}
           className="lg:col-span-4 lg:row-span-2"
         />
         <SalesPieChart data={pieData} className="lg:col-span-2 lg:row-span-2" />
         <EngagementChart data={chartData} className="lg:col-span-3" />
-        <Card className="bg-gradient-to-br from-red-50/80 to-orange-50/80 backdrop-blur-md border border-red-200/50 shadow-xl hover:shadow-2xl hover:scale-[1.02] transition-all duration-500 p-6 group lg:col-span-3">
+        <Card className="bg-gradient-to-br from-red-50/80 to-orange-50/80 backdrop-blur-md border border-red-200/50 shadow-xl hover:shadow-2xl hover:-translate-y-0.5 hover:scale-[1.01] transition-all duration-500 p-6 md:p-7 group lg:col-span-3">
           <SectionHeader
             size="md"
             align="left"
