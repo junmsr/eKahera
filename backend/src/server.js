@@ -1,17 +1,35 @@
-const fs = require('fs');
 const path = require('path');
 
-// Load config from config.env file
-const configPath = path.join(__dirname, '..', 'config.env');
-const configContent = fs.readFileSync(configPath, 'utf8');
-const config = {};
+// Load environment variables from .env file for local development
+// In production (like on Render), these variables should be set in the dashboard
+require('dotenv').config({ path: path.join(__dirname, '..', 'config.env') });
 
-configContent.split('\n').forEach(line => {
-  const [key, value] = line.split('=');
-  if (key && value && !key.startsWith('#')) {
-    config[key.trim()] = value.trim();
-  }
-});
+// The config object is populated from environment variables.
+// This is compatible with hosting platforms like Render.
+const config = {
+  DATABASE_URL: process.env.DATABASE_URL,
+  NODE_ENV: process.env.NODE_ENV,
+  AUTO_INIT_DB: process.env.AUTO_INIT_DB,
+  DB_HOST: process.env.DB_HOST,
+  DB_PORT: process.env.DB_PORT,
+  DB_USER: process.env.DB_USER,
+  DB_PASSWORD: process.env.DB_PASSWORD,
+  DB_NAME: process.env.DB_NAME,
+  PORT: process.env.PORT,
+  JWT_SECRET: process.env.JWT_SECRET,
+  EMAIL_USER: process.env.EMAIL_USER,
+  EMAIL_PASSWORD: process.env.EMAIL_PASSWORD,
+  FRONTEND_URL: process.env.FRONTEND_URL,
+  PAYMONGO_SECRET_KEY: process.env.PAYMONGO_SECRET_KEY,
+  CREATE_INITIAL_SUPERADMIN: process.env.CREATE_INITIAL_SUPERADMIN,
+  SUPERADMIN_EMAIL: process.env.SUPERADMIN_EMAIL,
+  SUPERADMIN_PASSWORD: process.env.SUPERADMIN_PASSWORD,
+  SUPERADMIN_NAME: process.env.SUPERADMIN_NAME,
+  SUPABASE_STORAGE_ENDPOINT: process.env.SUPABASE_STORAGE_ENDPOINT,
+  SUPABASE_REGION: process.env.SUPABASE_REGION,
+  SUPABASE_ACCESS_KEY_ID: process.env.SUPABASE_ACCESS_KEY_ID,
+  SUPABASE_SECRET_ACCESS_KEY: process.env.SUPABASE_SECRET_ACCESS_KEY,
+};
 
 const express = require('express');
 const cors = require('cors');
