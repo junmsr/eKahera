@@ -1,6 +1,7 @@
-import React from 'react';
-import Button from '../common/Button';
-import StatsCard from '../ui/Dashboard/StatsCard';
+import React from "react";
+import Button from "../common/Button";
+import StatsCard from "../ui/Dashboard/StatsCard";
+import Card from "../common/Card";
 
 /**
  * Inventory Table Component
@@ -18,117 +19,510 @@ function InventoryTable({
   onEdit,
   onDelete,
   onStockEntry,
+  categories = [],
+  selectedCategory,
+  onCategoryFilter,
+  stockFilter,
+  onStockFilter,
+  sortBy,
+  sortOrder,
+  onSort,
 }) {
   const EditIcon = () => (
-    <svg width="18" height="18" fill="none" stroke="#2196f3" strokeWidth="2" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 1 1 2.828 2.828L11.828 15.828a4 4 0 0 1-1.414.828l-4.243 1.414 1.414-4.243a4 4 0 0 1 .828-1.414z"/></svg>
+    <svg
+      width="18"
+      height="18"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      viewBox="0 0 24 24"
+    >
+      <path d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 1 1 2.828 2.828L11.828 15.828a4 4 0 0 1-1.414.828l-4.243 1.414 1.414-4.243a4 4 0 0 1 .828-1.414z" />
+    </svg>
   );
   const DeleteIcon = () => (
-    <svg width="18" height="18" fill="none" stroke="#f44336" strokeWidth="2" viewBox="0 0 24 24"><path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/><path d="M10 11v6M14 11v6"/></svg>
+    <svg
+      width="18"
+      height="18"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      viewBox="0 0 24 24"
+    >
+      <path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
+      <path d="M10 11v6M14 11v6" />
+    </svg>
   );
   const StockIcon = () => (
-    <svg width="18" height="18" fill="none" stroke="#4caf50" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9 12l2 2l4-4"/></svg>
+    <svg
+      width="18"
+      height="18"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      viewBox="0 0 24 24"
+    >
+      <circle cx="12" cy="12" r="10" />
+      <path d="M9 12l2 2l4-4" />
+    </svg>
   );
+
+  const getStockStatus = (quantity) => {
+    if (quantity === 0)
+      return {
+        label: "Out of Stock",
+        color: "bg-red-100 text-red-700 border-red-200",
+      };
+    if (quantity < 10)
+      return {
+        label: "Low Stock",
+        color: "bg-orange-100 text-orange-700 border-orange-200",
+      };
+    return {
+      label: "In Stock",
+      color: "bg-green-100 text-green-700 border-green-200",
+    };
+  };
+
+  const SortIcon = ({ direction }) => (
+    <svg
+      className={`w-4 h-4 ${direction ? "text-blue-600" : "text-gray-400"}`}
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      {direction === "asc" ? (
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M5 15l7-7 7 7"
+        />
+      ) : direction === "desc" ? (
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M19 9l-7 7-7-7"
+        />
+      ) : (
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
+        />
+      )}
+    </svg>
+  );
+
+  const handleSort = (field) => {
+    if (sortBy === field) {
+      onSort(field, sortOrder === "asc" ? "desc" : "asc");
+    } else {
+      onSort(field, "asc");
+    }
+  };
 
   return (
     <>
-      {/* Controls */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-2 gap-2">
-        <div className="flex flex-row gap-2 items-center">
-          <label className="text-sm text-blue-800 font-semibold mr-2">Show</label>
-          <select value={entriesPerPage} onChange={onEntriesChange} className="rounded-lg border border-blue-200 px-2 py-1 text-sm focus:ring-2 focus:ring-blue-400">
-            {[5, 10, 25, 50].map((n) => (
-              <option key={n} value={n}>{n}</option>
-            ))}
-          </select>
-          <span className="text-sm text-blue-800 font-semibold ml-2">entries</span>
-          <div className="ml-4 flex items-center">
-            <label className="text-sm text-blue-800 font-semibold mr-2">Search:</label>
-            <input
-              type="text"
-              value={search}
-              onChange={onSearchChange}
-              className="rounded-lg border border-blue-200 px-2 py-1 text-sm focus:ring-2 focus:ring-blue-400"
-              placeholder="Search..."
-            />
+      {/* Modern Search and Controls */}
+      <Card className="mb-4 sm:mb-6 p-3 sm:p-4 md:p-6 w-full overflow-hidden">
+        <div className="flex flex-col gap-3 sm:gap-4 w-full">
+          {/* Top Row: Search and Controls */}
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 sm:gap-4 w-full">
+            {/* Search Bar */}
+            <div className="flex-1 w-full min-w-0">
+              <div className="relative w-full">
+                <div className="absolute inset-y-0 left-0 pl-3 sm:pl-4 flex items-center pointer-events-none">
+                  <svg
+                    className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                    />
+                  </svg>
+                </div>
+                <input
+                  type="text"
+                  value={search}
+                  onChange={onSearchChange}
+                  className="w-full pl-9 sm:pl-12 pr-3 sm:pr-4 py-2 sm:py-3 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-xl text-xs sm:text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 placeholder-gray-400"
+                  placeholder="Search products..."
+                />
+              </div>
+            </div>
+
+            {/* Controls Row */}
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3 shrink-0">
+              {/* Sort Dropdown */}
+              <div className="flex items-center gap-1 sm:gap-2">
+                <label className="text-xs font-semibold text-gray-600 hidden md:block">
+                  Sort:
+                </label>
+                <select
+                  value={`${sortBy}-${sortOrder}`}
+                  onChange={(e) => {
+                    const [field, order] = e.target.value.split("-");
+                    onSort(field, order);
+                  }}
+                  className="bg-white/80 backdrop-blur-sm border border-gray-200 rounded-xl px-2 sm:px-3 py-1.5 sm:py-2 text-xs font-medium text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 cursor-pointer"
+                >
+                  <option value="name-asc">Name (A-Z)</option>
+                  <option value="name-desc">Name (Z-A)</option>
+                  <option value="quantity-asc">Stock (Low to High)</option>
+                  <option value="quantity-desc">Stock (High to Low)</option>
+                  <option value="selling_price-asc">Price (Low to High)</option>
+                  <option value="selling_price-desc">
+                    Price (High to Low)
+                  </option>
+                  <option value="category-asc">Category (A-Z)</option>
+                </select>
+              </div>
+
+              {/* Entries Selector */}
+              <div className="flex items-center gap-1 sm:gap-2">
+                <label className="text-xs font-semibold text-gray-600 hidden md:block">
+                  Show:
+                </label>
+                <select
+                  value={entriesPerPage}
+                  onChange={onEntriesChange}
+                  className="bg-white/80 backdrop-blur-sm border border-gray-200 rounded-xl px-2 sm:px-3 py-1.5 sm:py-2 text-xs font-medium text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 cursor-pointer"
+                >
+                  {[5, 10, 25, 50, 100].map((n) => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Filter Chips */}
+          <div className="flex flex-wrap items-center gap-2 pt-2 sm:pt-3 border-t border-gray-100 w-full">
+            <span className="text-xs font-semibold text-gray-600 shrink-0">
+              Filters:
+            </span>
+
+            {/* Category Filter */}
+            <div className="flex items-center gap-2">
+              <select
+                value={selectedCategory || ""}
+                onChange={(e) => onCategoryFilter(e.target.value || null)}
+                className="bg-white/80 backdrop-blur-sm border border-gray-200 rounded-full px-3 sm:px-4 py-1 sm:py-1.5 text-xs font-medium text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 cursor-pointer"
+              >
+                <option value="">All Categories</option>
+                {categories.map((cat) => (
+                  <option key={cat.id || cat.name} value={cat.name}>
+                    {cat.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Stock Status Filter */}
+            <div className="flex items-center gap-2">
+              <select
+                value={stockFilter || ""}
+                onChange={(e) => onStockFilter(e.target.value || null)}
+                className="bg-white/80 backdrop-blur-sm border border-gray-200 rounded-full px-3 sm:px-4 py-1 sm:py-1.5 text-xs font-medium text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 cursor-pointer"
+              >
+                <option value="">All Stock Status</option>
+                <option value="in_stock">In Stock</option>
+                <option value="low_stock">Low Stock</option>
+                <option value="out_of_stock">Out of Stock</option>
+              </select>
+            </div>
+
+            {/* Clear Filters */}
+            {(selectedCategory || stockFilter) && (
+              <button
+                onClick={() => {
+                  onCategoryFilter(null);
+                  onStockFilter(null);
+                }}
+                className="px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-all duration-200 flex items-center gap-1 shrink-0"
+              >
+                <svg
+                  className="w-3 h-3"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+                Clear
+              </button>
+            )}
           </div>
         </div>
-      </div>
-      {/* Table */}
-      <div className="bg-white rounded-2xl shadow-2xl p-4 md:p-8 mt-2">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-separate" style={{ borderSpacing: 0 }}>
-            <thead className="sticky top-0 z-10 bg-white/90">
-              <tr className="border-b border-blue-200">
-                <th className="py-2 px-2 font-bold text-black">#</th>
-                <th className="py-2 px-2 font-bold text-black">Name</th>
-                <th className="py-2 px-2 font-bold text-black">Category</th>
-                <th className="py-2 px-2 font-bold text-black">Description</th>
-                <th className="py-2 px-2 font-bold text-black">Cost Price</th>
-                <th className="py-2 px-2 font-bold text-black">Selling Price</th>
-                <th className="py-2 px-2 font-bold text-black">Quantity</th>
-                <th className="py-2 px-2 font-bold text-black">Actions</th>
+      </Card>
+
+      {/* Table Card */}
+      <Card className="overflow-hidden w-full">
+        <div className="overflow-x-auto w-full">
+          <table className="w-full min-w-[800px]">
+            <thead>
+              <tr className="bg-gradient-to-r from-blue-50/80 to-indigo-50/80 border-b-2 border-blue-100">
+                <th className="py-3 px-2 sm:py-4 sm:px-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                  #
+                </th>
+                <th
+                  className="py-3 px-2 sm:py-4 sm:px-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-100/50 transition-colors group"
+                  onClick={() => handleSort("name")}
+                >
+                  <div className="flex items-center gap-1 sm:gap-2">
+                    Product
+                    <SortIcon
+                      direction={sortBy === "name" ? sortOrder : null}
+                    />
+                  </div>
+                </th>
+                <th
+                  className="py-3 px-2 sm:py-4 sm:px-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider hidden sm:table-cell cursor-pointer hover:bg-blue-100/50 transition-colors group"
+                  onClick={() => handleSort("category")}
+                >
+                  <div className="flex items-center gap-1 sm:gap-2">
+                    Category
+                    <SortIcon
+                      direction={sortBy === "category" ? sortOrder : null}
+                    />
+                  </div>
+                </th>
+                <th className="py-3 px-2 sm:py-4 sm:px-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider hidden md:table-cell">
+                  Description
+                </th>
+                <th className="py-3 px-2 sm:py-4 sm:px-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider hidden lg:table-cell">
+                  Cost Price
+                </th>
+                <th
+                  className="py-3 px-2 sm:py-4 sm:px-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-100/50 transition-colors group"
+                  onClick={() => handleSort("selling_price")}
+                >
+                  <div className="flex items-center gap-1 sm:gap-2">
+                    Selling Price
+                    <SortIcon
+                      direction={sortBy === "selling_price" ? sortOrder : null}
+                    />
+                  </div>
+                </th>
+                <th
+                  className="py-3 px-2 sm:py-4 sm:px-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-100/50 transition-colors group"
+                  onClick={() => handleSort("quantity")}
+                >
+                  <div className="flex items-center gap-1 sm:gap-2">
+                    Stock
+                    <SortIcon
+                      direction={sortBy === "quantity" ? sortOrder : null}
+                    />
+                  </div>
+                </th>
+                <th className="py-3 px-2 sm:py-4 sm:px-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                  Actions
+                </th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-gray-100">
               {products.length === 0 ? (
-                <tr><td colSpan={8} className="text-center text-blue-300 py-8">No products</td></tr>
-              ) : products.map((product, idx) => (
-                <tr key={product.id} className="border-b border-blue-100 hover:bg-blue-50/60 transition-colors">
-                  <td className="py-2 px-2">{(page - 1) * entriesPerPage + idx + 1}</td>
-                  <td className="py-2 px-2 font-medium text-blue-900">{product.name}</td>
-                  <td className="py-2 px-2">{product.category}</td>
-                  <td className="py-2 px-2 max-w-xs truncate" title={product.description}>{product.description}</td>
-                  <td className="py-2 px-2">₱{Number(product.cost_price).toFixed(2)}</td>
-                  <td className="py-2 px-2">₱{Number(product.selling_price).toFixed(2)}</td>
-                  <td className="py-2 px-2">{product.quantity}</td>
-                  <td className="py-2 px-2 flex gap-2">
-                    <Button 
-                      variant="stockEntry" 
-                      title="Stock Entry"
-                      onClick={() => onStockEntry && onStockEntry(product)}
-                      icon={<StockIcon />}
-                      children={<span className="ml-1 text-green-700 font-semibold text-xs">Stock Entry</span>}
-                    />
-                    <Button 
-                      variant="edit" 
-                      title="Update" 
-                      onClick={() => onEdit(product)}
-                      icon={<EditIcon />}
-                      children={<span className="ml-1 text-blue-700 font-semibold text-xs">Update</span>}
-                    />
-                    <Button 
-                      variant="delete" 
-                      title="Delete" 
-                      onClick={() => onDelete(product.id)}
-                      icon={<DeleteIcon />}
-                      children={<span className="ml-1 text-red-700 font-semibold text-xs">Delete</span>}
-                    />
+                <tr>
+                  <td colSpan={8} className="text-center py-16">
+                    <div className="flex flex-col items-center justify-center">
+                      <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                        <svg
+                          className="w-10 h-10 text-gray-400"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"
+                          />
+                        </svg>
+                      </div>
+                      <p className="text-gray-500 text-lg font-semibold">
+                        No products found
+                      </p>
+                      <p className="text-gray-400 text-sm mt-2">
+                        {search
+                          ? "Try adjusting your search terms"
+                          : "Start by adding your first product"}
+                      </p>
+                    </div>
                   </td>
                 </tr>
-              ))}
+              ) : (
+                products.map((product, idx) => {
+                  const stockStatus = getStockStatus(product.quantity);
+                  return (
+                    <tr
+                      key={product.id}
+                      className="hover:bg-blue-50/50 transition-all duration-200 group"
+                    >
+                      <td className="py-3 px-2 sm:py-4 sm:px-4 text-xs sm:text-sm text-gray-600 font-medium">
+                        {(page - 1) * entriesPerPage + idx + 1}
+                      </td>
+                      <td className="py-3 px-2 sm:py-4 sm:px-4">
+                        <div className="flex flex-col min-w-0">
+                          <span className="text-xs sm:text-sm font-semibold text-gray-900 group-hover:text-blue-600 transition-colors truncate">
+                            {product.name}
+                          </span>
+                          <span className="text-[10px] sm:text-xs text-gray-500 mt-0.5 truncate">
+                            SKU: {product.sku || "N/A"}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="py-3 px-2 sm:py-4 sm:px-4 hidden sm:table-cell">
+                        <span className="inline-flex items-center px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200">
+                          {product.category}
+                        </span>
+                      </td>
+                      <td
+                        className="py-3 px-2 sm:py-4 sm:px-4 max-w-xs truncate hidden md:table-cell text-xs sm:text-sm text-gray-600"
+                        title={product.description}
+                      >
+                        {product.description || "-"}
+                      </td>
+                      <td className="py-3 px-2 sm:py-4 sm:px-4 hidden lg:table-cell">
+                        <span className="text-xs sm:text-sm font-medium text-gray-700">
+                          ₱{Number(product.cost_price).toFixed(2)}
+                        </span>
+                      </td>
+                      <td className="py-3 px-2 sm:py-4 sm:px-4">
+                        <span className="text-xs sm:text-sm font-bold text-blue-600">
+                          ₱{Number(product.selling_price).toFixed(2)}
+                        </span>
+                      </td>
+                      <td className="py-3 px-2 sm:py-4 sm:px-4">
+                        <div className="flex flex-col gap-1">
+                          <span className="text-xs sm:text-sm font-semibold text-gray-900">
+                            {product.quantity}
+                          </span>
+                          <span
+                            className={`inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium border ${stockStatus.color}`}
+                          >
+                            {stockStatus.label}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="py-3 px-2 sm:py-4 sm:px-4">
+                        <div className="flex items-center gap-1 sm:gap-2">
+                          <button
+                            onClick={() =>
+                              onStockEntry && onStockEntry(product)
+                            }
+                            className="p-2 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 border border-green-200 transition-all duration-200 hover:scale-110"
+                            title="Add Stock"
+                          >
+                            <StockIcon />
+                          </button>
+                          <button
+                            onClick={() => onEdit(product)}
+                            className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 transition-all duration-200 hover:scale-110"
+                            title="Edit Product"
+                          >
+                            <EditIcon />
+                          </button>
+                          <button
+                            onClick={() => onDelete(product.id)}
+                            className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 transition-all duration-200 hover:scale-110"
+                            title="Delete Product"
+                          >
+                            <DeleteIcon />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
-        {/* Pagination */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between mt-4 gap-2">
-          <div className="text-sm text-blue-800">
-            Showing {products.length === 0 ? 0 : (page - 1) * entriesPerPage + 1} to {Math.min(page * entriesPerPage, products.length)} of {products.length} entries
-          </div>
-          <div className="flex gap-2 items-center">
-            <Button label="Previous" size="sm" variant="secondary" onClick={() => onPageChange(page - 1)} disabled={page === 1} />
-            {Array.from({ length: totalPages }, (_, i) => (
+
+        {/* Enhanced Pagination */}
+        <div className="bg-gray-50/50 border-t border-gray-200 px-3 sm:px-4 md:px-6 py-3 sm:py-4 w-full">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 w-full">
+            <div className="text-xs sm:text-sm text-gray-600 whitespace-nowrap">
+              Showing{" "}
+              <span className="font-semibold text-gray-900">
+                {products.length === 0 ? 0 : (page - 1) * entriesPerPage + 1}
+              </span>{" "}
+              to{" "}
+              <span className="font-semibold text-gray-900">
+                {Math.min(page * entriesPerPage, products.length)}
+              </span>{" "}
+              of{" "}
+              <span className="font-semibold text-gray-900">
+                {products.length}
+              </span>{" "}
+              entries
+            </div>
+            <div className="flex flex-wrap items-center justify-center gap-1 sm:gap-2 w-full sm:w-auto">
               <Button
-                key={i + 1}
-                variant={page === i + 1 ? "paginationActive" : "paginationInactive"}
-                onClick={() => onPageChange(i + 1)}
-                disabled={page === i + 1}
-                children={i + 1}
+                label="Previous"
+                size="sm"
+                variant="secondary"
+                onClick={() => onPageChange(page - 1)}
+                disabled={page === 1}
+                className="min-w-[80px] sm:min-w-[100px] text-xs sm:text-sm"
               />
-            ))}
-            <Button label="Next" size="sm" variant="secondary" onClick={() => onPageChange(page + 1)} disabled={page === totalPages} />
+              <div className="flex items-center gap-1 flex-wrap justify-center">
+                {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                  let pageNum;
+                  if (totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (page <= 3) {
+                    pageNum = i + 1;
+                  } else if (page >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i;
+                  } else {
+                    pageNum = page - 2 + i;
+                  }
+                  return (
+                    <Button
+                      key={pageNum}
+                      variant={
+                        page === pageNum
+                          ? "paginationActive"
+                          : "paginationInactive"
+                      }
+                      onClick={() => onPageChange(pageNum)}
+                      disabled={page === pageNum}
+                      className="min-w-[36px] sm:min-w-[40px] text-xs sm:text-sm"
+                    >
+                      {pageNum}
+                    </Button>
+                  );
+                })}
+              </div>
+              <Button
+                label="Next"
+                size="sm"
+                variant="secondary"
+                onClick={() => onPageChange(page + 1)}
+                disabled={page === totalPages}
+                className="min-w-[80px] sm:min-w-[100px] text-xs sm:text-sm"
+              />
+            </div>
           </div>
         </div>
-      </div>
+      </Card>
     </>
   );
 }
@@ -139,7 +533,7 @@ function InventoryTable({
  */
 function InventoryStats({ stats }) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+    <div className="grid grid-cols-12 gap-3 sm:gap-4 md:gap-5 mb-4 sm:mb-6 md:mb-8 w-full">
       {stats.map((stat, i) => (
         <StatsCard
           key={stat.label}
@@ -148,8 +542,13 @@ function InventoryStats({ stats }) {
           icon={stat.icon}
           color={stat.color}
           change={0}
-          sub={i === 1 ? 'This Month' : ''}
-          className="h-full"
+          sub={stat.sub || ""}
+          formatValue={stat.formatValue}
+          className={`col-span-12 ${
+            i === 0
+              ? "sm:col-span-6 lg:col-span-6"
+              : "sm:col-span-6 lg:col-span-3 xl:col-span-2"
+          }`}
         />
       ))}
     </div>
@@ -162,6 +561,7 @@ function InventoryStats({ stats }) {
  */
 function Inventory({
   products,
+  allProducts = products, // For calculating stats from all products, not just paginated
   stats,
   page,
   entriesPerPage,
@@ -174,12 +574,151 @@ function Inventory({
   onDelete,
   onAddProduct,
   onStockEntry,
-  className = ''
+  categories = [],
+  selectedCategory,
+  onCategoryFilter,
+  stockFilter,
+  onStockFilter,
+  sortBy,
+  sortOrder,
+  onSort,
+  className = "",
 }) {
+  const totalValue = allProducts.reduce(
+    (sum, p) => sum + Number(p.selling_price || 0) * Number(p.quantity || 0),
+    0
+  );
+  const lowStockCount = allProducts.filter(
+    (p) => Number(p.quantity || 0) < 10
+  ).length;
+
   return (
-    <div className={`max-w-7xl mx-auto py-8 px-2 md:px-6 ${className}`}>
+    <div
+      className={`w-full max-w-full overflow-x-hidden py-4 sm:py-6 px-2 sm:px-3 md:px-4 lg:px-6 ${className}`}
+    >
+      {/* Stats Cards */}
       <InventoryStats stats={stats} />
-      <h2 className="text-2xl font-bold text-blue-900 tracking-tight mb-2 md:mb-0">Inventory List</h2>
+
+      {/* Header with Actions */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4 sm:mb-6 w-full">
+        <div className="min-w-0 flex-1">
+          <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 tracking-tight break-words">
+            Product Inventory
+          </h2>
+          <p className="text-xs sm:text-sm text-gray-600 mt-1">
+            Manage your products, stock levels, and pricing
+          </p>
+        </div>
+        <Button
+          onClick={onAddProduct}
+          size="lg"
+          variant="primary"
+          microinteraction
+          className="flex items-center gap-2 shadow-lg hover:shadow-xl w-full sm:w-auto shrink-0"
+        >
+          <svg
+            className="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 4v16m8-8H4"
+            />
+          </svg>
+          <span className="hidden sm:inline">Add Product</span>
+          <span className="sm:hidden">Add</span>
+        </Button>
+      </div>
+
+      {/* Quick Stats Bar */}
+      <Card className="mb-4 sm:mb-6 p-3 sm:p-4 md:p-6 bg-gradient-to-r from-blue-50/80 to-indigo-50/80 border-blue-100 w-full overflow-hidden">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 w-full">
+          <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-100 rounded-xl flex items-center justify-center shrink-0">
+              <svg
+                className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                />
+              </svg>
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide truncate">
+                Total Products
+              </p>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900 truncate">
+                {allProducts.length}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-orange-100 rounded-xl flex items-center justify-center shrink-0">
+              <svg
+                className="w-5 h-5 sm:w-6 sm:h-6 text-orange-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                />
+              </svg>
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide truncate">
+                Low Stock Items
+              </p>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900 truncate">
+                {lowStockCount}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 sm:gap-4 min-w-0 sm:col-span-2 lg:col-span-1">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-100 rounded-xl flex items-center justify-center shrink-0">
+              <svg
+                className="w-5 h-5 sm:w-6 sm:h-6 text-green-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide truncate">
+                Total Inventory Value
+              </p>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900 truncate">
+                ₱
+                {totalValue.toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                })}
+              </p>
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      {/* Table */}
       <InventoryTable
         products={products}
         page={page}
@@ -192,18 +731,17 @@ function Inventory({
         onEdit={onEdit}
         onDelete={onDelete}
         onStockEntry={onStockEntry}
+        categories={categories}
+        selectedCategory={selectedCategory}
+        onCategoryFilter={onCategoryFilter}
+        stockFilter={stockFilter}
+        onStockFilter={onStockFilter}
+        sortBy={sortBy}
+        sortOrder={sortOrder}
+        onSort={onSort}
       />
-      <div className="flex flex-row gap-6 mt-8 px-2">
-        <Button 
-          label="ADD PRODUCT" 
-          onClick={onAddProduct} 
-          size="lg" 
-          variant="primary" 
-          microinteraction 
-        />
-      </div>
     </div>
   );
 }
 
-export default Inventory; 
+export default Inventory;

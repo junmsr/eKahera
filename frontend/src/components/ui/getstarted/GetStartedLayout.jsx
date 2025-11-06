@@ -1,7 +1,6 @@
 import React from "react";
 import Background from "../../../components/layout/Background";
 import Card from "../../../components/common/Card";
-import Logo from "../../../components/common/Logo";
 import ProgressBar from "./ProgressBar";
 import Stepper from "./Stepper";
 import Button from "../../../components/common/Button";
@@ -33,17 +32,34 @@ function GetStartedLayout({
       <div className="flex justify-center px-4 py-10">
         <Card className="w-full max-w-5xl overflow-hidden rounded-3xl p-0">
           <div className="md:flex">
-            <aside className="hidden md:flex md:w-5/12 items-center justify-center bg-gradient-to-br from-blue-500 via-blue-300 to-blue-500 p-10 relative">
-              <div className="text-center max-w-xs">
-                <div className="absolute top-55 left-10">
-                  <Logo size={48} />
+            <aside className="hidden md:flex md:w-5/12 items-center justify-center bg-gradient-to-br from-blue-600 via-blue-400 to-blue-500 p-10 relative">
+              <div className="text-center max-w-sm">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 text-white text-xs font-semibold mb-5 border border-white/30">
+                  <span>Quick setup</span>
+                  <span className="opacity-80">•</span>
+                  <span>Secure</span>
                 </div>
-                <h3 className="text-white text-2xl font-bold mb-4">
-                  Welcome to your business journey!
+                <h3 className="text-white text-2xl font-bold mb-3">
+                  Welcome to your business journey
                 </h3>
-                <p className="text-white/85 text-sm">
-                  Let's set up your account in a few easy steps.
+                <p className="text-white/90 text-sm mb-6">
+                  Create your account, verify your email, add business details
+                  and upload documents. You're minutes away from a modern POS.
                 </p>
+                <ul className="text-left text-white/95 text-sm space-y-2">
+                  <li className="flex items-center gap-2">
+                    <span className="inline-block w-2 h-2 rounded-full bg-white"></span>{" "}
+                    Guided, step-by-step flow
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="inline-block w-2 h-2 rounded-full bg-white"></span>{" "}
+                    Save & resume automatically
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="inline-block w-2 h-2 rounded-full bg-white"></span>{" "}
+                    Bank‑grade security
+                  </li>
+                </ul>
               </div>
             </aside>
 
@@ -85,7 +101,7 @@ function GetStartedLayout({
                     variant="primary"
                     className="w-32"
                   >
-                    {loading ? <Loader size="sm" /> : "Next"}
+                    {loading ? <Loader size="sm" /> : "Continue"}
                   </Button>
                 ) : isOtpStep ? (
                   <div className="text-sm text-gray-700">
@@ -99,9 +115,13 @@ function GetStartedLayout({
                     className="w-32"
                   >
                     {loading ? <Loader className="mr-2" size="sm" /> : null}
-                    {loading ? "Finishing..." : "Finish"}
+                    {loading ? "Finishing..." : "Create account"}
                   </Button>
                 ) : null}
+              </div>
+
+              <div className="mt-4 text-[11px] text-gray-500 text-center">
+                Your data is encrypted in transit and at rest.
               </div>
             </main>
           </div>
