@@ -1,5 +1,6 @@
 export async function api(path, options = {}) {
-  const res = await fetch(path.startsWith('/api') ? path : `/api${path}`, {
+  const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
+  const res = await fetch(`${API_BASE}${path.startsWith('/api') ? path : `/api${path}`}`, {
     ...options,
     credentials: 'include',
     headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },

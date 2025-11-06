@@ -11,7 +11,6 @@ import { api, createGcashCheckout } from "../lib/api";
 import PriceCheckModal from "../components/modals/PriceCheckModal";
 import DiscountModal from "../components/modals/DiscountModal";
 import CashLedgerModal from "../components/modals/CashLedgerModal";
-import ProductReplacementModal from "../components/modals/ProductReplacementModal";
 import CheckoutModal from "../components/modals/CheckoutModal";
 import CashPaymentModal from "../components/modals/CashPaymentModal";
 import ScanCustomerCartModal from "../components/modals/ScanCustomerCartModal";
@@ -26,7 +25,6 @@ function POS() {
   const [sku, setSku] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [cart, setCart] = useState([]);
-  const [showRefund, setShowRefund] = useState(false);
   const [showDiscount, setShowDiscount] = useState(false);
   const [showPriceCheck, setShowPriceCheck] = useState(false);
   const [showImportCart, setShowImportCart] = useState(false);
@@ -519,14 +517,6 @@ function POS() {
                     microinteraction
                   />
                   <Button
-                    label="REFUND"
-                    size="lg"
-                    className="w-full h-16 text-base font-bold"
-                    onClick={() => setShowRefund(true)}
-                    variant="secondary"
-                    microinteraction
-                  />
-                  <Button
                     label="PRICE CHECK"
                     size="lg"
                     className="w-full h-16 text-base font-bold"
@@ -578,14 +568,6 @@ function POS() {
           <CashLedgerModal
             isOpen={showCashLedger}
             onClose={() => setShowCashLedger(false)}
-          />
-          <ProductReplacementModal
-            isOpen={showRefund}
-            onClose={() => setShowRefund(false)}
-            onConfirm={(data) => {
-              // Handle refund logic here
-              setShowRefund(false);
-            }}
           />
           <CheckoutModal
             isOpen={showCheckout}

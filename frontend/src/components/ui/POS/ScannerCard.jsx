@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Card from '../../common/Card';
 import Button from '../../common/Button';
 import { Scanner } from '@yudiel/react-qr-scanner';
@@ -19,6 +19,9 @@ function ScannerCard({
   const [hasPermission, setHasPermission] = useState(null);
   const [error, setError] = useState('');
   const [isInitializing, setIsInitializing] = useState(true);
+  const [torchEnabled, setTorchEnabled] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const audioContext = useRef(null);
   // Always use fast scanning on laptop; single camera expected
 
   useEffect(() => {
@@ -53,6 +56,30 @@ function ScannerCard({
     checkPermissions();
   }, []);
 
+  // Detect mobile device
+  useEffect(() => {
+    setIsMobile(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
+  }, []);
+
+  // Initialize audio context for beep
+  useEffect(() => {
+    audioContext.current = new (window.AudioContext || window.webkitAudioContext)();
+  }, []);
+
+  // Play beep sound on successful scan
+  const playBeep = () => {
+    if (audioContext.current) {
+      const oscillator = audioContext.current.createOscillator();
+      const gainNode = audioContext.current.createGain();
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.current.destination);
+      oscillator.frequency.setValueAtTime(800, audioContext.current.currentTime);
+      gainNode.gain.setValueAtTime(0.3, audioContext.current.currentTime);
+      oscillator.start();
+      oscillator.stop(audioContext.current.currentTime + 0.1);
+    }
+  };
+
   // Single camera devices (laptops) don't need camera toggle
 
   const handleError = (err) => {
@@ -75,6 +102,12 @@ function ScannerCard({
     }
 
     setError(errorMessage);
+    // Auto-retry after 3 seconds
+    setTimeout(() => {
+      setError('');
+      setIsInitializing(true);
+      setTimeout(() => setIsInitializing(false), 1000);
+    }, 3000);
   };
   return (
     <Card 
@@ -120,23 +153,21 @@ function ScannerCard({
                   const code = result[0]?.rawValue;
                   console.log('Detected code:', code);
                   if (code) {
+                    playBeep(); // Audio feedback
                     onScan(result);
                   }
                 }
               }}
               onError={handleError}
               paused={paused}
-              // Tighter video constraints can improve decoding latency
               constraints={{
                 facingMode,
                 width: { ideal: 640 },
                 height: { ideal: 480 },
-                frameRate: { ideal: 24 }
+                frameRate: { ideal: 15 },
+                ...(torchEnabled && { advanced: [{ torch: true }] })
               }}
-              // Reduce delay between decode attempts
-              scanDelay={160}
-              // Focus decoding to a center region to speed up detection
-              area={{ top: '20%', right: '20%', bottom: '20%', left: '20%' }}
+              scanDelay={300}
               styles={{
                 container: { width: '100%', height: '100%', borderRadius: '1rem', overflow: 'visible' },
                 video: {
@@ -148,20 +179,30 @@ function ScannerCard({
                 },
               }}
               classNames={{ container: 'w-full h-full' }}
-              formats={['qr_code', 'code_128', 'code_39', 'ean_13', 'ean_8', 'upc_a', 'upc_e', 'itf', 'codabar', 'data_matrix', 'pdf417']}
-              // Improve robustness on dark-on-light vs light-on-dark
-              inversionAttempts="attemptBoth"
+              formats={['qr_code', 'ean_13']}
+              inversionAttempts="dontInvert"
             />
           )}
           {!error && !isInitializing && paused && (
-            <Button
-              label="Resume"
-              size="sm"
-              variant="secondary"
-              className="absolute bottom-2 right-2 z-10"
-              onClick={onResume}
-              microinteraction
-            />
+            <div className="absolute bottom-2 right-2 z-10 flex gap-2">
+              <Button
+                label="Resume"
+                size="sm"
+                variant="secondary"
+                onClick={onResume}
+                microinteraction
+              />
+              {isMobile && (
+                <Button
+                  label={torchEnabled ? "🔦" : "💡"}
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => setTorchEnabled(!torchEnabled)}
+                  microinteraction
+                  title={torchEnabled ? "Turn off flashlight" : "Turn on flashlight"}
+                />
+              )}
+            </div>
           )}
         </div>
       </div>

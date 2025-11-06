@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
 
 // Components
@@ -18,9 +18,8 @@ import Loader from "../components/common/Loader";
  * Handles user authentication with email and password
  */
 export default function Login() {
-  // Navigation and URL params
+  // Navigation
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
 
   // Form state
   const [form, setForm] = useState({
@@ -86,9 +85,6 @@ export default function Login() {
     }
   };
 
-  // Determine login type
-  const isAdminLogin = searchParams.get("role") === "admin";
-  const loginTitle = isAdminLogin ? "Admin Login" : "Cashier Login";
 
   return (
     <Background variant="gradientBlue" pattern="dots" overlay floatingElements>
@@ -143,7 +139,7 @@ export default function Login() {
                   size="lg"
                   className="text-center"
                 >
-                  {loginTitle}
+                  Log In
                 </SectionHeader>
                 <p className="text-gray-500 text-sm mt-2">
                   Enter your credentials to access your account
