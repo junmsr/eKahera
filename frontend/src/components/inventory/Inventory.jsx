@@ -190,18 +190,18 @@ function InventoryTable({
               <div className="flex items-center gap-1 sm:gap-2">
                 <label className="text-xs font-semibold text-gray-600 hidden md:block">
                   Show:
-            </label>
-            <select
-              value={entriesPerPage}
-              onChange={onEntriesChange}
+                </label>
+                <select
+                  value={entriesPerPage}
+                  onChange={onEntriesChange}
                   className="bg-white/80 backdrop-blur-sm border border-gray-200 rounded-xl px-2 sm:px-3 py-1.5 sm:py-2 text-xs font-medium text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 cursor-pointer"
-            >
+                >
                   {[5, 10, 25, 50, 100].map((n) => (
-                <option key={n} value={n}>
-                  {n}
-                </option>
-              ))}
-            </select>
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
           </div>
@@ -240,7 +240,7 @@ function InventoryTable({
                 <option value="low_stock">Low Stock</option>
                 <option value="out_of_stock">Out of Stock</option>
               </select>
-          </div>
+            </div>
 
             {/* Clear Filters */}
             {(selectedCategory || stockFilter) && (
@@ -277,60 +277,60 @@ function InventoryTable({
           <table className="w-full min-w-[800px]">
             <thead>
               <tr className="bg-gradient-to-r from-blue-50/80 to-indigo-50/80 border-b-2 border-blue-100">
-                <th className="py-4 px-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                <th className="py-3 px-2 sm:py-4 sm:px-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                   #
                 </th>
                 <th
-                  className="py-4 px-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-100/50 transition-colors group"
+                  className="py-3 px-2 sm:py-4 sm:px-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-100/50 transition-colors group"
                   onClick={() => handleSort("name")}
                 >
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1 sm:gap-2">
                     Product
                     <SortIcon
                       direction={sortBy === "name" ? sortOrder : null}
                     />
-      </div>
+                  </div>
                 </th>
                 <th
-                  className="py-4 px-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider hidden sm:table-cell cursor-pointer hover:bg-blue-100/50 transition-colors group"
+                  className="py-3 px-2 sm:py-4 sm:px-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider hidden sm:table-cell cursor-pointer hover:bg-blue-100/50 transition-colors group"
                   onClick={() => handleSort("category")}
                 >
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1 sm:gap-2">
                     Category
                     <SortIcon
                       direction={sortBy === "category" ? sortOrder : null}
                     />
                   </div>
                 </th>
-                <th className="py-4 px-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider hidden md:table-cell">
+                <th className="py-3 px-2 sm:py-4 sm:px-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider hidden md:table-cell">
                   Description
                 </th>
-                <th className="py-4 px-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider hidden lg:table-cell">
+                <th className="py-3 px-2 sm:py-4 sm:px-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider hidden lg:table-cell">
                   Cost Price
                 </th>
                 <th
-                  className="py-4 px-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-100/50 transition-colors group"
+                  className="py-3 px-2 sm:py-4 sm:px-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-100/50 transition-colors group"
                   onClick={() => handleSort("selling_price")}
                 >
-                  <div className="flex items-center gap-2">
-                  Selling Price
+                  <div className="flex items-center gap-1 sm:gap-2">
+                    Selling Price
                     <SortIcon
                       direction={sortBy === "selling_price" ? sortOrder : null}
                     />
                   </div>
                 </th>
                 <th
-                  className="py-4 px-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-100/50 transition-colors group"
+                  className="py-3 px-2 sm:py-4 sm:px-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-100/50 transition-colors group"
                   onClick={() => handleSort("quantity")}
                 >
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1 sm:gap-2">
                     Stock
                     <SortIcon
                       direction={sortBy === "quantity" ? sortOrder : null}
                     />
                   </div>
                 </th>
-                <th className="py-4 px-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                <th className="py-3 px-2 sm:py-4 sm:px-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
@@ -370,58 +370,58 @@ function InventoryTable({
                 products.map((product, idx) => {
                   const stockStatus = getStockStatus(product.quantity);
                   return (
-                  <tr
-                    key={product.id}
+                    <tr
+                      key={product.id}
                       className="hover:bg-blue-50/50 transition-all duration-200 group"
-                  >
-                      <td className="py-4 px-4 text-sm text-gray-600 font-medium">
-                      {(page - 1) * entriesPerPage + idx + 1}
-                    </td>
-                      <td className="py-4 px-4">
-                        <div className="flex flex-col">
-                          <span className="text-sm font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
-                      {product.name}
+                    >
+                      <td className="py-3 px-2 sm:py-4 sm:px-4 text-xs sm:text-sm text-gray-600 font-medium">
+                        {(page - 1) * entriesPerPage + idx + 1}
+                      </td>
+                      <td className="py-3 px-2 sm:py-4 sm:px-4">
+                        <div className="flex flex-col min-w-0">
+                          <span className="text-xs sm:text-sm font-semibold text-gray-900 group-hover:text-blue-600 transition-colors truncate">
+                            {product.name}
                           </span>
-                          <span className="text-xs text-gray-500 mt-1">
+                          <span className="text-[10px] sm:text-xs text-gray-500 mt-0.5 truncate">
                             SKU: {product.sku || "N/A"}
                           </span>
                         </div>
                       </td>
-                      <td className="py-4 px-4 hidden sm:table-cell">
-                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200">
+                      <td className="py-3 px-2 sm:py-4 sm:px-4 hidden sm:table-cell">
+                        <span className="inline-flex items-center px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200">
                           {product.category}
                         </span>
-                    </td>
-                    <td
-                        className="py-4 px-4 max-w-xs truncate hidden md:table-cell text-sm text-gray-600"
-                      title={product.description}
-                    >
+                      </td>
+                      <td
+                        className="py-3 px-2 sm:py-4 sm:px-4 max-w-xs truncate hidden md:table-cell text-xs sm:text-sm text-gray-600"
+                        title={product.description}
+                      >
                         {product.description || "-"}
-                    </td>
-                      <td className="py-4 px-4 hidden lg:table-cell">
-                        <span className="text-sm font-medium text-gray-700">
-                      ₱{Number(product.cost_price).toFixed(2)}
+                      </td>
+                      <td className="py-3 px-2 sm:py-4 sm:px-4 hidden lg:table-cell">
+                        <span className="text-xs sm:text-sm font-medium text-gray-700">
+                          ₱{Number(product.cost_price).toFixed(2)}
                         </span>
-                    </td>
-                      <td className="py-4 px-4">
-                        <span className="text-sm font-bold text-blue-600">
-                      ₱{Number(product.selling_price).toFixed(2)}
+                      </td>
+                      <td className="py-3 px-2 sm:py-4 sm:px-4">
+                        <span className="text-xs sm:text-sm font-bold text-blue-600">
+                          ₱{Number(product.selling_price).toFixed(2)}
                         </span>
-                    </td>
-                      <td className="py-4 px-4">
+                      </td>
+                      <td className="py-3 px-2 sm:py-4 sm:px-4">
                         <div className="flex flex-col gap-1">
-                          <span className="text-sm font-semibold text-gray-900">
+                          <span className="text-xs sm:text-sm font-semibold text-gray-900">
                             {product.quantity}
                           </span>
                           <span
-                            className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${stockStatus.color}`}
+                            className={`inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium border ${stockStatus.color}`}
                           >
                             {stockStatus.label}
                           </span>
                         </div>
                       </td>
-                      <td className="py-4 px-4">
-                        <div className="flex items-center gap-2">
+                      <td className="py-3 px-2 sm:py-4 sm:px-4">
+                        <div className="flex items-center gap-1 sm:gap-2">
                           <button
                             onClick={() =>
                               onStockEntry && onStockEntry(product)
@@ -439,15 +439,15 @@ function InventoryTable({
                             <EditIcon />
                           </button>
                           <button
-                        onClick={() => onDelete(product.id)}
+                            onClick={() => onDelete(product.id)}
                             className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 transition-all duration-200 hover:scale-110"
                             title="Delete Product"
                           >
                             <DeleteIcon />
                           </button>
                         </div>
-                    </td>
-                  </tr>
+                      </td>
+                    </tr>
                   );
                 })
               )}
@@ -456,10 +456,10 @@ function InventoryTable({
         </div>
 
         {/* Enhanced Pagination */}
-        <div className="bg-gray-50/50 border-t border-gray-200 px-4 sm:px-6 py-4">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="text-sm text-gray-600">
-            Showing{" "}
+        <div className="bg-gray-50/50 border-t border-gray-200 px-3 sm:px-4 md:px-6 py-3 sm:py-4 w-full">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 w-full">
+            <div className="text-xs sm:text-sm text-gray-600 whitespace-nowrap">
+              Showing{" "}
               <span className="font-semibold text-gray-900">
                 {products.length === 0 ? 0 : (page - 1) * entriesPerPage + 1}
               </span>{" "}
@@ -472,17 +472,17 @@ function InventoryTable({
                 {products.length}
               </span>{" "}
               entries
-          </div>
-            <div className="flex items-center gap-2">
-            <Button
-              label="Previous"
-              size="sm"
-              variant="secondary"
-              onClick={() => onPageChange(page - 1)}
-              disabled={page === 1}
-                className="min-w-[100px]"
+            </div>
+            <div className="flex flex-wrap items-center justify-center gap-1 sm:gap-2 w-full sm:w-auto">
+              <Button
+                label="Previous"
+                size="sm"
+                variant="secondary"
+                onClick={() => onPageChange(page - 1)}
+                disabled={page === 1}
+                className="min-w-[80px] sm:min-w-[100px] text-xs sm:text-sm"
               />
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1 flex-wrap justify-center">
                 {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
                   let pageNum;
                   if (totalPages <= 5) {
@@ -495,33 +495,33 @@ function InventoryTable({
                     pageNum = page - 2 + i;
                   }
                   return (
-              <Button
+                    <Button
                       key={pageNum}
-                variant={
+                      variant={
                         page === pageNum
                           ? "paginationActive"
                           : "paginationInactive"
                       }
                       onClick={() => onPageChange(pageNum)}
                       disabled={page === pageNum}
-                      className="min-w-[40px]"
+                      className="min-w-[36px] sm:min-w-[40px] text-xs sm:text-sm"
                     >
                       {pageNum}
                     </Button>
                   );
                 })}
               </div>
-            <Button
-              label="Next"
-              size="sm"
-              variant="secondary"
-              onClick={() => onPageChange(page + 1)}
-              disabled={page === totalPages}
-                className="min-w-[100px]"
-            />
+              <Button
+                label="Next"
+                size="sm"
+                variant="secondary"
+                onClick={() => onPageChange(page + 1)}
+                disabled={page === totalPages}
+                className="min-w-[80px] sm:min-w-[100px] text-xs sm:text-sm"
+              />
+            </div>
           </div>
         </div>
-      </div>
       </Card>
     </>
   );
@@ -593,7 +593,9 @@ function Inventory({
   ).length;
 
   return (
-    <div className={`w-full max-w-full overflow-x-hidden py-4 sm:py-6 px-2 sm:px-3 md:px-4 lg:px-6 ${className}`}>
+    <div
+      className={`w-full max-w-full overflow-x-hidden py-4 sm:py-6 px-2 sm:px-3 md:px-4 lg:px-6 ${className}`}
+    >
       {/* Stats Cards */}
       <InventoryStats stats={stats} />
 
@@ -602,7 +604,7 @@ function Inventory({
         <div className="min-w-0 flex-1">
           <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 tracking-tight break-words">
             Product Inventory
-      </h2>
+          </h2>
           <p className="text-xs sm:text-sm text-gray-600 mt-1">
             Manage your products, stock levels, and pricing
           </p>
@@ -635,10 +637,10 @@ function Inventory({
       {/* Quick Stats Bar */}
       <Card className="mb-4 sm:mb-6 p-3 sm:p-4 md:p-6 bg-gradient-to-r from-blue-50/80 to-indigo-50/80 border-blue-100 w-full overflow-hidden">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 w-full">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+          <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-100 rounded-xl flex items-center justify-center shrink-0">
               <svg
-                className="w-6 h-6 text-blue-600"
+                className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -651,19 +653,19 @@ function Inventory({
                 />
               </svg>
             </div>
-            <div>
-              <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide truncate">
                 Total Products
               </p>
-              <p className="text-2xl font-bold text-gray-900">
+              <p className="text-xl sm:text-2xl font-bold text-gray-900 truncate">
                 {allProducts.length}
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
+          <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-orange-100 rounded-xl flex items-center justify-center shrink-0">
               <svg
-                className="w-6 h-6 text-orange-600"
+                className="w-5 h-5 sm:w-6 sm:h-6 text-orange-600"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -676,19 +678,19 @@ function Inventory({
                 />
               </svg>
             </div>
-            <div>
-              <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide truncate">
                 Low Stock Items
               </p>
-              <p className="text-2xl font-bold text-gray-900">
+              <p className="text-xl sm:text-2xl font-bold text-gray-900 truncate">
                 {lowStockCount}
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+          <div className="flex items-center gap-3 sm:gap-4 min-w-0 sm:col-span-2 lg:col-span-1">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-100 rounded-xl flex items-center justify-center shrink-0">
               <svg
-                className="w-6 h-6 text-green-600"
+                className="w-5 h-5 sm:w-6 sm:h-6 text-green-600"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -701,11 +703,11 @@ function Inventory({
                 />
               </svg>
             </div>
-            <div>
-              <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide truncate">
                 Total Inventory Value
               </p>
-              <p className="text-2xl font-bold text-gray-900">
+              <p className="text-xl sm:text-2xl font-bold text-gray-900 truncate">
                 ₱
                 {totalValue.toLocaleString(undefined, {
                   minimumFractionDigits: 2,
