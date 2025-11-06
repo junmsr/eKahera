@@ -9,6 +9,8 @@ export default function ScanCustomerCartModal({ isOpen, onClose, onImport }) {
 	const [error, setError] = useState('');
 	const token = localStorage.getItem('auth_token');
 
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+
 	const handleScan = async (result) => {
 		const code = result?.[0]?.rawValue;
 		if (!code) return;
@@ -18,7 +20,14 @@ export default function ScanCustomerCartModal({ isOpen, onClose, onImport }) {
 			let payload;
 			try { payload = JSON.parse(code); } catch (e) { throw new Error('Invalid QR payload'); }
 			if (!payload || payload.t !== 'cart' || !Array.isArray(payload.items)) throw new Error('Unsupported QR');
-			const compactItems = payload.items; // [{p, q}]
+
+      const { b: businessId, items: compactItems } = payload;
+      const cashierBusinessId = user?.businessId || user?.business_id;
+
+      if (businessId && cashierBusinessId && Number(businessId) !== Number(cashierBusinessId)) {
+        throw new Error('This QR code is not valid for this store.');
+      }
+
 			const fullItems = [];
 			for (const it of compactItems) {
 				if (!it?.p || !it?.q) continue;

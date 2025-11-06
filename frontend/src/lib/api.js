@@ -7,15 +7,21 @@ export async function api(path, options = {}, returnRawResponse = false) {
     headers['Content-Type'] = 'application/json';
   }
 
-  const res = await fetch(`${API_BASE}${path.startsWith('/api') ? path : `/api${path}`}`, {
+  const finalUrl = `${API_BASE}${path.startsWith('/api') ? path : `/api${path}`}`.replace(/([^:])\/\/+/g, "$1");
+  const res = await fetch(finalUrl, {
     ...options,
     credentials: 'include',
     headers,
   });
 
   if (!res.ok) {
-    const errorBody = await res.json().catch(() => res.text());
-    throw new Error(errorBody?.error || errorBody || 'Request failed');
+    const errorText = await res.text();
+    try {
+        const errorJson = JSON.parse(errorText);
+        throw new Error(errorJson?.error || errorText || 'Request failed');
+    } catch (e) {
+        throw new Error(errorText || 'Request failed');
+    }
   }
 
   if (returnRawResponse) {
