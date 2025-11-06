@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import Card from '../../common/Card';
-import Button from '../../common/Button';
-import { Scanner } from '@yudiel/react-qr-scanner';
+import React, { useState, useEffect } from "react";
+import Card from "../../common/Card";
+import Button from "../../common/Button";
+import { Scanner } from "@yudiel/react-qr-scanner";
 
 /**
  * Scanner Card Component
@@ -11,41 +11,73 @@ function ScannerCard({
   onScan,
   paused,
   onResume,
-  textMain = 'text-blue-800',
-  className = '',
+  textMain = "text-blue-800",
+  className = "",
   ...props
 }) {
-  const [facingMode, setFacingMode] = useState('environment'); // Start with back camera
+  const [facingMode, setFacingMode] = useState("user"); // Start with front camera (better for laptops)
   const [hasPermission, setHasPermission] = useState(null);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [isInitializing, setIsInitializing] = useState(true);
-  // Always use fast scanning on laptop; single camera expected
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
-    // Check camera permissions on mount
+    // Check camera permissions and try to initialize camera
     const checkPermissions = async () => {
       try {
-        const result = await navigator.permissions.query({ name: 'camera' });
-        setHasPermission(result.state === 'granted');
+        // Try to query permissions (may not work in all browsers)
+        try {
+          const result = await navigator.permissions.query({ name: "camera" });
+          setHasPermission(result.state === "granted");
 
-        if (result.state === 'denied') {
-          setError('Camera access denied. Please enable camera permissions in your browser settings.');
-        } else if (result.state === 'prompt') {
-          setError('Camera permission required. Click "Allow" when prompted.');
+          if (result.state === "denied") {
+            setError(
+              "Camera access denied. Please enable camera permissions in your browser settings."
+            );
+            setIsInitializing(false);
+            return;
+          }
+
+          result.addEventListener("change", () => {
+            setHasPermission(result.state === "granted");
+            if (result.state === "denied") {
+              setError(
+                "Camera access denied. Please enable camera permissions in your browser settings."
+              );
+            } else {
+              setError("");
+            }
+          });
+        } catch (permErr) {
+          // Permissions API not supported, continue anyway
+          console.log(
+            "Permissions API not supported, attempting camera access..."
+          );
         }
 
-        result.addEventListener('change', () => {
-          setHasPermission(result.state === 'granted');
-          if (result.state === 'denied') {
-            setError('Camera access denied. Please enable camera permissions in your browser settings.');
-          } else {
-            setError('');
+        // Try to enumerate devices to detect available cameras
+        try {
+          const devices = await navigator.mediaDevices.enumerateDevices();
+          const videoDevices = devices.filter(
+            (device) => device.kind === "videoinput"
+          );
+          console.log("Available cameras:", videoDevices.length);
+
+          if (videoDevices.length === 0) {
+            setError("No camera found. Please connect a camera.");
+            setIsInitializing(false);
+            return;
           }
-        });
+        } catch (enumErr) {
+          console.log("Could not enumerate devices, will try direct access...");
+        }
+
+        // Give a small delay to allow browser to process
+        setTimeout(() => {
+          setIsInitializing(false);
+        }, 500);
       } catch (err) {
-        // Fallback for browsers that don't support permissions API
-        console.log('Permissions API not supported, attempting camera access...');
-      } finally {
+        console.error("Permission check error:", err);
         setIsInitializing(false);
       }
     };
@@ -56,36 +88,84 @@ function ScannerCard({
   // Single camera devices (laptops) don't need camera toggle
 
   const handleError = (err) => {
-    console.error('Scanner error:', err);
-    let errorMessage = 'Scanner error occurred';
+    console.error("Scanner error:", err);
+    let errorMessage = "Scanner error occurred";
+    let shouldRetry = false;
 
-    if (err.name === 'NotAllowedError') {
-      errorMessage = 'Camera access denied. Please allow camera access and refresh the page.';
-    } else if (err.name === 'NotFoundError') {
-      errorMessage = 'No camera found. Please connect a camera and refresh the page.';
-    } else if (err.name === 'NotReadableError') {
-      errorMessage = 'Camera is being used by another application.';
-    } else if (err.name === 'OverconstrainedError') {
-      errorMessage = 'Camera constraints not supported. Trying different camera...';
-      // Auto-switch camera on constraint error
-      setFacingMode(prev => (prev === 'user' ? 'environment' : 'user'));
+    if (err.name === "NotAllowedError") {
+      errorMessage =
+        "Camera access denied. Please allow camera access and refresh the page.";
+      setHasPermission(false);
+    } else if (err.name === "NotFoundError") {
+      errorMessage =
+        "No camera found. Please connect a camera and refresh the page.";
+    } else if (err.name === "NotReadableError") {
+      errorMessage = "Camera is being used by another application.";
+    } else if (err.name === "OverconstrainedError") {
+      // Try switching facing mode if we haven't tried both
+      if (retryCount < 2) {
+        setRetryCount((prev) => prev + 1);
+        const newFacingMode = facingMode === "user" ? "environment" : "user";
+        setFacingMode(newFacingMode);
+        setError("");
+        setIsInitializing(true);
+        setTimeout(() => setIsInitializing(false), 1000);
+        return;
+      } else {
+        // Try without facing mode constraint
+        errorMessage =
+          "Camera constraints not supported. Trying without constraints...";
+        setFacingMode(null);
+        shouldRetry = true;
+      }
+    } else if (err.name === "SecurityError") {
+      errorMessage = "Camera access blocked. Please use HTTPS or localhost.";
+    } else {
+      // Unknown error - try retry
+      if (retryCount < 2) {
+        setRetryCount((prev) => prev + 1);
+        shouldRetry = true;
+      }
+    }
+
+    if (shouldRetry && retryCount < 2) {
+      setIsInitializing(true);
+      setTimeout(() => {
+        setIsInitializing(false);
+        setError("");
+      }, 1000);
       return;
-    } else if (err.name === 'SecurityError') {
-      errorMessage = 'Camera access blocked. Please use HTTPS or localhost.';
     }
 
     setError(errorMessage);
   };
   return (
-    <Card 
-      className={`flex-shrink-0 emphasized-card ${className}`} 
-      variant="glass" 
-      microinteraction 
+    <Card
+      className={`flex-shrink-0 bg-white/80 backdrop-blur-md border border-white/60 shadow-xl hover:shadow-2xl transition-all duration-300 overflow-hidden ${className}`}
+      variant="glass"
+      microinteraction
       {...props}
     >
-      <div className="flex flex-col items-center shadow-2xl">
-        <div className={`w-full text-center mb-2 font-bold text-lg tracking-wide ${textMain}`}>SCAN QR & BARCODE</div>
-        <div className="w-full h-56 md:h-64 lg:h-72 bg-gradient-to-b from-blue-100/60 to-blue-200/60 rounded-2xl flex items-center justify-center border-2 border-blue-300/40 mb-2 overflow-hidden relative z-0">
+      <div className="flex flex-col h-full p-2 sm:p-3">
+        <div
+          className={`w-full text-center mb-2 font-bold text-xs sm:text-sm tracking-wide ${textMain} flex items-center justify-center gap-1.5`}
+        >
+          <svg
+            className="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"
+            />
+          </svg>
+          SCAN QR & BARCODE
+        </div>
+        <div className="w-full h-40 sm:h-48 md:h-56 lg:h-64 bg-gradient-to-br from-blue-50/80 via-indigo-50/60 to-blue-100/80 rounded-xl flex items-center justify-center border-2 border-blue-200/50 shadow-inner overflow-hidden relative z-0 group">
           {isInitializing ? (
             <div className="flex items-center justify-center h-full text-gray-500">
               <div className="text-center">
@@ -104,8 +184,13 @@ function ScannerCard({
                   variant="secondary"
                   className="mt-2"
                   onClick={() => {
-                    setError('');
+                    setError("");
+                    setRetryCount(0);
                     setIsInitializing(true);
+                    // Try switching camera mode
+                    setFacingMode((prev) =>
+                      prev === "user" ? "environment" : "user"
+                    );
                     setTimeout(() => setIsInitializing(false), 1000);
                   }}
                   microinteraction
@@ -115,10 +200,10 @@ function ScannerCard({
           ) : (
             <Scanner
               onScan={(result) => {
-                console.log('Scanner result:', result);
+                console.log("Scanner result:", result);
                 if (result && result.length > 0) {
                   const code = result[0]?.rawValue;
-                  console.log('Detected code:', code);
+                  console.log("Detected code:", code);
                   if (code) {
                     onScan(result);
                   }
@@ -126,29 +211,54 @@ function ScannerCard({
               }}
               onError={handleError}
               paused={paused}
-              // Tighter video constraints can improve decoding latency
-              constraints={{
-                facingMode,
-                width: { ideal: 640 },
-                height: { ideal: 480 },
-                frameRate: { ideal: 24 }
-              }}
+              // More flexible constraints - try without facingMode if it fails
+              constraints={
+                facingMode !== null
+                  ? {
+                      facingMode,
+                      width: { ideal: 640, min: 320 },
+                      height: { ideal: 480, min: 240 },
+                      frameRate: { ideal: 24, min: 15 },
+                    }
+                  : {
+                      width: { ideal: 640, min: 320 },
+                      height: { ideal: 480, min: 240 },
+                      frameRate: { ideal: 24, min: 15 },
+                    }
+              }
               // Reduce delay between decode attempts
               scanDelay={160}
               // Focus decoding to a center region to speed up detection
-              area={{ top: '20%', right: '20%', bottom: '20%', left: '20%' }}
+              area={{ top: "20%", right: "20%", bottom: "20%", left: "20%" }}
               styles={{
-                container: { width: '100%', height: '100%', borderRadius: '1rem', overflow: 'visible' },
+                container: {
+                  width: "100%",
+                  height: "100%",
+                  borderRadius: "1rem",
+                  overflow: "visible",
+                },
                 video: {
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'contain',
-                  borderRadius: '1rem',
-                  backgroundColor: 'black',
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "contain",
+                  borderRadius: "1rem",
+                  backgroundColor: "black",
                 },
               }}
-              classNames={{ container: 'w-full h-full' }}
-              formats={['qr_code', 'code_128', 'code_39', 'ean_13', 'ean_8', 'upc_a', 'upc_e', 'itf', 'codabar', 'data_matrix', 'pdf417']}
+              classNames={{ container: "w-full h-full" }}
+              formats={[
+                "qr_code",
+                "code_128",
+                "code_39",
+                "ean_13",
+                "ean_8",
+                "upc_a",
+                "upc_e",
+                "itf",
+                "codabar",
+                "data_matrix",
+                "pdf417",
+              ]}
               // Improve robustness on dark-on-light vs light-on-dark
               inversionAttempts="attemptBoth"
             />
@@ -169,4 +279,4 @@ function ScannerCard({
   );
 }
 
-export default ScannerCard; 
+export default ScannerCard;
