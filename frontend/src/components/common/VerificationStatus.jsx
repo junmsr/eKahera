@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { api } from '../../lib/api';
 import Button from './Button';
 import Loader from './Loader';
 import TutorialGuide from './TutorialGuide';
@@ -21,24 +22,17 @@ export default function VerificationStatus({ user, onProceed }) {
   const fetchVerificationStatus = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(
-        `http://localhost:5000/api/documents/business/${user.businessId}`,
+      const data = await api(
+        `/documents/business/${user.businessId}`,
         {
           headers: {
             'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
           }
         }
       );
-
-      if (response.ok) {
-        const data = await response.json();
-        setVerificationData(data);
-      } else {
-        setError('Failed to fetch verification status');
-      }
+      setVerificationData(data);
     } catch (err) {
-      setError('Network error occurred');
+      setError(err.message || 'Failed to fetch verification status');
     } finally {
       setLoading(false);
     }

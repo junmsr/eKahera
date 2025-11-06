@@ -1,4 +1,5 @@
-/*  */import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+import { api } from '../../../lib/api';
 import Button from '../../common/Button';
 import Card from '../../common/Card';
 import Loader from '../../common/Loader';
@@ -19,17 +20,10 @@ export default function DocumentVerification() {
   const fetchPendingVerifications = async () => {
     try {
       const token = localStorage.getItem('auth_token');
-      const response = await fetch('http://localhost:5000/api/documents/pending', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+      const data = await api('/documents/pending', {
+        headers: { 'Authorization': `Bearer ${token}` }
       });
-
-      if (response.ok) {
-        const data = await response.json();
-        setPendingVerifications(data);
-      }
+      setPendingVerifications(data);
     } catch (error) {
       console.error('Error fetching pending verifications:', error);
     } finally {
@@ -40,24 +34,16 @@ export default function DocumentVerification() {
   const fetchStats = async () => {
     try {
       const token = localStorage.getItem('auth_token');
-      const response = await fetch('http://localhost:5000/api/documents/stats', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+      const data = await api('/documents/stats', {
+        headers: { 'Authorization': `Bearer ${token}` }
       });
-
-      if (response.ok) {
-        const data = await response.json();
-        // Filter stats to only include businesses with documents
-        const filteredStats = {
-          pending: data.pending || 0,
-          approved: data.approved || 0,
-          rejected: data.rejected || 0,
-          repass: data.repass || 0
-        };
-        setStats(filteredStats);
-      }
+      const filteredStats = {
+        pending: data.pending || 0,
+        approved: data.approved || 0,
+        rejected: data.rejected || 0,
+        repass: data.repass || 0
+      };
+      setStats(filteredStats);
     } catch (error) {
       console.error('Error fetching stats:', error);
     }
@@ -66,20 +52,10 @@ export default function DocumentVerification() {
   const fetchBusinessDetails = async (businessId) => {
     try {
       const token = localStorage.getItem('auth_token');
-      const response = await fetch(
-        `http://localhost:5000/api/documents/business/${businessId}/verification`,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-
-      if (response.ok) {
-        const data = await response.json();
-        setBusinessDetails(data);
-      }
+      const data = await api(`/documents/business/${businessId}/verification`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      setBusinessDetails(data);
     } catch (error) {
       console.error('Error fetching business details:', error);
     }
@@ -94,28 +70,16 @@ export default function DocumentVerification() {
     setActionLoading(true);
     try {
       const token = localStorage.getItem('auth_token');
-      const response = await fetch(
-        `http://localhost:5000/api/documents/document/${documentId}/verify`,
+      await api(
+        `/documents/document/${documentId}/verify`,
         {
           method: 'PUT',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            status: action,
-            notes: notes
-          })
+          headers: { 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({ status: action, notes: notes })
         }
       );
-
-      if (response.ok) {
-        // Refresh business details
-        fetchBusinessDetails(selectedBusiness.business_id);
-        alert(`Document ${action} successfully`);
-      } else {
-        alert('Failed to update document status');
-      }
+      fetchBusinessDetails(selectedBusiness.business_id);
+      alert(`Document ${action} successfully`);
     } catch (error) {
       console.error('Error updating document:', error);
       alert('Error updating document status');
@@ -128,14 +92,11 @@ export default function DocumentVerification() {
     setActionLoading(true);
     try {
       const token = localStorage.getItem('auth_token');
-      const response = await fetch(
-        `http://localhost:5000/api/documents/business/${selectedBusiness.business_id}/complete`,
+      await api(
+        `/documents/business/${selectedBusiness.business_id}/complete`,
         {
           method: 'PUT',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
+          headers: { 'Authorization': `Bearer ${token}` },
           body: JSON.stringify({
             status: status,
             rejection_reason: reason,
@@ -143,16 +104,11 @@ export default function DocumentVerification() {
           })
         }
       );
-
-      if (response.ok) {
-        alert(`Business verification ${status} successfully`);
-        setSelectedBusiness(null);
-        setBusinessDetails(null);
-        fetchPendingVerifications();
-        fetchStats();
-      } else {
-        alert('Failed to complete verification');
-      }
+      alert(`Business verification ${status} successfully`);
+      setSelectedBusiness(null);
+      setBusinessDetails(null);
+      fetchPendingVerifications();
+      fetchStats();
     } catch (error) {
       console.error('Error completing verification:', error);
       alert('Error completing verification');
@@ -164,28 +120,22 @@ export default function DocumentVerification() {
   const downloadDocument = async (documentId, fileName) => {
     try {
       const token = localStorage.getItem('auth_token');
-      const response = await fetch(
-        `http://localhost:5000/api/documents/download/${documentId}`,
+      const response = await api(
+        `/documents/download/${documentId}`,
         {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        }
+          headers: { 'Authorization': `Bearer ${token}` }
+        },
+        true // returnRawResponse = true
       );
-
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.style.display = 'none';
-        a.href = url;
-        a.download = fileName;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-      } else {
-        alert('Failed to download document');
-      }
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Error downloading document:', error);
       alert('Error downloading document');
