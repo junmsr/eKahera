@@ -1,14 +1,29 @@
-export async function api(path, options = {}) {
+export async function api(path, options = {}, returnRawResponse = false) {
   const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
+
+  const headers = { ...(options.headers || {}) };
+  // Let the browser set the Content-Type for FormData
+  if (!(options.body instanceof FormData)) {
+    headers['Content-Type'] = 'application/json';
+  }
+
   const res = await fetch(`${API_BASE}${path.startsWith('/api') ? path : `/api${path}`}`, {
     ...options,
     credentials: 'include',
-    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+    headers,
   });
+
+  if (!res.ok) {
+    const errorBody = await res.json().catch(() => res.text());
+    throw new Error(errorBody?.error || errorBody || 'Request failed');
+  }
+
+  if (returnRawResponse) {
+    return res;
+  }
+
   const contentType = res.headers.get('content-type') || '';
-  const body = contentType.includes('application/json') ? await res.json() : await res.text();
-  if (!res.ok) throw new Error(body?.error || body || 'Request failed');
-  return body;
+  return contentType.includes('application/json') ? res.json() : res.text();
 }
 
 export function authHeaders(token) {

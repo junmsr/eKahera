@@ -1,4 +1,5 @@
 import React from "react";
+import { api } from "../../../lib/api";
 import SectionHeader from "../../../components/layout/SectionHeader";
 import Input from "../../../components/common/Input";
 import Button from "../../../components/common/Button";
@@ -31,14 +32,11 @@ export default function GetStartedForm({ hook }) {
       if (!token || !businessId) return;
       (async () => {
         try {
-          const resp = await fetch(`http://localhost:5000/api/documents/business/${businessId}`, {
-            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
+          const data = await api(`/documents/business/${businessId}`, {
+            headers: { Authorization: `Bearer ${token}` }
           });
-          if (resp.ok) {
-            const data = await resp.json();
-            setExisting(Array.isArray(data.documents) ? data.documents : []);
-            setVerification(data.verification || null);
-          }
+          setExisting(Array.isArray(data.documents) ? data.documents : []);
+          setVerification(data.verification || null);
         } catch {}
       })();
     }, []);
@@ -171,28 +169,17 @@ export default function GetStartedForm({ hook }) {
                 if (value.length === 4) {
                   hook.setLoading(true);
                   try {
-                    const otpResponse = await fetch(
-                      "http://localhost:5000/api/otp/verify",
-                      {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ email: form.email, otp: value }),
-                      }
-                    );
-                    if (otpResponse.ok) {
-                      hook.setOtpVerified(true);
-                      setTimeout(() => {
-                        hook.setStep((s) => s + 1);
-                        hook.setOtpVerified(false);
-                      }, 800);
-                    } else {
-                      const error = await otpResponse.json();
-                      hook.setErrors({
-                        otp: error.error || "OTP verification failed",
-                      });
-                    }
-                  } catch {
-                    hook.setErrors({ otp: "Network error. Please try again." });
+                    await api("/otp/verify", {
+                      method: "POST",
+                      body: JSON.stringify({ email: form.email, otp: value }),
+                    });
+                    hook.setOtpVerified(true);
+                    setTimeout(() => {
+                      hook.setStep((s) => s + 1);
+                      hook.setOtpVerified(false);
+                    }, 800);
+                  } catch (err) {
+                    hook.setErrors({ otp: err.message || "OTP verification failed" });
                   } finally {
                     hook.setLoading(false);
                   }
@@ -234,21 +221,13 @@ export default function GetStartedForm({ hook }) {
               onClick={async () => {
                 hook.setLoading(true);
                 try {
-                  const response = await fetch(
-                    "http://localhost:5000/api/otp/resend",
-                    {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ email: form.email }),
-                    }
-                  );
-                  if (response.ok) alert("New OTP sent successfully!");
-                  else {
-                    const error = await response.json();
-                    alert(error.error || "Failed to resend OTP");
-                  }
-                } catch {
-                  alert("Network error. Please try again.");
+                  await api("/otp/resend", {
+                    method: "POST",
+                    body: JSON.stringify({ email: form.email }),
+                  });
+                  alert("New OTP sent successfully!");
+                } catch (err) {
+                  alert(err.message || "Failed to resend OTP");
                 } finally {
                   hook.setLoading(false);
                 }

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { api } from "../../../lib/api";
 import SectionHeader from "../../../components/layout/SectionHeader";
 import Input from "../../../components/common/Input";
 import Button from "../../../components/common/Button";
@@ -280,8 +281,7 @@ export default function GetStartedSingle({ onOpenTerms, onOpenPrivacy }) {
   const checkUsernameAvailability = async (username) => {
     setUsernameChecking(true);
     try {
-      const response = await fetch(`http://localhost:5000/api/auth/check-username/${encodeURIComponent(username)}`);
-      const data = await response.json();
+      const data = await api(`/auth/check-username/${encodeURIComponent(username)}`);
       setUsernameAvailable(data.available);
     } catch (error) {
       console.error('Error checking username:', error);
@@ -294,8 +294,7 @@ export default function GetStartedSingle({ onOpenTerms, onOpenPrivacy }) {
   const checkEmailAvailability = async (email) => {
     setEmailChecking(true);
     try {
-      const response = await fetch(`http://localhost:5000/api/auth/check-email/${encodeURIComponent(email)}`);
-      const data = await response.json();
+      const data = await api(`/auth/check-email/${encodeURIComponent(email)}`);
       setEmailAvailable(data.available);
     } catch (error) {
       console.error('Error checking email:', error);
@@ -423,19 +422,13 @@ export default function GetStartedSingle({ onOpenTerms, onOpenPrivacy }) {
 
       setLoading(true);
       try {
-        const response = await fetch("http://localhost:5000/api/otp/send", {
+        await api("/otp/send", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email: form.email }),
         });
-        if (response.ok) {
-          setStep((s) => s + 1);
-        } else {
-          const error = await response.json();
-          setErrors({ email: error.error || "Failed to send OTP" });
-        }
-      } catch {
-        setErrors({ email: "Network error. Please try again." });
+        setStep((s) => s + 1);
+      } catch (err) {
+        setErrors({ email: err.message || "Failed to send OTP" });
       } finally {
         setLoading(false);
       }
@@ -449,17 +442,13 @@ export default function GetStartedSingle({ onOpenTerms, onOpenPrivacy }) {
   const fetchExistingDocuments = async (bizId, token) => {
     try {
       if (!bizId || !token) return;
-      const resp = await fetch(`http://localhost:5000/api/documents/business/${bizId}`, {
+      const data = await api(`/documents/business/${bizId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
         }
       });
-      if (resp.ok) {
-        const data = await resp.json();
-        setExistingDocuments(Array.isArray(data.documents) ? data.documents : []);
-        setExistingVerification(data.verification || null);
-      }
+      setExistingDocuments(Array.isArray(data.documents) ? data.documents : []);
+      setExistingVerification(data.verification || null);
     } catch (e) {
       // best effort; ignore
     }
@@ -486,9 +475,8 @@ export default function GetStartedSingle({ onOpenTerms, onOpenPrivacy }) {
     try {
       // Step 1: Register business
       setErrors({ general: "Creating your business account..." });
-      const businessResponse = await fetch("http://localhost:5000/api/business/register", {
+      const result = await api("/business/register", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: form.email,
           username: form.username,
@@ -504,20 +492,6 @@ export default function GetStartedSingle({ onOpenTerms, onOpenPrivacy }) {
           password: form.password,
         }),
       });
-      
-      if (!businessResponse.ok) {
-        const error = await businessResponse.json();
-        if (error.error?.includes('username') || error.error?.includes('Username')) {
-          setErrors({ general: "Username already exists. Please go back and choose a different username." });
-        } else if (error.error?.includes('email') || error.error?.includes('Email')) {
-          setErrors({ general: "Email already exists. Please go back and use a different email address." });
-        } else {
-          setErrors({ general: error.error || "Registration failed. Please try again." });
-        }
-        return;
-      }
-
-      const result = await businessResponse.json();
       const businessId = result.business?.id;
       
       if (!businessId) {
@@ -606,33 +580,23 @@ export default function GetStartedSingle({ onOpenTerms, onOpenPrivacy }) {
       }
 
       // Send document URLs to backend
-      const documentResponse = await fetch(
-        "http://localhost:5000/api/documents/upload-urls",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            business_id: businessId,
-            documents: uploadedUrls
-          }),
-        }
-      );
+      const docResult = await api("/documents/upload-urls", {
+        method: "POST",
+        body: JSON.stringify({
+          business_id: businessId,
+          documents: uploadedUrls
+        }),
+      });
 
-      if (documentResponse.ok) {
-        const docResult = await documentResponse.json();
-        setErrors({}); // Clear loading message
-        
-        // Check if all required documents were uploaded
-        if (docResult.allRequiredUploaded) {
-          setSuccess(true);
-        } else {
-          setErrors({ 
-            general: `${docResult.message}. Your account was created successfully, but you need to upload all required documents before verification can begin.` 
-          });
-        }
+      setErrors({}); // Clear loading message
+      
+      // Check if all required documents were uploaded
+      if (docResult.allRequiredUploaded) {
+        setSuccess(true);
       } else {
-        const docError = await documentResponse.json();
-        setErrors({ general: `Document upload failed: ${docError.error}. Your account was created, but documents couldn't be uploaded.` });
+        setErrors({ 
+          general: `${docResult.message}. Your account was created successfully, but you need to upload all required documents before verification can begin.` 
+        });
       }
     } catch (error) {
       console.error("Registration error:", error);
@@ -809,23 +773,17 @@ export default function GetStartedSingle({ onOpenTerms, onOpenPrivacy }) {
                     if (value.length === 4) {
                       setLoading(true);
                       try {
-                        const otpResponse = await fetch("http://localhost:5000/api/otp/verify", {
+                        await api("/otp/verify", {
                           method: "POST",
-                          headers: { "Content-Type": "application/json" },
                           body: JSON.stringify({ email: form.email, otp: value }),
                         });
-                        if (otpResponse.ok) {
-                          setOtpVerified(true);
-                          setTimeout(() => {
-                            setStep((s) => s + 1);
-                            setOtpVerified(false);
-                          }, 800);
-                        } else {
-                          const error = await otpResponse.json();
-                          setErrors({ otp: error.error || "OTP verification failed" });
-                        }
-                      } catch {
-                        setErrors({ otp: "Network error. Please try again." });
+                        setOtpVerified(true);
+                        setTimeout(() => {
+                          setStep((s) => s + 1);
+                          setOtpVerified(false);
+                        }, 800);
+                      } catch (err) {
+                        setErrors({ otp: err.message || "OTP verification failed" });
                       } finally {
                         setLoading(false);
                       }
@@ -857,18 +815,13 @@ export default function GetStartedSingle({ onOpenTerms, onOpenPrivacy }) {
                   onClick={async () => {
                     setLoading(true);
                     try {
-                      const response = await fetch("http://localhost:5000/api/otp/resend", {
+                      await api("/otp/resend", {
                         method: "POST",
-                        headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ email: form.email }),
                       });
-                      if (response.ok) alert("New OTP sent successfully!");
-                      else {
-                        const error = await response.json();
-                        alert(error.error || "Failed to resend OTP");
-                      }
-                    } catch {
-                      alert("Network error. Please try again.");
+                      alert("New OTP sent successfully!");
+                    } catch (err) {
+                      alert(err.message || "Failed to resend OTP");
                     } finally {
                       setLoading(false);
                     }
