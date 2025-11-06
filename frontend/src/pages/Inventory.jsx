@@ -74,43 +74,153 @@ export default function InventoryPage() {
     fetchInventory();
   }, []);
 
-  // Stats (mocked)
+  // Stats
+  const totalInventoryValue = products.reduce(
+    (sum, p) => sum + Number(p.selling_price || 0) * Number(p.quantity || 0),
+    0
+  );
+  const lowStockItems = products.filter(
+    (p) => Number(p.quantity || 0) < 10
+  ).length;
+
   const stats = [
     {
       label: "TOTAL ITEMS",
       value: products.length,
-      icon: <span className="material-icons">inventory_2</span>,
+      icon: (
+        <svg
+          width="32"
+          height="32"
+          fill="none"
+          stroke="#2563eb"
+          strokeWidth="2"
+          viewBox="0 0 24 24"
+        >
+          <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+        </svg>
+      ),
       color: "text-blue-800",
+      sub: "Total products in inventory",
     },
     {
-      label: "TOTAL SALES",
-      value: products.length,
-      icon: <span className="material-icons">attach_money</span>,
+      label: "INVENTORY VALUE",
+      value: totalInventoryValue,
+      icon: (
+        <svg
+          width="32"
+          height="32"
+          fill="none"
+          stroke="#2563eb"
+          strokeWidth="2"
+          viewBox="0 0 24 24"
+        >
+          <path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      ),
       color: "text-green-700",
+      formatValue: (val) =>
+        `₱${val.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+      sub: "Total value of all stock",
     },
     {
       label: "AVAILABLE CATEGORIES",
       value: categories.length,
-      icon: <span className="material-icons">category</span>,
+      icon: (
+        <svg
+          width="32"
+          height="32"
+          fill="none"
+          stroke="#2563eb"
+          strokeWidth="2"
+          viewBox="0 0 24 24"
+        >
+          <path d="M4 7h16M4 12h16M4 17h16" />
+        </svg>
+      ),
       color: "text-blue-500",
+      sub: "Product categories",
     },
     {
-      label: "USERS",
-      value: 3,
-      icon: <span className="material-icons">group</span>,
-      color: "text-blue-400",
+      label: "LOW STOCK ALERTS",
+      value: lowStockItems,
+      icon: (
+        <svg
+          width="32"
+          height="32"
+          fill="none"
+          stroke="#2563eb"
+          strokeWidth="2"
+          viewBox="0 0 24 24"
+        >
+          <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+      ),
+      color: "text-orange-600",
+      sub: "Items needing restock",
     },
   ];
 
-  // Filtering and pagination
+  // Additional filter states (will be handled by Inventory component)
+  const [sortBy, setSortBy] = useState("name");
+  const [sortOrder, setSortOrder] = useState("asc");
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [stockFilter, setStockFilter] = useState(null);
+
+  // Filtering, sorting and pagination
   const filteredProducts = useMemo(() => {
-    return products.filter(
+    let filtered = products.filter(
       (p) =>
         p.name.toLowerCase().includes(search.toLowerCase()) ||
         p.category.toLowerCase().includes(search.toLowerCase()) ||
         p.description.toLowerCase().includes(search.toLowerCase())
     );
-  }, [products, search]);
+
+    // Apply category filter
+    if (selectedCategory) {
+      filtered = filtered.filter((p) => p.category === selectedCategory);
+    }
+
+    // Apply stock filter
+    if (stockFilter) {
+      if (stockFilter === "out_of_stock") {
+        filtered = filtered.filter((p) => Number(p.quantity || 0) === 0);
+      } else if (stockFilter === "low_stock") {
+        filtered = filtered.filter((p) => {
+          const qty = Number(p.quantity || 0);
+          return qty > 0 && qty < 10;
+        });
+      } else if (stockFilter === "in_stock") {
+        filtered = filtered.filter((p) => Number(p.quantity || 0) >= 10);
+      }
+    }
+
+    // Apply sorting
+    filtered.sort((a, b) => {
+      let aVal, bVal;
+      if (sortBy === "name") {
+        aVal = (a.name || "").toLowerCase();
+        bVal = (b.name || "").toLowerCase();
+      } else if (sortBy === "category") {
+        aVal = (a.category || "").toLowerCase();
+        bVal = (b.category || "").toLowerCase();
+      } else if (sortBy === "quantity") {
+        aVal = Number(a.quantity || 0);
+        bVal = Number(b.quantity || 0);
+      } else if (sortBy === "selling_price") {
+        aVal = Number(a.selling_price || 0);
+        bVal = Number(b.selling_price || 0);
+      } else {
+        return 0;
+      }
+
+      if (aVal < bVal) return sortOrder === "asc" ? -1 : 1;
+      if (aVal > bVal) return sortOrder === "asc" ? 1 : -1;
+      return 0;
+    });
+
+    return filtered;
+  }, [products, search, selectedCategory, stockFilter, sortBy, sortOrder]);
+
   const totalPages = Math.ceil(filteredProducts.length / entriesPerPage) || 1;
   const paginatedProducts = filteredProducts.slice(
     (page - 1) * entriesPerPage,
@@ -169,7 +279,10 @@ export default function InventoryPage() {
             cost_price: Number(productForm.cost_price) || 0,
             selling_price: Number(productForm.selling_price) || 0,
             sku: (productForm.sku || "").trim(),
-            category: productForm.category === "Others" ? (productForm.customCategory || "").trim() : (productForm.category || "").trim(),
+            category:
+              productForm.category === "Others"
+                ? (productForm.customCategory || "").trim()
+                : (productForm.category || "").trim(),
             description: (productForm.description || "").trim(),
           }),
         });
@@ -183,7 +296,10 @@ export default function InventoryPage() {
           },
           body: JSON.stringify({
             product_category_id: null,
-            category: productForm.category === "Others" ? (productForm.customCategory || "").trim() : (productForm.category || "").trim(),
+            category:
+              productForm.category === "Others"
+                ? (productForm.customCategory || "").trim()
+                : (productForm.category || "").trim(),
             product_name: (productForm.name || "").trim(),
             name: (productForm.name || "").trim(),
             description: (productForm.description || "").trim(),
@@ -310,6 +426,7 @@ export default function InventoryPage() {
     >
       <Inventory
         products={paginatedProducts}
+        allProducts={filteredProducts}
         stats={stats}
         page={page}
         entriesPerPage={entriesPerPage}
@@ -322,6 +439,24 @@ export default function InventoryPage() {
         onDelete={handleDeleteProduct}
         onAddProduct={openAddProduct}
         onStockEntry={openStockEntry}
+        categories={categories}
+        selectedCategory={selectedCategory}
+        onCategoryFilter={(category) => {
+          setSelectedCategory(category);
+          setPage(1); // Reset to first page on filter change
+        }}
+        stockFilter={stockFilter}
+        onStockFilter={(filter) => {
+          setStockFilter(filter);
+          setPage(1); // Reset to first page on filter change
+        }}
+        sortBy={sortBy}
+        sortOrder={sortOrder}
+        onSort={(field, order) => {
+          setSortBy(field);
+          setSortOrder(order);
+          setPage(1); // Reset to first page on sort
+        }}
       />
       {apiError && (
         <div className="text-red-600 text-sm mt-2 px-4">{apiError}</div>
@@ -342,8 +477,7 @@ export default function InventoryPage() {
       <Modal
         isOpen={showStockModal}
         onClose={() => setShowStockModal(false)}
-
-        title={'Stock Entry'}
+        title={"Stock Entry"}
         variant="stock"
         editingProduct={null}
         stockForm={stockForm}
