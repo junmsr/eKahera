@@ -18,11 +18,10 @@ export default function useGetStarted() {
     useAdminEmail: false,
     businessType: "",
     customBusinessType: "",
-    country: "Philippines",
+    region: "",
     province: "",
     city: "",
     barangay: "",
-    businessAddress: "",
     houseNumber: "",
     mobile: "",
     password: "",
@@ -50,6 +49,9 @@ export default function useGetStarted() {
         [name]: checked,
         businessEmail: checked ? f.email : ""
       }));
+    } else if (name === 'region') {
+      // Reset province, city and barangay when region changes
+      setForm((f) => ({ ...f, region: value, province: "", city: "", barangay: "" }));
     } else if (name === 'province') {
       // Reset city and barangay when province changes
       setForm((f) => ({ ...f, province: value, city: "", barangay: "" }));
@@ -91,10 +93,10 @@ export default function useGetStarted() {
       if (!form.businessType) err.businessType = "Required";
       if (form.businessType === "Others" && !form.customBusinessType) 
         err.customBusinessType = "Please specify business type";
+      if (!form.region) err.region = "Required";
       if (!form.province) err.province = "Required";
       if (!form.city) err.city = "Required";
       if (!form.barangay) err.barangay = "Required";
-      if (!form.businessAddress) err.businessAddress = "Required";
     }
     if (step === 3) {
       if (!form.documents || form.documents.length === 0) {
@@ -144,11 +146,10 @@ export default function useGetStarted() {
           businessName: form.businessName,
           businessEmail: form.useAdminEmail ? form.email : form.businessEmail,
           businessType: form.businessType === "Others" ? form.customBusinessType : form.businessType,
-          country: form.country,
+          region: form.region,
           province: form.province,
           city: form.city,
           barangay: form.barangay,
-          businessAddress: form.businessAddress,
           houseNumber: form.houseNumber,
           mobile: form.mobile,
           password: form.password,
