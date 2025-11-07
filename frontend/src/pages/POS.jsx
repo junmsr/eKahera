@@ -551,128 +551,137 @@ function POS() {
                 </div>
 
                 {/* Action Buttons */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-2 sm:gap-3 flex-shrink-0">
-                  <Button
-                    label="CASH LEDGER"
-                    size="md"
-                    className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
-                    variant="secondary"
-                    microinteraction
-                    onClick={() => setShowCashLedger(true)}
-                    icon={
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                        />
-                      </svg>
-                    }
-                    iconPosition="left"
-                  />
-                  <Button
-                    label="DISCOUNT"
-                    size="md"
-                    className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
-                    onClick={() => setShowDiscount(true)}
-                    variant="secondary"
-                    microinteraction
-                    icon={
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                        />
-                      </svg>
-                    }
-                    iconPosition="left"
-                  />
-                  <Button
-                    label="PRICE CHECK"
-                    size="md"
-                    className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
-                    onClick={() => setShowPriceCheck(true)}
-                    variant="secondary"
-                    microinteraction
-                    icon={
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                        />
-                      </svg>
-                    }
-                    iconPosition="left"
-                  />
-                  <Button
-                    label="IMPORT CART"
-                    size="md"
-                    className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
-                    onClick={() => setShowImportCart(true)}
-                    variant="secondary"
-                    microinteraction
-                    icon={
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
-                        />
-                      </svg>
-                    }
-                    iconPosition="left"
-                  />
-                  <Button
-                    label="CHECKOUT"
-                    size="md"
-                    className="w-full h-12 sm:h-14 lg:h-16 text-sm sm:text-base font-bold col-span-2 lg:col-span-1"
-                    variant="primary"
-                    microinteraction
-                    onClick={() => setShowCheckout(true)}
-                    disabled={cart.length === 0}
-                    icon={
-                      <svg
-                        className="w-5 h-5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                        />
-                      </svg>
-                    }
-                    iconPosition="left"
-                  />
+                <div className="grid grid-cols-12 gap-2 sm:gap-3 flex-shrink-0">
+                  {/* Grouped Buttons */}
+                  <div className="col-span-8">
+                    <div className="grid grid-cols-2 sm:grid-cols-2 gap-2 sm:gap-3">
+                      <Button
+                        label="CASH LEDGER"
+                        size="md"
+                        className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
+                        variant="secondary"
+                        microinteraction
+                        onClick={() => setShowCashLedger(true)}
+                        icon={
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                            />
+                          </svg>
+                        }
+                        iconPosition="left"
+                      />
+                      <Button
+                        label="DISCOUNT"
+                        size="md"
+                        className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
+                        onClick={() => setShowDiscount(true)}
+                        variant="secondary"
+                        microinteraction
+                        icon={
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                            />
+                          </svg>
+                        }
+                        iconPosition="left"
+                      />
+                      <Button
+                        label="PRICE CHECK"
+                        size="md"
+                        className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
+                        onClick={() => setShowPriceCheck(true)}
+                        variant="secondary"
+                        microinteraction
+                        icon={
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                            />
+                          </svg>
+                        }
+                        iconPosition="left"
+                      />
+                      <Button
+                        label="IMPORT CART"
+                        size="md"
+                        className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
+                        onClick={() => setShowImportCart(true)}
+                        variant="secondary"
+                        microinteraction
+                        icon={
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+                            />
+                          </svg>
+                        }
+                        iconPosition="left"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Checkout Button */}
+                  <div className="col-span-4">
+                    <Button
+                      label="CHECKOUT"
+                      size="md"
+                      className="w-full h-full text-sm sm:text-base font-bold"
+                      variant="primary"
+                      microinteraction
+                      onClick={() => setShowCheckout(true)}
+                      disabled={cart.length === 0}
+                      icon={
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
+                        </svg>
+                      }
+                      iconPosition="left"
+                    />
+                  </div>
                 </div>
               </div>
             </div>

@@ -4,17 +4,21 @@ import Button from './Button';
 import Loader from './Loader';
 import TutorialGuide from './TutorialGuide';
 
+import { useAuth } from '../../hooks/useAuth';
+
 export default function VerificationStatus({ user, onProceed }) {
   const [verificationData, setVerificationData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showTutorial, setShowTutorial] = useState(false);
   const [tutorialCompleted, setTutorialCompleted] = useState(false);
+  const { logout } = useAuth();
 
   useEffect(() => {
-    fetchVerificationStatus();
-    
-    // Check if tutorial was already completed
+    if (user) {
+      fetchVerificationStatus();
+    }
+
     const tutorialStatus = localStorage.getItem(`tutorial_completed_${user?.user_id}`);
     setTutorialCompleted(tutorialStatus === 'true');
   }, [user]);
@@ -31,8 +35,13 @@ export default function VerificationStatus({ user, onProceed }) {
         }
       );
       setVerificationData(data);
+      console.log('Verification data:', data); // Added for debugging
     } catch (err) {
-      setError(err.message || 'Failed to fetch verification status');
+      if (err.message === 'jwt expired' || err.message === '{\"error\":\"Invalid token\"}') {
+        logout();
+      } else {
+        setError(err.message || 'Failed to fetch verification status');
+      }
     } finally {
       setLoading(false);
     }

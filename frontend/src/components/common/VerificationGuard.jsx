@@ -16,12 +16,17 @@ export default function VerificationGuard({ children }) {
   useEffect(() => {
     const userData = localStorage.getItem('user');
     if (userData) {
-      const parsedUser = JSON.parse(userData);
-      setUser(parsedUser);
-      
-      // Check if tutorial was already completed
-      const tutorialStatus = localStorage.getItem(`tutorial_completed_${parsedUser.user_id}`);
-      setTutorialCompleted(tutorialStatus === 'true');
+      try {
+        const parsedUser = JSON.parse(userData);
+        setUser(parsedUser);
+        
+        // Check if tutorial was already completed
+        const tutorialStatus = localStorage.getItem(`tutorial_completed_${parsedUser.user_id}`);
+        setTutorialCompleted(tutorialStatus === 'true');
+      } catch (error) {
+        console.error('Failed to parse user data from localStorage:', error);
+        setUser(null);
+      }
     }
   }, []);
 
@@ -35,9 +40,7 @@ export default function VerificationGuard({ children }) {
     '/services'
   ];
 
-  const shouldSkipVerification = skipVerificationRoutes.some(route => 
-    location.pathname === route || location.pathname.startsWith(route)
-  );
+  const shouldSkipVerification = skipVerificationRoutes.includes(location.pathname);
 
   // Skip verification for non-business users or if no user
   if (!user || !user.businessId || user.role === 'superadmin' || shouldSkipVerification) {

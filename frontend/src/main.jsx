@@ -26,6 +26,7 @@ import SuperAdminView from "./pages/SuperAdminView.jsx";
 import InitialSetup from "./pages/InitialSetup.jsx";
 import StoreQR from "./pages/StoreQR.jsx";
 import Receipt from "./pages/Receipt.jsx";
+import Documents from "./pages/Documents.jsx";
 
 // Router Configuration
 const router = createBrowserRouter([
@@ -52,6 +53,7 @@ const router = createBrowserRouter([
       { path: "cashiers", element: <Cashiers /> },
       { path: "logs", element: <Logs /> },
       { path: "profile", element: <Profile /> },
+      { path: "documents", element: <Documents /> },
       { path: "superadmin", element: <SuperAdmin /> },
       { path: "superadmin/stores/:id", element: <SuperAdminView /> },
       { path: "setup", element: <InitialSetup /> },

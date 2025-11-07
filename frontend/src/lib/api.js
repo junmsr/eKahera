@@ -7,7 +7,7 @@ export async function api(path, options = {}, returnRawResponse = false) {
     headers['Content-Type'] = 'application/json';
   }
 
-  const finalUrl = `${API_BASE}${path.startsWith('/api') ? path : `/api${path}`}`.replace(/([^:])\/\/+/g, "$1");
+  const finalUrl = path.startsWith('/api') ? path : `/api${path}`;
   const res = await fetch(finalUrl, {
     ...options,
     credentials: 'include',
