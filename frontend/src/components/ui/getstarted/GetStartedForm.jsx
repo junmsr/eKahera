@@ -23,10 +23,10 @@ export default function GetStartedForm({ hook }) {
     const [existing, setExisting] = React.useState([]);
     const [verification, setVerification] = React.useState(null);
     React.useEffect(() => {
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('auth_token');
       let businessId = null;
       try {
-        const storedUser = JSON.parse(localStorage.getItem('user') || 'null');
+        const storedUser = JSON.parse(sessionStorage.getItem('user') || 'null');
         businessId = storedUser?.businessId || storedUser?.business_id || null;
       } catch {}
       if (!token || !businessId) return;
