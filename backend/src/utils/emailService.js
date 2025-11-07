@@ -303,9 +303,44 @@ const sendApplicationSubmittedNotification = async (businessData) => {
   }
 };
 
+const sendLowStockEmail = async (recipientEmail, lowStockProducts) => {
+  const transporter = createTransporter();
+
+  const subject = 'Low Stock Alert - eKahera';
+  const productList = lowStockProducts.map(p => `<li>${p.product_name} (Stock: ${p.quantity_in_stock})</li>`).join('');
+  const message = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #dc2626;">Low Stock Alert</h2>
+      <p>The following products are running low on stock:</p>
+      <ul>
+        ${productList}
+      </ul>
+      <p>Please update your inventory as soon as possible.</p>
+    </div>
+  `;
+
+  const mailOptions = {
+    from: config.EMAIL_USER || 'noreply@ekahera.com',
+    to: recipientEmail,
+    subject: subject,
+    html: message
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    await logEmailNotification(recipientEmail, subject, message, 'low_stock_alert');
+    console.log('Low stock alert sent to:', recipientEmail);
+    return true;
+  } catch (error) {
+    console.error('Error sending low stock alert:', error);
+    return false;
+  }
+};
+
 module.exports = {
   sendNewApplicationNotification,
   sendVerificationStatusNotification,
   sendApplicationSubmittedNotification,
+  sendLowStockEmail,
   logEmailNotification
 };

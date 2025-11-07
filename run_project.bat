@@ -68,7 +68,7 @@ if not exist "frontend\node_modules" (
 
 echo.
 echo ========================================
-echo Starting Backend & Frontend in one window...
+echo "Starting Backend & Frontend in one window..."
 echo ========================================
 echo.
 
