@@ -245,3 +245,61 @@ exports.addStockBySku = async (req, res) => {
     client.release();
   }
 };
+
+const { sendLowStockEmail } = require('../utils/emailService');
+
+async function _getLowStockProducts(businessId, threshold = 10) {
+  const result = await pool.query(
+    `SELECT p.product_id, p.product_name, i.quantity_in_stock
+     FROM products p
+     JOIN inventory i ON p.product_id = i.product_id
+     WHERE p.business_id = $1 AND i.quantity_in_stock <= $2
+     ORDER BY i.quantity_in_stock ASC`,
+    [businessId, threshold]
+  );
+  return result.rows;
+}
+
+exports.getLowStockProducts = async (req, res) => {
+  try {
+    const threshold = req.query.threshold || 10;
+    const businessId = req.user?.businessId || null;
+
+    if (!businessId) {
+      return res.status(400).json({ error: 'Business ID is required' });
+    }
+
+    const lowStockProducts = await _getLowStockProducts(businessId, threshold);
+    res.json(lowStockProducts);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.sendLowStockAlert = async (req, res) => {
+  try {
+    const businessId = req.user?.businessId || null;
+    if (!businessId) {
+      return res.status(400).json({ error: 'Business ID is required' });
+    }
+
+    const lowStockProducts = await _getLowStockProducts(businessId, 10);
+
+    if (lowStockProducts.length === 0) {
+      return res.json({ message: 'No low stock products to report.' });
+    }
+
+    const userResult = await pool.query('SELECT email FROM users WHERE user_id = $1', [req.user.userId]);
+    const userEmail = userResult.rows[0]?.email;
+
+    if (!userEmail) {
+      return res.status(404).json({ error: 'User email not found.' });
+    }
+
+    await sendLowStockEmail(userEmail, lowStockProducts);
+
+    res.json({ message: 'Low stock alert sent successfully.' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};

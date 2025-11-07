@@ -48,7 +48,7 @@ export default function SuperAdminView() {
       setLoading(true);
       setError('');
       try {
-        const token = localStorage.getItem('auth_token');
+        const token = sessionStorage.getItem('auth_token');
         const res = await api(`/api/superadmin/stores/${id}`, {
           headers: token ? { Authorization: `Bearer ${token}` } : undefined,
         });

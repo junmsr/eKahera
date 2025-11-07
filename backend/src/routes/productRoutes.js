@@ -1,7 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const { getAllProducts, getProductById, createProduct, getProductBySku, addStockBySku, getCategories, getProductBySkuPublic } = require('../controllers/productController');
+const { getAllProducts, getProductById, createProduct, getProductBySku, addStockBySku, getCategories, getProductBySkuPublic, getLowStockProducts, sendLowStockAlert } = require('../controllers/productController');
 const { authenticate, requireDocuments } = require('../middleware/authMiddleware');
+
+router.get('/low-stock', authenticate, requireDocuments, getLowStockProducts);
+router.post('/send-low-stock-alert', authenticate, requireDocuments, sendLowStockAlert);
 
 router.get('/', authenticate, requireDocuments, getAllProducts);
 router.get('/sku/:sku', authenticate, requireDocuments, getProductBySku);

@@ -1,48 +1,58 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import ScannerCard from '../components/ui/POS/ScannerCard';
-import SkuFormCard from '../components/ui/POS/SkuFormCard';
-import TransactionCard from '../components/ui/POS/TransactionCard';
-import CartTableCard from '../components/ui/POS/CartTableCard';
-import Button from '../components/common/Button';
-import Background from '../components/layout/Background';
+import ScannerCard from "../components/ui/POS/ScannerCard";
+import SkuFormCard from "../components/ui/POS/SkuFormCard";
+import CartTableCard from "../components/ui/POS/CartTableCard";
+import Button from "../components/common/Button";
 import { api, createGcashCheckout } from "../lib/api";
-import PriceCheckModal from '../components/modals/PriceCheckModal';
-import DiscountModal from '../components/modals/DiscountModal';
-import ScanCustomerCartModal from "../components/modals/ScanCustomerCartModal";
+import PriceCheckModal from "../components/modals/PriceCheckModal";
+import DiscountModal from "../components/modals/DiscountModal";
+import CashLedgerModal from "../components/modals/CashLedgerModal";
 import CheckoutModal from "../components/modals/CheckoutModal";
-import CashLedgerModal from '../components/modals/CashLedgerModal';
 import CashPaymentModal from "../components/modals/CashPaymentModal";
+import ScanCustomerCartModal from "../components/modals/ScanCustomerCartModal";
+import ProfileModal from "../components/modals/ProfileModal";
+import { BiBell, BiUser } from "react-icons/bi";
 
 function CashierPOS() {
   const navigate = useNavigate();
 
-  // State
-  const [sku, setSku] = useState('');
+  // States
+  const [sku, setSku] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [cart, setCart] = useState([]);
-  const [showImportCart, setShowImportCart] = useState(false);
+  const [appliedDiscount, setAppliedDiscount] = useState(null);
   const [showDiscount, setShowDiscount] = useState(false);
   const [showPriceCheck, setShowPriceCheck] = useState(false);
+  const [showImportCart, setShowImportCart] = useState(false);
   const [showCashLedger, setShowCashLedger] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState(null);
   const [showCashModal, setShowCashModal] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
   const [scannerPaused, setScannerPaused] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [transactionNumber, setTransactionNumber] = useState('');
   const [transactionId, setTransactionId] = useState(null);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const notificationRef = useRef(null);
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+  const touchStartXRef = useRef(null);
+  const touchActiveRef = useRef(false);
 
-  const token = localStorage.getItem('auth_token');
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const token = sessionStorage.getItem("auth_token");
+  const user = JSON.parse(sessionStorage.getItem("user") || "{}");
   const hasFinalizedRef = React.useRef(false);
 
-  // Generate a provisional transaction number when this POS view opens
-  React.useEffect(() => {
+  // Generate a client-side provisional transaction number when POS opens
+  useEffect(() => {
     if (!transactionNumber) {
-      const businessId = user?.businessId || user?.business_id || 'BIZ';
-      const timePart = new Date().toISOString().replace(/[-:T.Z]/g, '').slice(0, 14);
+      const businessId = user?.businessId || user?.business_id || "BIZ";
+      const timePart = new Date()
+        .toISOString()
+        .replace(/[-:T.Z]/g, "")
+        .slice(0, 14);
       const randPart = Math.floor(1000 + Math.random() * 9000);
       setTransactionNumber(`T-${businessId}-${timePart}-${randPart}`);
     }
@@ -108,11 +118,14 @@ function CashierPOS() {
 
   const addSkuToCart = async (skuValue, qty = 1) => {
     if (!skuValue || qty < 1) return;
-    setError('');
+    setError("");
     try {
-      const product = await api(`/api/products/sku/${encodeURIComponent(skuValue)}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const product = await api(
+        `/api/products/sku/${encodeURIComponent(skuValue)}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
       const price = Number(product.selling_price || 0);
       const stockQty = Number(product.stock_quantity ?? 0);
       if (stockQty <= 0) {
@@ -128,7 +141,9 @@ function CashierPOS() {
         return;
       }
       setCart((prev) => {
-        const existingIdx = prev.findIndex(i => i.product_id === product.product_id);
+        const existingIdx = prev.findIndex(
+          (i) => i.product_id === product.product_id
+        );
         if (existingIdx >= 0) {
           const next = [...prev];
           const newQty = next[existingIdx].quantity + qty;
@@ -152,29 +167,30 @@ function CashierPOS() {
           },
         ];
       });
-      setSku('');
+      setSku("");
       setQuantity(1);
       setScannerPaused(false);
     } catch (err) {
-      setError(err.message || 'Product not found');
+      setError(err.message || "Product not found");
     }
   };
 
-  const handleAddToCart = async () => addSkuToCart(sku, quantity);
+  const handleAddToCart = async () => {
+    await addSkuToCart(sku, quantity);
+  };
 
   const handleRemove = (idx) => setCart(cart.filter((_, i) => i !== idx));
-  const [appliedDiscount, setAppliedDiscount] = useState(null);
-  const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const total = (() => {
-    if (!appliedDiscount) return subtotal;
-    if (typeof appliedDiscount.value === 'string' && appliedDiscount.value.endsWith('%')) {
-      const pct = parseFloat(appliedDiscount.value);
-      if (Number.isFinite(pct) && pct > 0) return Math.max(0, subtotal - subtotal * (pct / 100));
-    }
-    const fixed = Number(appliedDiscount.value);
-    if (Number.isFinite(fixed) && fixed > 0) return Math.max(0, subtotal - fixed);
-    return subtotal;
-  })();
+
+  const subtotal = cart.reduce(
+    (sum, item) => sum + item.price * item.quantity,
+    0
+  );
+
+  // Placeholder for appliedDiscount state and discount calculation if needed
+  // const [appliedDiscount, setAppliedDiscount] = useState(null);
+  // const total = calculateTotalWithDiscount(subtotal, appliedDiscount);
+  // For now, total equals subtotal
+  const total = subtotal;
 
   const handleCheckout = async (
     paymentType = "cash",
@@ -226,131 +242,272 @@ function CashierPOS() {
     }
   };
 
+  const handleCopyTn = () => {
+    navigator.clipboard.writeText(transactionNumber);
+  };
+
+  const headerActions = (
+    <div className="flex items-center gap-2">
+      <button
+        onClick={() => setShowNotifications(!showNotifications)}
+        className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+        title="Notifications"
+      >
+        <BiBell className="w-5 h-5 text-gray-600" />
+      </button>
+      <button
+        onClick={() => setShowProfileModal(true)}
+        className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+        title="Profile"
+      >
+        <BiUser className="w-5 h-5 text-gray-600" />
+      </button>
+    </div>
+  );
+
   const handleLogout = () => {
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('user');
+    sessionStorage.removeItem('auth_token');
+    sessionStorage.removeItem('user');
     window.location.href = '/';
   };
 
   const cardClass = 'bg-white border border-blue-100 rounded-2xl p-6 shadow-lg';
 
   return (
-    <Background variant="gradientBlue" pattern="dots" floatingElements overlay>
-      <div className="h-screen overflow-hidden">
-        {/* Header with logout */}
-        <header className="flex items-center justify-between px-6 py-3 bg-white/80 shadow-sm border-b border-blue-100 h-[56px] min-h-[56px] max-h-[56px]">
-          <span className="text-2xl font-bold text-blue-700 tracking-tight flex items-center gap-2">
-            <span className="bg-blue-600 text-white rounded-xl px-3 py-1 text-xl font-bold mr-2">eK</span>
-            POS - Cashier
-          </span>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-600">Welcome, {user.name || user.username || 'Cashier'}</span>
-            <Button
-              label="Logout"
-              variant="secondary"
-              size="sm"
-              onClick={handleLogout}
-              className="px-4 py-2"
-            />
+    <div className="bg-white min-h-screen">
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col min-h-screen">
+        {/* Header */}
+        <header className="flex items-center gap-4 px-4 sm:px-6 py-3 bg-white/90 backdrop-blur-md shadow-md border-b border-gray-200/50 h-[64px] min-h-[64px] max-h-[64px] sticky top-0 z-30">
+          <div className="flex items-center gap-3">
+            <span className="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight">
+              POS
+            </span>
           </div>
+          <div className="flex-1 flex items-center justify-center px-2">
+            <button
+              onClick={handleCopyTn}
+              title="Copy transaction number"
+              className="inline-flex items-center gap-2 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg px-2.5 py-1.5 shadow-sm hover:bg-blue-100 transition-colors"
+            >
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2M8 16h8a2 2 0 002-2v-6m-10 8l-2 2m2-2l2 2"
+                />
+              </svg>
+              <span className="font-mono text-xs sm:text-sm md:text-base font-bold tracking-wider truncate max-w-[50vw]">
+                {transactionNumber}
+              </span>
+            </button>
+          </div>
+
+          <div className="ml-auto">{headerActions}</div>
         </header>
-        
+
         {/* Main Area */}
-        <main className="flex-1 bg-transparent overflow-hidden p-4 h-[calc(100vh-56px)]">
-          <div
-            className="grid gap-8 h-full"
-            style={{
-              gridTemplateColumns: '1fr 2fr',
-              gridTemplateRows: '325px 325px 1fr 120px',
-              height: '100%',
-            }}
-          >
-            {/* ScannerCard */}
-            <div className="row-span-1 col-span-1">
-              <ScannerCard
-                onScan={async (result) => {
-                  const code = result?.[0]?.rawValue;
-                  if (!code) return;
-                  setScannerPaused(true);
-                  await addSkuToCart(code, 1);
-                }}
-                paused={scannerPaused}
-                onResume={() => setScannerPaused(false)}
-                textMain="text-blue-700"
-              />
-            </div>
-            {/* CartTableCard (spans 3 rows on the right) */}
-            <div className="row-span-3 col-start-2 row-start-1 flex flex-col h-full">
-              <CartTableCard cart={cart} handleRemove={handleRemove} total={total} className="flex-1" />
-              {/* Action Buttons */}
-              <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 mt-4">
-                <Button
-                  label="CASH LEDGER"
-                  size="lg"
-                  className="w-full h-16 text-base font-bold"
-                  variant="secondary"
-                  microinteraction
-                  onClick={() => setShowCashLedger(true)}
-                />
-                <Button
-                  label="DISCOUNT"
-                  size="lg"
-                  className="w-full h-16 text-base font-bold"
-                  onClick={() => setShowDiscount(true)}
-                  variant="secondary"
-                  microinteraction
-                />
-                {/* Big Checkout Button */}
-                <Button
-                  label="CHECKOUT"
-                  size="lg"
-                  className="w-full h-35 text-lg font-bold row-span-2"
-                  variant="primary"
-                  microinteraction
-                  onClick={() => setShowCheckout(true)}
-                />
-                <Button
-                  label="IMPORT CUSTOMER CART"
-                  size="lg"
-                  className="w-full h-16 text-base font-bold"
-                  onClick={() => setShowImportCart(true)}
-                  variant="secondary"
-                  microinteraction
-                />
-                <Button
-                  label="PRICE CHECK"
-                  size="lg"
-                  className="w-full h-16 text-base font-bold"
-                  onClick={() => setShowPriceCheck(true)}
-                  variant="secondary"
-                  microinteraction
+        <main
+          className="flex-1 bg-gradient-to-br from-gray-50/50 via-blue-50/30 to-indigo-50/50 overflow-hidden p-2 sm:p-3 md:p-4"
+          style={{ height: "calc(100vh - 64px)" }}
+        >
+          <div className="grid gap-2 sm:gap-3 md:gap-4 h-full grid-cols-1 lg:grid-cols-12">
+            {/* Left Column - Scanner, SKU Form, Transaction */}
+            <div className="lg:col-span-4 flex flex-col gap-2 sm:gap-3 md:gap-4">
+              {/* ScannerCard */}
+              <div className="flex-shrink-0">
+                <ScannerCard
+                  onScan={async (result) => {
+                    const code = result?.[0]?.rawValue;
+                    if (!code) return;
+                    setScannerPaused(true);
+                    await addSkuToCart(code, 1);
+                  }}
+                  paused={scannerPaused}
+                  onResume={() => setScannerPaused(false)}
+                  textMain="text-blue-700"
                 />
               </div>
+
+              {/* SkuFormCard */}
+              <div className="flex-shrink-0">
+                <SkuFormCard
+                  sku={sku}
+                  setSku={setSku}
+                  quantity={quantity}
+                  setQuantity={setQuantity}
+                  handleAddToCart={handleAddToCart}
+                />
+                {error && (
+                  <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm font-medium">
+                    {error}
+                  </div>
+                )}
+              </div>
             </div>
-            {/* SkuFormCard */}
-            <div className="row-start-2 col-start-1 mb-0">
-              <SkuFormCard
-                sku={sku}
-                setSku={setSku}
-                quantity={quantity}
-                setQuantity={setQuantity}
-                handleAddToCart={handleAddToCart}
-              />
-              {error && <div className="text-red-600 text-sm mt-2">{error}</div>}
-            </div>
-            {/* TransactionCard */}
-            <div className="row-start-3 col-start-1 -mt-16">
-              <TransactionCard transactionNumber={transactionNumber} transactionId={transactionId} />
+
+            {/* Right Column - Cart and Actions */}
+            <div className="lg:col-span-8 flex flex-col gap-2 sm:gap-3 min-h-0">
+              {/* CartTableCard */}
+              <div className="flex-1 overflow-auto">
+                <CartTableCard
+                  cart={cart}
+                  handleRemove={handleRemove}
+                  total={total}
+                  className="flex-1 h-full"
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="grid grid-cols-12 gap-2 sm:gap-3 flex-shrink-0">
+                {/* Grouped Buttons */}
+                <div className="col-span-8">
+                  <div className="grid grid-cols-2 sm:grid-cols-2 gap-2 sm:gap-3">
+                    <Button
+                      label="CASH LEDGER"
+                      size="md"
+                      className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
+                      variant="secondary"
+                      microinteraction
+                      onClick={() => setShowCashLedger(true)}
+                      icon={
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
+                        </svg>
+                      }
+                      iconPosition="left"
+                    />
+                    <Button
+                      label="DISCOUNT"
+                      size="md"
+                      className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
+                      onClick={() => setShowDiscount(true)}
+                      variant="secondary"
+                      microinteraction
+                      icon={
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
+                        </svg>
+                      }
+                      iconPosition="left"
+                    />
+                    <Button
+                      label="PRICE CHECK"
+                      size="md"
+                      className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
+                      onClick={() => setShowPriceCheck(true)}
+                      variant="secondary"
+                      microinteraction
+                      icon={
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
+                        </svg>
+                      }
+                      iconPosition="left"
+                    />
+                    <Button
+                      label="IMPORT CART"
+                      size="md"
+                      className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
+                      onClick={() => setShowImportCart(true)}
+                      variant="secondary"
+                      microinteraction
+                      icon={
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+                          />
+                        </svg>
+                      }
+                      iconPosition="left"
+                    />
+                  </div>
+                </div>
+
+                {/* Checkout Button */}
+                <div className="col-span-4">
+                  <Button
+                    label="CHECKOUT"
+                    size="md"
+                    className="w-full h-full text-sm sm:text-base font-bold"
+                    variant="primary"
+                    microinteraction
+                    onClick={() => setShowCheckout(true)}
+                    disabled={cart.length === 0}
+                    icon={
+                      <svg
+                        className="w-5 h-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                    }
+                    iconPosition="left"
+                  />
+                </div>
+              </div>
             </div>
           </div>
         </main>
-        
+
         {/* Modals */}
         <DiscountModal
           isOpen={showDiscount}
           onClose={() => setShowDiscount(false)}
           onApplyDiscount={(discount) => {
-            setAppliedDiscount(discount);
+            // Apply the discount to your transaction/cart here
+            // Optionally handle discount state update
             setShowDiscount(false);
           }}
         />
@@ -370,25 +527,24 @@ function CashierPOS() {
                 (async () => {
                   try {
                     const successUrl =
-                    window.location.origin + "/pos?payment=success";
+                      window.location.origin + "/pos?payment=success";
                     const cancelUrl =
                       window.location.origin + "/pos?payment=cancel";
-                      // persist cart to finalize after redirect back
+                    // persist cart to finalize after redirect back
                     localStorage.setItem(
                       "pending_gcash_cart",
                       JSON.stringify({
-                      items: cart.map((i) => ({
-                        product_id: i.product_id,
-                        quantity: i.quantity,
-                      })),
-                      total,
+                        items: cart.map((i) => ({
+                          product_id: i.product_id,
+                          quantity: i.quantity,
+                        })),
+                        total,
                       })
                     );
                     const { checkoutUrl } = await createGcashCheckout({
                       amount: Number(total || 0),
                       description: "POS Order",
-                      referenceNumber:
-                      transactionNumber || `POS-${Date.now()}`,
+                      referenceNumber: transactionNumber || `POS-${Date.now()}`,
                       cancelUrl,
                       successUrl,
                     });
@@ -418,23 +574,24 @@ function CashierPOS() {
           isOpen={showImportCart}
           onClose={() => setShowImportCart(false)}
           onImport={(items) => {
-            // Merge imported items into current cart
             setCart((prev) => {
-              const bySku = new Map(prev.map(i => [i.sku, i]));
+              const bySku = new Map(prev.map((i) => [i.sku, i]));
               for (const it of items) {
                 const existing = bySku.get(it.sku);
-                if (existing) {
-                  existing.quantity += it.quantity;
-                } else {
-                  bySku.set(it.sku, { ...it });
-                }
+                if (existing) existing.quantity += it.quantity;
+                else bySku.set(it.sku, { ...it });
               }
               return Array.from(bySku.values());
             });
           }}
-        />          
+        />
+        <ProfileModal
+          isOpen={showProfileModal}
+          onClose={() => setShowProfileModal(false)}
+          userData={user}
+        />
       </div>
-    </Background>
+    </div>
   );
 }
 

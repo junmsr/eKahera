@@ -24,7 +24,7 @@ const Profile = () => {
       setLoading(true);
       setError("");
 
-      const token = localStorage.getItem("auth_token");
+      const token = sessionStorage.getItem("auth_token");
       console.log("Auth token:", token ? "Present" : "Missing");
 
       if (!token) {
@@ -256,7 +256,7 @@ const Profile = () => {
               <div className="flex items-start gap-4 flex-wrap">
                 <img
                   src={(function(){
-                    const businessId = profileData?.business?.business_id || profileData?.user?.businessId || JSON.parse(localStorage.getItem('user')||'{}')?.businessId;
+                    const businessId = profileData?.business?.business_id || profileData?.user?.businessId || JSON.parse(sessionStorage.getItem('user')||'{}')?.businessId;
                     const url = new URL(window.location.origin + '/enter-store');
                     if (businessId) url.searchParams.set('business_id', String(businessId));
                     const data = encodeURIComponent(url.toString());
@@ -268,7 +268,7 @@ const Profile = () => {
                 <div className="space-y-2">
                   <div className="text-sm text-gray-700 break-all">
                     {(function(){
-                      const businessId = profileData?.business?.business_id || profileData?.user?.businessId || JSON.parse(localStorage.getItem('user')||'{}')?.businessId;
+                      const businessId = profileData?.business?.business_id || profileData?.user?.businessId || JSON.parse(sessionStorage.getItem('user')||'{}')?.businessId;
                       const url = new URL(window.location.origin + '/enter-store');
                       if (businessId) url.searchParams.set('business_id', String(businessId));
                       return url.toString();
@@ -278,7 +278,7 @@ const Profile = () => {
                     label="Download PNG"
                     variant="primary"
                     onClick={() => {
-                      const businessId = profileData?.business?.business_id || profileData?.user?.businessId || JSON.parse(localStorage.getItem('user')||'{}')?.businessId;
+                      const businessId = profileData?.business?.business_id || profileData?.user?.businessId || JSON.parse(sessionStorage.getItem('user')||'{}')?.businessId;
                       const url = new URL(window.location.origin + '/enter-store');
                       if (businessId) url.searchParams.set('business_id', String(businessId));
                       const data = encodeURIComponent(url.toString());

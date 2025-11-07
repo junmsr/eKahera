@@ -7,16 +7,16 @@ function DashboardStatsCard({ stats, className = "", ...props }) {
       className={`bg-white/85 backdrop-blur-md border border-white/60 shadow-xl ${className}`}
       {...props}
     >
-      <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-gray-100/60 p-5 md:p-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-gray-100/60 p-5 md:p-6">
         <div className="flex items-center justify-between sm:justify-start gap-4 pr-0 sm:pr-6">
           <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center text-blue-700 font-bold">
             ₱
           </div>
           <div className="flex flex-col">
-            <span className="text-[12px] font-semibold text-gray-600 uppercase tracking-wide">
+            <span className="text-xs sm:text-[12px] font-semibold text-gray-600 uppercase tracking-wide">
               Today's Sales
             </span>
-            <span className="text-2xl md:text-3xl font-extrabold text-blue-700">
+            <span className="text-xl sm:text-2xl md:text-3xl font-extrabold text-blue-700">
               ₱{stats.sales.toLocaleString()}
             </span>
           </div>
@@ -26,10 +26,9 @@ function DashboardStatsCard({ stats, className = "", ...props }) {
             ↻
           </div>
           <div className="flex flex-col">
-            <span className="text-[12px] font-semibold text-gray-600 uppercase tracking-wide">
-              Transactions
+            <span className="text-xs sm:text-[12px] font-semibold text-gray-600 uppercase tracking-wide">
             </span>
-            <span className="text-2xl md:text-3xl font-extrabold text-blue-700">
+            <span className="text-xl sm:text-2xl md:text-3xl font-extrabold text-blue-700">
               {stats.transactions}
             </span>
           </div>
@@ -39,10 +38,10 @@ function DashboardStatsCard({ stats, className = "", ...props }) {
             ★
           </div>
           <div className="flex flex-col text-right">
-            <span className="text-[12px] font-semibold text-gray-600 uppercase tracking-wide">
+            <span className="text-xs sm:text-[12px] font-semibold text-gray-600 uppercase tracking-wide">
               Top Product
             </span>
-            <span className="text-xl md:text-2xl font-extrabold text-blue-700">
+            <span className="text-lg sm:text-xl md:text-2xl font-extrabold text-blue-700">
               {stats.topProduct}
             </span>
           </div>
