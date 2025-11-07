@@ -268,7 +268,7 @@ export default function Dashboard() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem("auth_token");
+      const token = sessionStorage.getItem("auth_token");
       const summary = await api("/api/stats/summary", {
         headers: authHeaders(token),
       });
@@ -551,7 +551,7 @@ export default function Dashboard() {
                 onClick={async () => {
                   try {
                     setSaving(true);
-                    const token = localStorage.getItem("auth_token");
+                    const token = sessionStorage.getItem("auth_token");
                     await api("/api/admin/update-credentials", {
                       method: "POST",
                       headers: {

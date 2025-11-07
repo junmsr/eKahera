@@ -7,9 +7,9 @@ import { api } from '../../lib/api';
 export default function ScanCustomerCartModal({ isOpen, onClose, onImport }) {
 	const [scannerPaused, setScannerPaused] = useState(false);
 	const [error, setError] = useState('');
-	const token = localStorage.getItem('auth_token');
+	const token = sessionStorage.getItem('auth_token');
 
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const user = JSON.parse(sessionStorage.getItem('user') || '{}');
 
 	const handleScan = async (result) => {
 		const code = result?.[0]?.rawValue;

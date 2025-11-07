@@ -23,7 +23,7 @@ const LogsPage = () => {
     const fetchLogs = async () => {
       try {
         setError("");
-        const token = localStorage.getItem("auth_token");
+        const token = sessionStorage.getItem("auth_token");
         const data = await api("/api/logs", {
           headers: { Authorization: `Bearer ${token}` },
         });

@@ -19,7 +19,7 @@ export default function DocumentVerification() {
 
   const fetchPendingVerifications = async () => {
     try {
-      const token = localStorage.getItem('auth_token');
+      const token = sessionStorage.getItem('auth_token');
       const data = await api('/documents/pending', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -33,7 +33,7 @@ export default function DocumentVerification() {
 
   const fetchStats = async () => {
     try {
-      const token = localStorage.getItem('auth_token');
+      const token = sessionStorage.getItem('auth_token');
       const data = await api('/documents/stats', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -51,7 +51,7 @@ export default function DocumentVerification() {
 
   const fetchBusinessDetails = async (businessId) => {
     try {
-      const token = localStorage.getItem('auth_token');
+      const token = sessionStorage.getItem('auth_token');
       const data = await api(`/documents/business/${businessId}/verification`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -69,7 +69,7 @@ export default function DocumentVerification() {
   const handleDocumentAction = async (documentId, action, notes = '') => {
     setActionLoading(true);
     try {
-      const token = localStorage.getItem('auth_token');
+      const token = sessionStorage.getItem('auth_token');
       await api(
         `/documents/document/${documentId}/verify`,
         {
@@ -91,7 +91,7 @@ export default function DocumentVerification() {
   const handleCompleteVerification = async (status, reason = '', notes = '') => {
     setActionLoading(true);
     try {
-      const token = localStorage.getItem('auth_token');
+      const token = sessionStorage.getItem('auth_token');
       await api(
         `/documents/business/${selectedBusiness.business_id}/complete`,
         {
@@ -119,7 +119,7 @@ export default function DocumentVerification() {
 
   const downloadDocument = async (documentId, fileName) => {
     try {
-      const token = localStorage.getItem('auth_token');
+      const token = sessionStorage.getItem('auth_token');
       const response = await api(
         `/documents/download/${documentId}`,
         {

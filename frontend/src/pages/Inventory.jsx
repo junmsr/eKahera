@@ -38,7 +38,7 @@ export default function InventoryPage() {
       try {
         setLoading(true);
         setApiError("");
-        const token = localStorage.getItem("auth_token");
+        const token = sessionStorage.getItem("auth_token");
         const data = await api("/api/inventory", {
           headers: authHeaders(token),
         });
@@ -264,7 +264,7 @@ export default function InventoryPage() {
     try {
       setLoading(true);
       setApiError("");
-      const token = localStorage.getItem("auth_token");
+      const token = sessionStorage.getItem("auth_token");
 
       if (editingProduct) {
         // Update existing product
@@ -338,7 +338,7 @@ export default function InventoryPage() {
     try {
       setLoading(true);
       setApiError("");
-      const token = localStorage.getItem("auth_token");
+      const token = sessionStorage.getItem("auth_token");
       await api("/api/products/add-stock-by-sku", {
         method: "POST",
         headers: authHeaders(token),
@@ -374,7 +374,7 @@ export default function InventoryPage() {
     try {
       setLoading(true);
       setApiError("");
-      const token = localStorage.getItem("auth_token");
+      const token = sessionStorage.getItem("auth_token");
       await api(`/api/inventory/${id}`, {
         method: "DELETE",
         headers: authHeaders(token),

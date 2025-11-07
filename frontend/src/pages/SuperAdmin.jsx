@@ -23,7 +23,7 @@ function SuperAdmin() {
   const [deletePassword, setDeletePassword] = useState('');
   const [deleteLoading, setDeleteLoading] = useState(false);
   const navigate = useNavigate();
-  const token = localStorage.getItem('auth_token');
+  const token = sessionStorage.getItem('auth_token');
 
   useEffect(() => {
     fetchStores();
@@ -150,10 +150,10 @@ function SuperAdmin() {
                   <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
               </button>
-              <button 
+              <button
                 onClick={() => {
-                  localStorage.removeItem('auth_token');
-                  localStorage.removeItem('user');
+                  sessionStorage.removeItem('auth_token');
+                  sessionStorage.removeItem('user');
                   navigate('/');
                 }}
                 className="p-3 rounded-full bg-white/60 shadow hover:bg-red-100 transition-colors"

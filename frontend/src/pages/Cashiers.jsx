@@ -28,7 +28,7 @@ function Cashiers() {
       try {
         setLoading(true);
         setApiError("");
-        const token = localStorage.getItem('auth_token');
+        const token = sessionStorage.getItem('auth_token');
         const list = await api('/api/business/cashiers', { headers: authHeaders(token) });
         const mapped = (list || []).map(r => ({
           name: r.username || '-',
@@ -58,7 +58,7 @@ function Cashiers() {
     try {
       setLoading(true);
       setApiError("");
-      const token = localStorage.getItem('auth_token');
+      const token = sessionStorage.getItem('auth_token');
       await api('/api/business/cashiers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders(token) },

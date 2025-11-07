@@ -34,8 +34,8 @@ function CashierPOS() {
   const [transactionNumber, setTransactionNumber] = useState('');
   const [transactionId, setTransactionId] = useState(null);
 
-  const token = localStorage.getItem('auth_token');
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const token = sessionStorage.getItem('auth_token');
+  const user = JSON.parse(sessionStorage.getItem('user') || '{}');
   const hasFinalizedRef = React.useRef(false);
 
   // Generate a provisional transaction number when this POS view opens
@@ -227,8 +227,8 @@ function CashierPOS() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('user');
+    sessionStorage.removeItem('auth_token');
+    sessionStorage.removeItem('user');
     window.location.href = '/';
   };
 

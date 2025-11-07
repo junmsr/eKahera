@@ -44,8 +44,8 @@ function POS() {
   const touchStartXRef = useRef(null);
   const touchActiveRef = useRef(false);
 
-  const token = localStorage.getItem("auth_token");
-  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const token = sessionStorage.getItem("auth_token");
+  const user = JSON.parse(sessionStorage.getItem("user") || "{}");
   const hasFinalizedRef = React.useRef(false);
 
   // Generate a client-side provisional transaction number when POS opens
