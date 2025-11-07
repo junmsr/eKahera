@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import ScannerCard from "../components/ui/POS/ScannerCard";
 import SkuFormCard from "../components/ui/POS/SkuFormCard";
-import TransactionCard from "../components/ui/POS/TransactionCard";
 import CartTableCard from "../components/ui/POS/CartTableCard";
 import Button from "../components/common/Button";
 import NavAdmin from "../components/layout/Nav-Admin";
@@ -94,10 +93,13 @@ function POS() {
             if (resp?.transaction_id) setTransactionId(resp.transaction_id);
             setCart([]);
             try {
-              const url = new URL(window.location.origin + '/receipt');
-              if (resp?.transaction_number) url.searchParams.set('tn', resp.transaction_number);
-              if (resp?.transaction_id) url.searchParams.set('tid', String(resp.transaction_id));
-              if (resp?.total != null) url.searchParams.set('total', String(resp.total));
+              const url = new URL(window.location.origin + "/receipt");
+              if (resp?.transaction_number)
+                url.searchParams.set("tn", resp.transaction_number);
+              if (resp?.transaction_id)
+                url.searchParams.set("tid", String(resp.transaction_id));
+              if (resp?.total != null)
+                url.searchParams.set("total", String(resp.total));
               window.location.href = url.toString();
             } catch (_) {}
           } catch (e) {
@@ -222,10 +224,13 @@ function POS() {
       if (resp?.transaction_id) setTransactionId(resp.transaction_id);
       setCart([]);
       try {
-        const url = new URL(window.location.origin + '/receipt');
-        if (resp?.transaction_number) url.searchParams.set('tn', resp.transaction_number);
-        if (resp?.transaction_id) url.searchParams.set('tid', String(resp.transaction_id));
-        if (resp?.total != null) url.searchParams.set('total', String(resp.total));
+        const url = new URL(window.location.origin + "/receipt");
+        if (resp?.transaction_number)
+          url.searchParams.set("tn", resp.transaction_number);
+        if (resp?.transaction_id)
+          url.searchParams.set("tid", String(resp.transaction_id));
+        if (resp?.total != null)
+          url.searchParams.set("total", String(resp.total));
         navigate(url.pathname + url.search);
       } catch (_) {}
       // Start a fresh provisional transaction number after successful checkout
@@ -385,6 +390,13 @@ function POS() {
     </div>
   );
 
+  const handleCopyTn = async () => {
+    try {
+      if (!transactionNumber) return;
+      await navigator.clipboard.writeText(transactionNumber);
+    } catch (_) {}
+  };
+
   return (
     <div className="bg-white min-h-screen">
       <div
@@ -443,110 +455,225 @@ function POS() {
         {/* Main Content */}
         <div className="flex-1 md:ml-48 ml-0 flex flex-col min-h-screen">
           {/* Header */}
-          <header className="flex items-center gap-4 px-6 py-3 bg-white/80 shadow-sm border-b border-blue-100 h-[56px] min-h-[56px] max-h-[56px]">
-            <span className="text-2xl font-bold text-blue-700 tracking-tight flex items-center gap-2">
-              <span className="bg-blue-600 text-white rounded-xl px-3 py-1 text-xl font-bold mr-2">
-                eK
+          <header className="flex items-center gap-4 px-4 sm:px-6 py-3 bg-white/90 backdrop-blur-md shadow-md border-b border-gray-200/50 h-[64px] min-h-[64px] max-h-[64px] sticky top-0 z-30">
+            <div className="flex items-center gap-3">
+              <span className="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight">
+                POS
               </span>
-              POS
-            </span>
+            </div>
+            <div className="flex-1 flex items-center justify-center px-2">
+              <button
+                onClick={handleCopyTn}
+                title="Copy transaction number"
+                className="inline-flex items-center gap-2 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg px-2.5 py-1.5 shadow-sm hover:bg-blue-100 transition-colors"
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2M8 16h8a2 2 0 002-2v-6m-10 8l-2 2m2-2l2 2"
+                  />
+                </svg>
+                <span className="font-mono text-xs sm:text-sm md:text-base font-bold tracking-wider truncate max-w-[50vw]">
+                  {transactionNumber}
+                </span>
+              </button>
+            </div>
 
             <div className="ml-auto">{headerActions}</div>
           </header>
 
           {/* Main Area */}
-          <main className="flex-1 bg-transparent overflow-hidden p-4">
-            <div className="grid gap-4 md:gap-8 h-full grid-cols-1 md:[grid-template-columns:1fr_2fr] md:[grid-template-rows:325px_325px_1fr_120px]">
-              {/* ScannerCard */}
-              <div className="row-span-1 col-span-1">
-                <ScannerCard
-                  onScan={async (result) => {
-                    const code = result?.[0]?.rawValue;
-                    if (!code) return;
-                    setScannerPaused(true);
-                    await addSkuToCart(code, 1);
-                  }}
-                  paused={scannerPaused}
-                  onResume={() => setScannerPaused(false)}
-                  textMain="text-blue-700"
-                />
+          <main
+            className="flex-1 bg-gradient-to-br from-gray-50/50 via-blue-50/30 to-indigo-50/50 overflow-hidden p-2 sm:p-3 md:p-4"
+            style={{ height: "calc(100vh - 64px)" }}
+          >
+            <div className="grid gap-2 sm:gap-3 md:gap-4 h-full grid-cols-1 lg:grid-cols-12">
+              {/* Left Column - Scanner, SKU Form, Transaction */}
+              <div className="lg:col-span-4 flex flex-col gap-2 sm:gap-3 md:gap-4">
+                {/* ScannerCard */}
+                <div className="flex-shrink-0">
+                  <ScannerCard
+                    onScan={async (result) => {
+                      const code = result?.[0]?.rawValue;
+                      if (!code) return;
+                      setScannerPaused(true);
+                      await addSkuToCart(code, 1);
+                    }}
+                    paused={scannerPaused}
+                    onResume={() => setScannerPaused(false)}
+                    textMain="text-blue-700"
+                  />
+                </div>
+
+                {/* SkuFormCard */}
+                <div className="flex-shrink-0">
+                  <SkuFormCard
+                    sku={sku}
+                    setSku={setSku}
+                    quantity={quantity}
+                    setQuantity={setQuantity}
+                    handleAddToCart={handleAddToCart}
+                  />
+                  {error && (
+                    <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm font-medium">
+                      {error}
+                    </div>
+                  )}
+                </div>
+
+                {/* TransactionCard */}
+                {/* Removed card display; transaction number now shown in header */}
+                {/* <div className="flex-shrink-0">
+                  <TransactionCard
+                    transactionNumber={transactionNumber}
+                    transactionId={transactionId}
+                  />
+                </div> */}
               </div>
 
-              {/* CartTableCard */}
-              <div className="md:row-span-3 md:col-start-2 md:row-start-1 flex flex-col h-full">
-                <CartTableCard
-                  cart={cart}
-                  handleRemove={handleRemove}
-                  total={total}
-                  className="flex-1"
-                />
+              {/* Right Column - Cart and Actions */}
+              <div className="lg:col-span-8 flex flex-col gap-2 sm:gap-3 min-h-0">
+                {/* CartTableCard */}
+                <div className="flex-1 min-h-0 max-h-[calc(100vh-280px)]">
+                  <CartTableCard
+                    cart={cart}
+                    handleRemove={handleRemove}
+                    total={total}
+                    className="flex-1 h-full"
+                  />
+                </div>
 
                 {/* Action Buttons */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-3 mt-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-2 sm:gap-3 flex-shrink-0">
                   <Button
                     label="CASH LEDGER"
-                    size="lg"
-                    className="w-full h-16 text-base font-bold"
+                    size="md"
+                    className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
                     variant="secondary"
                     microinteraction
                     onClick={() => setShowCashLedger(true)}
+                    icon={
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                    }
+                    iconPosition="left"
                   />
                   <Button
                     label="DISCOUNT"
-                    size="lg"
-                    className="w-full h-16 text-base font-bold"
+                    size="md"
+                    className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
                     onClick={() => setShowDiscount(true)}
                     variant="secondary"
                     microinteraction
-                  />
-                  {/* Big Checkout Button */}
-                  <Button
-                    label="CHECKOUT"
-                    size="lg"
-                    className="w-full h-35 text-lg font-bold row-span-2"
-                    variant="primary"
-                    microinteraction
-                    onClick={() => setShowCheckout(true)}
-                  />
-                  <Button
-                    label="IMPORT CUSTOMER CART"
-                    size="lg"
-                    className="w-full h-16 text-base font-bold"
-                    onClick={() => setShowImportCart(true)}
-                    variant="secondary"
-                    microinteraction
+                    icon={
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                    }
+                    iconPosition="left"
                   />
                   <Button
                     label="PRICE CHECK"
-                    size="lg"
-                    className="w-full h-16 text-base font-bold"
+                    size="md"
+                    className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
                     onClick={() => setShowPriceCheck(true)}
                     variant="secondary"
                     microinteraction
+                    icon={
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                    }
+                    iconPosition="left"
+                  />
+                  <Button
+                    label="IMPORT CART"
+                    size="md"
+                    className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
+                    onClick={() => setShowImportCart(true)}
+                    variant="secondary"
+                    microinteraction
+                    icon={
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+                        />
+                      </svg>
+                    }
+                    iconPosition="left"
+                  />
+                  <Button
+                    label="CHECKOUT"
+                    size="md"
+                    className="w-full h-12 sm:h-14 lg:h-16 text-sm sm:text-base font-bold col-span-2 lg:col-span-1"
+                    variant="primary"
+                    microinteraction
+                    onClick={() => setShowCheckout(true)}
+                    disabled={cart.length === 0}
+                    icon={
+                      <svg
+                        className="w-5 h-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                    }
+                    iconPosition="left"
                   />
                 </div>
-              </div>
-
-              {/* SkuFormCard */}
-              <div className="md:row-start-2 md:col-start-1 mb-0">
-                <SkuFormCard
-                  sku={sku}
-                  setSku={setSku}
-                  quantity={quantity}
-                  setQuantity={setQuantity}
-                  handleAddToCart={handleAddToCart}
-                />
-                {error && (
-                  <div className="text-red-600 text-sm mt-2">{error}</div>
-                )}
-              </div>
-
-              {/* TransactionCard */}
-              <div className="md:row-start-3 md:col-start-1 md:-mt-16">
-                <TransactionCard
-                  transactionNumber={transactionNumber}
-                  transactionId={transactionId}
-                />
               </div>
             </div>
           </main>
@@ -639,7 +766,7 @@ function POS() {
             onImport={(items) => {
               // Merge imported items into current cart
               setCart((prev) => {
-                const bySku = new Map(prev.map(i => [i.sku, i]));
+                const bySku = new Map(prev.map((i) => [i.sku, i]));
                 for (const it of items) {
                   const existing = bySku.get(it.sku);
                   if (existing) {
