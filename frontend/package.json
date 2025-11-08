@@ -1,11 +1,13 @@
 {
   "name": "frontend",
+  "homepage": "https://junmsr.github.io/eKahera",
   "private": true,
   "version": "0.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:gh": "vite build --outDir ../docs",
     "lint": "eslint .",
     "preview": "vite preview"
   },

@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import NavAdmin from "../components/layout/Nav-Admin";
 import PageLayout from "../components/layout/PageLayout";
-import LogsCard from "../components/ui/ContainerLogs/LogsCard";
 import Button from "../components/common/Button";
 import { api, authHeaders } from "../lib/api";
 
@@ -11,16 +10,17 @@ const LogsPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [clearing, setClearing] = useState(false);
+  const [roleFilter, setRoleFilter] = useState("all");
+  const [sortOrder, setSortOrder] = useState("desc");
 
   const fetchLogs = async () => {
     try {
       setLoading(true);
       setError("");
-      const token = localStorage.getItem("auth_token");
+      const token = sessionStorage.getItem("auth_token");
       const data = await api("/api/logs", {
         headers: authHeaders(token),
       });
-      // Normalize logs for UI
       const normalized = (data || []).map((l) => ({
         id: l.log_id,
         userId: l.user_id,
@@ -28,7 +28,7 @@ const LogsPage = () => {
         action: l.action || `Action by ${l.username || l.user_id}`,
         time: new Date(l.date_time).toLocaleString(),
         dateTime: l.date_time,
-        role: (l.role || "").toLowerCase(),
+        role: (l.role === 'business_owner' ? 'admin' : l.role || "").toLowerCase(),
       }));
       setLogs(normalized);
     } catch (err) {
@@ -42,67 +42,33 @@ const LogsPage = () => {
     fetchLogs();
   }, []);
 
-  const cashierLogs = useMemo(
-    () => logs.filter((l) => l.role === "cashier"),
-    [logs]
-  );
-  const adminLogs = useMemo(
-    () => logs.filter((l) => l.role === "admin" || l.role === "business_owner"),
-    [logs]
-  );
-  const userLogs = useMemo(() => {
-    return logs.filter((l) => {
-      const role = l.role || "";
-      return (
-        role !== "cashier" && role !== "admin" && role !== "business_owner"
+  const filteredLogs = useMemo(() => {
+    let filtered = logs;
+
+    if (roleFilter !== "all") {
+      filtered = filtered.filter((l) => l.role === roleFilter);
+    }
+
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter((l) =>
+        (l.action || "").toLowerCase().includes(query) ||
+        (l.username || "").toLowerCase().includes(query)
       );
+    }
+
+    filtered.sort((a, b) => {
+      const dateA = new Date(a.dateTime);
+      const dateB = new Date(b.dateTime);
+      return sortOrder === "asc" ? dateA - dateB : dateB - dateA;
     });
-  }, [logs]);
 
-  const filteredCashierLogs = useMemo(() => {
-    const query = (searchQuery || "").toLowerCase();
-    if (!query) return cashierLogs;
-    return cashierLogs.filter((l) =>
-      (l.action || "").toLowerCase().includes(query)
-    );
-  }, [cashierLogs, searchQuery]);
+    return filtered;
+  }, [logs, roleFilter, searchQuery, sortOrder]);
 
-  const filteredAdminLogs = useMemo(() => {
-    const query = (searchQuery || "").toLowerCase();
-    if (!query) return adminLogs;
-    return adminLogs.filter((l) =>
-      (l.action || "").toLowerCase().includes(query)
-    );
-  }, [adminLogs, searchQuery]);
-
-  const filteredUserLogs = useMemo(() => {
-    const query = (searchQuery || "").toLowerCase();
-    if (!query) return userLogs;
-    return userLogs.filter((l) =>
-      (l.action || "").toLowerCase().includes(query)
-    );
-  }, [userLogs, searchQuery]);
-
-  // Export logs to CSV
   const exportToCSV = () => {
     try {
-      // Get all logs (not filtered)
-      const allLogs = [
-        ...cashierLogs.map((l) => ({ ...l, category: "CASHIER" })),
-        ...adminLogs.map((l) => ({ ...l, category: "ADMIN" })),
-        ...userLogs.map((l) => ({ ...l, category: "USER" })),
-      ];
-
-      // Sort by date time (newest first)
-      allLogs.sort((a, b) => {
-        const dateA = new Date(a.dateTime || a.time);
-        const dateB = new Date(b.dateTime || b.time);
-        return dateB - dateA;
-      });
-
-      // Create CSV headers
       const headers = [
-        "Category",
         "User ID",
         "Username",
         "Role",
@@ -110,12 +76,10 @@ const LogsPage = () => {
         "Time",
       ];
 
-      // Create CSV rows
       const csvRows = [
         headers.join(","),
-        ...allLogs.map((log) => {
+        ...filteredLogs.map((log) => {
           const row = [
-            log.category || "",
             log.userId || log.id || "",
             `"${(log.username || "").replace(/"/g, '""')}"`,
             log.role || "",
@@ -126,10 +90,8 @@ const LogsPage = () => {
         }),
       ];
 
-      // Create CSV content
       const csvContent = csvRows.join("\n");
 
-      // Create blob and download
       const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
       const link = document.createElement("a");
       const url = URL.createObjectURL(blob);
@@ -148,7 +110,6 @@ const LogsPage = () => {
     }
   };
 
-  // Clear all logs
   const clearLogs = async () => {
     if (
       !window.confirm(
@@ -161,16 +122,14 @@ const LogsPage = () => {
     try {
       setClearing(true);
       setError("");
-      const token = localStorage.getItem("auth_token");
+      const token = sessionStorage.getItem("auth_token");
 
-      // Try to call delete endpoint, if it doesn't exist, we'll handle it gracefully
       try {
         await api("/api/logs", {
           method: "DELETE",
           headers: authHeaders(token),
         });
       } catch (deleteErr) {
-        // If endpoint doesn't exist, show a message
         if (
           deleteErr.message.includes("404") ||
           deleteErr.message.includes("Not Found")
@@ -183,7 +142,6 @@ const LogsPage = () => {
         throw deleteErr;
       }
 
-      // Refresh logs after clearing
       await fetchLogs();
     } catch (err) {
       setError(err.message || "Failed to clear logs");
@@ -199,10 +157,8 @@ const LogsPage = () => {
       sidebar={<NavAdmin />}
       className="h-screen overflow-hidden"
     >
-      <div className="flex-1 bg-transparent overflow-hidden p-4">
-        {/* Search and Action Buttons */}
+      <div className="flex-1 bg-transparent overflow-hidden p-4 flex flex-col">
         <div className="mb-6 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-          {/* Modern Search Bar */}
           <div className="relative flex-1 max-w-xl w-full">
             <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
               <svg
@@ -228,17 +184,25 @@ const LogsPage = () => {
             />
           </div>
 
-          {/* Action Buttons */}
           <div className="flex flex-wrap gap-3 w-full sm:w-auto">
+            <select
+              value={roleFilter}
+              onChange={(e) => setRoleFilter(e.target.value)}
+              className="w-full sm:w-auto pl-4 pr-10 py-3 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+            >
+              <option value="all">All Roles</option>
+              <option value="cashier">Cashier</option>
+              <option value="admin">Admin</option>
+              <option value="user">User</option>
+            </select>
             <Button
-              onClick={fetchLogs}
+              onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
               variant="secondary"
               size="md"
               className="flex items-center gap-2"
-              disabled={loading}
             >
               <svg
-                className={`w-5 h-5 ${loading ? "animate-spin" : ""}`}
+                className="w-5 h-5"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -247,17 +211,17 @@ const LogsPage = () => {
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeWidth={2}
-                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                  d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12"
                 />
               </svg>
-              {loading ? "Loading..." : "Refresh"}
+              Sort ({sortOrder === "asc" ? "Oldest" : "Newest"})
             </Button>
             <Button
               onClick={exportToCSV}
               variant="secondary"
               size="md"
               className="flex items-center gap-2"
-              disabled={logs.length === 0 || loading}
+              disabled={filteredLogs.length === 0 || loading}
             >
               <svg
                 className="w-5 h-5"
@@ -274,64 +238,48 @@ const LogsPage = () => {
               </svg>
               Export as CSV
             </Button>
-            <Button
-              onClick={clearLogs}
-              variant="danger"
-              size="md"
-              className="flex items-center gap-2"
-              disabled={logs.length === 0 || loading || clearing}
-            >
-              {clearing ? (
-                <>
-                  <svg
-                    className="animate-spin h-5 w-5"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    ></circle>
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    ></path>
-                  </svg>
-                  Clearing...
-                </>
-              ) : (
-                <>
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                    />
-                  </svg>
-                  Clear Logs
-                </>
-              )}
-            </Button>
           </div>
         </div>
 
-        {/* Logs Grid - 3 columns on large screens */}
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          <LogsCard title="CASHIER" logs={filteredCashierLogs} />
-          <LogsCard title="ADMIN" logs={filteredAdminLogs} />
-          <LogsCard title="USER" logs={filteredUserLogs} />
+        <div className="flex-1 overflow-y-auto">
+          <table className="min-w-full bg-white/80 backdrop-blur-md rounded-xl overflow-hidden">
+            <thead className="bg-gray-100/50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Timestamp</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200/50">
+              {loading ? (
+                <tr>
+                  <td colSpan="4" className="text-center py-8 text-gray-500">Loading logs...</td>
+                </tr>
+              ) : filteredLogs.length === 0 ? (
+                <tr>
+                  <td colSpan="4" className="text-center py-8 text-gray-500">No logs found.</td>
+                </tr>
+              ) : (
+                filteredLogs.map((log) => (
+                  <tr key={log.id}>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">{log.username}</div>
+                      <div className="text-sm text-gray-500">ID: {log.userId}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span
+                        className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${log.role === "admin" || log.role === "business_owner" ? "bg-purple-100 text-purple-800" : log.role === "cashier" ? "bg-blue-100 text-blue-800" : "bg-green-100 text-green-800"}`}>
+                        {log.role}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">{log.action}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{log.time}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
 
         {error && (

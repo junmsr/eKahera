@@ -1,17 +1,14 @@
 const pool = require('../config/database');
 
-async function logAction({ userId, businessId, action }) {
+const logAction = async ({ userId, businessId, action }) => {
   try {
-    if (!businessId || !userId || !action) return;
     await pool.query(
-      'INSERT INTO logs (user_id, business_id, action, date_time) VALUES ($1, $2, $3, NOW())',
-      [userId, businessId, action.toString()]
+      'INSERT INTO logs (user_id, business_id, action) VALUES ($1, $2, $3)',
+      [userId, businessId, action]
     );
-  } catch (_) {
-    // Best-effort logging; ignore failures
+  } catch (error) {
+    console.error('Failed to log action:', error);
   }
-}
+};
 
 module.exports = { logAction };
-
-

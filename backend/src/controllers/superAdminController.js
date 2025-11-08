@@ -407,3 +407,76 @@ exports.deleteStore = async (req, res) => {
     res.status(500).json({ error: 'Failed to delete store' });
   }
 };
+
+// Update SuperAdmin credentials
+exports.updateSuperAdmin = async (req, res) => {
+  try {
+    const { username, email, password } = req.body;
+    const { userId } = req.user;
+
+    // Validate input
+    if (!username && !email && !password) {
+      return res.status(400).json({ error: 'No fields to update' });
+    }
+
+    let hashedPassword;
+    if (password) {
+      hashedPassword = await bcrypt.hash(password, 12);
+    }
+
+    // Build update query
+    const updateFields = [];
+    const queryParams = [];
+    let paramIndex = 1;
+
+    if (username) {
+      updateFields.push(`username = $${paramIndex++}`);
+      queryParams.push(username);
+    }
+    if (email) {
+      updateFields.push(`email = $${paramIndex++}`);
+      queryParams.push(email);
+    }
+    if (hashedPassword) {
+      updateFields.push(`password_hash = $${paramIndex++}`);
+      queryParams.push(hashedPassword);
+    }
+
+    queryParams.push(userId);
+
+    const updateQuery = `
+      UPDATE users
+      SET ${updateFields.join(', ')}, updated_at = NOW()
+      WHERE user_id = $${paramIndex} AND role = 'superadmin'
+      RETURNING user_id, username, email, updated_at
+    `;
+
+    const result = await pool.query(updateQuery, queryParams);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'SuperAdmin not found' });
+    }
+
+    const updatedSuperAdmin = result.rows[0];
+
+    logAction({
+      userId: userId,
+      action: 'Updated SuperAdmin credentials'
+    });
+
+    console.log(`SuperAdmin ${req.user.email} updated their credentials`);
+
+    res.json({
+      message: 'SuperAdmin credentials updated successfully',
+      user: {
+        id: updatedSuperAdmin.user_id,
+        username: updatedSuperAdmin.username,
+        email: updatedSuperAdmin.email,
+        updatedAt: updatedSuperAdmin.updated_at
+      }
+    });
+  } catch (err) {
+    console.error('Update SuperAdmin error:', err);
+    res.status(500).json({ error: 'Failed to update SuperAdmin credentials' });
+  }
+};

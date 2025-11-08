@@ -27,6 +27,7 @@ exports.getLogs = async (req, res) => {
          u.role,
          l.business_id,
          l.action,
+         l.details,
          l.date_time
        FROM logs l
        LEFT JOIN users u ON u.user_id = l.user_id

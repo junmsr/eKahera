@@ -193,10 +193,10 @@ function HomeHero({ onCustomerClick, onStaffClick }) {
                   }}
                   whileTap={{ scale: 0.98 }}
                 >
-                  <span className="relative z-10">Explore as Customer</span>
+                  <span className="relative z-10">Shop Now!</span>
                 </motion.button>
                 <span className="text-xs sm:text-sm text-slate-500 mt-2.5 text-center sm:text-left font-medium">
-                  See the shopping flow
+                  Shop in your own convenience
                 </span>
               </div>
             </motion.div>

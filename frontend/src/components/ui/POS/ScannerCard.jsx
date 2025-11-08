@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Card from "../../common/Card";
 import Button from "../../common/Button";
 import { Scanner } from "@yudiel/react-qr-scanner";
@@ -19,6 +19,9 @@ function ScannerCard({
   const [hasPermission, setHasPermission] = useState(null);
   const [error, setError] = useState("");
   const [isInitializing, setIsInitializing] = useState(true);
+  const [torchEnabled, setTorchEnabled] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const audioContext = useRef(null);
   const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
@@ -85,6 +88,30 @@ function ScannerCard({
     checkPermissions();
   }, []);
 
+  // Detect mobile device
+  useEffect(() => {
+    setIsMobile(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
+  }, []);
+
+  // Initialize audio context for beep
+  useEffect(() => {
+    audioContext.current = new (window.AudioContext || window.webkitAudioContext)();
+  }, []);
+
+  // Play beep sound on successful scan
+  const playBeep = () => {
+    if (audioContext.current) {
+      const oscillator = audioContext.current.createOscillator();
+      const gainNode = audioContext.current.createGain();
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.current.destination);
+      oscillator.frequency.setValueAtTime(800, audioContext.current.currentTime);
+      gainNode.gain.setValueAtTime(0.3, audioContext.current.currentTime);
+      oscillator.start();
+      oscillator.stop(audioContext.current.currentTime + 0.1);
+    }
+  };
+
   // Single camera devices (laptops) don't need camera toggle
 
   const handleError = (err) => {
@@ -138,6 +165,12 @@ function ScannerCard({
     }
 
     setError(errorMessage);
+    // Auto-retry after 3 seconds
+    setTimeout(() => {
+      setError('');
+      setIsInitializing(true);
+      setTimeout(() => setIsInitializing(false), 1000);
+    }, 3000);
   };
   return (
     <Card
@@ -205,6 +238,7 @@ function ScannerCard({
                   const code = result[0]?.rawValue;
                   console.log("Detected code:", code);
                   if (code) {
+                    playBeep(); // Audio feedback
                     onScan(result);
                   }
                 }
@@ -264,14 +298,25 @@ function ScannerCard({
             />
           )}
           {!error && !isInitializing && paused && (
-            <Button
-              label="Resume"
-              size="sm"
-              variant="secondary"
-              className="absolute bottom-2 right-2 z-10"
-              onClick={onResume}
-              microinteraction
-            />
+            <div className="absolute bottom-2 right-2 z-10 flex gap-2">
+              <Button
+                label="Resume"
+                size="sm"
+                variant="secondary"
+                onClick={onResume}
+                microinteraction
+              />
+              {isMobile && (
+                <Button
+                  label={torchEnabled ? "🔦" : "💡"}
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => setTorchEnabled(!torchEnabled)}
+                  microinteraction
+                  title={torchEnabled ? "Turn off flashlight" : "Turn on flashlight"}
+                />
+              )}
+            </div>
           )}
         </div>
       </div>

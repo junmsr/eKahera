@@ -7,9 +7,9 @@ import { api } from "../lib/api";
 import Button from "../components/common/Button";
 
 // Icon Components
-const UserIcon = () => (
+const UserIcon = (props) => (
   <svg
-    className="w-5 h-5"
+    className={`w-5 h-5 ${props.className || ""}`}
     fill="none"
     stroke="currentColor"
     viewBox="0 0 24 24"
@@ -23,9 +23,9 @@ const UserIcon = () => (
   </svg>
 );
 
-const EmailIcon = () => (
+const EmailIcon = (props) => (
   <svg
-    className="w-5 h-5"
+    className={`w-5 h-5 ${props.className || ""}`}
     fill="none"
     stroke="currentColor"
     viewBox="0 0 24 24"
@@ -39,9 +39,9 @@ const EmailIcon = () => (
   </svg>
 );
 
-const PhoneIcon = () => (
+const PhoneIcon = (props) => (
   <svg
-    className="w-5 h-5"
+    className={`w-5 h-5 ${props.className || ""}`}
     fill="none"
     stroke="currentColor"
     viewBox="0 0 24 24"
@@ -55,9 +55,9 @@ const PhoneIcon = () => (
   </svg>
 );
 
-const CalendarIcon = () => (
+const CalendarIcon = (props) => (
   <svg
-    className="w-5 h-5"
+    className={`w-5 h-5 ${props.className || ""}`}
     fill="none"
     stroke="currentColor"
     viewBox="0 0 24 24"
@@ -71,9 +71,9 @@ const CalendarIcon = () => (
   </svg>
 );
 
-const StoreIcon = () => (
+const StoreIcon = (props) => (
   <svg
-    className="w-5 h-5"
+    className={`w-5 h-5 ${props.className || ""}`}
     fill="none"
     stroke="currentColor"
     viewBox="0 0 24 24"
@@ -87,9 +87,9 @@ const StoreIcon = () => (
   </svg>
 );
 
-const LocationIcon = () => (
+const LocationIcon = (props) => (
   <svg
-    className="w-5 h-5"
+    className={`w-5 h-5 ${props.className || ""}`}
     fill="none"
     stroke="currentColor"
     viewBox="0 0 24 24"
@@ -173,6 +173,50 @@ const DownloadIcon = () => (
   </svg>
 );
 
+// New QR Icon from the 'new-nigga-dave' branch
+const QRIcon = () => (
+  <svg
+    className="w-5 h-5"
+    fill="none"
+    stroke="currentColor"
+    viewBox="0 0 24 24"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h4a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"
+    />
+  </svg>
+);
+
+// ---
+
+// QR Code Logic Utility (Consolidated)
+const getQrCodeData = (profileData) => {
+  // 1. Get businessId, prioritizing profileData, then sessionStorage, then localStorage
+  const businessId =
+    profileData?.business?.business_id ||
+    profileData?.user?.businessId ||
+    JSON.parse(sessionStorage.getItem("user") || "{}")?.businessId ||
+    JSON.parse(localStorage.getItem("user") || "{}")?.businessId;
+
+  if (!businessId) return { url: "N/A", qrSrc: null, businessId: null };
+
+  const url = new URL(window.location.origin + "/enter-store");
+  url.searchParams.set("business_id", String(businessId));
+  const urlString = url.toString();
+  const data = encodeURIComponent(urlString);
+  
+  // Use a slightly larger size for better download quality, but display size remains 260x260
+  const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${data}&qzone=2&format=png&_=${Date.now()}`;
+  const downloadSrc = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${data}&qzone=2&format=png&_=${Date.now()}`;
+
+  return { url: urlString, qrSrc, downloadSrc, businessId };
+};
+
+// ---
+
 /**
  * Profile Page Component
  * Displays store and admin credentials information
@@ -191,11 +235,15 @@ const Profile = () => {
       setLoading(true);
       setError("");
 
-      const token = localStorage.getItem("auth_token");
+      const token = sessionStorage.getItem("auth_token");
       console.log("Auth token:", token ? "Present" : "Missing");
 
       if (!token) {
-        throw new Error("No authentication token found");
+        // Fallback to localStorage if sessionStorage is empty, but warn
+        const fallbackToken = localStorage.getItem("auth_token");
+        if (!fallbackToken) {
+          throw new Error("No authentication token found");
+        }
       }
 
       console.log("Fetching profile data from /api/auth/profile");
@@ -228,6 +276,21 @@ const Profile = () => {
       hour: "2-digit",
       minute: "2-digit",
     });
+  };
+
+  const handleDownloadQr = () => {
+    const { downloadSrc, businessId } = getQrCodeData(profileData);
+    if (!downloadSrc) {
+      alert("Business ID not found to generate QR code.");
+      return;
+    }
+
+    const a = document.createElement("a");
+    a.href = downloadSrc;
+    a.download = `store-${businessId || "qr"}.png`;
+    a.target = "_blank";
+    a.rel = "noopener";
+    a.click();
   };
 
   // Header actions with modern styling
@@ -525,23 +588,11 @@ const Profile = () => {
                   </div>
                 </div>
 
-                {/* Store Entry QR for Customers */}
+                {/* Store Entry QR for Customers (Adopted styling from new-nigga-dave) */}
                 <div className="mt-8 pt-8 border-t border-gray-200">
                   <div className="flex items-center gap-3 mb-4">
                     <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 text-white rounded-xl flex items-center justify-center">
-                      <svg
-                        className="w-5 h-5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h4a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"
-                        />
-                      </svg>
+                      <QRIcon />
                     </div>
                     <div>
                       <h3 className="text-lg font-bold text-gray-900">
@@ -557,23 +608,7 @@ const Profile = () => {
                       <div className="relative">
                         <div className="absolute inset-0 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-2xl blur-xl opacity-20"></div>
                         <img
-                          src={(function () {
-                            const businessId =
-                              profileData?.business?.business_id ||
-                              profileData?.user?.businessId ||
-                              JSON.parse(localStorage.getItem("user") || "{}")
-                                ?.businessId;
-                            const url = new URL(
-                              window.location.origin + "/enter-store"
-                            );
-                            if (businessId)
-                              url.searchParams.set(
-                                "business_id",
-                                String(businessId)
-                              );
-                            const data = encodeURIComponent(url.toString());
-                            return `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${data}&qzone=2&format=png&_=${Date.now()}`;
-                          })()}
+                          src={getQrCodeData(profileData).qrSrc}
                           alt="Store Entry QR"
                           className="relative w-[260px] h-[260px] border-4 border-white rounded-2xl bg-white shadow-xl"
                         />
@@ -584,22 +619,7 @@ const Profile = () => {
                             QR Code URL
                           </label>
                           <div className="bg-white px-4 py-3 rounded-xl border border-gray-200 break-all text-sm text-gray-700 font-mono">
-                            {(function () {
-                              const businessId =
-                                profileData?.business?.business_id ||
-                                profileData?.user?.businessId ||
-                                JSON.parse(localStorage.getItem("user") || "{}")
-                                  ?.businessId;
-                              const url = new URL(
-                                window.location.origin + "/enter-store"
-                              );
-                              if (businessId)
-                                url.searchParams.set(
-                                  "business_id",
-                                  String(businessId)
-                                );
-                              return url.toString();
-                            })()}
+                            {getQrCodeData(profileData).url}
                           </div>
                         </div>
                         <Button
@@ -607,29 +627,7 @@ const Profile = () => {
                           size="md"
                           icon={<DownloadIcon />}
                           iconPosition="left"
-                          onClick={() => {
-                            const businessId =
-                              profileData?.business?.business_id ||
-                              profileData?.user?.businessId ||
-                              JSON.parse(localStorage.getItem("user") || "{}")
-                                ?.businessId;
-                            const url = new URL(
-                              window.location.origin + "/enter-store"
-                            );
-                            if (businessId)
-                              url.searchParams.set(
-                                "business_id",
-                                String(businessId)
-                              );
-                            const data = encodeURIComponent(url.toString());
-                            const src = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${data}&qzone=2&format=png&_=${Date.now()}`;
-                            const a = document.createElement("a");
-                            a.href = src;
-                            a.download = `store-${businessId || "qr"}.png`;
-                            a.target = "_blank";
-                            a.rel = "noopener";
-                            a.click();
-                          }}
+                          onClick={handleDownloadQr}
                           className="w-full md:w-auto"
                         >
                           Download QR Code
@@ -900,8 +898,6 @@ const Profile = () => {
                   </div>
                 </Card>
               )}
-
-            {/* Actions moved to header */}
           </React.Fragment>
         )}
       </div>

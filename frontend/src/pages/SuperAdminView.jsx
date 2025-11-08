@@ -48,7 +48,8 @@ export default function SuperAdminView() {
       setLoading(true);
       setError("");
       try {
-        const token = localStorage.getItem("auth_token");
+        // Standardized to sessionStorage
+        const token = sessionStorage.getItem("auth_token"); 
         const res = await api(`/api/superadmin/stores/${id}`, {
           headers: token ? { Authorization: `Bearer ${token}` } : undefined,
         });
@@ -74,7 +75,8 @@ export default function SuperAdminView() {
     if (!store || actionLoading) return;
     setActionLoading(true);
     try {
-      const token = localStorage.getItem("auth_token");
+      // Standardized to sessionStorage
+      const token = sessionStorage.getItem("auth_token"); 
       await api(`/api/superadmin/stores/${id}/approve`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
@@ -100,7 +102,8 @@ export default function SuperAdminView() {
     if (!confirm("Are you sure you want to reject this application?")) return;
     setActionLoading(true);
     try {
-      const token = localStorage.getItem("auth_token");
+      // Standardized to sessionStorage
+      const token = sessionStorage.getItem("auth_token"); 
       await api(`/api/superadmin/stores/${id}/reject`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
@@ -125,7 +128,8 @@ export default function SuperAdminView() {
     if (!store || actionLoading) return;
     setActionLoading(true);
     try {
-      const token = localStorage.getItem("auth_token");
+      // Standardized to sessionStorage
+      const token = sessionStorage.getItem("auth_token"); 
       await api(`/api/superadmin/stores/${id}/request-resubmission`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },

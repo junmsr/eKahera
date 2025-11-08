@@ -70,7 +70,7 @@ exports.adjustStock = async (req, res) => {
     logAction({
       userId: req.user?.userId || null,
       businessId: req.user?.businessId || null,
-      action: `Adjust stock by ${delta} for product_id=${result.rows[0].product_id} (inventory_id=${result.rows[0].inventory_id})`
+      action: `Adjusted stock for product ${product_id} by ${delta}`,
     });
     res.json(result.rows[0]);
   } catch (err) {
@@ -99,11 +99,12 @@ exports.deleteProduct = async (req, res) => {
       return res.status(404).json({ error: 'Product not found' });
     }
     
+    const deletedProduct = result.rows[0];
     await client.query('COMMIT');
     logAction({
       userId: req.user?.userId || null,
       businessId: req.user?.businessId || null,
-      action: `Delete product_id=${product_id}`
+      action: `Deleted product: ${deletedProduct.product_name} (SKU: ${deletedProduct.sku})`,
     });
     res.json({ message: 'Product deleted successfully' });
   } catch (err) {
@@ -156,7 +157,15 @@ exports.updateProduct = async (req, res) => {
     }
     
     await client.query('COMMIT');
-    res.json(result.rows[0]);
+
+    const updatedProduct = result.rows[0];
+    logAction({
+      userId: req.user?.userId || null,
+      businessId: req.user?.businessId || null,
+      action: `Updated product: ${updatedProduct.product_name} (SKU: ${updatedProduct.sku})`,
+    });
+
+    res.json(updatedProduct);
   } catch (err) {
     await client.query('ROLLBACK');
     res.status(500).json({ error: err.message });

@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const fs = require('fs');
 const path = require('path');
 const { sendApplicationSubmittedNotification } = require('../utils/emailService');
+const { logAction } = require('../utils/logger');
 
 // Load config from config.env file
 const configPath = path.join(__dirname, '..', '..', 'config.env');
@@ -122,7 +123,15 @@ exports.createCashier = async (req, res) => {
   let client;
   try {
     const adminUserId = req.user.userId;
-    const adminBusinessId = req.user.businessId;
+    // Fetch the business_id directly from the database to ensure accuracy
+    const userQuery = await pool.query(
+      'SELECT business_id FROM users WHERE user_id = $1',
+      [adminUserId]
+    );
+    if (userQuery.rows.length === 0) {
+      return res.status(400).json({ error: 'User not found' });
+    }
+    const adminBusinessId = userQuery.rows[0].business_id;
     if (!adminBusinessId) {
       return res.status(400).json({ error: 'Admin is not associated with a business' });
     }
@@ -169,9 +178,16 @@ exports.createCashier = async (req, res) => {
 
     client.release();
 
+    const newCashier = ins.rows[0];
+    logAction({
+      userId: adminUserId,
+      businessId: adminBusinessId,
+      action: `Created cashier: ${newCashier.username}`,
+    });
+
     res.status(201).json({
       message: 'Cashier created',
-      cashier: ins.rows[0]
+      cashier: newCashier,
     });
   } catch (err) {
     if (client) {
@@ -189,7 +205,21 @@ exports.createCashier = async (req, res) => {
 // List cashiers under current admin's business
 exports.listCashiers = async (req, res) => {
   try {
-    const businessId = req.user.businessId;
+    // Fetch the business_id directly from the database to ensure accuracy
+    const userQuery = await pool.query(
+      'SELECT business_id FROM users WHERE user_id = $1',
+      [req.user.userId]
+    );
+
+    if (userQuery.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const businessId = userQuery.rows[0].business_id;
+    if (!businessId) {
+      return res.status(400).json({ error: 'User is not associated with a business' });
+    }
+
     const rows = await pool.query(
       `SELECT u.user_id, u.username, u.email, u.contact_number, u.created_at
        FROM users u
@@ -317,6 +347,12 @@ exports.registerBusiness = async (req, res) => {
 
     await client.query('COMMIT');
 
+    logAction({
+      userId: userId,
+      businessId: businessResult.rows[0].business_id,
+      action: `Registered business: ${businessResult.rows[0].business_name}`,
+    });
+
     res.status(201).json({
       message: 'Business account created successfully. Please upload required documents to complete verification.',
       user: {
@@ -351,27 +387,40 @@ exports.registerBusiness = async (req, res) => {
 // Get business profile
 exports.getBusinessProfile = async (req, res) => {
   try {
-    const userId = req.user.userId;
+    // Fetch the business_id directly from the database to ensure accuracy
+    const userQuery = await pool.query(
+      'SELECT business_id FROM users WHERE user_id = $1',
+      [req.user.userId]
+    );
+
+    if (userQuery.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const businessId = userQuery.rows[0].business_id;
+    if (!businessId) {
+      return res.status(400).json({ error: 'User is not associated with a business' });
+    }
 
     const result = await pool.query(`
-      SELECT 
-        b.business_id,
-        b.business_name,
-        b.business_type,
-        b.country,
-        b.business_address,
-        b.house_number,
-        b.mobile,
-        b.email,
-        b.created_at,
-        b.updated_at
-      FROM business b
-      WHERE b.user_id = $1
-    `, [userId]);
+      SELECT
+        business_id,
+        business_name,
+        business_type,
+        country,
+        business_address,
+        house_number,
+        mobile,
+        email,
+        created_at,
+        updated_at
+      FROM business
+      WHERE business_id = $1
+    `, [businessId]);
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ 
-        error: 'Business profile not found' 
+      return res.status(404).json({
+        error: 'Business profile not found'
       });
     }
 
@@ -381,8 +430,8 @@ exports.getBusinessProfile = async (req, res) => {
 
   } catch (error) {
     console.error('Get business profile error:', error);
-    res.status(500).json({ 
-      error: 'Failed to get business profile' 
+    res.status(500).json({
+      error: 'Failed to get business profile'
     });
   }
 };
@@ -399,11 +448,24 @@ exports.updateBusinessProfile = async (req, res) => {
   } = req.body;
 
   try {
-    const userId = req.user.userId;
+    // Fetch the business_id directly from the database to ensure accuracy
+    const userQuery = await pool.query(
+      'SELECT business_id FROM users WHERE user_id = $1',
+      [req.user.userId]
+    );
+
+    if (userQuery.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const businessId = userQuery.rows[0].business_id;
+    if (!businessId) {
+      return res.status(400).json({ error: 'User is not associated with a business' });
+    }
 
     const result = await pool.query(`
-      UPDATE business 
-      SET 
+      UPDATE business
+      SET
         business_name = COALESCE($1, business_name),
         business_type = COALESCE($2, business_type),
         country = COALESCE($3, country),
@@ -411,25 +473,32 @@ exports.updateBusinessProfile = async (req, res) => {
         house_number = COALESCE($5, house_number),
         mobile = COALESCE($6, mobile),
         updated_at = NOW()
-      WHERE user_id = $7
+      WHERE business_id = $7
       RETURNING *
-    `, [businessName, businessType, country, businessAddress, houseNumber, mobile, userId]);
+    `, [businessName, businessType, country, businessAddress, houseNumber, mobile, businessId]);
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ 
-        error: 'Business profile not found' 
+      return res.status(404).json({
+        error: 'Business profile not found'
       });
     }
 
+    const updatedBusiness = result.rows[0];
+    logAction({
+      userId: req.user.userId,
+      businessId: businessId,
+      action: `Updated business profile for: ${updatedBusiness.business_name}`,
+    });
+
     res.json({
       message: 'Business profile updated successfully',
-      business: result.rows[0]
+      business: updatedBusiness,
     });
 
   } catch (error) {
     console.error('Update business profile error:', error);
-    res.status(500).json({ 
-      error: 'Failed to update business profile' 
+    res.status(500).json({
+      error: 'Failed to update business profile'
     });
   }
 };
@@ -437,14 +506,23 @@ exports.updateBusinessProfile = async (req, res) => {
 // Check document upload status for a business
 exports.checkDocumentStatus = async (req, res) => {
   try {
-    const businessId = req.user.businessId;
-    
+    // Fetch the business_id directly from the database to ensure accuracy
+    const userQuery = await pool.query(
+      'SELECT business_id FROM users WHERE user_id = $1',
+      [req.user.userId]
+    );
+
+    if (userQuery.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const businessId = userQuery.rows[0].business_id;
     if (!businessId) {
       return res.status(400).json({ error: 'Business ID not found for user' });
     }
 
     const documentStatus = await hasRequiredDocuments(businessId);
-    
+
     res.json({
       businessId,
       documentsRequired: REQUIRED_DOCUMENT_TYPES,
@@ -453,8 +531,8 @@ exports.checkDocumentStatus = async (req, res) => {
 
   } catch (error) {
     console.error('Check document status error:', error);
-    res.status(500).json({ 
-      error: 'Failed to check document status' 
+    res.status(500).json({
+      error: 'Failed to check document status'
     });
   }
 };
@@ -462,17 +540,29 @@ exports.checkDocumentStatus = async (req, res) => {
 // Verify business can access system (has required documents)
 exports.verifyBusinessAccess = async (req, res) => {
   try {
-    const businessId = req.user.businessId;
-    
+    // Fetch the business_id directly from the database to ensure accuracy
+    const userQuery = await pool.query(
+      'SELECT business_id FROM users WHERE user_id = $1',
+      [req.user.userId]
+    );
+
+    if (userQuery.rows.length === 0) {
+      return res.status(404).json({
+        error: 'User not found',
+        canAccess: false
+      });
+    }
+
+    const businessId = userQuery.rows[0].business_id;
     if (!businessId) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: 'Business ID not found for user',
-        canAccess: false 
+        canAccess: false
       });
     }
 
     const documentStatus = await hasRequiredDocuments(businessId);
-    
+
     if (!documentStatus.hasAllRequired) {
       return res.status(403).json({
         error: 'Document verification required',
@@ -485,16 +575,16 @@ exports.verifyBusinessAccess = async (req, res) => {
 
     // Check if business is approved
     const businessQuery = `
-      SELECT verification_status 
-      FROM business 
+      SELECT verification_status
+      FROM business
       WHERE business_id = $1
     `;
     const businessResult = await pool.query(businessQuery, [businessId]);
-    
+
     if (businessResult.rows.length === 0) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         error: 'Business not found',
-        canAccess: false 
+        canAccess: false
       });
     }
 
@@ -521,9 +611,9 @@ exports.verifyBusinessAccess = async (req, res) => {
 
   } catch (error) {
     console.error('Verify business access error:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to verify business access',
-      canAccess: false 
+      canAccess: false
     });
   }
 };

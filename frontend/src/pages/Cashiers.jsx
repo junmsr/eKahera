@@ -30,16 +30,14 @@ function Cashiers() {
       try {
         setLoading(true);
         setApiError("");
-        const token = localStorage.getItem("auth_token");
-        const list = await api("/api/business/cashiers", {
-          headers: authHeaders(token),
-        });
-        const mapped = (list || []).map((r) => ({
-          name: r.username || "-",
-          id: r.user_id || "-",
-          number: r.contact_number || "-",
-          email: r.email || "-",
-          status: "ACTIVE",
+        const token = sessionStorage.getItem('auth_token');
+        const list = await api('/api/business/cashiers', { headers: authHeaders(token) });
+        const mapped = (list || []).map(r => ({
+          name: r.username || '-',
+          id: r.user_id || '-',
+          number: r.contact_number || '-',
+          email: r.email || '-',
+          status: 'ACTIVE',
         }));
         setCashiers(mapped);
       } catch (err) {
@@ -82,10 +80,10 @@ function Cashiers() {
     try {
       setLoading(true);
       setApiError("");
-      const token = localStorage.getItem("auth_token");
-      await api("/api/business/cashiers", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...authHeaders(token) },
+      const token = sessionStorage.getItem('auth_token');
+      await api('/api/business/cashiers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders(token) },
         body: JSON.stringify({
           username: (form.name || "").trim(),
           password: (form.password || "").trim(),

@@ -38,7 +38,13 @@ exports.register = async (req, res) => {
       'INSERT INTO users (name, email, password_hash, role, user_type_id, business_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING user_id, name, email, role, user_type_id, business_id',
       [name, email, hashedPassword, desiredRole, userTypeId, business_id || null]
     );
-    res.status(201).json({ user: result.rows[0] });
+    const newUser = result.rows[0];
+    logAction({
+      userId: newUser.user_id,
+      businessId: newUser.business_id,
+      action: `User registered: ${newUser.name} (${newUser.email})`,
+    });
+    res.status(201).json({ user: newUser });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

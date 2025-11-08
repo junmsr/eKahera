@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { api } from '../../lib/api';
 import Button from './Button';
 import Loader from './Loader';
 import TutorialGuide from './TutorialGuide';
+
+import { useAuth } from '../../hooks/useAuth';
 
 export default function VerificationStatus({ user, onProceed }) {
   const [verificationData, setVerificationData] = useState(null);
@@ -9,11 +12,13 @@ export default function VerificationStatus({ user, onProceed }) {
   const [error, setError] = useState(null);
   const [showTutorial, setShowTutorial] = useState(false);
   const [tutorialCompleted, setTutorialCompleted] = useState(false);
+  const { logout } = useAuth();
 
   useEffect(() => {
-    fetchVerificationStatus();
-    
-    // Check if tutorial was already completed
+    if (user) {
+      fetchVerificationStatus();
+    }
+
     const tutorialStatus = localStorage.getItem(`tutorial_completed_${user?.user_id}`);
     setTutorialCompleted(tutorialStatus === 'true');
   }, [user]);
@@ -21,24 +26,22 @@ export default function VerificationStatus({ user, onProceed }) {
   const fetchVerificationStatus = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(
-        `http://localhost:5000/api/documents/business/${user.businessId}`,
+      const data = await api(
+        `/documents/business/${user.businessId}`,
         {
           headers: {
             'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
           }
         }
       );
-
-      if (response.ok) {
-        const data = await response.json();
-        setVerificationData(data);
-      } else {
-        setError('Failed to fetch verification status');
-      }
+      setVerificationData(data);
+      console.log('Verification data:', data); // Added for debugging
     } catch (err) {
-      setError('Network error occurred');
+      if (err.message === 'jwt expired' || err.message === '{\"error\":\"Invalid token\"}') {
+        logout();
+      } else {
+        setError(err.message || 'Failed to fetch verification status');
+      }
     } finally {
       setLoading(false);
     }

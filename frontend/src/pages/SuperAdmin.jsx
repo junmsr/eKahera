@@ -7,6 +7,20 @@ import { api } from "../lib/api";
 import Modal from "../components/modals/Modal";
 import PasswordInput from "../components/common/PasswordInput";
 
+// Icon for Profile Button
+const ProfileIcon = () => (
+  <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+  </svg>
+);
+
+// Icon for Logout Button
+const LogoutIcon = () => (
+  <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+  </svg>
+);
+
 function SuperAdmin() {
   const [activeTab, setActiveTab] = useState("verification");
 
@@ -31,9 +45,10 @@ function SuperAdmin() {
   const [deletePassword, setDeletePassword] = useState("");
   const [deleteLoading, setDeleteLoading] = useState(false);
   const navigate = useNavigate();
-  const token = localStorage.getItem("auth_token");
+  // Standardizing token retrieval to sessionStorage (from 'main' branch)
+  const token = sessionStorage.getItem("auth_token");
 
-  // Profile modal state
+  // Profile modal state (from 'new-nigga-dave' branch)
   const [profileModal, setProfileModal] = useState({ isOpen: false });
   const [profileData, setProfileData] = useState(null);
   const [profileLoading, setProfileLoading] = useState(false);
@@ -48,10 +63,17 @@ function SuperAdmin() {
     contactNumber: "",
   });
 
-  // Get user information
+  // Get user information (Updated to use sessionStorage primarily)
   const user = (() => {
     try {
-      return JSON.parse(localStorage.getItem("user") || "{}");
+      // Prioritize sessionStorage, fallback to localStorage if needed
+      const sessionUser = sessionStorage.getItem("user");
+      if (sessionUser) return JSON.parse(sessionUser);
+      
+      const localUser = localStorage.getItem("user");
+      if (localUser) return JSON.parse(localUser);
+
+      return {};
     } catch {
       return {};
     }
@@ -61,6 +83,8 @@ function SuperAdmin() {
     fetchStores();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // --- Store Management Handlers ---
 
   const fetchStores = async () => {
     setLoading(true);
@@ -159,7 +183,8 @@ function SuperAdmin() {
     setDeletePassword("");
   };
 
-  // Profile modal handlers
+  // --- Profile Modal Handlers (from 'new-nigga-dave' branch) ---
+
   const openProfileModal = async () => {
     setProfileModal({ isOpen: true });
     setProfileError("");
@@ -257,8 +282,6 @@ function SuperAdmin() {
         updateData.newPassword = profileForm.newPassword;
       }
 
-      // Note: This endpoint needs to be created in the backend
-      // For now, we'll use a generic update endpoint pattern
       await api("/api/auth/profile", {
         method: "PUT",
         headers: {
@@ -268,13 +291,15 @@ function SuperAdmin() {
         body: JSON.stringify(updateData),
       });
 
-      // Update local storage if email or username changed
+      // Update local/session storage if email or username changed
       const updatedUser = {
         ...user,
         name: profileForm.username,
         email: profileForm.email,
       };
-      localStorage.setItem("user", JSON.stringify(updatedUser));
+      sessionStorage.setItem("user", JSON.stringify(updatedUser));
+      // Keeping localStorage update for the existing 'user' object just in case
+      localStorage.setItem("user", JSON.stringify(updatedUser)); 
 
       // Show success message
       alert("Profile updated successfully!");
@@ -309,78 +334,31 @@ function SuperAdmin() {
               </div>
             </div>
 
-            {/* Right Section: User Info and Actions */}
+            {/* Right Section: User Info and Actions (Merged and Simplified) */}
             <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-              {/* User Info */}
-              {user?.name || user?.email ? (
-                <div className="hidden lg:flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 bg-blue-50/80 rounded-lg border border-blue-100 min-w-0">
-                  <div className="flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-blue-600 text-white font-semibold text-xs sm:text-sm flex-shrink-0">
-                    {user?.name
-                      ? user.name.charAt(0).toUpperCase()
-                      : user?.email?.charAt(0).toUpperCase() || "A"}
-                  </div>
-                  <div className="flex flex-col min-w-0">
-                    <span className="text-xs sm:text-sm font-semibold text-gray-900 truncate max-w-[120px] sm:max-w-[150px]">
-                      {user?.name || "Super Admin"}
-                    </span>
-                    <span className="text-xs text-gray-600 truncate max-w-[120px] sm:max-w-[150px]">
-                      {user?.email || ""}
-                    </span>
-                  </div>
-                </div>
-              ) : null}
+              {/* Profile/Edit Button (Using openProfileModal) */}
+              <button
+                onClick={openProfileModal}
+                className="p-2.5 rounded-lg bg-white border border-blue-200 shadow-sm hover:bg-blue-50 hover:border-blue-300 transition-all duration-200 group"
+                title="Edit Profile"
+              >
+                <ProfileIcon />
+              </button>
 
-              {/* Action Buttons */}
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={openProfileModal}
-                  className="relative p-2.5 rounded-lg bg-white border border-blue-200 shadow-sm hover:bg-blue-50 hover:border-blue-300 transition-all duration-200 group"
-                  title="Edit Profile"
-                >
-                  <svg
-                    className="w-5 h-5 text-blue-600"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                    />
-                  </svg>
-                  <span className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-                    Edit Profile
-                  </span>
-                </button>
-                <button
-                  onClick={() => {
-                    localStorage.removeItem("auth_token");
-                    localStorage.removeItem("user");
-                    navigate("/");
-                  }}
-                  className="relative p-2.5 rounded-lg bg-white border border-red-200 shadow-sm hover:bg-red-50 hover:border-red-300 transition-all duration-200 group"
-                  title="Logout"
-                >
-                  <svg
-                    className="w-5 h-5 text-red-600"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-                    />
-                  </svg>
-                  <span className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-                    Logout
-                  </span>
-                </button>
-              </div>
+              {/* Logout Button (Using sessionStorage) */}
+              <button
+                onClick={() => {
+                  sessionStorage.removeItem("auth_token");
+                  sessionStorage.removeItem("user");
+                  localStorage.removeItem("auth_token"); // Remove local storage token just in case
+                  localStorage.removeItem("user"); // Remove local storage user object just in case
+                  navigate("/");
+                }}
+                className="p-2.5 rounded-lg bg-white border border-red-200 shadow-sm hover:bg-red-50 hover:border-red-300 transition-all duration-200 group"
+                title="Logout"
+              >
+                <LogoutIcon />
+              </button>
             </div>
           </header>
 

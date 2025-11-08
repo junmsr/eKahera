@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
 
 // Components
@@ -18,9 +18,8 @@ import Loader from "../components/common/Loader";
  * Handles user authentication with email and password
  */
 export default function Login() {
-  // Navigation and URL params
+  // Navigation
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
 
   // Form state
   const [form, setForm] = useState({
@@ -67,8 +66,8 @@ export default function Login() {
         method: "POST",
         body: JSON.stringify({ email: form.email, password: form.password }),
       });
-      localStorage.setItem('auth_token', token);
-      localStorage.setItem('user', JSON.stringify(user));
+      sessionStorage.setItem('auth_token', token);
+      sessionStorage.setItem('user', JSON.stringify(user));
       const role = (user?.role || '').toLowerCase();
       if (role === 'cashier') {
         navigate('/cashier-pos');
@@ -86,9 +85,6 @@ export default function Login() {
     }
   };
 
-  // Determine login type
-  const isAdminLogin = searchParams.get("role") === "admin";
-  const loginTitle = isAdminLogin ? "Admin Login" : "Cashier Login";
 
   return (
     <Background variant="gradientBlue" pattern="dots" overlay floatingElements>
@@ -143,7 +139,7 @@ export default function Login() {
                   size="lg"
                   className="text-center"
                 >
-                  {loginTitle}
+                  Log In
                 </SectionHeader>
                 <p className="text-gray-500 text-sm mt-2">
                   Enter your credentials to access your account
@@ -184,12 +180,12 @@ export default function Login() {
                 <div className="flex items-center justify-end mt-1">
                   <div className="text-sm text-gray-500">
                     Need an account?{" "}
-                    <a
-                      href="/get-started"
+                    <Link
+                      to="/get-started"
                       className="text-blue-600 hover:underline"
                     >
                       Get started
-                    </a>
+                    </Link>
                   </div>
                 </div>
 

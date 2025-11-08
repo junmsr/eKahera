@@ -113,7 +113,7 @@ exports.createProduct = async (req, res) => {
     logAction({
       userId: req.user?.userId || null,
       businessId: req.user?.businessId || null,
-      action: `Create product: ${product.product_name} (SKU: ${product.sku})`
+      action: `Created product: ${product.product_name} (SKU: ${product.sku})`,
     });
     res.status(201).json(product);
   } catch (err) {
@@ -136,12 +136,17 @@ exports.getProductBySku = async (req, res) => {
       `SELECT p.*, COALESCE(i.quantity_in_stock, 0) as stock_quantity
        FROM products p
        LEFT JOIN inventory i ON i.product_id = p.product_id AND i.business_id = p.business_id
-       WHERE ${where}
-       LIMIT 1`,
-      params
-    );
+       WHERE ${where}`,
     if (result.rows.length === 0) return res.status(404).json({ error: 'Not found' });
-    res.json(result.rows[0]);
+
+    const product = result.rows[0];
+    logAction({
+      userId: req.user?.userId || null,
+      businessId: req.user?.businessId || null,
+      action: `Scanned item: ${product.product_name} (SKU: ${product.sku})`,
+    });
+
+    res.json(product);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -234,7 +239,7 @@ exports.addStockBySku = async (req, res) => {
       logAction({
         userId: req.user?.userId || null,
         businessId: req.user?.businessId || null,
-        action: `Add stock for product_id=${productId} (inventory_id=${invRow.rows?.[0]?.inventory_id || 'n/a'})`
+        action: `Added ${qty} stock for product with SKU: ${parsedSku}`,
       });
     } catch (_) {}
     res.json({ message: 'Stock added', product_id: productId, quantity });
@@ -244,4 +249,253 @@ exports.addStockBySku = async (req, res) => {
   } finally {
     client.release();
   }
+};
+
+const { sendLowStockEmail } = require('../utils/emailService');
+
+async function _getLowStockProducts(businessId, threshold = 10) {
+  const result = await pool.query(
+    `SELECT p.product_id, p.product_name, i.quantity_in_stock
+     FROM products p
+     JOIN inventory i ON p.product_id = i.product_id
+     WHERE p.business_id = $1 AND i.quantity_in_stock <= $2
+     ORDER BY i.quantity_in_stock ASC`,
+    [businessId, threshold]
+  );
+  return result.rows;
+}
+
+exports.getLowStockProducts = async (req, res) => {
+  try {
+    const threshold = req.query.threshold || 10;
+    const businessId = req.user?.businessId || null;
+
+    if (!businessId) {
+      return res.status(400).json({ error: 'Business ID is required' });
+    }
+
+    const lowStockProducts = await _getLowStockProducts(businessId, threshold);
+    res.json(lowStockProducts);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.sendLowStockAlert = async (req, res) => {
+  try {
+    const businessId = req.user?.businessId || null;
+    if (!businessId) {
+      return res.status(400).json({ error: 'Business ID is required' });
+    }
+
+    const lowStockProducts = await _getLowStockProducts(businessId, 10);
+
+    if (lowStockProducts.length === 0) {
+      return res.json({ message: 'No low stock products to report.' });
+    }
+
+    const userResult = await pool.query('SELECT email FROM users WHERE user_id = $1', [req.user.userId]);
+    const userEmail = userResult.rows[0]?.email;
+
+    if (!userEmail) {
+      return res.status(404).json({ error: 'User email not found.' });
+    }
+
+    await sendLowStockEmail(userEmail, lowStockProducts);
+
+    res.json({ message: 'Low stock alert sent successfully.' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.updateProduct = async (req, res) => {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const { id } = req.params;
+    const body = req.body || {};
+    const businessId = req.user?.businessId || null;
+    const userId = req.user?.userId || null;
+
+    // Fetch the current product details for logging purposes
+    const currentProductResult = await client.query('SELECT product_name, sku, description, cost_price, selling_price, product_category_id FROM products WHERE product_id = $1 AND business_id = $2', [id, businessId]);
+    if (currentProductResult.rowCount === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Product not found or you do not have permission to update it.' });
+    }
+    const currentProduct = currentProductResult.rows[0];
+
+    const rawName = body.product_name ?? body.name ?? body.productName ?? body.ProductName;
+    const product_name = typeof rawName === 'string' ? rawName.trim() : currentProduct.product_name;
+
+    const cost_price = body.cost_price !== undefined ? Number(body.cost_price) : currentProduct.cost_price;
+    const selling_price = body.selling_price !== undefined ? Number(body.selling_price) : currentProduct.selling_price;
+    const sku = body.sku !== undefined ? (body.sku || `SKU-${Date.now()}`).toString() : currentProduct.sku;
+    const description = body.description !== undefined ? body.description : currentProduct.description;
+    let categoryId = body.product_category_id ?? currentProduct.product_category_id;
+
+    const rawCategoryName = body.category ?? body.category_name ?? body.product_category_name;
+    const categoryName = typeof rawCategoryName === 'string' ? rawCategoryName.trim() : '';
+    if (!categoryId && categoryName) {
+      const existing = await client.query('SELECT product_category_id FROM product_categories WHERE LOWER(product_category_name) = LOWER($1) LIMIT 1', [categoryName]);
+      if (existing.rowCount > 0) {
+        categoryId = existing.rows[0].product_category_id;
+      } else {
+        const insCat = await client.query('INSERT INTO product_categories (product_category_name) VALUES ($1) RETURNING product_category_id', [categoryName]);
+        categoryId = insCat.rows[0].product_category_id;
+      }
+    }
+
+    const updateFields = [];
+    const updateValues = [];
+    let paramCount = 1;
+
+    if (categoryId !== currentProduct.product_category_id) {
+      updateFields.push(`product_category_id = $${paramCount++}`);
+      updateValues.push(categoryId);
+    }
+    if (product_name !== currentProduct.product_name) {
+      updateFields.push(`product_name = $${paramCount++}`);
+      updateValues.push(product_name);
+    }
+    if (description !== currentProduct.description) {
+      updateFields.push(`description = $${paramCount++}`);
+      updateValues.push(description);
+    }
+    if (cost_price !== currentProduct.cost_price) {
+      updateFields.push(`cost_price = $${paramCount++}`);
+      updateValues.push(cost_price);
+    }
+    if (selling_price !== currentProduct.selling_price) {
+      updateFields.push(`selling_price = $${paramCount++}`);
+      updateValues.push(selling_price);
+    }
+    if (sku !== currentProduct.sku) {
+      updateFields.push(`sku = $${paramCount++}`);
+      updateValues.push(sku);
+    }
+
+    if (updateFields.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(200).json({ message: 'No changes detected for product', product: currentProduct }); // Return 200 if no changes
+    }
+
+    updateFields.push(`updated_at = NOW()`);
+
+    updateValues.push(id);
+    updateValues.push(businessId);
+
+    const query = `UPDATE products SET ${updateFields.join(', ')} WHERE product_id = $${paramCount} AND business_id = $${paramCount + 1} RETURNING *`;
+
+    const prodRes = await client.query(query, updateValues);
+
+    if (prodRes.rowCount === 0) {
+        await client.query('ROLLBACK');
+        return res.status(404).json({ error: 'Product not found or you do not have permission to update it.' });
+    }
+
+    const updatedProduct = prodRes.rows[0];
+
+    await client.query('COMMIT');
+
+    // Construct detailed log message
+    const changes = [];
+    if (product_name !== currentProduct.product_name) {
+      changes.push(`name from "${currentProduct.product_name}" to "${updatedProduct.product_name}"`);
+    }
+    if (description !== currentProduct.description) {
+      changes.push(`description from "${currentProduct.description}" to "${updatedProduct.description}"`);
+    }
+    if (cost_price !== currentProduct.cost_price) {
+      changes.push(`cost price from "${currentProduct.cost_price}" to "${updatedProduct.cost_price}"`);
+    }
+    if (selling_price !== currentProduct.selling_price) {
+      changes.push(`selling price from "${currentProduct.selling_price}" to "${updatedProduct.selling_price}"`);
+    }
+    if (sku !== currentProduct.sku) {
+      changes.push(`SKU from "${currentProduct.sku}" to "${updatedProduct.sku}"`);
+    }
+    if (categoryId !== currentProduct.product_category_id) {
+        // Need to fetch category names for better logging
+        const oldCategoryRes = await client.query('SELECT product_category_name FROM product_categories WHERE product_category_id = $1', [currentProduct.product_category_id]);
+        const newCategoryRes = await client.query('SELECT product_category_name FROM product_categories WHERE product_category_id = $1', [updatedProduct.product_category_id]);
+        const oldCategoryName = oldCategoryRes.rows[0]?.product_category_name || 'N/A';
+        const newCategoryName = newCategoryRes.rows[0]?.product_category_name || 'N/A';
+        changes.push(`category from "${oldCategoryName}" to "${newCategoryName}"`);
+    }
+
+    let logMessage = `Updated product: ${updatedProduct.product_name} (ID: ${updatedProduct.product_id})`;
+    if (changes.length > 0) {
+      logMessage += ` - Changed ${changes.join(', ')}`;
+    } else {
+      logMessage += ` - No significant changes detected (only metadata or unchanged values)`;
+    }
+
+    logAction({
+      userId: userId,
+      businessId: businessId,
+      action: logMessage,
+    });
+
+    res.status(200).json(updatedProduct);
+  } catch (err) {
+    try { await client.query('ROLLBACK'); } catch (_) {}
+    res.status(500).json({ error: err.message });
+  } finally {
+    client.release();
+  }
+};
+
+exports.deleteProduct = async (req, res) => {
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        const { id } = req.params;
+        const businessId = req.user?.businessId || null;
+        const userId = req.user?.userId || null;
+
+        // Fetch the product details before deleting for logging
+        const productResult = await client.query('SELECT product_name, sku FROM products WHERE product_id = $1 AND business_id = $2', [id, businessId]);
+
+        if (productResult.rowCount === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({ error: 'Product not found or you do not have permission to delete it.' });
+        }
+        const product = productResult.rows[0];
+
+        // Before deleting the product, we might need to handle related records in other tables,
+        // like 'inventory' or 'sales_items'. Assuming ON DELETE CASCADE is set up in the database
+        // or that we handle it here if not. For now, just deleting from products.
+        
+        // Also deleting from inventory
+        await client.query('DELETE FROM inventory WHERE product_id = $1 AND business_id = $2', [id, businessId]);
+
+        const deleteResult = await client.query('DELETE FROM products WHERE product_id = $1 AND business_id = $2', [id, businessId]);
+
+        if (deleteResult.rowCount === 0) {
+            // This case should ideally not be reached if the initial check passes, but as a safeguard:
+            await client.query('ROLLBACK');
+            return res.status(404).json({ error: 'Product not found during deletion, or you do not have permission.' });
+        }
+
+        await client.query('COMMIT');
+
+        logAction({
+            userId: userId,
+            businessId: businessId,
+            action: `Deleted product: ${product.product_name} (SKU: ${product.sku})`,
+        });
+
+        res.status(200).json({ message: 'Product deleted successfully' });
+    } catch (err) {
+        try { await client.query('ROLLBACK'); } catch (_) {}
+        // Check for foreign key violation error
+        if (err.code === '23503') {
+            return res.status(400).json({ error: 'Cannot delete product because it is referenced in other records (e.g., sales). Please handle these records first.' });
+        }
+        res.status(500).json({ error: err.message });
+    } finally {
+        client.release();
+    }
 };

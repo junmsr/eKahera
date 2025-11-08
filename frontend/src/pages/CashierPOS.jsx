@@ -8,32 +8,30 @@ import { api, createGcashCheckout } from "../lib/api";
 import PriceCheckModal from "../components/modals/PriceCheckModal";
 import DiscountModal from "../components/modals/DiscountModal";
 import CashLedgerModal from "../components/modals/CashLedgerModal";
-import ProductReplacementModal from "../components/modals/ProductReplacementModal";
 import CheckoutModal from "../components/modals/CheckoutModal";
 import CashPaymentModal from "../components/modals/CashPaymentModal";
 import ScanCustomerCartModal from "../components/modals/ScanCustomerCartModal";
 import ProfileModal from "../components/modals/ProfileModal";
-import { BiBell, BiSync, BiUser } from "react-icons/bi";
-import { MdClose } from "react-icons/md";
+import { BiBell, BiUser } from "react-icons/bi";
 
-function POS() {
+function CashierPOS() {
   const navigate = useNavigate();
 
   const [sku, setSku] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [cart, setCart] = useState([]);
-  const [showRefund, setShowRefund] = useState(false);
+  const [appliedDiscount, setAppliedDiscount] = useState(null);
   const [showDiscount, setShowDiscount] = useState(false);
   const [showPriceCheck, setShowPriceCheck] = useState(false);
   const [showImportCart, setShowImportCart] = useState(false);
   const [showCashLedger, setShowCashLedger] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
-  const [showCashModal, setShowCashModal] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState(null);
+  const [showCashModal, setShowCashModal] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
   const [scannerPaused, setScannerPaused] = useState(false);
   const [error, setError] = useState("");
-  const [transactionNumber, setTransactionNumber] = useState("");
+  const [transactionNumber, setTransactionNumber] = useState('');
   const [transactionId, setTransactionId] = useState(null);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
@@ -42,8 +40,8 @@ function POS() {
   const touchStartXRef = useRef(null);
   const touchActiveRef = useRef(false);
 
-  const token = localStorage.getItem("auth_token");
-  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const token = sessionStorage.getItem("auth_token");
+  const user = JSON.parse(sessionStorage.getItem("user") || "{}");
   const hasFinalizedRef = React.useRef(false);
 
   // Generate a client-side provisional transaction number when POS opens
@@ -59,8 +57,6 @@ function POS() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // On mount, if returned from PayMongo success/cancel, finalize or cleanup
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const status = params.get("payment");
@@ -92,14 +88,11 @@ function POS() {
             if (resp?.transaction_id) setTransactionId(resp.transaction_id);
             setCart([]);
             try {
-              const url = new URL(window.location.origin + "/receipt");
-              if (resp?.transaction_number)
-                url.searchParams.set("tn", resp.transaction_number);
-              if (resp?.transaction_id)
-                url.searchParams.set("tid", String(resp.transaction_id));
-              if (resp?.total != null)
-                url.searchParams.set("total", String(resp.total));
-              window.location.href = url.toString();
+              const url = new URL(window.location.origin + '/receipt');
+              if (resp?.transaction_number) url.searchParams.set('tn', resp.transaction_number);
+              if (resp?.transaction_id) url.searchParams.set('tid', String(resp.transaction_id));
+              if (resp?.total != null) url.searchParams.set('total', String(resp.total));
+              navigate(url.pathname + url.search);
             } catch (_) {}
           } catch (e) {
             setError(e.message || "Failed to record GCASH payment");
@@ -212,6 +205,11 @@ function POS() {
         })),
         payment_type: paymentType,
         money_received: moneyReceived,
+        ...(appliedDiscount && typeof appliedDiscount.value === 'string' && appliedDiscount.value.endsWith('%')
+          ? { discount_percentage: parseFloat(appliedDiscount.value) }
+          : appliedDiscount
+          ? { discount_amount: Number(appliedDiscount.value) }
+          : {}),
       };
       const resp = await api("/api/sales/checkout", {
         method: "POST",
@@ -223,13 +221,10 @@ function POS() {
       if (resp?.transaction_id) setTransactionId(resp.transaction_id);
       setCart([]);
       try {
-        const url = new URL(window.location.origin + "/receipt");
-        if (resp?.transaction_number)
-          url.searchParams.set("tn", resp.transaction_number);
-        if (resp?.transaction_id)
-          url.searchParams.set("tid", String(resp.transaction_id));
-        if (resp?.total != null)
-          url.searchParams.set("total", String(resp.total));
+        const url = new URL(window.location.origin + '/receipt');
+        if (resp?.transaction_number) url.searchParams.set('tn', resp.transaction_number);
+        if (resp?.transaction_id) url.searchParams.set('tid', String(resp.transaction_id));
+        if (resp?.total != null) url.searchParams.set('total', String(resp.total));
         navigate(url.pathname + url.search);
       } catch (_) {}
       // Start a fresh provisional transaction number after successful checkout
@@ -240,161 +235,42 @@ function POS() {
         .slice(0, 14);
       const randPart = Math.floor(1000 + Math.random() * 9000);
       setTransactionNumber(`T-${businessId}-${timePart}-${randPart}`);
-      // setAppliedDiscount(null); // if using discount
+      setAppliedDiscount(null);
     } catch (err) {
       setError(err.message || "Checkout failed");
     }
   };
 
-  // Sample notifications - replace with actual notifications data
-  const notifications = [
-    {
-      id: 1,
-      title: "Low Stock Alert",
-      message: "Item SKU#123 is running low on stock",
-      time: "2 mins ago",
-      isRead: false,
-    },
-    {
-      id: 2,
-      title: "New Transaction",
-      message: "Transaction #45678 completed successfully",
-      time: "5 mins ago",
-      isRead: false,
-    },
-    {
-      id: 3,
-      title: "System Update",
-      message: "POS System will update in 30 minutes",
-      time: "10 mins ago",
-      isRead: true,
-    },
-  ];
-
-  // Close dropdown when clicking outside notifications
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (
-        notificationRef.current &&
-        !notificationRef.current.contains(event.target)
-      ) {
-        setShowNotifications(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  const handleCopyTn = () => {
+    navigator.clipboard.writeText(transactionNumber);
+  };
 
   const headerActions = (
-    <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
+    <div className="flex items-center gap-2">
       <button
-        className="p-2 rounded-full hover:bg-gray-400 transition-colors"
-        onClick={() => {
-          /* Add sync logic here */
-        }}
-        title="Sync Data"
+        onClick={() => setShowNotifications(!showNotifications)}
+        className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+        title="Notifications"
       >
-        <BiSync className="w-6 h-6 text-gray-700" />
+        <BiBell className="w-5 h-5 text-gray-600" />
       </button>
-
-      {/* Notification Button with Dropdown */}
-      <div className="relative" ref={notificationRef}>
-        <button
-          className="p-2 rounded-full hover:bg-gray-400 transition-colors relative"
-          onClick={() => setShowNotifications(!showNotifications)}
-          title="Notifications"
-        >
-          <BiBell className="w-6 h-6 text-gray-700" />
-          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-            {notifications.filter((n) => !n.isRead).length}
-          </span>
-        </button>
-
-        {showNotifications && (
-          <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
-            <div className="p-4 border-b border-gray-200 flex justify-between items-center">
-              <h3 className="font-semibold text-gray-900">Notifications</h3>
-              <button
-                className="text-gray-500 hover:text-gray-700"
-                onClick={() => setShowNotifications(false)}
-              >
-                <MdClose className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="max-h-96 overflow-y-auto">
-              {notifications.length > 0 ? (
-                notifications.map((notification) => (
-                  <div
-                    key={notification.id}
-                    className={`p-4 border-b border-gray-100 hover:bg-gray-50 cursor-pointer ${
-                      !notification.isRead ? "bg-blue-50" : ""
-                    }`}
-                  >
-                    <div className="flex justify-between items-start">
-                      <h4 className="font-medium text-gray-900">
-                        {notification.title}
-                      </h4>
-                      <span className="text-xs text-gray-500">
-                        {notification.time}
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-600 mt-1">
-                      {notification.message}
-                    </p>
-                  </div>
-                ))
-              ) : (
-                <div className="p-4 text-center text-gray-500">
-                  No notifications
-                </div>
-              )}
-            </div>
-            {notifications.length > 0 && (
-              <div className="p-3 text-center border-t border-gray-200">
-                <button
-                  className="text-sm text-blue-600 hover:text-blue-800 font-medium"
-                  onClick={() => {
-                    /* Add clear all logic */
-                  }}
-                >
-                  Clear all notifications
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Cashier Profile Button */}
       <button
         onClick={() => setShowProfileModal(true)}
-        className="flex items-center gap-3 bg-white px-4 py-2 rounded-lg shadow-sm hover:bg-gray-50 transition-colors group"
+        className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+        title="Profile"
       >
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-gray-600">Cashier</span>
-          <span className="text-sm font-bold text-gray-900">#123</span>
-        </div>
-        <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center">
-          {user?.profileImage ? (
-            <img
-              src={user.profileImage}
-              alt="Profile"
-              className="h-full w-full rounded-full object-cover"
-            />
-          ) : (
-            <BiUser className="h-5 w-5 text-gray-600" />
-          )}
-        </div>
+        <BiUser className="w-5 h-5 text-gray-600" />
       </button>
     </div>
   );
 
-  const handleCopyTn = async () => {
-    try {
-      if (!transactionNumber) return;
-      await navigator.clipboard.writeText(transactionNumber);
-    } catch (_) {}
+  const handleLogout = () => {
+    sessionStorage.removeItem('auth_token');
+    sessionStorage.removeItem('user');
+    window.location.href = '/';
   };
+
+  const cardClass = 'bg-white border border-blue-100 rounded-2xl p-6 shadow-lg';
 
   return (
     <div className="bg-white min-h-screen">
@@ -488,153 +364,137 @@ function POS() {
               </div>
 
               {/* Action Buttons */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-2 sm:gap-3 flex-shrink-0">
-                <Button
-                  label="CASH LEDGER"
-                  size="md"
-                  className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
-                  variant="secondary"
-                  microinteraction
-                  onClick={() => setShowCashLedger(true)}
-                  icon={
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                  }
-                  iconPosition="left"
-                />
-                <Button
-                  label="DISCOUNT"
-                  size="md"
-                  className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
-                  onClick={() => setShowDiscount(true)}
-                  variant="secondary"
-                  microinteraction
-                  icon={
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                  }
-                  iconPosition="left"
-                />
-                <Button
-                  label="PRICE CHECK"
-                  size="md"
-                  className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
-                  onClick={() => setShowPriceCheck(true)}
-                  variant="secondary"
-                  microinteraction
-                  icon={
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                  }
-                  iconPosition="left"
-                />
-                <Button
-                  label="IMPORT CART"
-                  size="md"
-                  className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
-                  onClick={() => setShowImportCart(true)}
-                  variant="secondary"
-                  microinteraction
-                  icon={
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
-                      />
-                    </svg>
-                  }
-                  iconPosition="left"
-                />
-                <Button
-                  label="REFUND"
-                  size="md"
-                  className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
-                  onClick={() => setShowRefund(true)}
-                  variant="secondary"
-                  microinteraction
-                  icon={
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"
-                      />
-                    </svg>
-                  }
-                  iconPosition="left"
-                />
-                {/* Big Checkout Button */}
-                <Button
-                  label="CHECKOUT"
-                  size="md"
-                  className="w-full h-12 sm:h-14 lg:h-16 text-sm sm:text-base font-bold col-span-2 lg:col-span-1"
-                  variant="primary"
-                  microinteraction
-                  onClick={() => setShowCheckout(true)}
-                  disabled={cart.length === 0}
-                  icon={
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                  }
-                  iconPosition="left"
-                />
+              <div className="grid grid-cols-12 gap-2 sm:gap-3 flex-shrink-0">
+                {/* Grouped Buttons */}
+                <div className="col-span-8">
+                  <div className="grid grid-cols-2 sm:grid-cols-2 gap-2 sm:gap-3">
+                    <Button
+                      label="CASH LEDGER"
+                      size="md"
+                      className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
+                      variant="secondary"
+                      microinteraction
+                      onClick={() => setShowCashLedger(true)}
+                      icon={
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
+                        </svg>
+                      }
+                      iconPosition="left"
+                    />
+                    <Button
+                      label="DISCOUNT"
+                      size="md"
+                      className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
+                      onClick={() => setShowDiscount(true)}
+                      variant="secondary"
+                      microinteraction
+                      icon={
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
+                        </svg>
+                      }
+                      iconPosition="left"
+                    />
+                    <Button
+                      label="PRICE CHECK"
+                      size="md"
+                      className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
+                      onClick={() => setShowPriceCheck(true)}
+                      variant="secondary"
+                      microinteraction
+                      icon={
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
+                        </svg>
+                      }
+                      iconPosition="left"
+                    />
+                    <Button
+                      label="IMPORT CART"
+                      size="md"
+                      className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
+                      onClick={() => setShowImportCart(true)}
+                      variant="secondary"
+                      microinteraction
+                      icon={
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+                          />
+                        </svg>
+                      }
+                      iconPosition="left"
+                    />
+                  </div>
+                </div>
+
+                {/* Checkout Button */}
+                <div className="col-span-4">
+                  <Button
+                    label="CHECKOUT"
+                    size="md"
+                    className="w-full h-full text-sm sm:text-base font-bold"
+                    variant="primary"
+                    microinteraction
+                    onClick={() => setShowCheckout(true)}
+                    disabled={cart.length === 0}
+                    icon={
+                      <svg
+                        className="w-5 h-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                    }
+                    iconPosition="left"
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -650,22 +510,8 @@ function POS() {
             setShowDiscount(false);
           }}
         />
-        <PriceCheckModal
-          isOpen={showPriceCheck}
-          onClose={() => setShowPriceCheck(false)}
-        />
-        <CashLedgerModal
-          isOpen={showCashLedger}
-          onClose={() => setShowCashLedger(false)}
-        />
-        <ProductReplacementModal
-          isOpen={showRefund}
-          onClose={() => setShowRefund(false)}
-          onConfirm={(data) => {
-            // Handle refund logic here
-            setShowRefund(false);
-          }}
-        />
+        <PriceCheckModal isOpen={showPriceCheck} onClose={() => setShowPriceCheck(false)} />
+        <CashLedgerModal isOpen={showCashLedger} onClose={() => setShowCashLedger(false)} />
         <CheckoutModal
           isOpen={showCheckout}
           onClose={() => setShowCheckout(false)}
@@ -673,7 +519,6 @@ function POS() {
           onSelectPayment={(method) => {
             setSelectedPayment(method);
             setShowCheckout(false);
-
             if (method === "cash") {
               setShowCashModal(true);
             } else {
@@ -724,11 +569,6 @@ function POS() {
             setShowCashModal(false);
           }}
         />
-        <ProfileModal
-          isOpen={showProfileModal}
-          onClose={() => setShowProfileModal(false)}
-          userData={user}
-        />
         <ScanCustomerCartModal
           isOpen={showImportCart}
           onClose={() => setShowImportCart(false)}
@@ -744,9 +584,14 @@ function POS() {
             });
           }}
         />
+        <ProfileModal
+          isOpen={showProfileModal}
+          onClose={() => setShowProfileModal(false)}
+          userData={user}
+        />
       </div>
     </div>
   );
 }
 
-export default POS;
+export default CashierPOS;

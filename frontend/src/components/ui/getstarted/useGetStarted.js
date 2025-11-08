@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { api } from "../../../lib/api";
 
 export default function useGetStarted() {
   const steps = [
@@ -17,11 +18,10 @@ export default function useGetStarted() {
     useAdminEmail: false,
     businessType: "",
     customBusinessType: "",
-    country: "Philippines",
+    region: "",
     province: "",
     city: "",
     barangay: "",
-    businessAddress: "",
     houseNumber: "",
     mobile: "",
     password: "",
@@ -49,6 +49,9 @@ export default function useGetStarted() {
         [name]: checked,
         businessEmail: checked ? f.email : ""
       }));
+    } else if (name === 'region') {
+      // Reset province, city and barangay when region changes
+      setForm((f) => ({ ...f, region: value, province: "", city: "", barangay: "" }));
     } else if (name === 'province') {
       // Reset city and barangay when province changes
       setForm((f) => ({ ...f, province: value, city: "", barangay: "" }));
@@ -90,10 +93,10 @@ export default function useGetStarted() {
       if (!form.businessType) err.businessType = "Required";
       if (form.businessType === "Others" && !form.customBusinessType) 
         err.customBusinessType = "Please specify business type";
+      if (!form.region) err.region = "Required";
       if (!form.province) err.province = "Required";
       if (!form.city) err.city = "Required";
       if (!form.barangay) err.barangay = "Required";
-      if (!form.businessAddress) err.businessAddress = "Required";
     }
     if (step === 3) {
       if (!form.documents || form.documents.length === 0) {
@@ -113,19 +116,13 @@ export default function useGetStarted() {
     if (step === 0) {
       setLoading(true);
       try {
-        const response = await fetch("http://localhost:5000/api/otp/send", {
+        await api("/otp/send", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email: form.email }),
         });
-        if (response.ok) {
-          setStep((s) => s + 1);
-        } else {
-          const error = await response.json();
-          setErrors({ email: error.error || "Failed to send OTP" });
-        }
-      } catch {
-        setErrors({ email: "Network error. Please try again." });
+        setStep((s) => s + 1);
+      } catch (err) {
+        setErrors({ email: err.message || "Failed to send OTP" });
       } finally {
         setLoading(false);
       }
@@ -141,64 +138,46 @@ export default function useGetStarted() {
     setLoading(true);
     try {
       // First register the business
-      const businessResponse = await fetch(
-        "http://localhost:5000/api/business/register",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            email: form.email,
-            username: form.username,
-            businessName: form.businessName,
-            businessEmail: form.useAdminEmail ? form.email : form.businessEmail,
-            businessType: form.businessType === "Others" ? form.customBusinessType : form.businessType,
-            country: form.country,
-            province: form.province,
-            city: form.city,
-            barangay: form.barangay,
-            businessAddress: form.businessAddress,
-            houseNumber: form.houseNumber,
-            mobile: form.mobile,
-            password: form.password,
-          }),
-        }
-      );
+      const result = await api("/business/register", {
+        method: "POST",
+        body: JSON.stringify({
+          email: form.email,
+          username: form.username,
+          businessName: form.businessName,
+          businessEmail: form.useAdminEmail ? form.email : form.businessEmail,
+          businessType: form.businessType === "Others" ? form.customBusinessType : form.businessType,
+          region: form.region,
+          province: form.province,
+          city: form.city,
+          barangay: form.barangay,
+          houseNumber: form.houseNumber,
+          mobile: form.mobile,
+          password: form.password,
+        }),
+      });
       
-      if (businessResponse.ok) {
-        const result = await businessResponse.json();
-        const businessId = result.business.id;
-        
-        // Upload documents
-        const formData = new FormData();
-        formData.append('business_id', businessId);
-        formData.append('document_types', JSON.stringify(form.documentTypes));
-        
-        form.documents.forEach((file) => {
-          formData.append('documents', file);
-        });
+      const businessId = result.business.id;
+      
+      // Upload documents
+      const formData = new FormData();
+      formData.append('business_id', businessId);
+      formData.append('document_types', JSON.stringify(form.documentTypes));
+      
+      form.documents.forEach((file) => {
+        formData.append('documents', file);
+      });
 
-        const documentResponse = await fetch(
-          "http://localhost:5000/api/documents/upload",
-          {
-            method: "POST",
-            body: formData,
-          }
-        );
+      await api("/documents/upload", {
+        method: "POST",
+        body: formData,
+      });
 
-        if (documentResponse.ok) {
-          localStorage.setItem("token", result.token);
-          localStorage.setItem("user", JSON.stringify(result.user));
-          setSuccess(true);
-        } else {
-          const docError = await documentResponse.json();
-          setErrors({ general: docError.error || "Document upload failed" });
-        }
-      } else {
-        const error = await businessResponse.json();
-        setErrors({ general: error.error || "Registration failed" });
-      }
-    } catch {
-      setErrors({ general: "Network error. Please try again." });
+      localStorage.setItem("token", result.token);
+      localStorage.setItem("user", JSON.stringify(result.user));
+      setSuccess(true);
+
+    } catch (err) {
+      setErrors({ general: err.message || "An error occurred." });
     } finally {
       setLoading(false);
     }

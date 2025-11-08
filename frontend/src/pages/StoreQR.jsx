@@ -6,7 +6,7 @@ import Button from '../components/common/Button';
 
 export default function StoreQR() {
 	const user = useMemo(() => {
-		try { return JSON.parse(localStorage.getItem('user') || '{}'); } catch { return {}; }
+		try { return JSON.parse(sessionStorage.getItem('user') || '{}'); } catch { return {}; }
 	}, []);
 	const businessId = user?.businessId || user?.business_id;
 	const [nonce, setNonce] = useState(() => String(Date.now()));
