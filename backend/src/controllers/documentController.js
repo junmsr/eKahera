@@ -7,6 +7,7 @@ const path = require('path');
 const fs = require('fs');
 const pool = require('../config/database');
 const supabaseStorage = require('../utils/supabaseStorage');
+const { logAction } = require('../utils/logger');
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
@@ -80,6 +81,12 @@ exports.handleDocumentUpload = async (req, res) => {
 
     const businessData = businessResult.rows[0];
     const uploadedDocuments = [];
+
+    logAction({
+      userId: req.user?.userId,
+      businessId: business_id,
+      action: `Uploaded ${files.length} documents for business ${businessData.business_name}`,
+    });
 
     // Upload each document to Supabase Storage and save to database
     for (let i = 0; i < files.length; i++) {
@@ -249,6 +256,12 @@ exports.verifyDocument = async (req, res) => {
       return res.status(404).json({ error: 'Document not found' });
     }
 
+    logAction({
+      userId: req.user.userId,
+      businessId: updatedDocument.business_id,
+      action: `Verified document: ${updatedDocument.document_name} with status: ${status}`,
+    });
+
     res.json({
       message: 'Document verification updated successfully',
       document: updatedDocument
@@ -290,6 +303,12 @@ exports.completeBusinessVerification = async (req, res) => {
       const businessData = businessResult.rows[0];
       await sendVerificationStatusNotification(businessData, status, rejection_reason, resubmission_notes);
     }
+
+    logAction({
+      userId: req.user.userId,
+      businessId: business_id,
+      action: `Completed business verification for business ID ${business_id} with status: ${status}`,
+    });
 
     res.json({
       message: 'Business verification completed successfully',

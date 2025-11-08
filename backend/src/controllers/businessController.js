@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const fs = require('fs');
 const path = require('path');
 const { sendApplicationSubmittedNotification } = require('../utils/emailService');
+const { logAction } = require('../utils/logger');
 
 // Load config from config.env file
 const configPath = path.join(__dirname, '..', '..', 'config.env');
@@ -177,9 +178,16 @@ exports.createCashier = async (req, res) => {
 
     client.release();
 
+    const newCashier = ins.rows[0];
+    logAction({
+      userId: adminUserId,
+      businessId: adminBusinessId,
+      action: `Created cashier: ${newCashier.username}`,
+    });
+
     res.status(201).json({
       message: 'Cashier created',
-      cashier: ins.rows[0]
+      cashier: newCashier,
     });
   } catch (err) {
     if (client) {
@@ -339,6 +347,12 @@ exports.registerBusiness = async (req, res) => {
 
     await client.query('COMMIT');
 
+    logAction({
+      userId: userId,
+      businessId: businessResult.rows[0].business_id,
+      action: `Registered business: ${businessResult.rows[0].business_name}`,
+    });
+
     res.status(201).json({
       message: 'Business account created successfully. Please upload required documents to complete verification.',
       user: {
@@ -469,9 +483,16 @@ exports.updateBusinessProfile = async (req, res) => {
       });
     }
 
+    const updatedBusiness = result.rows[0];
+    logAction({
+      userId: req.user.userId,
+      businessId: businessId,
+      action: `Updated business profile for: ${updatedBusiness.business_name}`,
+    });
+
     res.json({
       message: 'Business profile updated successfully',
-      business: result.rows[0]
+      business: updatedBusiness,
     });
 
   } catch (error) {
