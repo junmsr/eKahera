@@ -137,6 +137,8 @@ exports.getProductBySku = async (req, res) => {
        FROM products p
        LEFT JOIN inventory i ON i.product_id = p.product_id AND i.business_id = p.business_id
        WHERE ${where}`,
+      params
+    );
     if (result.rows.length === 0) return res.status(404).json({ error: 'Not found' });
 
     const product = result.rows[0];
