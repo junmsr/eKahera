@@ -17,7 +17,6 @@ import { BiBell, BiUser } from "react-icons/bi";
 function CashierPOS() {
   const navigate = useNavigate();
 
-  // States
   const [sku, setSku] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [cart, setCart] = useState([]);

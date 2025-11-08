@@ -11,11 +11,11 @@ import ScannerCard from "../ui/POS/ScannerCard";
 function StockForm({ stockForm, onChange, onSubmit, loading, onClose }) {
   return (
     <form onSubmit={onSubmit} className="space-y-4">
-      {!(stockForm?.sku) && (
+      {!stockForm?.sku && (
         <FormField
           label="SKU Code"
           name="sku"
-          value={stockForm?.sku || ''}
+          value={stockForm?.sku || ""}
           onChange={onChange}
           placeholder="Enter SKU"
         />
@@ -24,7 +24,7 @@ function StockForm({ stockForm, onChange, onSubmit, loading, onClose }) {
         label="Quantity to Add"
         name="quantity"
         type="number"
-        value={stockForm?.quantity || ''}
+        value={stockForm?.quantity || ""}
         onChange={onChange}
         placeholder="Enter quantity"
         required
@@ -136,7 +136,9 @@ function ProductForm({
           <option value="Grocery">Grocery</option>
           <option value="Others">Others</option>
           {categories.map((c) => (
-            <option key={c.id} value={c.name}>{c.name}</option>
+            <option key={c.id} value={c.name}>
+              {c.name}
+            </option>
           ))}
         </select>
         {productForm.category === "Others" && (
@@ -213,8 +215,8 @@ function Modal({
   onClose,
   title,
   children,
-  size = 'md',
-  variant = 'glass',
+  size = "md",
+  variant = "glass",
   // Product Modal Props
   editingProduct,
   productForm,
@@ -255,45 +257,78 @@ function Modal({
   }
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center z-50">
-      {/* Blurred background */}
-      <div className="absolute inset-0 backdrop-blur-sm pointer-events-none"></div>
+    <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
+        onClick={onClose}
+        aria-hidden="true"
+      ></div>
       {/* Modal content */}
       <div
-        className={`relative bg-white rounded-2xl shadow-lg p-8 min-w-[340px] z-10 max-h-[90vh] overflow-y-auto`}
+        className={`relative bg-white rounded-2xl shadow-2xl min-w-[340px] max-w-full z-10 max-h-[90vh] overflow-hidden flex flex-col ${
+          size === "sm"
+            ? "w-full max-w-md"
+            : size === "lg"
+            ? "w-full max-w-4xl"
+            : "w-full max-w-xl"
+        }`}
       >
         {/* Exit button */}
         <button
-          className="absolute top-4 right-4 text-2xl text-gray-400 hover:text-blue-600 focus:outline-none"
+          className="absolute top-4 right-4 z-20 w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200"
           onClick={onClose}
           aria-label="Close"
           type="button"
         >
-          ×
+          <svg
+            className="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M6 18L18 6M6 6l12 12"
+            />
+          </svg>
         </button>
 
-        {title && <h2 className="text-xl font-bold mb-6 text-blue-700">{title}</h2>}
-        {variant === 'product' ? (
-          <ProductForm
-            editingProduct={editingProduct}
-            productForm={productForm}
-            onChange={onChange}
-            categories={categories || []}
-            onSubmit={onSubmit}
-            loading={loading}
-            onClose={onClose}
-          />
-        ) : variant === 'stock' ? (
-          <StockForm
-            stockForm={stockForm}
-            onChange={onChange}
-            onSubmit={onSubmit}
-            loading={loading}
-            onClose={onClose}
-          />
-        ) : (
-          children
-        )}
+        {/* Scrollable content */}
+        <div className="overflow-y-auto">
+          {title && (
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h2 className="text-xl font-bold text-gray-900">{title}</h2>
+            </div>
+          )}
+          {variant === "product" ? (
+            <div className="p-6">
+              <ProductForm
+                editingProduct={editingProduct}
+                productForm={productForm}
+                onChange={onChange}
+                categories={categories || []}
+                onSubmit={onSubmit}
+                loading={loading}
+                onClose={onClose}
+              />
+            </div>
+          ) : variant === "stock" ? (
+            <div className="p-6">
+              <StockForm
+                stockForm={stockForm}
+                onChange={onChange}
+                onSubmit={onSubmit}
+                loading={loading}
+                onClose={onClose}
+              />
+            </div>
+          ) : (
+            children
+          )}
+        </div>
       </div>
     </div>
   );

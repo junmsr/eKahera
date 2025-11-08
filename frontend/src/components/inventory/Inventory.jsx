@@ -596,19 +596,8 @@ function Inventory({
     <div
       className={`w-full max-w-full overflow-x-hidden py-4 sm:py-6 px-2 sm:px-3 md:px-4 lg:px-6 ${className}`}
     >
-      {/* Stats Cards */}
-      <InventoryStats stats={stats} />
-
       {/* Header with Actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4 sm:mb-6 w-full">
-        <div className="min-w-0 flex-1">
-          <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 tracking-tight break-words">
-            Product Inventory
-          </h2>
-          <p className="text-xs sm:text-sm text-gray-600 mt-1">
-            Manage your products, stock levels, and pricing
-          </p>
-        </div>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 sm:gap-4 mb-4 sm:mb-6 w-full">
         <Button
           onClick={onAddProduct}
           size="lg"
