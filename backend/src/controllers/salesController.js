@@ -84,7 +84,7 @@ exports.checkout = async (req, res) => {
     logAction({
       userId: req.user?.userId || null,
       businessId: req.user?.businessId || null,
-      action: `Successful checkout for transaction_id=${transaction_id} with a total of ${total}`
+      action: `Checkout for transaction ${transaction_id} with a total of ${total} via ${payment_type}`,
     });
     res.status(201).json({ transaction_id, transaction_number, total });
   } catch (err) {
@@ -172,7 +172,7 @@ exports.publicCheckout = async (req, res) => {
       logAction({
         userId: customer_user_id || null,
         businessId: business_id,
-        action: `Successful public checkout for transaction_id=${transaction_id} with a total of ${total}`
+        action: `Public checkout for transaction ${transaction_id} with a total of ${total} via ${payment_type}`,
       });
     } catch (_) {}
     res.status(201).json({ transaction_id, transaction_number, total });

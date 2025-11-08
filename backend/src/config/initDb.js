@@ -46,6 +46,25 @@ async function initializeDatabase() {
     `);
 
 
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS logs (
+        log_id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(user_id),
+        business_id INTEGER,
+        action VARCHAR(255) NOT NULL,
+        details JSONB,
+        date_time TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+    `);
+
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_logs_user_id ON logs(user_id);
+    `);
+
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_logs_business_id ON logs(business_id);
+    `);
+
     await client.query('COMMIT');
     
     // Create initial superadmin if environment variables are set
