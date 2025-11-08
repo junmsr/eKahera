@@ -53,7 +53,7 @@ const app = express();
 const { paymongoWebhook } = require('./controllers/paymentsController');
 app.post('/api/payments/paymongo/webhook', express.raw({ type: '*/*' }), paymongoWebhook);
 
-app.use(cors({ origin: ['https://ekahera.netlify.app', 'http://localhost:5173'], credentials: true }));
+app.use(cors({ origin: ['https://ekahera.netlify.app', 'http://localhost:5173', process.env.FRONTEND_URL], credentials: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
