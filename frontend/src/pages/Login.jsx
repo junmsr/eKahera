@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
 
 // Components
@@ -180,12 +180,12 @@ export default function Login() {
                 <div className="flex items-center justify-end mt-1">
                   <div className="text-sm text-gray-500">
                     Need an account?{" "}
-                    <a
-                      href="/get-started"
+                    <Link
+                      to="/get-started"
                       className="text-blue-600 hover:underline"
                     >
                       Get started
-                    </a>
+                    </Link>
                   </div>
                 </div>
 
