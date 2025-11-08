@@ -1,7 +1,7 @@
-/*  */import React, { useState, useEffect } from 'react';
-import Button from '../../common/Button';
-import Card from '../../common/Card';
-import Loader from '../../common/Loader';
+/*  */ import React, { useState, useEffect } from "react";
+import Button from "../../common/Button";
+import Card from "../../common/Card";
+import Loader from "../../common/Loader";
 
 export default function DocumentVerification() {
   const [pendingVerifications, setPendingVerifications] = useState([]);
@@ -18,20 +18,23 @@ export default function DocumentVerification() {
 
   const fetchPendingVerifications = async () => {
     try {
-      const token = localStorage.getItem('auth_token');
-      const response = await fetch('http://localhost:5000/api/documents/pending', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+      const token = localStorage.getItem("auth_token");
+      const response = await fetch(
+        "http://localhost:5000/api/documents/pending",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
         }
-      });
+      );
 
       if (response.ok) {
         const data = await response.json();
         setPendingVerifications(data);
       }
     } catch (error) {
-      console.error('Error fetching pending verifications:', error);
+      console.error("Error fetching pending verifications:", error);
     } finally {
       setLoading(false);
     }
@@ -39,13 +42,16 @@ export default function DocumentVerification() {
 
   const fetchStats = async () => {
     try {
-      const token = localStorage.getItem('auth_token');
-      const response = await fetch('http://localhost:5000/api/documents/stats', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+      const token = localStorage.getItem("auth_token");
+      const response = await fetch(
+        "http://localhost:5000/api/documents/stats",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
         }
-      });
+      );
 
       if (response.ok) {
         const data = await response.json();
@@ -54,25 +60,25 @@ export default function DocumentVerification() {
           pending: data.pending || 0,
           approved: data.approved || 0,
           rejected: data.rejected || 0,
-          repass: data.repass || 0
+          repass: data.repass || 0,
         };
         setStats(filteredStats);
       }
     } catch (error) {
-      console.error('Error fetching stats:', error);
+      console.error("Error fetching stats:", error);
     }
   };
 
   const fetchBusinessDetails = async (businessId) => {
     try {
-      const token = localStorage.getItem('auth_token');
+      const token = localStorage.getItem("auth_token");
       const response = await fetch(
         `http://localhost:5000/api/documents/business/${businessId}/verification`,
         {
           headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
         }
       );
 
@@ -81,7 +87,7 @@ export default function DocumentVerification() {
         setBusinessDetails(data);
       }
     } catch (error) {
-      console.error('Error fetching business details:', error);
+      console.error("Error fetching business details:", error);
     }
   };
 
@@ -90,22 +96,22 @@ export default function DocumentVerification() {
     fetchBusinessDetails(business.business_id);
   };
 
-  const handleDocumentAction = async (documentId, action, notes = '') => {
+  const handleDocumentAction = async (documentId, action, notes = "") => {
     setActionLoading(true);
     try {
-      const token = localStorage.getItem('auth_token');
+      const token = localStorage.getItem("auth_token");
       const response = await fetch(
         `http://localhost:5000/api/documents/document/${documentId}/verify`,
         {
-          method: 'PUT',
+          method: "PUT",
           headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
           },
           body: JSON.stringify({
             status: action,
-            notes: notes
-          })
+            notes: notes,
+          }),
         }
       );
 
@@ -114,33 +120,37 @@ export default function DocumentVerification() {
         fetchBusinessDetails(selectedBusiness.business_id);
         alert(`Document ${action} successfully`);
       } else {
-        alert('Failed to update document status');
+        alert("Failed to update document status");
       }
     } catch (error) {
-      console.error('Error updating document:', error);
-      alert('Error updating document status');
+      console.error("Error updating document:", error);
+      alert("Error updating document status");
     } finally {
       setActionLoading(false);
     }
   };
 
-  const handleCompleteVerification = async (status, reason = '', notes = '') => {
+  const handleCompleteVerification = async (
+    status,
+    reason = "",
+    notes = ""
+  ) => {
     setActionLoading(true);
     try {
-      const token = localStorage.getItem('auth_token');
+      const token = localStorage.getItem("auth_token");
       const response = await fetch(
         `http://localhost:5000/api/documents/business/${selectedBusiness.business_id}/complete`,
         {
-          method: 'PUT',
+          method: "PUT",
           headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
           },
           body: JSON.stringify({
             status: status,
             rejection_reason: reason,
-            resubmission_notes: notes
-          })
+            resubmission_notes: notes,
+          }),
         }
       );
 
@@ -151,11 +161,11 @@ export default function DocumentVerification() {
         fetchPendingVerifications();
         fetchStats();
       } else {
-        alert('Failed to complete verification');
+        alert("Failed to complete verification");
       }
     } catch (error) {
-      console.error('Error completing verification:', error);
-      alert('Error completing verification');
+      console.error("Error completing verification:", error);
+      alert("Error completing verification");
     } finally {
       setActionLoading(false);
     }
@@ -163,32 +173,32 @@ export default function DocumentVerification() {
 
   const downloadDocument = async (documentId, fileName) => {
     try {
-      const token = localStorage.getItem('auth_token');
+      const token = localStorage.getItem("auth_token");
       const response = await fetch(
         `http://localhost:5000/api/documents/download/${documentId}`,
         {
           headers: {
-            'Authorization': `Bearer ${token}`
-          }
+            Authorization: `Bearer ${token}`,
+          },
         }
       );
 
       if (response.ok) {
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.style.display = 'none';
+        const a = document.createElement("a");
+        a.style.display = "none";
         a.href = url;
         a.download = fileName;
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
       } else {
-        alert('Failed to download document');
+        alert("Failed to download document");
       }
     } catch (error) {
-      console.error('Error downloading document:', error);
-      alert('Error downloading document');
+      console.error("Error downloading document:", error);
+      alert("Error downloading document");
     }
   };
 
@@ -206,31 +216,44 @@ export default function DocumentVerification() {
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <Card className="p-4">
           <div className="text-center">
-            <div className="text-2xl font-bold text-blue-600">{(stats.pending || 0) + (stats.approved || 0) + (stats.rejected || 0) + (stats.repass || 0)}</div>
+            <div className="text-2xl font-bold text-blue-600">
+              {(stats.pending || 0) +
+                (stats.approved || 0) +
+                (stats.rejected || 0) +
+                (stats.repass || 0)}
+            </div>
             <div className="text-sm text-gray-600">Total Businesses</div>
           </div>
         </Card>
         <Card className="p-4">
           <div className="text-center">
-            <div className="text-2xl font-bold text-yellow-600">{stats.pending || 0}</div>
+            <div className="text-2xl font-bold text-yellow-600">
+              {stats.pending || 0}
+            </div>
             <div className="text-sm text-gray-600">Pending</div>
           </div>
         </Card>
         <Card className="p-4">
           <div className="text-center">
-            <div className="text-2xl font-bold text-green-600">{stats.approved || 0}</div>
+            <div className="text-2xl font-bold text-green-600">
+              {stats.approved || 0}
+            </div>
             <div className="text-sm text-gray-600">Approved</div>
           </div>
         </Card>
         <Card className="p-4">
           <div className="text-center">
-            <div className="text-2xl font-bold text-red-600">{stats.rejected || 0}</div>
+            <div className="text-2xl font-bold text-red-600">
+              {stats.rejected || 0}
+            </div>
             <div className="text-sm text-gray-600">Rejected</div>
           </div>
         </Card>
         <Card className="p-4">
           <div className="text-center">
-            <div className="text-2xl font-bold text-orange-600">{stats.repass || 0}</div>
+            <div className="text-2xl font-bold text-orange-600">
+              {stats.repass || 0}
+            </div>
             <div className="text-sm text-gray-600">Repass</div>
           </div>
         </Card>
@@ -240,9 +263,13 @@ export default function DocumentVerification() {
         {/* Pending Verifications List */}
         <div className="lg:col-span-1">
           <Card className="p-6">
-            <h3 className="text-lg font-semibold mb-4">All Businesses with Documents</h3>
+            <h3 className="text-lg font-semibold mb-4">
+              All Businesses with Documents
+            </h3>
             {pendingVerifications.length === 0 ? (
-              <p className="text-gray-500 text-center py-8">No businesses with documents</p>
+              <p className="text-gray-500 text-center py-8">
+                No businesses with documents
+              </p>
             ) : (
               <div className="space-y-3">
                 {pendingVerifications.map((business) => (
@@ -250,18 +277,26 @@ export default function DocumentVerification() {
                     key={business.business_id}
                     className={`p-3 border rounded-lg cursor-pointer transition-colors ${
                       selectedBusiness?.business_id === business.business_id
-                        ? 'border-blue-500 bg-blue-50'
-                        : 'border-gray-200 hover:border-gray-300'
+                        ? "border-blue-500 bg-blue-50"
+                        : "border-gray-200 hover:border-gray-300"
                     }`}
                     onClick={() => handleSelectBusiness(business)}
                   >
                     <div className="font-medium">{business.business_name}</div>
-                    <div className="text-sm text-gray-600">{business.business_type}</div>
-                    <div className="text-xs text-gray-500">
-                      {business.total_documents} documents • Status: {business.verification_status}
+                    <div className="text-sm text-gray-600">
+                      {business.business_type}
                     </div>
                     <div className="text-xs text-gray-500">
-                      Submitted {business.verification_submitted_at ? new Date(business.verification_submitted_at).toLocaleDateString() : 'N/A'}
+                      {business.total_documents} documents • Status:{" "}
+                      {business.verification_status}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      Submitted{" "}
+                      {business.verification_submitted_at
+                        ? new Date(
+                            business.verification_submitted_at
+                          ).toLocaleDateString()
+                        : "N/A"}
                     </div>
                   </div>
                 ))}
@@ -283,7 +318,6 @@ export default function DocumentVerification() {
           ) : (
             <Card className="p-6">
               <div className="text-center py-12">
-                <div className="text-gray-400 text-6xl mb-4">📋</div>
                 <h3 className="text-lg font-medium text-gray-900 mb-2">
                   Select a Business to Review
                 </h3>
@@ -305,10 +339,10 @@ function BusinessVerificationDetails({
   onDocumentAction,
   onCompleteVerification,
   onDownloadDocument,
-  actionLoading
+  actionLoading,
 }) {
-  const [rejectionReason, setRejectionReason] = useState('');
-  const [resubmissionNotes, setResubmissionNotes] = useState('');
+  const [rejectionReason, setRejectionReason] = useState("");
+  const [resubmissionNotes, setResubmissionNotes] = useState("");
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [showRepassModal, setShowRepassModal] = useState(false);
 
@@ -324,16 +358,24 @@ function BusinessVerificationDetails({
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'approved': return 'text-green-600 bg-green-100';
-      case 'rejected': return 'text-red-600 bg-red-100';
-      case 'repass': return 'text-orange-600 bg-orange-100';
-      default: return 'text-yellow-600 bg-yellow-100';
+      case "approved":
+        return "text-green-600 bg-green-100";
+      case "rejected":
+        return "text-red-600 bg-red-100";
+      case "repass":
+        return "text-orange-600 bg-orange-100";
+      default:
+        return "text-yellow-600 bg-yellow-100";
     }
   };
 
-  const allDocumentsApproved = business.documents?.every(doc => doc.verification_status === 'approved');
-  const hasRejectedOrRepass = business.documents?.some(doc =>
-    doc.verification_status === 'rejected' || doc.verification_status === 'repass'
+  const allDocumentsApproved = business.documents?.every(
+    (doc) => doc.verification_status === "approved"
+  );
+  const hasRejectedOrRepass = business.documents?.some(
+    (doc) =>
+      doc.verification_status === "rejected" ||
+      doc.verification_status === "repass"
   );
 
   return (
@@ -343,27 +385,37 @@ function BusinessVerificationDetails({
         <h3 className="text-lg font-semibold mb-4">Business Information</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">Business Name</label>
+            <label className="block text-sm font-medium text-gray-700">
+              Business Name
+            </label>
             <p className="text-gray-900">{business.business_name}</p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Business Type</label>
+            <label className="block text-sm font-medium text-gray-700">
+              Business Type
+            </label>
             <p className="text-gray-900">{business.business_type}</p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Email</label>
+            <label className="block text-sm font-medium text-gray-700">
+              Email
+            </label>
             <p className="text-gray-900">{business.business_email}</p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Mobile</label>
+            <label className="block text-sm font-medium text-gray-700">
+              Mobile
+            </label>
             <p className="text-gray-900">{business.mobile}</p>
           </div>
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700">Address</label>
+            <label className="block text-sm font-medium text-gray-700">
+              Address
+            </label>
             <p className="text-gray-900">
               {business.business_address}
-              {business.house_number && `, ${business.house_number}`}
-              , {business.country}
+              {business.house_number && `, ${business.house_number}`},{" "}
+              {business.country}
             </p>
           </div>
         </div>
@@ -381,12 +433,19 @@ function BusinessVerificationDetails({
                 <div className="flex justify-between items-start mb-3">
                   <div>
                     <h4 className="font-medium">{document.document_type}</h4>
-                    <p className="text-sm text-gray-600">{document.document_name}</p>
+                    <p className="text-sm text-gray-600">
+                      {document.document_name}
+                    </p>
                     <p className="text-xs text-gray-500">
-                      Uploaded {new Date(document.uploaded_at).toLocaleDateString()}
+                      Uploaded{" "}
+                      {new Date(document.uploaded_at).toLocaleDateString()}
                     </p>
                   </div>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(document.verification_status)}`}>
+                  <span
+                    className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
+                      document.verification_status
+                    )}`}
+                  >
                     {document.verification_status}
                   </span>
                 </div>
@@ -401,15 +460,22 @@ function BusinessVerificationDetails({
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => onDownloadDocument(document.document_id, document.document_name)}
+                    onClick={() =>
+                      onDownloadDocument(
+                        document.document_id,
+                        document.document_name
+                      )
+                    }
                   >
                     Download
                   </Button>
-                  {document.verification_status === 'pending' && (
+                  {document.verification_status === "pending" && (
                     <>
                       <Button
                         size="sm"
-                        onClick={() => onDocumentAction(document.document_id, 'approved')}
+                        onClick={() =>
+                          onDocumentAction(document.document_id, "approved")
+                        }
                         disabled={actionLoading}
                       >
                         Approve
@@ -418,9 +484,13 @@ function BusinessVerificationDetails({
                         size="sm"
                         variant="outline"
                         onClick={() => {
-                          const notes = prompt('Enter notes for rejection:');
+                          const notes = prompt("Enter notes for rejection:");
                           if (notes !== null) {
-                            onDocumentAction(document.document_id, 'rejected', notes);
+                            onDocumentAction(
+                              document.document_id,
+                              "rejected",
+                              notes
+                            );
                           }
                         }}
                         disabled={actionLoading}
@@ -431,9 +501,15 @@ function BusinessVerificationDetails({
                         size="sm"
                         variant="outline"
                         onClick={() => {
-                          const notes = prompt('Enter notes for repass (document quality issues):');
+                          const notes = prompt(
+                            "Enter notes for repass (document quality issues):"
+                          );
                           if (notes !== null) {
-                            onDocumentAction(document.document_id, 'repass', notes);
+                            onDocumentAction(
+                              document.document_id,
+                              "repass",
+                              notes
+                            );
                           }
                         }}
                         disabled={actionLoading}
@@ -454,7 +530,7 @@ function BusinessVerificationDetails({
         <h3 className="text-lg font-semibold mb-4">Complete Verification</h3>
         <div className="flex space-x-3">
           <Button
-            onClick={() => onCompleteVerification('approved')}
+            onClick={() => onCompleteVerification("approved")}
             disabled={!allDocumentsApproved || actionLoading}
             className="bg-green-600 hover:bg-green-700"
           >
@@ -499,16 +575,16 @@ function BusinessVerificationDetails({
                 variant="outline"
                 onClick={() => {
                   setShowRejectModal(false);
-                  setRejectionReason('');
+                  setRejectionReason("");
                 }}
               >
                 Cancel
               </Button>
               <Button
                 onClick={() => {
-                  onCompleteVerification('rejected', rejectionReason);
+                  onCompleteVerification("rejected", rejectionReason);
                   setShowRejectModal(false);
-                  setRejectionReason('');
+                  setRejectionReason("");
                 }}
                 disabled={!rejectionReason.trim()}
                 className="bg-red-600 hover:bg-red-700"
@@ -536,16 +612,16 @@ function BusinessVerificationDetails({
                 variant="outline"
                 onClick={() => {
                   setShowRepassModal(false);
-                  setResubmissionNotes('');
+                  setResubmissionNotes("");
                 }}
               >
                 Cancel
               </Button>
               <Button
                 onClick={() => {
-                  onCompleteVerification('repass', '', resubmissionNotes);
+                  onCompleteVerification("repass", "", resubmissionNotes);
                   setShowRepassModal(false);
-                  setResubmissionNotes('');
+                  setResubmissionNotes("");
                 }}
                 disabled={!resubmissionNotes.trim()}
                 className="bg-orange-600 hover:bg-orange-700"

@@ -19,7 +19,6 @@ import { MdClose } from "react-icons/md";
 function POS() {
   const navigate = useNavigate();
 
-  // States
   const [sku, setSku] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [cart, setCart] = useState([]);

@@ -6,6 +6,173 @@ import Loader from "../components/common/Loader";
 import { api } from "../lib/api";
 import Button from "../components/common/Button";
 
+// Icon Components
+const UserIcon = () => (
+  <svg
+    className="w-5 h-5"
+    fill="none"
+    stroke="currentColor"
+    viewBox="0 0 24 24"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+    />
+  </svg>
+);
+
+const EmailIcon = () => (
+  <svg
+    className="w-5 h-5"
+    fill="none"
+    stroke="currentColor"
+    viewBox="0 0 24 24"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+    />
+  </svg>
+);
+
+const PhoneIcon = () => (
+  <svg
+    className="w-5 h-5"
+    fill="none"
+    stroke="currentColor"
+    viewBox="0 0 24 24"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
+    />
+  </svg>
+);
+
+const CalendarIcon = () => (
+  <svg
+    className="w-5 h-5"
+    fill="none"
+    stroke="currentColor"
+    viewBox="0 0 24 24"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+    />
+  </svg>
+);
+
+const StoreIcon = () => (
+  <svg
+    className="w-5 h-5"
+    fill="none"
+    stroke="currentColor"
+    viewBox="0 0 24 24"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+    />
+  </svg>
+);
+
+const LocationIcon = () => (
+  <svg
+    className="w-5 h-5"
+    fill="none"
+    stroke="currentColor"
+    viewBox="0 0 24 24"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+    />
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+    />
+  </svg>
+);
+
+const RefreshIcon = () => (
+  <svg
+    className="w-4 h-4"
+    fill="none"
+    stroke="currentColor"
+    viewBox="0 0 24 24"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+    />
+  </svg>
+);
+
+const EditIcon = () => (
+  <svg
+    className="w-4 h-4"
+    fill="none"
+    stroke="currentColor"
+    viewBox="0 0 24 24"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+    />
+  </svg>
+);
+
+const LockIcon = () => (
+  <svg
+    className="w-4 h-4"
+    fill="none"
+    stroke="currentColor"
+    viewBox="0 0 24 24"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+    />
+  </svg>
+);
+
+const DownloadIcon = () => (
+  <svg
+    className="w-4 h-4"
+    fill="none"
+    stroke="currentColor"
+    viewBox="0 0 24 24"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+    />
+  </svg>
+);
+
 /**
  * Profile Page Component
  * Displays store and admin credentials information
@@ -63,31 +230,43 @@ const Profile = () => {
     });
   };
 
-  // Header actions moved from body into the page header
+  // Header actions with modern styling
   const headerActions = (
-    <div className="flex flex-wrap gap-3">
-      <button
+    <div className="flex flex-wrap gap-2 sm:gap-3">
+      <Button
         onClick={fetchProfileData}
-        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+        variant="secondary"
+        size="sm"
+        icon={<RefreshIcon />}
+        iconPosition="left"
+        className="whitespace-nowrap"
       >
-        Refresh Profile
-      </button>
-      <button
-        className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+        Refresh
+      </Button>
+      <Button
+        variant="secondary"
+        size="sm"
+        icon={<LockIcon />}
+        iconPosition="left"
         onClick={() =>
           alert("Change password functionality would be implemented here")
         }
+        className="whitespace-nowrap"
       >
         Change Password
-      </button>
-      <button
-        className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+      </Button>
+      <Button
+        variant="primary"
+        size="sm"
+        icon={<EditIcon />}
+        iconPosition="left"
         onClick={() =>
           alert("Edit profile functionality would be implemented here")
         }
+        className="whitespace-nowrap"
       >
         Edit Profile
-      </button>
+      </Button>
     </div>
   );
 
@@ -114,290 +293,498 @@ const Profile = () => {
       headerActions={headerActions}
       className="bg-gray-50"
     >
-      <div className="p-6 space-y-6">
+      <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <div className="flex items-center">
-              <svg
-                className="w-5 h-5 text-red-400 mr-2"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              <p className="text-red-800 text-sm">{error}</p>
+          <Card className="bg-gradient-to-br from-red-50 to-orange-50 border-red-200/50">
+            <div className="flex items-start gap-4 p-4">
+              <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                <svg
+                  className="w-5 h-5 text-red-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-sm font-semibold text-red-900 mb-1">
+                  Error Loading Profile
+                </h3>
+                <p className="text-sm text-red-700">{error}</p>
+              </div>
             </div>
-          </div>
+          </Card>
         )}
 
         {!loading && !error && !profileData && (
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
-            <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg
-                className="w-8 h-8 text-gray-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+          <Card className="bg-gradient-to-br from-gray-50 to-blue-50/30 border-gray-200/50">
+            <div className="p-8 md:p-12 text-center">
+              <div className="w-20 h-20 bg-gradient-to-br from-gray-200 to-gray-300 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+                <svg
+                  className="w-10 h-10 text-gray-500"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                  />
+                </svg>
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">
+                No Profile Data Available
+              </h3>
+              <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                Unable to load your profile information. Please try refreshing
+                or check your connection.
+              </p>
+              <Button
+                onClick={fetchProfileData}
+                variant="primary"
+                size="md"
+                icon={<RefreshIcon />}
+                iconPosition="left"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 3v18m0-18a4 4 0 0 1 4 4v1a4 4 0 0 1-4 4 4 4 0 0 1-4-4V7a4 4 0 0 1 4-4z"
-                />
-              </svg>
+                Try Again
+              </Button>
             </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
-              No Profile Data Available
-            </h3>
-            <p className="text-gray-600 mb-4">
-              Unable to load your profile information.
-            </p>
-            <button
-              onClick={fetchProfileData}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-            >
-              Try Again
-            </button>
-          </div>
+          </Card>
         )}
 
         {/* Profile Content - Only show when data is available */}
         {profileData && (
           <React.Fragment>
+            {/* Modern Profile Header */}
+            <Card className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 border-blue-200/50 overflow-hidden">
+              <div className="p-6 md:p-8">
+                <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
+                  <div className="relative">
+                    <div className="w-24 h-24 md:w-32 md:h-32 bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-2xl flex items-center justify-center text-3xl md:text-4xl font-bold shadow-lg ring-4 ring-white/50">
+                      {profileData?.user?.username?.charAt(0)?.toUpperCase() ||
+                        "A"}
+                    </div>
+                    <div className="absolute -bottom-1 -right-1 w-8 h-8 bg-green-500 rounded-full border-4 border-white flex items-center justify-center">
+                      <div className="w-3 h-3 bg-white rounded-full"></div>
+                    </div>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
+                      {profileData?.user?.username || "Admin User"}
+                    </h1>
+                    <p className="text-gray-600 mb-4 flex items-center gap-2">
+                      <EmailIcon />
+                      <span className="truncate">
+                        {profileData?.user?.email || "N/A"}
+                      </span>
+                    </p>
+                    <div className="flex flex-wrap gap-3">
+                      <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold bg-blue-100 text-blue-800 border border-blue-200">
+                        {profileData?.user?.role
+                          ?.replace("_", " ")
+                          .toUpperCase() || "ADMIN"}
+                      </span>
+                      {profileData?.business?.business_name && (
+                        <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-indigo-100 text-indigo-800 border border-indigo-200">
+                          <StoreIcon />
+                          <span className="ml-1.5">
+                            {profileData.business.business_name}
+                          </span>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </Card>
+
             {/* Admin Information */}
             <Card className="bg-white shadow-sm">
-              <div className="p-6">
-                <div className="flex items-center mb-6">
-                  <div className="w-12 h-12 bg-blue-600 text-white rounded-full flex items-center justify-center text-lg font-semibold mr-4">
-                    {profileData?.user?.username?.charAt(0)?.toUpperCase() ||
-                      "A"}
+              <div className="p-6 md:p-8">
+                <div className="flex items-center mb-6 pb-4 border-b border-gray-200">
+                  <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-xl flex items-center justify-center mr-3">
+                    <UserIcon />
                   </div>
                   <div>
-                    <h2 className="text-xl font-semibold text-gray-900">
-                      Admin Information
+                    <h2 className="text-xl font-bold text-gray-900">
+                      Account Information
                     </h2>
-                    <p className="text-gray-600">
-                      Account and login credentials
+                    <p className="text-sm text-gray-500">
+                      Personal details and credentials
                     </p>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <div className="space-y-5">
+                    <div className="group">
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
                         Username
                       </label>
-                      <div className="bg-gray-50 px-3 py-2 rounded-lg border">
-                        {profileData?.user?.username || "N/A"}
+                      <div className="flex items-center gap-3 bg-gradient-to-r from-gray-50 to-gray-100/50 px-4 py-3 rounded-xl border border-gray-200/50 group-hover:border-blue-300 transition-colors">
+                        <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <UserIcon className="text-blue-600" />
+                        </div>
+                        <span className="text-gray-900 font-medium flex-1">
+                          {profileData?.user?.username || "N/A"}
+                        </span>
                       </div>
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <div className="group">
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
                         Email Address
                       </label>
-                      <div className="bg-gray-50 px-3 py-2 rounded-lg border">
-                        {profileData?.user?.email || "N/A"}
+                      <div className="flex items-center gap-3 bg-gradient-to-r from-gray-50 to-gray-100/50 px-4 py-3 rounded-xl border border-gray-200/50 group-hover:border-blue-300 transition-colors">
+                        <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <EmailIcon className="text-blue-600" />
+                        </div>
+                        <span className="text-gray-900 font-medium flex-1 truncate">
+                          {profileData?.user?.email || "N/A"}
+                        </span>
                       </div>
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <div className="group">
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
                         Role
                       </label>
-                      <div className="bg-gray-50 px-3 py-2 rounded-lg border">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 capitalize">
-                          {profileData?.user?.role || "N/A"}
+                      <div className="flex items-center gap-3 bg-gradient-to-r from-gray-50 to-gray-100/50 px-4 py-3 rounded-xl border border-gray-200/50">
+                        <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <svg
+                            className="w-5 h-5 text-indigo-600"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+                            />
+                          </svg>
+                        </div>
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-blue-100 text-blue-800 border border-blue-200 capitalize">
+                          {profileData?.user?.role?.replace("_", " ") || "N/A"}
                         </span>
                       </div>
                     </div>
                   </div>
 
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <div className="space-y-5">
+                    <div className="group">
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
                         Contact Number
                       </label>
-                      <div className="bg-gray-50 px-3 py-2 rounded-lg border">
-                        {profileData?.user?.contact_number || "N/A"}
+                      <div className="flex items-center gap-3 bg-gradient-to-r from-gray-50 to-gray-100/50 px-4 py-3 rounded-xl border border-gray-200/50 group-hover:border-blue-300 transition-colors">
+                        <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <PhoneIcon className="text-green-600" />
+                        </div>
+                        <span className="text-gray-900 font-medium flex-1">
+                          {profileData?.user?.contact_number || "N/A"}
+                        </span>
                       </div>
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <div className="group">
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
                         Account Created
                       </label>
-                      <div className="bg-gray-50 px-3 py-2 rounded-lg border">
-                        {formatDate(profileData?.user?.created_at)}
+                      <div className="flex items-center gap-3 bg-gradient-to-r from-gray-50 to-gray-100/50 px-4 py-3 rounded-xl border border-gray-200/50 group-hover:border-blue-300 transition-colors">
+                        <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <CalendarIcon className="text-purple-600" />
+                        </div>
+                        <span className="text-gray-900 font-medium flex-1">
+                          {formatDate(profileData?.user?.created_at)}
+                        </span>
                       </div>
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <div className="group">
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
                         Last Updated
                       </label>
-                      <div className="bg-gray-50 px-3 py-2 rounded-lg border">
-                        {formatDate(profileData?.user?.updated_at)}
+                      <div className="flex items-center gap-3 bg-gradient-to-r from-gray-50 to-gray-100/50 px-4 py-3 rounded-xl border border-gray-200/50 group-hover:border-blue-300 transition-colors">
+                        <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <CalendarIcon className="text-orange-600" />
+                        </div>
+                        <span className="text-gray-900 font-medium flex-1">
+                          {formatDate(profileData?.user?.updated_at)}
+                        </span>
                       </div>
                     </div>
                   </div>
                 </div>
 
-            {/* Store Entry QR for Customers */}
-            <div className="mt-8">
-              <div className="text-lg font-semibold text-gray-900 mb-2">Store Entry QR</div>
-              <div className="text-gray-600 mb-3">Customers scan this to start self-checkout in your store.</div>
-              <div className="flex items-start gap-4 flex-wrap">
-                <img
-                  src={(function(){
-                    const businessId = profileData?.business?.business_id || profileData?.user?.businessId || JSON.parse(localStorage.getItem('user')||'{}')?.businessId;
-                    const url = new URL(window.location.origin + '/enter-store');
-                    if (businessId) url.searchParams.set('business_id', String(businessId));
-                    const data = encodeURIComponent(url.toString());
-                    return `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${data}&qzone=2&format=png&_=${Date.now()}`;
-                  })()}
-                  alt="Store Entry QR"
-                  className="w-[260px] h-[260px] border rounded-xl bg-white"
-                />
-                <div className="space-y-2">
-                  <div className="text-sm text-gray-700 break-all">
-                    {(function(){
-                      const businessId = profileData?.business?.business_id || profileData?.user?.businessId || JSON.parse(localStorage.getItem('user')||'{}')?.businessId;
-                      const url = new URL(window.location.origin + '/enter-store');
-                      if (businessId) url.searchParams.set('business_id', String(businessId));
-                      return url.toString();
-                    })()}
+                {/* Store Entry QR for Customers */}
+                <div className="mt-8 pt-8 border-t border-gray-200">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 text-white rounded-xl flex items-center justify-center">
+                      <svg
+                        className="w-5 h-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h4a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"
+                        />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-gray-900">
+                        Store Entry QR Code
+                      </h3>
+                      <p className="text-sm text-gray-500">
+                        Share this QR code for customer self-checkout
+                      </p>
+                    </div>
                   </div>
-                  <Button
-                    label="Download PNG"
-                    variant="primary"
-                    onClick={() => {
-                      const businessId = profileData?.business?.business_id || profileData?.user?.businessId || JSON.parse(localStorage.getItem('user')||'{}')?.businessId;
-                      const url = new URL(window.location.origin + '/enter-store');
-                      if (businessId) url.searchParams.set('business_id', String(businessId));
-                      const data = encodeURIComponent(url.toString());
-                      const src = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${data}&qzone=2&format=png&_=${Date.now()}`;
-                      const a = document.createElement('a');
-                      a.href = src;
-                      a.download = `store-${businessId||'qr'}.png`;
-                      a.target = '_blank';
-                      a.rel = 'noopener';
-                      a.click();
-                    }}
-                  />
+                  <div className="bg-gradient-to-br from-gray-50 to-blue-50/30 rounded-2xl p-6 border border-gray-200/50">
+                    <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
+                      <div className="relative">
+                        <div className="absolute inset-0 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-2xl blur-xl opacity-20"></div>
+                        <img
+                          src={(function () {
+                            const businessId =
+                              profileData?.business?.business_id ||
+                              profileData?.user?.businessId ||
+                              JSON.parse(localStorage.getItem("user") || "{}")
+                                ?.businessId;
+                            const url = new URL(
+                              window.location.origin + "/enter-store"
+                            );
+                            if (businessId)
+                              url.searchParams.set(
+                                "business_id",
+                                String(businessId)
+                              );
+                            const data = encodeURIComponent(url.toString());
+                            return `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${data}&qzone=2&format=png&_=${Date.now()}`;
+                          })()}
+                          alt="Store Entry QR"
+                          className="relative w-[260px] h-[260px] border-4 border-white rounded-2xl bg-white shadow-xl"
+                        />
+                      </div>
+                      <div className="flex-1 space-y-4 min-w-0">
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                            QR Code URL
+                          </label>
+                          <div className="bg-white px-4 py-3 rounded-xl border border-gray-200 break-all text-sm text-gray-700 font-mono">
+                            {(function () {
+                              const businessId =
+                                profileData?.business?.business_id ||
+                                profileData?.user?.businessId ||
+                                JSON.parse(localStorage.getItem("user") || "{}")
+                                  ?.businessId;
+                              const url = new URL(
+                                window.location.origin + "/enter-store"
+                              );
+                              if (businessId)
+                                url.searchParams.set(
+                                  "business_id",
+                                  String(businessId)
+                                );
+                              return url.toString();
+                            })()}
+                          </div>
+                        </div>
+                        <Button
+                          variant="primary"
+                          size="md"
+                          icon={<DownloadIcon />}
+                          iconPosition="left"
+                          onClick={() => {
+                            const businessId =
+                              profileData?.business?.business_id ||
+                              profileData?.user?.businessId ||
+                              JSON.parse(localStorage.getItem("user") || "{}")
+                                ?.businessId;
+                            const url = new URL(
+                              window.location.origin + "/enter-store"
+                            );
+                            if (businessId)
+                              url.searchParams.set(
+                                "business_id",
+                                String(businessId)
+                              );
+                            const data = encodeURIComponent(url.toString());
+                            const src = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${data}&qzone=2&format=png&_=${Date.now()}`;
+                            const a = document.createElement("a");
+                            a.href = src;
+                            a.download = `store-${businessId || "qr"}.png`;
+                            a.target = "_blank";
+                            a.rel = "noopener";
+                            a.click();
+                          }}
+                          className="w-full md:w-auto"
+                        >
+                          Download QR Code
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
               </div>
             </Card>
 
             {/* Store Information */}
             <Card className="bg-white shadow-sm">
-              <div className="p-6">
-                <div className="flex items-center mb-6">
-                  <div className="w-12 h-12 bg-green-600 text-white rounded-full flex items-center justify-center text-lg font-semibold mr-4">
-                    <svg
-                      width="24"
-                      height="24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      viewBox="0 0 24 24"
-                    >
-                      <path d="M3 21h18l-9-18-9 18zM12 9v4m0 4h.01" />
-                    </svg>
+              <div className="p-6 md:p-8">
+                <div className="flex items-center mb-6 pb-4 border-b border-gray-200">
+                  <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 text-white rounded-xl flex items-center justify-center mr-3">
+                    <StoreIcon />
                   </div>
                   <div>
-                    <h2 className="text-xl font-semibold text-gray-900">
+                    <h2 className="text-xl font-bold text-gray-900">
                       Store Information
                     </h2>
-                    <p className="text-gray-600">
+                    <p className="text-sm text-gray-500">
                       Business details and credentials
                     </p>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <div className="space-y-5">
+                    <div className="group">
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
                         Business Name
                       </label>
-                      <div className="bg-gray-50 px-3 py-2 rounded-lg border">
-                        {profileData?.business?.business_name || "N/A"}
+                      <div className="flex items-center gap-3 bg-gradient-to-r from-gray-50 to-gray-100/50 px-4 py-3 rounded-xl border border-gray-200/50 group-hover:border-green-300 transition-colors">
+                        <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <StoreIcon className="text-green-600" />
+                        </div>
+                        <span className="text-gray-900 font-medium flex-1">
+                          {profileData?.business?.business_name || "N/A"}
+                        </span>
                       </div>
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <div className="group">
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
                         Business Type
                       </label>
-                      <div className="bg-gray-50 px-3 py-2 rounded-lg border">
-                        {profileData?.business?.business_type || "N/A"}
+                      <div className="flex items-center gap-3 bg-gradient-to-r from-gray-50 to-gray-100/50 px-4 py-3 rounded-xl border border-gray-200/50 group-hover:border-green-300 transition-colors">
+                        <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <svg
+                            className="w-5 h-5 text-emerald-600"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                            />
+                          </svg>
+                        </div>
+                        <span className="text-gray-900 font-medium flex-1">
+                          {profileData?.business?.business_type || "N/A"}
+                        </span>
                       </div>
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <div className="group">
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
                         Country
                       </label>
-                      <div className="bg-gray-50 px-3 py-2 rounded-lg border">
-                        {profileData?.business?.country || "N/A"}
+                      <div className="flex items-center gap-3 bg-gradient-to-r from-gray-50 to-gray-100/50 px-4 py-3 rounded-xl border border-gray-200/50 group-hover:border-green-300 transition-colors">
+                        <div className="w-8 h-8 bg-teal-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <LocationIcon className="text-teal-600" />
+                        </div>
+                        <span className="text-gray-900 font-medium flex-1">
+                          {profileData?.business?.country || "N/A"}
+                        </span>
                       </div>
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <div className="group">
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
                         Business Email
                       </label>
-                      <div className="bg-gray-50 px-3 py-2 rounded-lg border">
-                        {profileData?.business?.email || "N/A"}
+                      <div className="flex items-center gap-3 bg-gradient-to-r from-gray-50 to-gray-100/50 px-4 py-3 rounded-xl border border-gray-200/50 group-hover:border-green-300 transition-colors">
+                        <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <EmailIcon className="text-blue-600" />
+                        </div>
+                        <span className="text-gray-900 font-medium flex-1 truncate">
+                          {profileData?.business?.email || "N/A"}
+                        </span>
                       </div>
                     </div>
                   </div>
 
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <div className="space-y-5">
+                    <div className="group">
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
                         Business Address
                       </label>
-                      <div className="bg-gray-50 px-3 py-2 rounded-lg border">
-                        {profileData?.business?.business_address || "N/A"}
-                        {profileData?.business?.house_number &&
-                          `, ${profileData.business.house_number}`}
+                      <div className="flex items-start gap-3 bg-gradient-to-r from-gray-50 to-gray-100/50 px-4 py-3 rounded-xl border border-gray-200/50 group-hover:border-green-300 transition-colors">
+                        <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <LocationIcon className="text-indigo-600" />
+                        </div>
+                        <span className="text-gray-900 font-medium flex-1">
+                          {profileData?.business?.business_address || "N/A"}
+                          {profileData?.business?.house_number &&
+                            `, ${profileData.business.house_number}`}
+                        </span>
                       </div>
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <div className="group">
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
                         Mobile Number
                       </label>
-                      <div className="bg-gray-50 px-3 py-2 rounded-lg border">
-                        {profileData?.business?.mobile || "N/A"}
+                      <div className="flex items-center gap-3 bg-gradient-to-r from-gray-50 to-gray-100/50 px-4 py-3 rounded-xl border border-gray-200/50 group-hover:border-green-300 transition-colors">
+                        <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <PhoneIcon className="text-green-600" />
+                        </div>
+                        <span className="text-gray-900 font-medium flex-1">
+                          {profileData?.business?.mobile || "N/A"}
+                        </span>
                       </div>
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <div className="group">
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
                         Business Established
                       </label>
-                      <div className="bg-gray-50 px-3 py-2 rounded-lg border">
-                        {formatDate(profileData?.business?.created_at)}
+                      <div className="flex items-center gap-3 bg-gradient-to-r from-gray-50 to-gray-100/50 px-4 py-3 rounded-xl border border-gray-200/50 group-hover:border-green-300 transition-colors">
+                        <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <CalendarIcon className="text-purple-600" />
+                        </div>
+                        <span className="text-gray-900 font-medium flex-1">
+                          {formatDate(profileData?.business?.created_at)}
+                        </span>
                       </div>
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <div className="group">
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
                         Last Updated
                       </label>
-                      <div className="bg-gray-50 px-3 py-2 rounded-lg border">
-                        {formatDate(profileData?.business?.updated_at)}
+                      <div className="flex items-center gap-3 bg-gradient-to-r from-gray-50 to-gray-100/50 px-4 py-3 rounded-xl border border-gray-200/50 group-hover:border-green-300 transition-colors">
+                        <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <CalendarIcon className="text-orange-600" />
+                        </div>
+                        <span className="text-gray-900 font-medium flex-1">
+                          {formatDate(profileData?.business?.updated_at)}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -409,57 +796,60 @@ const Profile = () => {
             {profileData?.business?.users &&
               profileData.business.users.length > 0 && (
                 <Card className="bg-white shadow-sm">
-                  <div className="p-6">
-                    <div className="flex items-center mb-6">
-                      <div className="w-12 h-12 bg-purple-600 text-white rounded-full flex items-center justify-center text-lg font-semibold mr-4">
+                  <div className="p-6 md:p-8">
+                    <div className="flex items-center mb-6 pb-4 border-b border-gray-200">
+                      <div className="w-10 h-10 bg-gradient-to-br bg-blue-500 text-white rounded-xl flex items-center justify-center mr-3">
                         <svg
-                          width="24"
-                          height="24"
+                          className="w-5 h-5"
                           fill="none"
                           stroke="currentColor"
-                          strokeWidth="2"
                           viewBox="0 0 24 24"
                         >
-                          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                          <circle cx="9" cy="7" r="4" />
-                          <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-                          <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                          />
                         </svg>
                       </div>
                       <div>
-                        <h2 className="text-xl font-semibold text-gray-900">
+                        <h2 className="text-xl font-bold text-gray-900">
                           Business Team
                         </h2>
-                        <p className="text-gray-600">
+                        <p className="text-sm text-gray-500">
                           All users associated with this business (
                           {profileData.business.total_users} total)
                         </p>
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                       {profileData.business.users.map((user, index) => (
                         <div
                           key={user.user_id}
-                          className="bg-gray-50 rounded-lg p-4 border"
+                          className="group bg-gradient-to-br from-white to-gray-50/50 rounded-2xl p-5 border border-gray-200/50 hover:border-purple-300 hover:shadow-lg transition-all duration-300"
                         >
-                          <div className="flex items-center mb-3">
-                            <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-full flex items-center justify-center text-sm font-semibold mr-3">
-                              {user.username?.charAt(0)?.toUpperCase() || "U"}
+                          <div className="flex items-center mb-4">
+                            <div className="relative">
+                              <div className="w-12 h-12 bg-gradient-to-br bg-blue-500 text-white rounded-xl flex items-center justify-center text-lg font-bold shadow-md ring-2 ring-white">
+                                {user.username?.charAt(0)?.toUpperCase() || "U"}
+                              </div>
+                              <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
                             </div>
-                            <div>
-                              <h4 className="font-semibold text-gray-900">
+                            <div className="ml-3 flex-1 min-w-0">
+                              <h4 className="font-bold text-gray-900 truncate">
                                 {user.username}
                               </h4>
                               <span
-                                className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold mt-1 ${
                                   user.user_type_name === "admin" ||
                                   user.role === "business_owner"
-                                    ? "bg-red-100 text-red-800"
+                                    ? "bg-red-100 text-red-800 border border-red-200"
                                     : user.user_type_name === "cashier" ||
                                       user.role === "cashier"
-                                    ? "bg-green-100 text-green-800"
-                                    : "bg-gray-100 text-gray-800"
+                                    ? "bg-green-100 text-green-800 border border-green-200"
+                                    : "bg-gray-100 text-gray-800 border border-gray-200"
                                 }`}
                               >
                                 {user.user_type_name || user.role}
@@ -467,25 +857,40 @@ const Profile = () => {
                             </div>
                           </div>
 
-                          <div className="space-y-2 text-sm">
-                            <div>
-                              <span className="text-gray-600">Email:</span>
-                              <div className="font-medium text-gray-900">
-                                {user.email}
+                          <div className="space-y-3 text-sm">
+                            <div className="flex items-start gap-2">
+                              <EmailIcon className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                              <div className="min-w-0 flex-1">
+                                <div className="text-xs text-gray-500 mb-0.5">
+                                  Email
+                                </div>
+                                <div className="font-medium text-gray-900 truncate">
+                                  {user.email}
+                                </div>
                               </div>
                             </div>
                             {user.contact_number && (
-                              <div>
-                                <span className="text-gray-600">Contact:</span>
-                                <div className="font-medium text-gray-900">
-                                  {user.contact_number}
+                              <div className="flex items-start gap-2">
+                                <PhoneIcon className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                                <div className="min-w-0 flex-1">
+                                  <div className="text-xs text-gray-500 mb-0.5">
+                                    Contact
+                                  </div>
+                                  <div className="font-medium text-gray-900">
+                                    {user.contact_number}
+                                  </div>
                                 </div>
                               </div>
                             )}
-                            <div>
-                              <span className="text-gray-600">Joined:</span>
-                              <div className="font-medium text-gray-900">
-                                {formatDate(user.created_at)}
+                            <div className="flex items-start gap-2">
+                              <CalendarIcon className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                              <div className="min-w-0 flex-1">
+                                <div className="text-xs text-gray-500 mb-0.5">
+                                  Joined
+                                </div>
+                                <div className="font-medium text-gray-900">
+                                  {formatDate(user.created_at)}
+                                </div>
                               </div>
                             </div>
                           </div>
