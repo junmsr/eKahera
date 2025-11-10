@@ -20,27 +20,16 @@ const otpStorage = new Map();
 
 // Create email transporter
 const createTransporter = () => {
-  // For Gmail (you'll need to enable "Less secure app access" or use App Password)
   return nodemailer.createTransport({
-    service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false, // use 'true' for port 465, 'false' for all other ports
     auth: {
       user: config.EMAIL_USER || 'your-email@gmail.com',
       pass: config.EMAIL_PASSWORD || 'your-app-password'
-    }
+    },
+    requireTLS: true
   });
-
-  // For other email services, use this format:
-  /*
-  return nodemailer.createTransporter({
-    host: 'smtp.gmail.com',
-    port: 587,
-    secure: false,
-    auth: {
-      user: config.EMAIL_USER,
-      pass: config.EMAIL_PASSWORD
-    }
-  });
-  */
 };
 
 // Generate and send OTP
