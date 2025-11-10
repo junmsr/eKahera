@@ -1,4 +1,4 @@
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 const otpGenerator = require('otp-generator');
 const fs = require('fs');
 const path = require('path');
@@ -15,21 +15,11 @@ configContent.split('\n').forEach(line => {
   }
 });
 
+// Initialize Resend
+const resend = new Resend(config.RESEND_API_KEY);
+
 // In-memory storage for OTPs (in production, use Redis or database)
 const otpStorage = new Map();
-
-// Create email transporter
-const createTransporter = () => {
-  return nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 587,
-    secure: true, // use 'true' for port 465, 'false' for all other ports
-    auth: {
-      user: config.EMAIL_USER || 'your-email@gmail.com',
-      pass: config.EMAIL_PASSWORD || 'your-app-password'
-    },
-  });
-};
 
 // Generate and send OTP
 exports.sendOTP = async (req, res) => {
@@ -56,13 +46,10 @@ exports.sendOTP = async (req, res) => {
       attempts: 0
     });
 
-    // Create email transporter
-    const transporter = createTransporter();
-
-    // Email content
-    const mailOptions = {
-      from: config.EMAIL_USER || 'your-email@gmail.com',
-      to: email,
+    // Send email using Resend (using Resend's default domain)
+    const { data, error } = await resend.emails.send({
+      from: 'eKahera <noreply@resend.dev>',
+      to: [email],
       subject: 'eKahera - Email Verification OTP',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -91,10 +78,11 @@ exports.sendOTP = async (req, res) => {
           </div>
         </div>
       `
-    };
+    });
 
-    // Send email
-    await transporter.sendMail(mailOptions);
+    if (error) {
+      throw new Error(error.message);
+    }
 
     res.json({ 
       message: 'OTP sent successfully',
@@ -188,13 +176,10 @@ exports.resendOTP = async (req, res) => {
       attempts: 0
     });
 
-    // Create email transporter
-    const transporter = createTransporter();
-
-    // Email content
-    const mailOptions = {
-      from: config.EMAIL_USER || 'your-email@gmail.com',
-      to: email,
+    // Send email using Resend (using Resend's default domain)
+    const { data, error } = await resend.emails.send({
+      from: 'eKahera <noreply@resend.dev>',
+      to: [email],
       subject: 'eKahera - New Email Verification OTP',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -223,10 +208,11 @@ exports.resendOTP = async (req, res) => {
           </div>
         </div>
       `
-    };
+    });
 
-    // Send email
-    await transporter.sendMail(mailOptions);
+    if (error) {
+      throw new Error(error.message);
+    }
 
     res.json({ 
       message: 'New OTP sent successfully',
