@@ -1,4 +1,5 @@
 const path = require('path');
+const fs = require('fs');
 
 // Load environment variables from .env file for local development
 // In production (like on Render), these variables should be set in the dashboard
