@@ -7,9 +7,10 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
 
   const proxySettings = {};
-  if (env.VITE_API_BASE_URL) {
+  // If VITE_API_BASE_URL is NOT set, we are in local development and need to proxy.
+  if (!env.VITE_API_BASE_URL) {
     proxySettings['/api'] = {
-      target: env.VITE_API_BASE_URL,
+      target: 'http://localhost:5000', // Your local backend server
       changeOrigin: true,
     };
   }
