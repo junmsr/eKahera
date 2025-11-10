@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { motion } from "framer-motion";
 import Background from "../components/layout/Background";
 import ScannerCard from "../components/ui/POS/ScannerCard";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 
 function parseBusinessId(raw) {
   try {
@@ -115,6 +115,29 @@ export default function CustomerEnter() {
             <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
 
             <div className="relative z-10">
+              {/* Back to home button */}
+              <div className="absolute -left-4 -top-3">
+                <Link
+                  to="/"
+                  className="inline-flex items-center gap-1 text-sm text-gray-600 hover:text-gray-800"
+                >
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15 19l-7-7 7-7"
+                    />
+                  </svg>
+                  Back to home
+                </Link>
+              </div>
+
               <motion.div
                 className="flex items-center justify-center gap-3 mb-4"
                 initial={{ scale: 0 }}

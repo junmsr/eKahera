@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import Background from "../../../components/layout/Background";
 import Card from "../../../components/common/Card";
 import ProgressBar from "./ProgressBar";
@@ -64,6 +65,28 @@ function GetStartedLayout({
             </aside>
 
             <main className="w-full md:w-7/12 p-6 md:p-10 flex flex-col">
+              {/* Back to home button */}
+              <div className="mb-4">
+                <Link
+                  to="/"
+                  className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-800"
+                >
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15 19l-7-7 7-7"
+                    />
+                  </svg>
+                  Back to home
+                </Link>
+              </div>
               <div className="mb-6">
                 <div className="flex items-center justify-center">
                   <div className="w-full max-w-md">
