@@ -22,8 +22,8 @@ const createTransporter = () => {
     port: 465,
     secure: true, // use 'true' for port 465, 'false' for all other ports
     auth: {
-      user: config.EMAIL_USER || 'your-email@gmail.com',
-      pass: config.EMAIL_PASSWORD || 'your-app-password'
+      user: process.env.EMAIL_USER || config.EMAIL_USER || 'your-email@gmail.com',
+      pass: process.env.EMAIL_PASSWORD || config.EMAIL_PASSWORD || 'your-app-password'
     },
   });
 };

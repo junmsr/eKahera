@@ -6,21 +6,19 @@ import tailwindcss from '@tailwindcss/vite'
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
 
-  // Define the proxy target. Use the env variable if it exists,
-  // otherwise default to the local backend server.
-  const proxyTarget = env.VITE_API_BASE_URL || 'http://localhost:5000';
+  const proxySettings = {};
+  if (env.VITE_API_BASE_URL) {
+    proxySettings['/api'] = {
+      target: env.VITE_API_BASE_URL,
+      changeOrigin: true,
+    };
+  }
 
   return {
     base: '/eKahera/',
     plugins: [react(), tailwindcss()],
     server: {
-      proxy: {
-        '/api': {
-          target: proxyTarget,
-          changeOrigin: true,
-        },
-      },
+      proxy: proxySettings,
     },
   };
 });
-
