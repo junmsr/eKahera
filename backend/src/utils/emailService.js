@@ -19,7 +19,7 @@ configContent.split('\n').forEach(line => {
 const createTransporter = () => {
   return nodemailer.createTransport({
     host: 'smtp.gmail.com',
-    port: 465,
+    port: 587,
     secure: true, // use 'true' for port 465, 'false' for all other ports
     auth: {
       user: process.env.EMAIL_USER || config.EMAIL_USER || 'your-email@gmail.com',

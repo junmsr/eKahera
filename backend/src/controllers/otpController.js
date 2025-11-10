@@ -22,7 +22,7 @@ const otpStorage = new Map();
 const createTransporter = () => {
   return nodemailer.createTransport({
     host: 'smtp.gmail.com',
-    port: 465,
+    port: 587,
     secure: true, // use 'true' for port 465, 'false' for all other ports
     auth: {
       user: config.EMAIL_USER || 'your-email@gmail.com',
