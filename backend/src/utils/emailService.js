@@ -17,13 +17,21 @@ configContent.split('\n').forEach(line => {
 
 // Create transporter for sending emails
 const createTransporter = () => {
+  const emailUser = process.env.EMAIL_USER || config.EMAIL_USER;
+  const emailPassword = process.env.EMAIL_PASSWORD || config.EMAIL_PASSWORD;
+
+  if (!emailUser || !emailPassword) {
+    console.error('Email credentials are not set. Please check EMAIL_USER and EMAIL_PASSWORD in config.env or environment variables.');
+    throw new Error('Email credentials missing.');
+  }
+
   return nodemailer.createTransport({
     host: 'smtp.hostinger.com',
-    port: 587,
-    secure: false, // use 'true' for port 465, 'false' for all other ports
+    port: 465, // Use 465 for secure connections
+    secure: true, // Use 'true' for port 465
     auth: {
-      user: process.env.EMAIL_USER || config.EMAIL_USER || 'your-email@yourdomain.com',
-      pass: process.env.EMAIL_PASSWORD || config.EMAIL_PASSWORD || 'your-email-password'
+      user: emailUser,
+      pass: emailPassword
     },
   });
 };
