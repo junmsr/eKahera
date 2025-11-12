@@ -40,6 +40,14 @@ export default function useGetStarted() {
     if (inputRef.current) inputRef.current.focus();
   }, [step]);
 
+  useEffect(() => {
+    if (step === 1 && isOtpVerified) {
+      handleNext();
+    } else if (step === 1 && !isOtpVerified && form.otp && form.otp.length === 4) {
+      handleNext();
+    }
+  }, [step, isOtpVerified, form.otp]);
+
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     
