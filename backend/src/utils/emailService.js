@@ -33,6 +33,7 @@ const createTransporter = () => {
       user: emailUser,
       pass: emailPassword
     },
+    connectionTimeout: 15000 // Increase timeout to 15 seconds
   });
 };
 
