@@ -16,7 +16,7 @@ export default defineConfig(({ mode }) => {
   }
 
   return {
-    base: '/eKahera/',
+    base: '/',
     plugins: [react(), tailwindcss()],
     server: {
       proxy: proxySettings,
