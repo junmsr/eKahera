@@ -8,7 +8,7 @@ import Button from "../../common/Button";
 
 export default function GetStartedSingle({ onOpenTerms, onOpenPrivacy }) {
   const hook = useGetStarted();
-  const { step, steps, progress, loading, errors, handleBack, handleNext, handleFinish, success } = hook;
+  const { step, steps, progress, loading, errors, handleBack, handleNext, handleFinish, success, isOtpVerified } = hook;
 
   if (success) {
     return (
@@ -66,7 +66,7 @@ export default function GetStartedSingle({ onOpenTerms, onOpenPrivacy }) {
       onNext={handleNext}
       onFinish={handleFinish}
     >
-      <GetStartedForm hook={hook} />
+      <GetStartedForm hook={hook} isOtpVerified={isOtpVerified} />
 
       {step === 3 && (
         <div className="mt-6 space-y-3 max-w-lg">

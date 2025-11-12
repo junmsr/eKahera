@@ -18,12 +18,12 @@ configContent.split('\n').forEach(line => {
 // Create transporter for sending emails
 const createTransporter = () => {
   return nodemailer.createTransport({
-    host: 'smtp.gmail.com',
+    host: 'smtp.hostinger.com',
     port: 587,
-    secure: true, // use 'true' for port 465, 'false' for all other ports
+    secure: false, // use 'true' for port 465, 'false' for all other ports
     auth: {
-      user: process.env.EMAIL_USER || config.EMAIL_USER || 'your-email@gmail.com',
-      pass: process.env.EMAIL_PASSWORD || config.EMAIL_PASSWORD || 'your-app-password'
+      user: process.env.EMAIL_USER || config.EMAIL_USER || 'your-email@yourdomain.com',
+      pass: process.env.EMAIL_PASSWORD || config.EMAIL_PASSWORD || 'your-email-password'
     },
   });
 };
@@ -339,10 +339,61 @@ const sendLowStockEmail = async (recipientEmail, lowStockProducts) => {
   }
 };
 
+const sendOTPNotification = async (recipientEmail, otp) => {
+  const transporter = createTransporter();
+
+  const subject = 'eKahera - Email Verification OTP';
+  const message = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; text-align: center;">
+        <h1 style="color: white; margin: 0;">eKahera</h1>
+      </div>
+      <div style="padding: 30px; background: #f9f9f9;">
+        <h2 style="color: #333; text-align: center;">Email Verification</h2>
+        <p style="color: #666; text-align: center; font-size: 16px;">
+          Your 4-character verification code is:
+        </p>
+        <div style="text-align: center; margin: 30px 0;">
+          <div style="display: inline-block; background: white; padding: 20px 40px; border-radius: 10px; border: 2px solid #667eea;">
+            <span style="font-size: 32px; font-weight: bold; color: #667eea; letter-spacing: 5px;">${otp}</span>
+          </div>
+        </div>
+        <p style="color: #666; text-align: center; font-size: 14px;">
+          This code will expire in 5 minutes.<br>
+          If you didn't request this code, please ignore this email.
+        </p>
+      </div>
+      <div style="background: #333; padding: 20px; text-align: center;">
+        <p style="color: white; margin: 0; font-size: 12px;">
+          © 2024 eKahera. All rights reserved.
+        </p>
+      </div>
+    </div>
+  `;
+
+  const mailOptions = {
+    from: config.EMAIL_USER || 'noreply@ekahera.com',
+    to: recipientEmail,
+    subject: subject,
+    html: message
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    await logEmailNotification(recipientEmail, subject, message, 'otp');
+    console.log('OTP sent to:', recipientEmail);
+    return true;
+  } catch (error) {
+    console.error('Error sending OTP:', error);
+    return false;
+  }
+};
+
 module.exports = {
   sendNewApplicationNotification,
   sendVerificationStatusNotification,
   sendApplicationSubmittedNotification,
   sendLowStockEmail,
-  logEmailNotification
+  logEmailNotification,
+  sendOTPNotification
 };

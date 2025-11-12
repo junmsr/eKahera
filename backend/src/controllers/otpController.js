@@ -1,22 +1,5 @@
-const { Resend } = require('resend');
 const otpGenerator = require('otp-generator');
-const fs = require('fs');
-const path = require('path');
-
-// Load config from config.env file
-const configPath = path.join(__dirname, '..', '..', 'config.env');
-const configContent = fs.readFileSync(configPath, 'utf8');
-const config = {};
-
-configContent.split('\n').forEach(line => {
-  const [key, value] = line.split('=');
-  if (key && value && !key.startsWith('#')) {
-    config[key.trim()] = value.trim();
-  }
-});
-
-// Initialize Resend
-const resend = new Resend(config.RESEND_API_KEY);
+const { sendOTPNotification } = require('../utils/emailService');
 
 // In-memory storage for OTPs (in production, use Redis or database)
 const otpStorage = new Map();
@@ -46,42 +29,11 @@ exports.sendOTP = async (req, res) => {
       attempts: 0
     });
 
-    // Send email using Resend (using Resend's default domain)
-    const { data, error } = await resend.emails.send({
-      from: 'eKahera <noreply@resend.dev>',
-      to: [email],
-      subject: 'eKahera - Email Verification OTP',
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; text-align: center;">
-            <h1 style="color: white; margin: 0;">eKahera</h1>
-          </div>
-          <div style="padding: 30px; background: #f9f9f9;">
-            <h2 style="color: #333; text-align: center;">Email Verification</h2>
-            <p style="color: #666; text-align: center; font-size: 16px;">
-              Your 4-character verification code is:
-            </p>
-            <div style="text-align: center; margin: 30px 0;">
-              <div style="display: inline-block; background: white; padding: 20px 40px; border-radius: 10px; border: 2px solid #667eea;">
-                <span style="font-size: 32px; font-weight: bold; color: #667eea; letter-spacing: 5px;">${otp}</span>
-              </div>
-            </div>
-            <p style="color: #666; text-align: center; font-size: 14px;">
-              This code will expire in 5 minutes.<br>
-              If you didn't request this code, please ignore this email.
-            </p>
-          </div>
-          <div style="background: #333; padding: 20px; text-align: center;">
-            <p style="color: white; margin: 0; font-size: 12px;">
-              © 2024 eKahera. All rights reserved.
-            </p>
-          </div>
-        </div>
-      `
-    });
+    // Send email using the new email service
+    const emailSent = await sendOTPNotification(email, otp);
 
-    if (error) {
-      throw new Error(error.message);
+    if (!emailSent) {
+      throw new Error('Failed to send OTP email');
     }
 
     res.json({ 
@@ -176,42 +128,11 @@ exports.resendOTP = async (req, res) => {
       attempts: 0
     });
 
-    // Send email using Resend (using Resend's default domain)
-    const { data, error } = await resend.emails.send({
-      from: 'eKahera <noreply@resend.dev>',
-      to: [email],
-      subject: 'eKahera - New Email Verification OTP',
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; text-align: center;">
-            <h1 style="color: white; margin: 0;">eKahera</h1>
-          </div>
-          <div style="padding: 30px; background: #f9f9f9;">
-            <h2 style="color: #333; text-align: center;">New Verification Code</h2>
-            <p style="color: #666; text-align: center; font-size: 16px;">
-              Your new 4-character verification code is:
-            </p>
-            <div style="text-align: center; margin: 30px 0;">
-              <div style="display: inline-block; background: white; padding: 20px 40px; border-radius: 10px; border: 2px solid #667eea;">
-                <span style="font-size: 32px; font-weight: bold; color: #667eea; letter-spacing: 5px;">${otp}</span>
-              </div>
-            </div>
-            <p style="color: #666; text-align: center; font-size: 14px;">
-              This code will expire in 5 minutes.<br>
-              If you didn't request this code, please ignore this email.
-            </p>
-          </div>
-          <div style="background: #333; padding: 20px; text-align: center;">
-            <p style="color: white; margin: 0; font-size: 12px;">
-              © 2024 eKahera. All rights reserved.
-            </p>
-          </div>
-        </div>
-      `
-    });
+    // Send email using the new email service
+    const emailSent = await sendOTPNotification(email, otp);
 
-    if (error) {
-      throw new Error(error.message);
+    if (!emailSent) {
+      throw new Error('Failed to send new OTP email');
     }
 
     res.json({ 

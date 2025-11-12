@@ -33,7 +33,7 @@ export default function useGetStarted() {
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [otpVerified, setOtpVerified] = useState(false);
+  const [isOtpVerified, setIsOtpVerified] = useState(false);
   const inputRef = useRef(null);
 
   useEffect(() => {
@@ -126,6 +126,20 @@ export default function useGetStarted() {
       } finally {
         setLoading(false);
       }
+    } else if (step === 1) {
+      setLoading(true);
+      try {
+        await api("/otp/verify", {
+          method: "POST",
+          body: JSON.stringify({ email: form.email, otp: form.otp }),
+        });
+        setIsOtpVerified(true);
+        setStep((s) => s + 1);
+      } catch (err) {
+        setErrors({ otp: err.message || "Failed to verify OTP" });
+      } finally {
+        setLoading(false);
+      }
     } else {
       setStep((s) => s + 1);
     }
@@ -196,8 +210,8 @@ export default function useGetStarted() {
     loading,
     setLoading,
     success,
-    otpVerified,
-    setOtpVerified,
+    isOtpVerified,
+    setIsOtpVerified,
     inputRef,
     handleChange,
     validateStep,
