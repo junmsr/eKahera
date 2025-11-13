@@ -51,16 +51,25 @@ export default function SetupGuard({ children }) {
             style={{ animationDelay: "0.1s" }}
           >
             {/* Animated Logo Loader */}
-            <div className="relative w-24 h-24">
-              {/* Glowing Pulse behind Logo */}
-              <div className="absolute inset-0 rounded-full bg-blue-400 opacity-30 blur-2xl animate-pulse-slow"></div>
+            <div className="relative w-40 h-40 flex items-center justify-center">
+              {/* Outer Spinning Ring */}
+              <div className="absolute inset-0 border-4 border-blue-400 border-t-transparent rounded-full animate-spin-slow"></div>
 
-              {/* Trending Logo */}
-              <img
-                src={Logo}
-                alt="Logo"
-                className="w-full h-full animate-trending transform transition-transform duration-700 hover:scale-110 drop-shadow-lg"
-              />
+              {/* Middle Spinning Ring */}
+              <div className="absolute inset-2 border-3 border-blue-500 border-t-transparent rounded-full animate-spin-reverse"></div>
+
+              {/* Logo Container */}
+              <div className="relative w-24 h-24">
+                {/* Glowing Pulse behind Logo */}
+                <div className="absolute inset-0 rounded-full bg-blue-400 opacity-40 blur-2xl animate-pulse-slow"></div>
+
+                {/* Trending Logo */}
+                <img
+                  src={Logo}
+                  alt="Logo"
+                  className="w-full h-full animate-trending transform transition-transform duration-700 hover:scale-110 drop-shadow-lg"
+                />
+              </div>
             </div>
 
             {/* Loading Text */}
@@ -93,6 +102,8 @@ export default function SetupGuard({ children }) {
               75% { transform: translateY(-8px) rotate(-2deg); }
             }
             .animate-trending {
+              animation: trending 2s ease-in-out infinite;
+            }
 
             @keyframes pulseSlow {
               0%, 100% { opacity: 0.3; transform: scale(0.9); }
@@ -108,6 +119,22 @@ export default function SetupGuard({ children }) {
             }
             .animate-shimmerText {
               animation: shimmerText 2.5s linear infinite;
+            }
+
+            @keyframes spinSlow {
+              from { transform: rotate(0deg); }
+              to { transform: rotate(360deg); }
+            }
+            .animate-spin-slow {
+              animation: spinSlow 3s linear infinite;
+            }
+
+            @keyframes spinReverse {
+              from { transform: rotate(360deg); }
+              to { transform: rotate(0deg); }
+            }
+            .animate-spin-reverse {
+              animation: spinReverse 2s linear infinite;
             }
           `}
         </style>
