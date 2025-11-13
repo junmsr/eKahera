@@ -1,13 +1,14 @@
-import React, { useEffect, useState } from "react";
-import NavAdmin from "../components/layout/Nav-Admin";
+import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import PageLayout from "../components/layout/PageLayout";
-import Modal from "../components/modals/Modal";
+import NavAdmin from "../components/layout/Nav-Admin";
 import Button from "../components/common/Button";
+import Modal from "../components/modals/Modal";
 import { api, authHeaders } from "../lib/api";
 
 const initialCashiers = [];
 
-function Cashiers() {
+export default function Cashiers() {
   const [cashiers, setCashiers] = useState(initialCashiers);
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState("");
@@ -23,6 +24,9 @@ function Cashiers() {
     email: "",
     status: "ACTIVE",
   });
+
+  // mobile sidebar state
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   // Load cashiers from API
   useEffect(() => {
@@ -136,11 +140,14 @@ function Cashiers() {
 
   return (
     <PageLayout
-      title="CASHIER"
-      subtitle="Manage cashier accounts and permissions"
+      title="&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Cashiers"
+      
+      subtitle="&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Manage cashier accounts and permissions"
       sidebar={<NavAdmin />}
-      className="h-screen bg-white"
+      className="min-h-screen bg-white"
     >
+      {/* (removed inline fixed button - rendered via portal below so it sits at the very top-left of the viewport) */}
+
       <div className="flex-1 bg-transparent overflow-hidden p-3 sm:p-4">
         <div className="flex flex-col items-center">
           {/* Top Controls */}
@@ -209,38 +216,45 @@ function Cashiers() {
           )}
 
           <div className="w-full max-w-5xl bg-white rounded-2xl shadow-lg border border-blue-100 p-0">
-            <div className="w-full overflow-x-auto">
-              <table className="w-full min-w-[720px] text-left rounded-xl overflow-hidden">
+            {/* mobile: sidebar toggle button (visible only on small screens) */}
+            <div className="flex items-center justify-between px-4 py-3 sm:hidden">
+              <div className="text-sm font-semibold text-gray-700">Cashiers</div>
+              <div /> {/* placeholder to keep spacing */}
+            </div>
+
+            {/* Desktop / wide screens: table */}
+            <div className="w-full overflow-x-auto hidden sm:block">
+              <table className="w-full min-w-0 md:min-w-[720px] text-left rounded-xl overflow-hidden">
                 <thead>
                   <tr className="bg-gradient-to-r from-blue-50/80 to-indigo-50/80 text-gray-700 font-semibold text-xs uppercase tracking-wider border-b border-blue-100">
-                    <th className="py-2 px-5">Name</th>
-                    <th className="py-2 px-5">Cashier ID</th>
-                    <th className="py-2 px-5">Number</th>
-                    <th className="py-2 px-5">Email</th>
-                    <th className="py-2 px-5">Status</th>
-                    <th className="py-2 px-5 text-center">Action</th>
+                    <th className="py-2 px-3 sm:px-5">Name</th>
+                    <th className="py-2 px-3 sm:px-5">Cashier ID</th>
+                    <th className="py-2 px-3 sm:px-5">Number</th>
+                    <th className="py-2 px-3 sm:px-5">Email</th>
+                    <th className="py-2 px-3 sm:px-5">Status</th>
+                    <th className="py-2 px-3 sm:px-5 text-center">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {loading &&
                     Array.from({ length: 5 }).map((_, i) => (
                       <tr key={`skeleton-${i}`} className="animate-pulse">
-                        <td className="py-3 px-5">
+                        <td className="py-3 px-3 sm:px-5">
                           <div className="h-3 w-28 bg-gray-200 rounded" />
                         </td>
-                        <td className="py-3 px-5">
+                        <td className="py-3 px-3 sm:px-5">
                           <div className="h-3 w-16 bg-gray-200 rounded" />
                         </td>
-                        <td className="py-3 px-5">
+                        <td className="py-3 px-3 sm:px-5">
                           <div className="h-3 w-24 bg-gray-200 rounded" />
                         </td>
-                        <td className="py-3 px-5">
+                        <td className="py-3 px-3 sm:px-5">
                           <div className="h-3 w-40 bg-gray-200 rounded" />
                         </td>
-                        <td className="py-3 px-5">
+                        <td className="py-3 px-3 sm:px-5">
                           <div className="h-3 w-16 bg-gray-200 rounded" />
                         </td>
-                        <td className="py-3 px-5">
+                        <td className="py-3 px-3 sm:px-5">
                           <div className="h-8 w-20 bg-gray-200 rounded" />
                         </td>
                       </tr>
@@ -282,15 +296,15 @@ function Cashiers() {
                         key={idx}
                         className="hover:bg-blue-50/40 transition-colors"
                       >
-                        <td className="py-2.5 px-5 font-medium text-gray-900">
+                        <td className="py-2.5 px-3 sm:px-5 font-medium text-gray-900">
                           {c.name}
                         </td>
-                        <td className="py-2.5 px-5 text-gray-700">{c.id}</td>
-                        <td className="py-2.5 px-5 text-gray-700">
+                        <td className="py-2.5 px-3 sm:px-5 text-gray-700">{c.id}</td>
+                        <td className="py-2.5 px-3 sm:px-5 text-gray-700">
                           {c.number}
                         </td>
-                        <td className="py-2.5 px-5 text-gray-700">{c.email}</td>
-                        <td className="py-2.5 px-5">
+                        <td className="py-2.5 px-3 sm:px-5 text-gray-700">{c.email}</td>
+                        <td className="py-2.5 px-3 sm:px-5">
                           <span
                             className={
                               c.status === "ACTIVE"
@@ -301,7 +315,7 @@ function Cashiers() {
                             {c.status}
                           </span>
                         </td>
-                        <td className="py-2.5 px-5">
+                        <td className="py-2.5 px-3 sm:px-5">
                           <div className="flex items-center justify-center gap-2">
                             <Button
                               variant="icon"
@@ -349,6 +363,94 @@ function Cashiers() {
                     ))}
                 </tbody>
               </table>
+            </div>
+
+            {/* Mobile / narrow screens: stacked card layout */}
+            <div className="w-full sm:hidden px-3 py-3 space-y-3">
+              {loading &&
+                Array.from({ length: 4 }).map((_, i) => (
+                  <div
+                    key={`card-skel-${i}`}
+                    className="animate-pulse bg-white border rounded-lg p-3 shadow-sm"
+                  >
+                    <div className="h-4 w-32 bg-gray-200 rounded mb-2" />
+                    <div className="h-3 w-24 bg-gray-200 rounded mb-1" />
+                    <div className="h-3 w-40 bg-gray-200 rounded" />
+                  </div>
+                ))}
+
+              {!loading && filteredCashiers.length === 0 && (
+                <div className="bg-white border rounded-lg p-4 text-center">
+                  <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
+                    <svg
+                      className="w-6 h-6 text-gray-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M3 7h18M5 7V5a2 2 0 012-2h10a2 2 0 012 2v2M3 7v10a2 2 0 002 2h14a2 2 0 002-2V7"
+                      />
+                    </svg>
+                  </div>
+                  <p className="text-gray-600 font-semibold">No cashiers found</p>
+                  <p className="text-gray-400 text-sm">Try changing filters or add a new cashier</p>
+                </div>
+              )}
+
+              {!loading &&
+                filteredCashiers.map((c, idx) => (
+                  <div key={`card-${idx}`} className="bg-white border rounded-lg p-3 shadow-sm">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <div className="text-sm font-semibold text-gray-900">{c.name}</div>
+                        <div className="text-xs text-gray-500">ID: {c.id}</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="mb-1">
+                          <span
+                            className={
+                              c.status === "ACTIVE"
+                                ? "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700 border border-green-200"
+                                : "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700 border border-red-200"
+                            }
+                          >
+                            {c.status}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="icon"
+                            className="bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-full p-1.5 border border-blue-200"
+                            onClick={() => handleEditCashier(idx)}
+                            title="Edit"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a4 4 0 01-1.414.828l-4.243 1.414 1.414-4.243a4 4 0 01.828-1.414z" />
+                            </svg>
+                          </Button>
+                          <Button
+                            variant="icon"
+                            className="bg-red-50 hover:bg-red-100 text-red-700 rounded-full p-1.5 border border-red-200"
+                            onClick={() => handleDeleteCashier(idx)}
+                            title="Delete"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-3 text-sm text-gray-700">
+                      <div className="truncate"><strong>Number:</strong> {c.number}</div>
+                      <div className="truncate"><strong>Email:</strong> {c.email}</div>
+                    </div>
+                  </div>
+                ))}
             </div>
           </div>
           {/* Spacing */}
@@ -471,8 +573,66 @@ function Cashiers() {
           </Button>
         </form>
       </Modal>
+
+      {/* Mobile sidebar drawer */}
+      {typeof document !== "undefined" &&
+        createPortal(
+          mobileSidebarOpen ? (
+            <div className="fixed inset-0 z-50 flex">
+              {/* overlay */}
+              <div
+                className="fixed inset-0 bg-black/40"
+                onClick={() => setMobileSidebarOpen(false)}
+                aria-hidden="true"
+              />
+
+              {/* panel */}
+              <aside
+                role="dialog"
+                aria-modal="true"
+                className="relative w-72 max-w-full h-full bg-white border-r shadow-xl transform transition-transform duration-200 ease-out"
+              >
+                <div className="flex items-center justify-between p-4 border-b">
+                  <div className="text-lg font-semibold"></div>
+                  <button
+                    type="button"
+                    className="p-2 rounded-md text-gray-600 hover:bg-gray-100"
+                    onClick={() => setMobileSidebarOpen(false)}
+                    aria-label="Close menu"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+
+                <div className="p-4 overflow-y-auto h-full">
+                  <NavAdmin />
+                </div>
+              </aside>
+            </div>
+          ) : null,
+          document.body
+        )}
+
+      {/* Mobile menu button rendered into document.body so it's at the topmost-left of the page */}
+      {typeof document !== "undefined" &&
+        createPortal(
+          <div className="sm:hidden" aria-hidden={false}>
+            <button
+              type="button"
+              onClick={() => setMobileSidebarOpen(true)}
+              aria-label="Open menu"
+              className="inline-flex items-center justify-center p-2 rounded-md bg-white border border-gray-200 shadow text-gray-700"
+              style={{ position: "fixed", top: 12, left: 12, zIndex: 2147483647 }}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+          </div>,
+          document.body
+        )}
     </PageLayout>
   );
 }
-
-export default Cashiers;
