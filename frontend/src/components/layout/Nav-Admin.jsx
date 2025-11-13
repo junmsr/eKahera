@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import Logo from "../common/Logo";
 import LogoutModal from "../modals/LogoutModal";
 
@@ -219,6 +219,8 @@ const NavAdmin = () => {
         <div
           className={`${STYLES.logoContainer} logoContainer`}
           onClick={handleLogoClick}
+          role="button"
+          tabIndex={0}
         >
           <div className="transition-all duration-300 group-hover:scale-110">
             <Logo size={42} />

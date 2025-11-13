@@ -3,6 +3,7 @@ import Background from "./Background";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
 import Header from "./Header";
+import Button from "../common/Button";
 
 /**
  * PageLayout Component
@@ -76,9 +77,13 @@ export default function PageLayout({
         {/* Sidebar Mobile Off-canvas */}
         {sidebar && (
           <aside
-            className={`md:hidden fixed inset-y-0 left-0 z-50 w-64 max-w-[80vw] bg-white shadow-xl transform transition-transform duration-300 ${isMobileNavOpen ? "translate-x-0" : "-translate-x-full"}`}
+            className={`md:hidden fixed inset-y-0 left-0 z-50 w-48 max-w-[80vw] bg-white shadow-xl transform transition-transform duration-300 ${
+              isMobileNavOpen ? "translate-x-0" : "-translate-x-full"
+            }`}
+            role="dialog"
+            aria-modal="true"
           >
-            {sidebar}
+            {React.cloneElement(sidebar, { isMobile: true })}
           </aside>
         )}
         {sidebar && isMobileNavOpen && (
@@ -96,6 +101,8 @@ export default function PageLayout({
               title={title}
               subtitle={subtitle}
               headerActions={headerActions}
+              isMobileNavOpen={isMobileNavOpen}
+              onMenuClick={() => setIsMobileNavOpen(!isMobileNavOpen)}
               className="sticky top-0 z-50 bg-white"
             />
           )}
