@@ -1,9 +1,11 @@
 import React, { useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Background from "./Background";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
 import Header from "./Header";
 import Button from "../common/Button";
+import LogoutModal from "../modals/LogoutModal";
 
 /**
  * PageLayout Component
@@ -25,6 +27,21 @@ export default function PageLayout({
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const touchStartXRef = useRef(null);
   const touchActiveRef = useRef(false);
+  const navigate = useNavigate();
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+
+  const handleLogoutClick = () => {
+    setShowLogoutModal(true);
+  };
+
+  const handleLogoutConfirm = () => {
+    setShowLogoutModal(false);
+    navigate("/");
+  };
+
+  const handleLogoutCancel = () => {
+    setShowLogoutModal(false);
+  };
 
   return (
     <Background
@@ -34,6 +51,12 @@ export default function PageLayout({
       floatingElements={false}
       className={theme}
     >
+      <LogoutModal
+        isOpen={showLogoutModal}
+        onClose={handleLogoutCancel}
+        onConfirm={handleLogoutConfirm}
+      />
+
       {/* Navbar */}
       {showNavbar && <Navbar />}
       {/* Spacer to offset fixed navbar (disabled for compact top spacing) */}
@@ -83,7 +106,7 @@ export default function PageLayout({
             role="dialog"
             aria-modal="true"
           >
-            {React.cloneElement(sidebar, { isMobile: true })}
+            {React.cloneElement(sidebar, { isMobile: true, onLogoutClick: handleLogoutClick })}
           </aside>
         )}
         {sidebar && isMobileNavOpen && (
