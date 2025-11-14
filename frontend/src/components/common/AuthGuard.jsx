@@ -15,10 +15,12 @@ export default function AuthGuard({ children }) {
     const checkAuth = () => {
       const token = sessionStorage.getItem('auth_token') || localStorage.getItem('token');
 
-      // If no token and not on login page, redirect to login
-      if (!token && location.pathname !== '/login') {
+      const publicPaths = ['/', '/services', '/get-started', '/contact'];
+
+      // If no token and not on a public page, redirect to login
+      if (!token && !publicPaths.includes(location.pathname) && location.pathname !== '/login') {
         // Preserve the intended destination
-        const redirectPath = location.pathname !== '/' ? location.pathname + location.search : '/dashboard';
+        const redirectPath = location.pathname + location.search;
         navigate(`/login?redirect=${encodeURIComponent(redirectPath)}`, { replace: true });
       } else {
         setIsChecking(false);
