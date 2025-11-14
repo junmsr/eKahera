@@ -27,7 +27,6 @@ import InitialSetup from "./pages/InitialSetup.jsx";
 import StoreQR from "./pages/StoreQR.jsx";
 import Receipt from "./pages/Receipt.jsx";
 import Documents from "./pages/Documents.jsx";
-import RedirectHandler from './components/common/RedirectHandler.jsx';
 
 // Router Configuration
 const router = createBrowserRouter(
@@ -59,7 +58,6 @@ const router = createBrowserRouter(
         { path: "superadmin", element: <SuperAdmin /> },
         { path: "superadmin/stores/:id", element: <SuperAdminView /> },
         { path: "setup", element: <InitialSetup /> },
-        { path: "redirect", element: <RedirectHandler /> },
       ],
     },
   ],
