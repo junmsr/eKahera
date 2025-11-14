@@ -3,13 +3,20 @@
   <head>
     <meta charset="utf-8">
     <title>eKahera</title>
-    <script type="text/javascript">
-      const path = window.location.pathname;
-      const repoName = '/eKahera'; // Change this to your repository name
-      const newPath = path.startsWith(repoName) ? path.substring(repoName.length) : path;
-      window.location.href = `${window.location.origin}${repoName}/redirect?path=${newPath.substring(1)}`;
+    <script>
+      (function(){
+        var redirect = sessionStorage.redirect;
+        delete sessionStorage.redirect;
+        if (redirect && redirect != location.href) {
+          history.replaceState(null, null, redirect);
+        }
+      })();
     </script>
   </head>
   <body>
+    <script>
+      sessionStorage.redirect = location.href;
+    </script>
+    <meta http-equiv="refresh" content="0;URL='/'">
   </body>
 </html>
