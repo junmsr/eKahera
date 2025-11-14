@@ -847,17 +847,17 @@ exports.registerBusinessWithDocuments = [
 
       // Only send notifications and update status if all required documents are uploaded
       if (documentStatus.hasAllRequired) {
-        // Get SuperAdmin email for notification
-        const superAdminResult = await client.query(
-          'SELECT email FROM users WHERE role = $1 LIMIT 1',
-          ['superadmin']
-        );
-
-        if (superAdminResult.rowCount > 0) {
-          const superAdminEmail = superAdminResult.rows[0].email;
-          // Send notification to super admin about new application
-          await sendApplicationSubmittedNotification(businessResult.rows[0], superAdminEmail);
-        }
+                // Get SuperAdmin emails for notification
+                const superAdminResult = await client.query(
+                  'SELECT email FROM users WHERE role = $1',
+                  ['superadmin']
+                );
+        
+                if (superAdminResult.rows.length > 0) {
+                  const superAdminEmails = superAdminResult.rows.map(row => row.email);
+                  // Send notification to super admin about new application
+                  await sendNewApplicationNotification(businessResult.rows[0], superAdminEmails);
+                }
 
         // Send application submitted confirmation to the business
         await sendApplicationSubmittedNotification(businessResult.rows[0]).catch(error => {

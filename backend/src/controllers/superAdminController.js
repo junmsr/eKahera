@@ -242,6 +242,21 @@ exports.rejectStore = async (req, res) => {
       ['rejected', req.user.userId, rejection_reason, id]
     );
 
+    // Fetch updated business data to send email
+    const updatedBusinessResult = await pool.query(
+      `SELECT business_id, business_name, email FROM business WHERE business_id = $1`,
+      [id]
+    );
+    const updatedBusiness = updatedBusinessResult.rows[0];
+
+    // Send rejection email notification
+    try {
+      await sendVerificationStatusNotification(updatedBusiness, 'rejected', rejection_reason);
+      console.log(`Rejection email sent to ${updatedBusiness.email}`);
+    } catch (emailError) {
+      console.error('Error sending rejection email:', emailError);
+    }
+
     // Log the rejection action
     logAction({
       userId: req.user.userId,

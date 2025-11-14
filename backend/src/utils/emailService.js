@@ -25,7 +25,7 @@ const logEmailNotification = async (recipientEmail, subject, message, type, busi
 };
 
 // Send email notification for new business application
-const sendNewApplicationNotification = async (businessData, superAdminEmail) => {
+const sendNewApplicationNotification = async (businessData, superAdminEmails) => {
   const subject = 'New Business Application - eKahera Verification Required';
   const message = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -59,14 +59,16 @@ const sendNewApplicationNotification = async (businessData, superAdminEmail) => 
   `;
 
   try {
-    await resend.emails.send({
-      from: process.env.EMAIL_USER,
-      to: superAdminEmail,
-      subject: subject,
-      html: message,
-    });
-    await logEmailNotification(superAdminEmail, subject, message, 'new_application', businessData.business_id);
-    console.log('New application notification sent to SuperAdmin:', superAdminEmail);
+    for (const email of superAdminEmails) {
+      await resend.emails.send({
+        from: process.env.EMAIL_USER,
+        to: email,
+        subject: subject,
+        html: message,
+      });
+      await logEmailNotification(email, subject, message, 'new_application', businessData.business_id);
+      console.log('New application notification sent to SuperAdmin:', email);
+    }
     return true;
   } catch (error) {
     console.error('Error sending new application notification:', error);
