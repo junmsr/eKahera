@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import ScannerCard from "../components/ui/POS/ScannerCard";
+import PageLayout from "../components/layout/PageLayout";
 import SkuFormCard from "../components/ui/POS/SkuFormCard";
 import CartTableCard from "../components/ui/POS/CartTableCard";
 import Button from "../components/common/Button";
@@ -40,9 +41,6 @@ function POS() {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const notificationRef = useRef(null);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
-  const touchStartXRef = useRef(null);
-  const touchActiveRef = useRef(false);
-
   const token = sessionStorage.getItem("auth_token");
   const user = JSON.parse(sessionStorage.getItem("user") || "{}");
   const hasFinalizedRef = React.useRef(false);
@@ -412,70 +410,14 @@ function POS() {
   };
 
   return (
-    <div className="bg-white min-h-screen">
-      <div
-        className="flex min-h-screen overflow-y-auto md:overflow-hidden"
-        onTouchStart={(e) => {
-          if (window.innerWidth >= 768) return;
-          const x = e.touches?.[0]?.clientX ?? 0;
-          // Start tracking if swipe begins near left edge or drawer is open
-          if (!isMobileNavOpen && x <= 24) {
-            touchActiveRef.current = true;
-            touchStartXRef.current = x;
-          } else if (isMobileNavOpen) {
-            touchActiveRef.current = true;
-            touchStartXRef.current = x;
-          }
-        }}
-        onTouchMove={(e) => {
-          if (!touchActiveRef.current) return;
-          const x = e.touches?.[0]?.clientX ?? 0;
-          const delta = x - (touchStartXRef.current ?? x);
-          // Open when swiping right from edge; close when swiping left while open
-          if (!isMobileNavOpen && delta > 60) {
-            setIsMobileNavOpen(true);
-            touchActiveRef.current = false;
-            touchStartXRef.current = null;
-          } else if (isMobileNavOpen && delta < -60) {
-            setIsMobileNavOpen(false);
-            touchActiveRef.current = false;
-            touchStartXRef.current = null;
-          }
-        }}
-        onTouchEnd={() => {
-          touchActiveRef.current = false;
-          touchStartXRef.current = null;
-        }}
-      >
-        {/* Sidebar */}
-        <div className="hidden md:block">
-          <NavAdmin />
-        </div>
-        {/* Mobile Off-canvas Nav */}
-        <div
-          className={`md:hidden fixed inset-y-0 left-0 z-50 w-64 max-w-[80vw] bg-white shadow-xl transform transition-transform duration-300 ${
-            isMobileNavOpen ? "translate-x-0" : "-translate-x-full"
-          }`}
-        >
-          <NavAdmin />
-        </div>
-        {isMobileNavOpen && (
-          <div
-            className="md:hidden fixed inset-0 bg-black/30 z-40"
-            onClick={() => setIsMobileNavOpen(false)}
-          />
-        )}
-
-        {/* Main Content */}
-        <div className="flex-1 md:ml-48 ml-0 flex flex-col min-h-screen">
-          {/* Header */}
-          <header className="flex items-center gap-4 px-4 sm:px-6 py-3 bg-white/90 backdrop-blur-md shadow-md border-b border-gray-200/50 h-[64px] min-h-[64px] max-h-[64px] sticky top-0 z-30">
-            <div className="flex items-center gap-3">
-              <span className="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight">
-                POS
-              </span>
-            </div>
-            <div className="flex-1 flex items-center justify-center px-2">
+    <PageLayout
+      title="POS"
+      sidebar={<NavAdmin />}
+      headerActions={
+        <>
+          {headerActions}
+          {/* Transaction Number display moved to header actions */}
+          <div className="hidden sm:flex items-center justify-center px-2">
               <button
                 onClick={handleCopyTn}
                 title="Copy transaction number"
@@ -498,16 +440,12 @@ function POS() {
                   {transactionNumber}
                 </span>
               </button>
-            </div>
-
-            <div className="ml-auto">{headerActions}</div>
-          </header>
-
-          {/* Main Area */}
-          <main
-            className="flex-1 bg-gradient-to-br from-gray-50/50 via-blue-50/30 to-indigo-50/50 overflow-hidden p-2 sm:p-3 md:p-4"
-            style={{ height: "calc(100vh - 64px)" }}
-          >
+          </div>
+        </>
+      }
+    >
+      <div className="flex-1 flex flex-col min-h-screen">
+        <main className="flex-1 bg-gradient-to-br from-gray-50/50 via-blue-50/30 to-indigo-50/50 overflow-hidden p-2 sm:p-3 md:p-4">
             <div className="grid gap-2 sm:gap-3 md:gap-4 h-full grid-cols-1 lg:grid-cols-12">
               {/* Left Column - Scanner, SKU Form, Transaction */}
               <div className="lg:col-span-4 flex flex-col gap-2 sm:gap-3 md:gap-4">
@@ -700,7 +638,7 @@ function POS() {
               </div>
             </div>
           </main>
-
+      </div>
           {/* Modals */}
           <DiscountModal
             isOpen={showDiscount}
@@ -802,9 +740,7 @@ function POS() {
               });
             }}
           />
-        </div>
-      </div>
-    </div>
+    </PageLayout>
   );
 }
 

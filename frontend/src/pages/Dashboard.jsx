@@ -126,6 +126,21 @@ export default function Dashboard() {
     }
   }, []);
 
+  // Close notification dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        notificationRef.current &&
+        !notificationRef.current.contains(event.target)
+      ) {
+        setShowNotifications(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   // Data fetching
   const fetchData = async () => {
     try {
@@ -298,52 +313,109 @@ export default function Dashboard() {
   return (
     <PageLayout
       title="DASHBOARD"
-      subtitle="Overview of your business performance"
+      subtitle=""
       sidebar={<NavAdmin />}
       headerActions={headerActions}
       className="bg-gray-50 min-h-screen"
     >
-      <div className="grid grid-cols-12 gap-6 p-6">
-        <div className="col-span-12 lg:col-span-8 flex flex-col gap-6">
-          <VisitorsChart data={chartData} />
-          <SalesPieChart data={pieData} />
+      {/* Stats Cards - Mobile View */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 lg:hidden">
+        {loading
+          ? Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 animate-pulse">
+                <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                <div className="h-8 bg-gray-300 rounded w-1/2"></div>
+              </div>
+            ))
+          : stats.map((stat, index) => (
+              <div key={index} className="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+                <h4 className="text-sm font-medium text-gray-500">{stat.label}</h4>
+                <p className="text-2xl font-bold text-gray-900 mt-1">
+                  {typeof stat.value === "number" ? stat.value.toLocaleString() : stat.value}
+                </p>
+                {stat.change ? (
+                  <p className={`text-xs font-medium mt-1 ${stat.change > 0 ? "text-green-600" : "text-red-600"}`}>
+                    {stat.change > 0 ? "+" : ""}{stat.change.toFixed(2)}%
+                  </p>
+                ) : null}
+              </div>
+            ))}
+      </div>
+
+      {/* Main Content */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 p-6">
+        {/* Main Chart Area */}
+        <div className="lg:col-span-8 flex flex-col gap-6">
+          {loading ? (
+            <>
+              <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200 h-[336px] animate-pulse flex items-center justify-center"><div className="w-full h-64 bg-gray-200 rounded-lg"></div></div>
+              <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200 h-[336px] animate-pulse flex items-center justify-center"><div className="w-64 h-64 bg-gray-200 rounded-full"></div></div>
+            </>
+          ) : (
+            <>
+              <VisitorsChart data={chartData} />
+              <SalesPieChart data={pieData} />
+            </>
+          )}
         </div>
-        <div className="col-span-12 lg:col-span-4 flex flex-col gap-6">
-          <DashboardStatsCard stats={highlight} />
-          <div className="bg-white p-6 rounded-xl shadow-md">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-bold text-gray-800">Low Stock Products</h3>
-              <button
-                onClick={async () => {
-                  try {
-                    const token = sessionStorage.getItem("auth_token");
-                    await api("/api/products/send-low-stock-alert", {
-                      method: "POST",
-                      headers: authHeaders(token),
-                    });
-                    alert("Low stock alert sent successfully!");
-                  } catch (err) {
-                    alert("Failed to send low stock alert.");
-                  }
-                }}
-                className="text-sm font-medium text-blue-600 hover:text-blue-800"
-              >
-                Send Alert
-              </button>
+
+        {/* Sidebar with Stats and Low Stock */}
+        <div className="lg:col-span-4 flex flex-col gap-6">
+          {loading ? (
+            <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200 animate-pulse">
+              <div className="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
+              <div className="h-8 bg-gray-300 rounded w-1/2 mb-6"></div>
+              <div className="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
+              <div className="h-8 bg-gray-300 rounded w-1/2 mb-6"></div>
+              <div className="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
+              <div className="h-8 bg-gray-300 rounded w-1/2"></div>
             </div>
-            {lowStockProducts.length > 0 ? (
-              <ul className="divide-y divide-gray-200">
-                {lowStockProducts.map((product) => (
-                  <li key={product.product_id} className="py-3 flex justify-between items-center">
-                    <span className="text-sm font-medium text-gray-800">{product.product_name}</span>
-                    <span className="text-sm font-bold text-red-600">{product.quantity_in_stock} left</span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm text-gray-500">No products with low stock.</p>
-            )}
-          </div>
+          ) : (
+            <DashboardStatsCard stats={highlight} />
+          )}
+          {loading ? (
+            <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200 animate-pulse">
+              <div className="h-6 bg-gray-200 rounded w-1/2 mb-6"></div>
+              <div className="h-4 bg-gray-200 rounded w-full mb-3"></div>
+              <div className="h-4 bg-gray-200 rounded w-full mb-3"></div>
+              <div className="h-4 bg-gray-200 rounded w-4/5"></div>
+            </div>
+          ) : (
+            <div className="bg-white p-6 rounded-xl shadow-md">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-bold text-gray-800">Low Stock Products</h3>
+                <button
+                  onClick={async () => {
+                    try {
+                      const token = sessionStorage.getItem("auth_token");
+                      await api("/api/products/send-low-stock-alert", {
+                        method: "POST",
+                        headers: authHeaders(token),
+                      });
+                      alert("Low stock alert sent successfully!");
+                    } catch (err) {
+                      alert("Failed to send low stock alert.");
+                    }
+                  }}
+                  className="text-sm font-medium text-blue-600 hover:text-blue-800"
+                >
+                  Send Alert
+                </button>
+              </div>
+              {lowStockProducts.length > 0 ? (
+                <ul className="divide-y divide-gray-200">
+                  {lowStockProducts.map((product) => (
+                    <li key={product.product_id} className="py-3 flex justify-between items-center">
+                      <span className="text-sm font-medium text-gray-800">{product.product_name}</span>
+                      <span className="text-sm font-bold text-red-600">{product.quantity_in_stock} left</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-gray-500">No products with low stock.</p>
+              )}
+            </div>
+          )}
         </div>
       </div>
       <ProfileModal

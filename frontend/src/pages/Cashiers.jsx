@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { createPortal } from "react-dom";
 import PageLayout from "../components/layout/PageLayout";
 import NavAdmin from "../components/layout/Nav-Admin";
 import Button from "../components/common/Button";
 import Modal from "../components/modals/Modal";
 import { api, authHeaders } from "../lib/api";
 
+// (Assuming initialCashiers is defined elsewhere or is intended to be empty)
 const initialCashiers = [];
 
 export default function Cashiers() {
@@ -24,9 +24,6 @@ export default function Cashiers() {
     email: "",
     status: "ACTIVE",
   });
-
-  // mobile sidebar state
-  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   // Load cashiers from API
   useEffect(() => {
@@ -140,14 +137,11 @@ export default function Cashiers() {
 
   return (
     <PageLayout
-      title="&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Cashiers"
-      
-      subtitle="&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Manage cashier accounts and permissions"
+      title="Cashiers"
+      subtitle="Manage cashier accounts and permissions"
       sidebar={<NavAdmin />}
       className="min-h-screen bg-white"
     >
-      {/* (removed inline fixed button - rendered via portal below so it sits at the very top-left of the viewport) */}
-
       <div className="flex-1 bg-transparent overflow-hidden p-3 sm:p-4">
         <div className="flex flex-col items-center">
           {/* Top Controls */}
@@ -216,12 +210,6 @@ export default function Cashiers() {
           )}
 
           <div className="w-full max-w-5xl bg-white rounded-2xl shadow-lg border border-blue-100 p-0">
-            {/* mobile: sidebar toggle button (visible only on small screens) */}
-            <div className="flex items-center justify-between px-4 py-3 sm:hidden">
-              <div className="text-sm font-semibold text-gray-700">Cashiers</div>
-              <div /> {/* placeholder to keep spacing */}
-            </div>
-
             {/* Desktop / wide screens: table */}
             <div className="w-full overflow-x-auto hidden sm:block">
               <table className="w-full min-w-0 md:min-w-[720px] text-left rounded-xl overflow-hidden">
@@ -573,66 +561,6 @@ export default function Cashiers() {
           </Button>
         </form>
       </Modal>
-
-      {/* Mobile sidebar drawer */}
-      {typeof document !== "undefined" &&
-        createPortal(
-          mobileSidebarOpen ? (
-            <div className="fixed inset-0 z-50 flex">
-              {/* overlay */}
-              <div
-                className="fixed inset-0 bg-black/40"
-                onClick={() => setMobileSidebarOpen(false)}
-                aria-hidden="true"
-              />
-
-              {/* panel */}
-              <aside
-                role="dialog"
-                aria-modal="true"
-                className="relative w-72 max-w-full h-full bg-white border-r shadow-xl transform transition-transform duration-200 ease-out"
-              >
-                <div className="flex items-center justify-between p-4 border-b">
-                  <div className="text-lg font-semibold"></div>
-                  <button
-                    type="button"
-                    className="p-2 rounded-md text-gray-600 hover:bg-gray-100"
-                    onClick={() => setMobileSidebarOpen(false)}
-                    aria-label="Close menu"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-
-                <div className="p-4 overflow-y-auto h-full">
-                  <NavAdmin />
-                </div>
-              </aside>
-            </div>
-          ) : null,
-          document.body
-        )}
-
-      {/* Mobile menu button rendered into document.body so it's at the topmost-left of the page */}
-      {typeof document !== "undefined" &&
-        createPortal(
-          <div className="sm:hidden" aria-hidden={false}>
-            <button
-              type="button"
-              onClick={() => setMobileSidebarOpen(true)}
-              aria-label="Open menu"
-              className="inline-flex items-center justify-center p-2 rounded-md bg-white border border-gray-200 shadow text-gray-700"
-              style={{ position: "fixed", top: 12, left: 12, zIndex: 2147483647 }}
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
-          </div>,
-          document.body
-        )}
     </PageLayout>
   );
 }
