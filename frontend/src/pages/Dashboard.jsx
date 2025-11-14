@@ -383,7 +383,7 @@ export default function Dashboard() {
       </div>
 
       {/* Main Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 p-6 pb-50 lg:pb-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 p-6 pb-10 lg:pb-6">
         {/* Main Chart Area */}
         <div className="lg:col-span-8 flex flex-col gap-6">
           {loading ? (

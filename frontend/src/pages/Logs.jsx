@@ -26,7 +26,7 @@ const LogsPage = () => {
         userId: l.user_id,
         username: l.username || "",
         action: l.action || `Action by ${l.username || l.user_id}`,
-        time: new Date(l.date_time).toLocaleString(),
+        time: l.date_time ? new Date(l.date_time).toLocaleString() : "Invalid date",
         dateTime: l.date_time,
         role: (l.role === 'business_owner' ? 'admin' : l.role || "").toLowerCase(),
       }));
@@ -242,44 +242,69 @@ const LogsPage = () => {
         </div>
 
         <div className="flex-1 overflow-y-auto">
-          <table className="min-w-full bg-white/80 backdrop-blur-md rounded-xl overflow-hidden">
-            <thead className="bg-gray-100/50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Timestamp</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200/50">
-              {loading ? (
+          {/* Desktop Table View */}
+          <div className="hidden sm:block">
+            <table className="min-w-full bg-white/80 backdrop-blur-md rounded-xl overflow-hidden">
+              <thead className="bg-gray-100/50">
                 <tr>
-                  <td colSpan="4" className="text-center py-8 text-gray-500">Loading logs...</td>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Timestamp</th>
                 </tr>
-              ) : filteredLogs.length === 0 ? (
-                <tr>
-                  <td colSpan="4" className="text-center py-8 text-gray-500">No logs found.</td>
-                </tr>
-              ) : (
-                filteredLogs.map((log) => (
-                  <tr key={log.id}>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{log.username}</div>
-                      <div className="text-sm text-gray-500">ID: {log.userId}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${log.role === "admin" || log.role === "business_owner" ? "bg-purple-100 text-purple-800" : log.role === "cashier" ? "bg-blue-100 text-blue-800" : "bg-green-100 text-green-800"}`}>
-                        {log.role}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">{log.action}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{log.time}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-gray-200/50">
+                {loading ? (
+                  <tr><td colSpan="4" className="text-center py-8 text-gray-500">Loading logs...</td></tr>
+                ) : filteredLogs.length === 0 ? (
+                  <tr><td colSpan="4" className="text-center py-8 text-gray-500">No logs found.</td></tr>
+                ) : (
+                  filteredLogs.map((log) => (
+                    <tr key={log.id}>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900">{log.username}</div>
+                        <div className="text-sm text-gray-500">ID: {log.userId}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${log.role === "admin" || log.role === "business_owner" ? "bg-purple-100 text-purple-800" : log.role === "cashier" ? "bg-blue-100 text-blue-800" : "bg-green-100 text-green-800"}`}>
+                          {log.role}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">{log.action}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{log.time}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile Card View */}
+          <div className="sm:hidden space-y-3">
+            {loading ? (
+              <div className="text-center py-8 text-gray-500">Loading logs...</div>
+            ) : filteredLogs.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">No logs found.</div>
+            ) : (
+              filteredLogs.map((log) => (
+                <div key={log.id} className="bg-white/90 backdrop-blur-sm border rounded-lg p-4 shadow-sm">
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <div className="font-semibold text-gray-900">{log.username}</div>
+                      <div className="text-xs text-gray-500">ID: {log.userId}</div>
+                    </div>
+                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${log.role === "admin" || log.role === "business_owner" ? "bg-purple-100 text-purple-800" : log.role === "cashier" ? "bg-blue-100 text-blue-800" : "bg-green-100 text-green-800"}`}>
+                      {log.role}
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-700 mb-2">{log.action}</p>
+                  <div className="text-xs text-gray-500 text-right border-t pt-2 mt-2">
+                    {log.time}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </div>
 
         {error && (

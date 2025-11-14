@@ -431,7 +431,7 @@ function POS() {
       headerActions={headerActions}
     >
       <div className="flex-1 flex flex-col min-h-screen">
-        <main className="flex-1 bg-gradient-to-br from-gray-50/50 via-blue-50/30 to-indigo-50/50 overflow-hidden p-2 sm:p-3 md:p-4 pb-55 lg:pb-4">
+        <main className="flex-1 bg-gradient-to-br from-gray-50/50 via-blue-50/30 to-indigo-50/50 overflow-hidden p-2 sm:p-3 md:p-4 pb-10 lg:pb-4">
             <div className="grid gap-2 sm:gap-3 md:gap-4 h-full grid-cols-1 lg:grid-cols-12">
               {/* Left Column - Scanner, SKU Form, Transaction */}
               <div className="lg:col-span-4 flex flex-col gap-2 sm:gap-3 md:gap-4">
