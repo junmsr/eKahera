@@ -44,9 +44,10 @@ function SuperAdmin() {
   });
   const [deletePassword, setDeletePassword] = useState("");
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
   const navigate = useNavigate();
-  // Standardizing token retrieval to sessionStorage (from 'main' branch)
-  const token = sessionStorage.getItem("auth_token");
+  // Get token from sessionStorage or localStorage (consistent with other parts of the app)
+  const token = sessionStorage.getItem("auth_token") || localStorage.getItem("token");
 
   // Profile modal state (from 'new-nigga-dave' branch)
   const [profileModal, setProfileModal] = useState({ isOpen: false });
@@ -154,12 +155,14 @@ function SuperAdmin() {
   const handleDelete = (store) => {
     setDeleteModal({ isOpen: true, store });
     setDeletePassword("");
+    setDeleteError("");
   };
 
   const confirmDelete = async () => {
     if (!deleteModal.store || !deletePassword) return;
 
     setDeleteLoading(true);
+    setDeleteError("");
     try {
       await api(`/api/superadmin/stores/${deleteModal.store.id}`, {
         method: "DELETE",
@@ -172,7 +175,7 @@ function SuperAdmin() {
       setDeleteModal({ isOpen: false, store: null });
       setError("");
     } catch (err) {
-      setError("Failed to delete store: " + (err.message || "Unknown error"));
+      setDeleteError(err.message || "Unknown error");
     } finally {
       setDeleteLoading(false);
     }
@@ -181,6 +184,7 @@ function SuperAdmin() {
   const closeDeleteModal = () => {
     setDeleteModal({ isOpen: false, store: null });
     setDeletePassword("");
+    setDeleteError("");
   };
 
   // --- Profile Modal Handlers (from 'new-nigga-dave' branch) ---
@@ -824,6 +828,9 @@ function SuperAdmin() {
                   disabled={deleteLoading}
                 />
               </div>
+              {deleteError && (
+                <p className="text-red-600 text-sm mt-2">{deleteError}</p>
+              )}
             </div>
 
             {/* Action Buttons */}

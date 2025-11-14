@@ -14,19 +14,24 @@ export default function VerificationGuard({ children }) {
   const [tutorialCompleted, setTutorialCompleted] = useState(false);
 
   useEffect(() => {
-    const userData = localStorage.getItem('user');
-    if (userData) {
-      try {
-        const parsedUser = JSON.parse(userData);
-        setUser(parsedUser);
-        
-        // Check if tutorial was already completed
-        const tutorialStatus = localStorage.getItem(`tutorial_completed_${parsedUser.user_id}`);
-        setTutorialCompleted(tutorialStatus === 'true');
-      } catch (error) {
-        console.error('Failed to parse user data from localStorage:', error);
-        setUser(null);
+    // Only check user data once per session to prevent loops
+    const hasChecked = sessionStorage.getItem('verification_checked');
+    if (!hasChecked) {
+      const userData = localStorage.getItem('user');
+      if (userData) {
+        try {
+          const parsedUser = JSON.parse(userData);
+          setUser(parsedUser);
+
+          // Check if tutorial was already completed
+          const tutorialStatus = localStorage.getItem(`tutorial_completed_${parsedUser.user_id}`);
+          setTutorialCompleted(tutorialStatus === 'true');
+        } catch (error) {
+          console.error('Failed to parse user data from localStorage:', error);
+          setUser(null);
+        }
       }
+      sessionStorage.setItem('verification_checked', 'true');
     }
   }, []);
 

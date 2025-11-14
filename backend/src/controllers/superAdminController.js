@@ -333,7 +333,7 @@ exports.deleteStore = async (req, res) => {
 
     const isPasswordValid = await bcrypt.compare(password, superAdminResult.rows[0].password_hash);
     if (!isPasswordValid) {
-      return res.status(401).json({ error: 'Invalid password' });
+      return res.status(401).json({ error: 'The password you entered is incorrect. Please try again.' });
     }
 
     // Check if store exists

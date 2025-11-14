@@ -7,6 +7,12 @@ export async function api(path, options = {}, returnRawResponse = false) {
     headers['Content-Type'] = 'application/json';
   }
 
+  // Get token from sessionStorage first, then localStorage
+  const token = sessionStorage.getItem('auth_token') || localStorage.getItem('token');
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
   const finalUrl = API_BASE + (path.startsWith('/api') ? path : `/api${path}`);
   const res = await fetch(finalUrl, {
     ...options,
@@ -34,7 +40,7 @@ export async function api(path, options = {}, returnRawResponse = false) {
 
 export function authHeaders(token) {
   return token ? { Authorization: `Bearer ${token}` } : {};
-} 
+}
 
 export async function createGcashCheckout({ amount, description, referenceNumber, cancelUrl, successUrl }) {
   return await api('/payments/gcash/checkout', {

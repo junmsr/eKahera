@@ -15,8 +15,13 @@ export default function VerificationStatus({ user, onProceed }) {
   const { logout } = useAuth();
 
   useEffect(() => {
-    if (user) {
+    // Only fetch verification status once per session to prevent loops
+    const hasFetched = sessionStorage.getItem('verification_fetched');
+    if (user && !hasFetched) {
       fetchVerificationStatus();
+      sessionStorage.setItem('verification_fetched', 'true');
+    } else if (!user) {
+      setLoading(false);
     }
 
     const tutorialStatus = localStorage.getItem(`tutorial_completed_${user?.user_id}`);

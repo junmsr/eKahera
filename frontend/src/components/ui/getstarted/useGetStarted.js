@@ -29,6 +29,8 @@ export default function useGetStarted() {
     otp: "",
     documents: [],
     documentTypes: [],
+    acceptTerms: false,
+    acceptPrivacy: false,
   });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
@@ -159,37 +161,31 @@ export default function useGetStarted() {
     if (!validateStep()) return;
     setLoading(true);
     try {
-      // First register the business
-      const result = await api("/business/register", {
-        method: "POST",
-        body: JSON.stringify({
-          email: form.email,
-          username: form.username,
-          businessName: form.businessName,
-          businessEmail: form.useAdminEmail ? form.email : form.businessEmail,
-          businessType: form.businessType === "Others" ? form.customBusinessType : form.businessType,
-          region: form.region,
-          province: form.province,
-          city: form.city,
-          barangay: form.barangay,
-          houseNumber: form.houseNumber,
-          mobile: form.mobile,
-          password: form.password,
-        }),
-      });
-      
-      const businessId = result.business.id;
-      
-      // Upload documents
+      // Register business with documents in one transaction
       const formData = new FormData();
-      formData.append('business_id', businessId);
+
+      // Add business registration fields
+      formData.append('email', form.email);
+      formData.append('username', form.username);
+      formData.append('businessName', form.businessName);
+      formData.append('businessType', form.businessType === "Others" ? form.customBusinessType : form.businessType);
+      formData.append('country', form.region);
+      formData.append('province', form.province);
+      formData.append('city', form.city);
+      formData.append('barangay', form.barangay);
+      formData.append('houseNumber', form.houseNumber);
+      formData.append('mobile', form.mobile);
+      formData.append('password', form.password);
+
+      // Add document types
       formData.append('document_types', JSON.stringify(form.documentTypes));
-      
+
+      // Add documents
       form.documents.forEach((file) => {
         formData.append('documents', file);
       });
 
-      await api("/documents/upload", {
+      const result = await api("/business/register-with-documents", {
         method: "POST",
         body: formData,
       });

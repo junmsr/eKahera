@@ -1,8 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const { 
-  registerBusiness, 
-  getBusinessProfile, 
+const {
+  registerBusiness,
+  registerBusinessWithDocuments,
+  getBusinessProfile,
   updateBusinessProfile,
   createCashier,
   listCashiers,
@@ -13,6 +14,9 @@ const { authenticate, authorize, requireDocuments } = require('../middleware/aut
 
 // Public route for business registration
 router.post('/register', registerBusiness);
+
+// Public route for business registration with documents
+router.post('/register-with-documents', ...registerBusinessWithDocuments);
 
 // Protected routes (require authentication)
 router.get('/profile', authenticate, getBusinessProfile);

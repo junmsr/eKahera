@@ -21,6 +21,8 @@ function ScannerCard({
   const [isInitializing, setIsInitializing] = useState(true);
   const [torchEnabled, setTorchEnabled] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [videoDevices, setVideoDevices] = useState([]);
+  const [hasMultipleCameras, setHasMultipleCameras] = useState(false);
   const audioContext = useRef(null);
   const [retryCount, setRetryCount] = useState(0);
 
@@ -65,6 +67,8 @@ function ScannerCard({
             (device) => device.kind === "videoinput"
           );
           console.log("Available cameras:", videoDevices.length);
+          setVideoDevices(videoDevices);
+          setHasMultipleCameras(videoDevices.length > 1);
 
           if (videoDevices.length === 0) {
             setError("No camera found. Please connect a camera.");
@@ -250,14 +254,14 @@ function ScannerCard({
                 facingMode !== null
                   ? {
                       facingMode,
-                      width: { ideal: 640, min: 320 },
-                      height: { ideal: 480, min: 240 },
-                      frameRate: { ideal: 24, min: 15 },
+                      width: { ideal: 1280, min: 640 },
+                      height: { ideal: 720, min: 480 },
+                      frameRate: { ideal: 30, min: 15 },
                     }
                   : {
-                      width: { ideal: 640, min: 320 },
-                      height: { ideal: 480, min: 240 },
-                      frameRate: { ideal: 24, min: 15 },
+                      width: { ideal: 1280, min: 640 },
+                      height: { ideal: 720, min: 480 },
+                      frameRate: { ideal: 30, min: 15 },
                     }
               }
               // Reduce delay between decode attempts
@@ -306,6 +310,20 @@ function ScannerCard({
                 onClick={onResume}
                 microinteraction
               />
+              {isMobile && hasMultipleCameras && (
+                <Button
+                  label={facingMode === "user" ? "📷" : "📱"}
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => {
+                    setFacingMode((prev) => (prev === "user" ? "environment" : "user"));
+                    setIsInitializing(true);
+                    setTimeout(() => setIsInitializing(false), 1000);
+                  }}
+                  microinteraction
+                  title={facingMode === "user" ? "Switch to back camera" : "Switch to front camera"}
+                />
+              )}
               {isMobile && (
                 <Button
                   label={torchEnabled ? "🔦" : "💡"}

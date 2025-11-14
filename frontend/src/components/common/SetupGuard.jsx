@@ -15,7 +15,14 @@ export default function SetupGuard({ children }) {
   const [needsSetup, setNeedsSetup] = useState(false);
 
   useEffect(() => {
-    checkSetupStatus();
+    // Only check setup status once per session to prevent loops
+    const hasChecked = sessionStorage.getItem('setup_checked');
+    if (!hasChecked) {
+      checkSetupStatus();
+      sessionStorage.setItem('setup_checked', 'true');
+    } else {
+      setLoading(false);
+    }
   }, []);
 
   const checkSetupStatus = async () => {
@@ -27,11 +34,13 @@ export default function SetupGuard({ children }) {
       }
 
       const response = await api('/api/auth/setup/status');
-      
+
       if (response.needsSetup) {
         setNeedsSetup(true);
-        // Redirect to setup page
-        navigate('/setup', { replace: true });
+        // Only redirect if not already on setup page
+        if (location.pathname !== '/setup') {
+          navigate('/setup', { replace: true });
+        }
       } else {
         setNeedsSetup(false);
       }
