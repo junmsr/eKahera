@@ -4,13 +4,8 @@
     <meta charset="utf-8">
     <title>eKahera</title>
     <script type="text/javascript">
-      (function() {
-        var redirect = sessionStorage.redirect;
-        delete sessionStorage.redirect;
-        if (redirect && redirect != location.href) {
-          history.replaceState(null, null, redirect);
-        }
-      })();
+      var path = window.location.pathname;
+      window.location.href = "/redirect?path=" + path.substring(1);
     </script>
   </head>
   <body>
