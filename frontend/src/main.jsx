@@ -31,26 +31,29 @@ import Documents from "./pages/Documents.jsx";
 // Router Configuration
 const router = createBrowserRouter(
   [
+    // Public routes that do not require authentication
+    { path: "/", element: <Home /> },
+    { path: "services", element: <Services /> },
+    { path: "get-started", element: <GetStarted /> },
+    { path: "contact", element: <Contact /> },
+    { path: "login", element: <Login /> },
+    { path: "mobile-scanner", element: <MobileScanner /> },
+    { path: "select-role", element: <SelectRole /> },
+    { path: "customer-enter", element: <CustomerEnter /> },
+    { path: "enter-store", element: <EnterStore /> },
+    
+    // Protected routes that require authentication
     {
       path: "/",
       element: <App />,
       children: [
-        { index: true, element: <Home /> },
-        { path: "services", element: <Services /> },
-        { path: "get-started", element: <GetStarted /> },
-        { path: "contact", element: <Contact /> },
-        { path: "login", element: <Login /> },
         { path: "dashboard", element: <Dashboard /> },
         { path: "dashboard/store-qr", element: <StoreQR /> },
         { path: "pos", element: <POS /> },
         { path: "cashier-pos", element: <CashierPOS /> },
         { path: "inventory", element: <Inventory /> },
-        { path: "mobile-scanner", element: <MobileScanner /> },
-        { path: "select-role", element: <SelectRole /> },
         { path: "customer", element: <Customer /> },
-        { path: "customer-enter", element: <CustomerEnter /> },
         { path: "receipt", element: <Receipt /> },
-        { path: "enter-store", element: <EnterStore /> },
         { path: "cashiers", element: <Cashiers /> },
         { path: "logs", element: <Logs /> },
         { path: "profile", element: <Profile /> },
