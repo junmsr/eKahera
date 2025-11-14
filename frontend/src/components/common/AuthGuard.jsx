@@ -24,7 +24,8 @@ export default function AuthGuard({ children }) {
         '/mobile-scanner', 
         '/select-role', 
         '/customer-enter', 
-        '/enter-store'
+        '/enter-store',
+        '/customer'
       ];
 
       // If no token and not on a public page, redirect to login
