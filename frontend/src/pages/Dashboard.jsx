@@ -14,6 +14,8 @@ import {
   Legend,
 } from "recharts";
 
+import { useAuth } from "../hooks/useAuth";
+
 // Components
 import PageLayout from "../components/layout/PageLayout";
 import NavAdmin from "../components/layout/Nav-Admin";
@@ -117,6 +119,7 @@ export default function Dashboard() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
   const notificationRef = React.useRef(null);
+  const { logout } = useAuth();
 
   const user = useMemo(() => {
     try {
@@ -314,7 +317,7 @@ export default function Dashboard() {
     <PageLayout
       title="DASHBOARD"
       subtitle=""
-      sidebar={<NavAdmin />}
+      sidebar={<NavAdmin onLogoutClick={logout} />}
       headerActions={headerActions}
       className="bg-gray-50 min-h-screen"
     >
