@@ -3,7 +3,10 @@
   <head>
     <meta charset="utf-8">
     <title>eKahera</title>
-    <script type="text/javascript"></script>
+    <script type="text/javascript">
+      var path = window.location.pathname;
+      window.location.href = "/redirect?path=" + path.substring(1);
+    </script>
   </head>
   <body>
   </body>
