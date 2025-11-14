@@ -38,7 +38,7 @@ export default function CustomerEnter() {
       localStorage.setItem("business_id", String(bid));
       // Small delay for better UX feedback
       setTimeout(() => {
-        navigate("/mobile-scanner");
+        navigate("/customer");
       }, 300);
     } else {
       setIsScanning(false);

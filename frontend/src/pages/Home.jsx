@@ -15,6 +15,7 @@ function Home() {
 
   const handleCustomerPortal = () => navigate("/customer-enter");
   const handleStaffPortal = () => navigate("/select-role");
+  const handleMobileScanner = () => navigate("/mobile-scanner");
 
   useEffect(() => {
     const doc = document.documentElement;
@@ -43,6 +44,7 @@ function Home() {
       <HomeHero
         onCustomerClick={handleCustomerPortal}
         onStaffClick={handleStaffPortal}
+        onMobileScannerClick={handleMobileScanner}
       />
       <main id="main-content" role="main" className="flex-1">
         {/* Features Section */}

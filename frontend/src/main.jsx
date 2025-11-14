@@ -41,7 +41,6 @@ const router = createBrowserRouter(
     { path: "select-role", element: <SelectRole /> },
     { path: "customer-enter", element: <CustomerEnter /> },
     { path: "enter-store", element: <EnterStore /> },
-    { path: "customer", element: <Customer /> },
     
     // Protected routes that require authentication
     {
@@ -53,6 +52,7 @@ const router = createBrowserRouter(
         { path: "pos", element: <POS /> },
         { path: "cashier-pos", element: <CashierPOS /> },
         { path: "inventory", element: <Inventory /> },
+        { path: "customer", element: <Customer /> },
         { path: "receipt", element: <Receipt /> },
         { path: "cashiers", element: <Cashiers /> },
         { path: "logs", element: <Logs /> },

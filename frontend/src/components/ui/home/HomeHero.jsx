@@ -3,7 +3,7 @@ import heroIllustration from "../../../assets/images/hero-illustration.png";
 import { useNavigate } from "react-router-dom";
 import { motion, useScroll, useTransform } from "framer-motion";
 
-function HomeHero({ onCustomerClick, onStaffClick }) {
+function HomeHero({ onCustomerClick, onStaffClick, onMobileScannerClick }) {
   const navigate = useNavigate();
   const { scrollY } = useScroll();
   // Subtle parallax for the illustration
@@ -28,6 +28,7 @@ function HomeHero({ onCustomerClick, onStaffClick }) {
   // If parent didn't provide handlers, fall back to navigation
   const handleCustomer = onCustomerClick || (() => navigate("/customer"));
   const handleStaff = onStaffClick || (() => navigate("/select-role"));
+  const handleMobileScanner = onMobileScannerClick || (() => navigate("/mobile-scanner"));
 
   return (
     <section
@@ -197,6 +198,27 @@ function HomeHero({ onCustomerClick, onStaffClick }) {
                 </motion.button>
                 <span className="text-xs sm:text-sm text-slate-500 mt-2.5 text-center sm:text-left font-medium">
                   Shop in your own convenience
+                </span>
+              </div>
+
+              {/* Tertiary Button for Mobile Scanner */}
+              <div className="flex flex-col group">
+                <motion.button
+                  onClick={handleMobileScanner}
+                  className="relative overflow-hidden backdrop-blur-md bg-gray-100/80 border-2 border-gray-200/50 text-gray-700 font-semibold px-8 py-4 rounded-2xl shadow-lg shadow-gray-500/10 text-base sm:text-lg flex items-center justify-center gap-2 min-w-[180px] transition-all duration-300"
+                  style={{ fontFamily: "Inter, sans-serif" }}
+                  whileHover={{ 
+                    scale: 1.02,
+                    backgroundColor: "rgba(243, 244, 246, 0.95)",
+                    borderColor: "rgba(156, 163, 175, 0.6)",
+                    boxShadow: "0 20px 25px -5px rgba(156, 163, 175, 0.15), 0 10px 10px -5px rgba(156, 163, 175, 0.1)"
+                  }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <span className="relative z-10">Scan QR</span>
+                </motion.button>
+                <span className="text-xs sm:text-sm text-slate-500 mt-2.5 text-center sm:text-left font-medium">
+                  Use the mobile scanner
                 </span>
               </div>
             </motion.div>
