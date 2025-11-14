@@ -304,7 +304,7 @@ function CashierPOS() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-h-screen">
         {/* Header */}
-        <header className="flex items-center gap-4 px-4 sm:px-6 py-3 bg-white/90 backdrop-blur-md shadow-md border-b border-gray-200/50 h-[64px] min-h-[64px] max-h-[64px] sticky top-0 z-30">
+        <header className="flex items-center gap-2 px-4 sm:px-6 py-3 bg-white/90 backdrop-blur-md shadow-md border-b border-gray-200/50 h-[64px] min-h-[64px] max-h-[64px] sticky top-0 z-30">
           <div className="flex items-center gap-3">
             <span className="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight">
               POS
@@ -340,7 +340,7 @@ function CashierPOS() {
 
         {/* Main Area */}
         <main
-          className="flex-1 bg-gradient-to-br from-gray-50/50 via-blue-50/30 to-indigo-50/50 overflow-hidden p-2 sm:p-3 md:p-4"
+          className="flex-1 bg-g radient-to-br from-gray-50/50 via-blue-50/30 to-indigo-50/50 overflow-y-auto p-2 sm:p-3 md:p-4 pb-55 lg:pb-4"
           style={{ height: "calc(100vh - 64px)" }}
         >
           <div className="grid gap-2 sm:gap-3 md:gap-4 h-full grid-cols-1 lg:grid-cols-12">
