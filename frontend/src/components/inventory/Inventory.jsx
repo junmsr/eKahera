@@ -30,8 +30,7 @@ function InventoryTable({
 }) {
   const EditIcon = () => (
     <svg
-      width="18"
-      height="18"
+      className="w-4 h-4 sm:w-5 sm:h-5"
       fill="none"
       stroke="currentColor"
       strokeWidth="2"
@@ -42,8 +41,7 @@ function InventoryTable({
   );
   const DeleteIcon = () => (
     <svg
-      width="18"
-      height="18"
+      className="w-4 h-4 sm:w-5 sm:h-5"
       fill="none"
       stroke="currentColor"
       strokeWidth="2"
@@ -55,8 +53,7 @@ function InventoryTable({
   );
   const StockIcon = () => (
     <svg
-      width="18"
-      height="18"
+      className="w-4 h-4 sm:w-5 sm:h-5"
       fill="none"
       stroke="currentColor"
       strokeWidth="2"
@@ -154,7 +151,7 @@ function InventoryTable({
                   value={search}
                   onChange={onSearchChange}
                   className="w-full pl-9 sm:pl-12 pr-3 sm:pr-4 py-2 sm:py-3 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-xl text-xs sm:text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 placeholder-gray-400"
-                  placeholder="Search products..."
+                  placeholder="Search products, categories..."
                 />
               </div>
             </div>
@@ -168,7 +165,7 @@ function InventoryTable({
                 </label>
                 <select
                   value={`${sortBy}-${sortOrder}`}
-                  onChange={(e) => {
+                  onChange={(e) => { // Explicitly pass event object
                     const [field, order] = e.target.value.split("-");
                     onSort(field, order);
                   }}
@@ -193,7 +190,7 @@ function InventoryTable({
                 </label>
                 <select
                   value={entriesPerPage}
-                  onChange={onEntriesChange}
+                  onChange={onEntriesChange} // Explicitly pass event object
                   className="bg-white/80 backdrop-blur-sm border border-gray-200 rounded-xl px-2 sm:px-3 py-1.5 sm:py-2 text-xs font-medium text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 cursor-pointer"
                 >
                   {[5, 10, 25, 50, 100].map((n) => (
@@ -215,7 +212,7 @@ function InventoryTable({
             {/* Category Filter */}
             <div className="flex items-center gap-2">
               <select
-                value={selectedCategory || ""}
+                value={selectedCategory || ""} // Ensure value prop is set for controlled component
                 onChange={(e) => onCategoryFilter(e.target.value || null)}
                 className="bg-white/80 backdrop-blur-sm border border-gray-200 rounded-full px-3 sm:px-4 py-1 sm:py-1.5 text-xs font-medium text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 cursor-pointer"
               >
@@ -231,7 +228,7 @@ function InventoryTable({
             {/* Stock Status Filter */}
             <div className="flex items-center gap-2">
               <select
-                value={stockFilter || ""}
+                value={stockFilter || ""} // Ensure value prop is set for controlled component
                 onChange={(e) => onStockFilter(e.target.value || null)}
                 className="bg-white/80 backdrop-blur-sm border border-gray-200 rounded-full px-3 sm:px-4 py-1 sm:py-1.5 text-xs font-medium text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 cursor-pointer"
               >
@@ -273,7 +270,7 @@ function InventoryTable({
 
       {/* Table Card */}
       <Card className="overflow-hidden w-full">
-        <div className="overflow-x-auto w-full">
+        <div className="overflow-x-auto w-full relative hidden sm:block"> {/* Hide table on mobile */}
           <table className="w-full min-w-[800px]">
             <thead>
               <tr className="bg-gradient-to-r from-blue-50/80 to-indigo-50/80 border-b-2 border-blue-100">
@@ -282,7 +279,7 @@ function InventoryTable({
                 </th>
                 <th
                   className="py-3 px-2 sm:py-4 sm:px-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-100/50 transition-colors group"
-                  onClick={() => handleSort("name")}
+                  onClick={() => handleSort("name")} // Added onClick handler
                 >
                   <div className="flex items-center gap-1 sm:gap-2">
                     Product
@@ -293,7 +290,7 @@ function InventoryTable({
                 </th>
                 <th
                   className="py-3 px-2 sm:py-4 sm:px-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider hidden sm:table-cell cursor-pointer hover:bg-blue-100/50 transition-colors group"
-                  onClick={() => handleSort("category")}
+                  onClick={() => handleSort("category")} // Added onClick handler
                 >
                   <div className="flex items-center gap-1 sm:gap-2">
                     Category
@@ -310,7 +307,7 @@ function InventoryTable({
                 </th>
                 <th
                   className="py-3 px-2 sm:py-4 sm:px-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-100/50 transition-colors group"
-                  onClick={() => handleSort("selling_price")}
+                  onClick={() => handleSort("selling_price")} // Added onClick handler
                 >
                   <div className="flex items-center gap-1 sm:gap-2">
                     Selling Price
@@ -321,7 +318,7 @@ function InventoryTable({
                 </th>
                 <th
                   className="py-3 px-2 sm:py-4 sm:px-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-100/50 transition-colors group"
-                  onClick={() => handleSort("quantity")}
+                  onClick={() => handleSort("quantity")} // Added onClick handler
                 >
                   <div className="flex items-center gap-1 sm:gap-2">
                     Stock
@@ -337,7 +334,7 @@ function InventoryTable({
             </thead>
             <tbody className="divide-y divide-gray-100">
               {products.length === 0 ? (
-                <tr>
+                <tr className="absolute inset-0 w-full h-full bg-white/80 backdrop-blur-sm flex items-center justify-center"> {/* Centered empty state */}
                   <td colSpan={8} className="text-center py-16">
                     <div className="flex flex-col items-center justify-center">
                       <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4">
@@ -380,7 +377,7 @@ function InventoryTable({
                       <td className="py-3 px-2 sm:py-4 sm:px-4">
                         <div className="flex flex-col min-w-0">
                           <span className="text-xs sm:text-sm font-semibold text-gray-900 group-hover:text-blue-600 transition-colors truncate">
-                            {product.name}
+                            {product.name || "N/A"} {/* Added N/A fallback */}
                           </span>
                           <span className="text-[10px] sm:text-xs text-gray-500 mt-0.5 truncate">
                             SKU: {product.sku || "N/A"}
@@ -390,7 +387,7 @@ function InventoryTable({
                       <td className="py-3 px-2 sm:py-4 sm:px-4 hidden sm:table-cell">
                         <span className="inline-flex items-center px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200">
                           {product.category}
-                        </span>
+                        </span> {/* Added N/A fallback */}
                       </td>
                       <td
                         className="py-3 px-2 sm:py-4 sm:px-4 max-w-xs truncate hidden md:table-cell text-xs sm:text-sm text-gray-600"
@@ -400,12 +397,12 @@ function InventoryTable({
                       </td>
                       <td className="py-3 px-2 sm:py-4 sm:px-4 hidden lg:table-cell">
                         <span className="text-xs sm:text-sm font-medium text-gray-700">
-                          ₱{Number(product.cost_price).toFixed(2)}
+                          ₱{Number(product.cost_price || 0).toFixed(2)} {/* Added 0 fallback */}
                         </span>
                       </td>
                       <td className="py-3 px-2 sm:py-4 sm:px-4">
                         <span className="text-xs sm:text-sm font-bold text-blue-600">
-                          ₱{Number(product.selling_price).toFixed(2)}
+                          ₱{Number(product.selling_price || 0).toFixed(2)} {/* Added 0 fallback */}
                         </span>
                       </td>
                       <td className="py-3 px-2 sm:py-4 sm:px-4">
@@ -453,6 +450,95 @@ function InventoryTable({
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile Card View */}
+        <div className="sm:hidden divide-y divide-gray-100">
+          {products.length === 0 ? (
+            <div className="text-center py-16 px-4">
+              <div className="flex flex-col items-center justify-center">
+                <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                  <svg
+                    className="w-10 h-10 text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"
+                    />
+                  </svg>
+                </div>
+                <p className="text-gray-500 text-lg font-semibold">
+                  No products found
+                </p>
+                <p className="text-gray-400 text-sm mt-2">
+                  {search
+                    ? "Try adjusting your search terms"
+                    : "Start by adding your first product"}
+                </p>
+              </div>
+            </div>
+          ) : (
+            products.map((product, idx) => {
+              const stockStatus = getStockStatus(product.quantity);
+              return (
+                <div key={product.id} className="p-4">
+                  <div className="flex justify-between items-start gap-4">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-gray-900 truncate">{product.name || "N/A"}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">SKU: {product.sku || "N/A"}</p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-indigo-50 text-indigo-700 border border-indigo-200">
+                          {product.category || "N/A"}
+                        </span>
+                      </p>
+                      {product.description && (
+                        <p className="text-xs text-gray-500 mt-2 italic truncate" title={product.description}>
+                          "{product.description}"
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex-shrink-0 text-right">
+                      <p className="text-sm font-bold text-blue-600">₱{Number(product.selling_price || 0).toFixed(2)}</p>
+                      <p className="text-xs text-gray-500">Cost: ₱{Number(product.cost_price || 0).toFixed(2)}</p>
+                      <p className={`text-xs font-semibold mt-1 ${stockStatus.color.replace('bg-', 'text-').split(' ')[0]}`}>
+                        {product.quantity} in stock
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-4 flex items-center justify-end gap-2 border-t border-gray-100 pt-3">
+                      <button
+                        onClick={() =>
+                          onStockEntry && onStockEntry(product)
+                        }
+                        className="p-2 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 border border-green-200 transition-all duration-200"
+                        title="Add Stock"
+                      >
+                        <StockIcon />
+                      </button>
+                      <button
+                        onClick={() => onEdit(product)}
+                        className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 transition-all duration-200"
+                        title="Edit Product"
+                      >
+                        <EditIcon />
+                      </button>
+                      <button
+                        onClick={() => onDelete(product.id)}
+                        className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 transition-all duration-200"
+                        title="Delete Product"
+                      >
+                        <DeleteIcon />
+                      </button>
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
 
         {/* Enhanced Pagination */}
@@ -532,7 +618,7 @@ function InventoryTable({
  * Internal component for displaying inventory statistics
  */
 function InventoryStats({ stats }) {
-  return (
+  return ( // This component is not actually used in pages/Inventory.jsx, but keeping it for completeness if it were to be used elsewhere.
     <div className="grid grid-cols-12 gap-3 sm:gap-4 md:gap-5 mb-4 sm:mb-6 md:mb-8 w-full">
       {stats.map((stat, i) => (
         <StatsCard
@@ -542,10 +628,10 @@ function InventoryStats({ stats }) {
           icon={stat.icon}
           color={stat.color}
           change={0}
-          sub={stat.sub || ""}
+          sub={stat.description || ""} // Changed 'sub' to 'description' as per previous refactor
           formatValue={stat.formatValue}
-          className={`col-span-12 ${
-            i === 0
+          className={`col-span-12 xs:col-span-6 sm:col-span-6 md:col-span-4 lg:col-span-3 xl:col-span-3 ${ // More consistent grid for 4 stats
+            i === 0 // This conditional class is now less relevant with a more uniform grid
               ? "sm:col-span-6 lg:col-span-6"
               : "sm:col-span-6 lg:col-span-3 xl:col-span-2"
           }`}
@@ -594,12 +680,12 @@ function Inventory({
 
   return (
     <div
-      className={`w-full max-w-full overflow-x-hidden py-4 sm:py-6 px-2 sm:px-3 md:px-4 lg:px-6 ${className}`}
+      className={`w-full max-w-full overflow-x-hidden py-4 sm:py-6 px-4 md:px-6 ${className}`}
     >
       {/* Header with Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 sm:gap-4 mb-4 sm:mb-6 w-full">
         <Button
-          onClick={onAddProduct}
+          onClick={onAddProduct} // Added onClick handler
           size="lg"
           variant="primary"
           microinteraction
@@ -625,7 +711,7 @@ function Inventory({
 
       {/* Quick Stats Bar */}
       <Card className="mb-4 sm:mb-6 p-3 sm:p-4 md:p-6 bg-gradient-to-r from-blue-50/80 to-indigo-50/80 border-blue-100 w-full overflow-hidden">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 w-full">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 w-full"> {/* Added xl:grid-cols-4 for wider screens */}
           <div className="flex items-center gap-3 sm:gap-4 min-w-0">
             <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-100 rounded-xl flex items-center justify-center shrink-0">
               <svg
@@ -647,7 +733,7 @@ function Inventory({
                 Total Products
               </p>
               <p className="text-xl sm:text-2xl font-bold text-gray-900 truncate">
-                {allProducts.length}
+                {allProducts.length || 0} {/* Added 0 fallback */}
               </p>
             </div>
           </div>
@@ -672,7 +758,7 @@ function Inventory({
                 Low Stock Items
               </p>
               <p className="text-xl sm:text-2xl font-bold text-gray-900 truncate">
-                {lowStockCount}
+                {lowStockCount || 0} {/* Added 0 fallback */}
               </p>
             </div>
           </div>
@@ -697,7 +783,7 @@ function Inventory({
                 Total Inventory Value
               </p>
               <p className="text-xl sm:text-2xl font-bold text-gray-900 truncate">
-                ₱
+                ₱ {/* Added 0 fallback */}
                 {totalValue.toLocaleString(undefined, {
                   minimumFractionDigits: 2,
                 })}

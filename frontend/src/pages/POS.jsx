@@ -303,12 +303,44 @@ function POS() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const handleCopyTn = async () => {
+    try {
+      if (!transactionNumber) return;
+      await navigator.clipboard.writeText(transactionNumber);
+    } catch (_) {}
+  };
+
   const headerActions = (
-    <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
+    <div className="flex items-center justify-end gap-1 sm:gap-4 w-full">
+      {/* Transaction Number display */}
+      <div className="flex-1 flex items-center justify-center">
+        <button
+          onClick={handleCopyTn}
+          title="Copy transaction number"
+          className="inline-flex items-center gap-2 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg px-2 py-1.5 sm:px-2.5 shadow-sm hover:bg-blue-100 transition-colors"
+        >
+          <svg
+            className="w-3 h-3 sm:w-4 sm:h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2M8 16h8a2 2 0 002-2v-6m-10 8l-2 2m2-2l2 2"
+            />
+          </svg>
+          <span className="font-mono text-xs sm:text-sm font-bold tracking-wider truncate max-w-[30vw] sm:max-w-[50vw]">
+            {transactionNumber}
+          </span>
+        </button>
+      </div>
       {/* Notification Button with Dropdown */}
       <div className="relative" ref={notificationRef}>
         <button
-          className="p-2 rounded-full hover:bg-gray-400 transition-colors relative"
+          className="p-2 rounded-full hover:bg-gray-200 transition-colors relative"
           onClick={() => setShowNotifications(!showNotifications)}
           title="Notifications"
         >
@@ -382,70 +414,24 @@ function POS() {
       {/* Cashier Profile Button */}
       <button
         onClick={() => setShowProfileModal(true)}
-        className="flex items-center gap-3 bg-white px-4 py-2 rounded-lg shadow-sm hover:bg-gray-50 transition-colors group"
+        className="flex items-center gap-2 bg-white/80 backdrop-blur-sm p-1.5 sm:px-3 sm:py-2 rounded-lg border border-gray-200/80 hover:bg-white transition-all duration-200 hover:shadow-md hover:scale-[1.02]"
       >
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-gray-600">{user.username}</span>
+        <div className="w-6 h-6 sm:w-7 sm:h-7 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-full flex items-center justify-center text-sm font-medium shadow-md">
+          {user.username?.[0]?.toUpperCase() || 'A'}
         </div>
-        <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center">
-          {user?.profileImage ? (
-            <img
-              src={user.profileImage}
-              alt="Profile"
-              className="h-full w-full rounded-full object-cover"
-            />
-          ) : (
-            <BiUser className="h-5 w-5 text-gray-600" />
-          )}
-        </div>
+        <span className="text-sm font-medium text-gray-700 hidden sm:inline">{user.username || 'Admin'}</span>
       </button>
     </div>
   );
-
-  const handleCopyTn = async () => {
-    try {
-      if (!transactionNumber) return;
-      await navigator.clipboard.writeText(transactionNumber);
-    } catch (_) {}
-  };
 
   return (
     <PageLayout
       title="POS"
       sidebar={<NavAdmin />}
-      headerActions={
-        <>
-          {headerActions}
-          {/* Transaction Number display moved to header actions */}
-          <div className="hidden sm:flex items-center justify-center px-2">
-              <button
-                onClick={handleCopyTn}
-                title="Copy transaction number"
-                className="inline-flex items-center gap-2 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg px-2.5 py-1.5 shadow-sm hover:bg-blue-100 transition-colors"
-              >
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2M8 16h8a2 2 0 002-2v-6m-10 8l-2 2m2-2l2 2"
-                  />
-                </svg>
-                <span className="font-mono text-xs sm:text-sm md:text-base font-bold tracking-wider truncate max-w-[50vw]">
-                  {transactionNumber}
-                </span>
-              </button>
-          </div>
-        </>
-      }
+      headerActions={headerActions}
     >
       <div className="flex-1 flex flex-col min-h-screen">
-        <main className="flex-1 bg-gradient-to-br from-gray-50/50 via-blue-50/30 to-indigo-50/50 overflow-hidden p-2 sm:p-3 md:p-4">
+        <main className="flex-1 bg-gradient-to-br from-gray-50/50 via-blue-50/30 to-indigo-50/50 overflow-hidden p-2 sm:p-3 md:p-4 pb-10 lg:pb-4">
             <div className="grid gap-2 sm:gap-3 md:gap-4 h-full grid-cols-1 lg:grid-cols-12">
               {/* Left Column - Scanner, SKU Form, Transaction */}
               <div className="lg:col-span-4 flex flex-col gap-2 sm:gap-3 md:gap-4">

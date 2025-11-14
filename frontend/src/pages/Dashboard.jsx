@@ -22,7 +22,7 @@ import NavAdmin from "../components/layout/Nav-Admin";
 import StatsCard from "../components/ui/Dashboard/StatsCard";
 import ChartCard from "../components/ui/Dashboard/ChartCard";
 import DashboardStatsCard from "../components/ui/Dashboard/DashboardStatsCard";
-import { BiBell, BiUser } from "react-icons/bi";
+import { BiBell, BiUser, BiRefresh } from "react-icons/bi";
 import ProfileModal from "../components/modals/ProfileModal";
 
 // Constants
@@ -230,35 +230,36 @@ export default function Dashboard() {
   }, [range]);
 
   const headerActions = (
-    <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+    <div className="flex flex-nowrap items-center justify-end -gap-3 sm:gap-2">
       <button
         onClick={fetchData}
         disabled={loading}
-        className="bg-white/80 backdrop-blur-sm hover:bg-white text-gray-700 px-4 py-2.5 rounded-xl border border-white/50 text-sm font-medium transition-all duration-200 hover:shadow-md hover:scale-[1.02] w-full sm:w-auto"
+        title="Refresh Data"
+        className="bg-white/80 backdrop-blur-sm hover:bg-white text-gray-700 p-2 rounded-lg border border-gray-200/80 text-sm font-medium transition-all duration-200 hover:shadow-md hover:scale-[1.02]"
       >
-        {loading ? "Refreshing..." : "Refresh"}
+        <BiRefresh className={`w-5 h-5 ${loading ? "animate-spin" : ""}`} />
       </button>
 
       <select
-        className="bg-white/80 backdrop-blur-sm hover:bg-white text-gray-700 px-4 py-2.5 rounded-xl border border-white/50 text-sm font-medium transition-all duration-200 outline-none cursor-pointer hover:shadow-md w-full sm:w-auto"
+        className="bg-white/80 backdrop-blur-sm hover:bg-white text-gray-700 px-2 sm:px-3 py-2 rounded-lg border border-gray-200/80 text-sm font-medium transition-all duration-200 outline-none cursor-pointer hover:shadow-md"
         value={range}
         onChange={(e) => setRange(e.target.value)}
         disabled={loading}
       >
-        <option value="week">This Week</option>
-        <option value="month">This Month</option>
-        <option value="year">This Year</option>
+        <option value="week">Week</option>
+        <option value="month">Month</option>
+        <option value="year">Year</option>
       </select>
 
       <div className="relative" ref={notificationRef}>
         <button
-          className="p-2 rounded-full hover:bg-gray-200 transition-colors relative"
+          className="p-2 rounded-full hover:bg-gray-200/80 transition-colors relative"
           onClick={() => setShowNotifications(!showNotifications)}
           title="Notifications"
         >
-          <BiBell className="w-6 h-6 text-gray-700" />
+          <BiBell className="w-5 h-5 text-gray-700" />
           {unreadCount > 0 && (
-            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+            <span className="absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
               {unreadCount}
             </span>
           )}
@@ -303,12 +304,12 @@ export default function Dashboard() {
 
       <button
         onClick={() => setShowProfileModal(true)}
-        className="flex items-center gap-3 bg-white/80 backdrop-blur-sm px-4 py-2.5 rounded-xl border border-white/50 hover:bg-white transition-all duration-200 hover:shadow-md hover:scale-[1.02] w-full sm:w-auto"
+        className="flex items-center gap-2 bg-white/80 backdrop-blur-sm p-1 sm:p-1.5 sm:px-3 sm:py-2 rounded-lg border border-gray-200/80 hover:bg-white transition-all duration-200 hover:shadow-md hover:scale-[1.02]"
       >
-        <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-full flex items-center justify-center text-sm font-medium shadow-lg">
+        <div className="w-6 h-6 sm:w-7 sm:h-7 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-full flex items-center justify-center text-sm font-medium shadow-md">
           {user.username?.[0]?.toUpperCase() || 'A'}
         </div>
-        <span className="text-sm font-medium text-gray-700">{user.username || 'Admin'}</span>
+        <span className="text-sm font-medium text-gray-700 hidden sm:inline">{user.username || 'Admin'}</span>
       </button>
     </div>
   );
@@ -345,8 +346,44 @@ export default function Dashboard() {
             ))}
       </div>
 
+      {/* Low Stock Products - Mobile View */}
+      <div className="p-4 lg:hidden">
+        {loading ? (
+          <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200 animate-pulse">
+            <div className="h-6 bg-gray-200 rounded w-1/2 mb-6"></div>
+            <div className="h-4 bg-gray-200 rounded w-full mb-3"></div>
+            <div className="h-4 bg-gray-200 rounded w-full mb-3"></div>
+            <div className="h-4 bg-gray-200 rounded w-4/5"></div>
+          </div>
+        ) : (
+          <div className="bg-white p-6 rounded-xl shadow-md">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-bold text-gray-800">Low Stock Products</h3>
+              <button
+                onClick={async () => {
+                  try {
+                    const token = sessionStorage.getItem("auth_token");
+                    await api("/api/products/send-low-stock-alert", {
+                      method: "POST",
+                      headers: authHeaders(token),
+                    });
+                    alert("Low stock alert sent successfully!");
+                  } catch (err) {
+                    alert("Failed to send low stock alert.");
+                  }
+                }}
+                className="text-sm font-medium text-blue-600 hover:text-blue-800"
+              >
+                Send Alert
+              </button>
+            </div>
+            <LowStockList lowStockProducts={lowStockProducts} />
+          </div>
+        )}
+      </div>
+
       {/* Main Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 p-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 p-6 pb-10 lg:pb-6">
         {/* Main Chart Area */}
         <div className="lg:col-span-8 flex flex-col gap-6">
           {loading ? (
@@ -374,27 +411,26 @@ export default function Dashboard() {
               <div className="h-8 bg-gray-300 rounded w-1/2"></div>
             </div>
           ) : (
+          <div className="hidden lg:block">
             <DashboardStatsCard stats={highlight} />
+          </div>
           )}
           {loading ? (
-            <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200 animate-pulse">
+          <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200 animate-pulse hidden lg:block">
               <div className="h-6 bg-gray-200 rounded w-1/2 mb-6"></div>
               <div className="h-4 bg-gray-200 rounded w-full mb-3"></div>
               <div className="h-4 bg-gray-200 rounded w-full mb-3"></div>
               <div className="h-4 bg-gray-200 rounded w-4/5"></div>
             </div>
           ) : (
-            <div className="bg-white p-6 rounded-xl shadow-md">
+          <div className="bg-white p-6 rounded-xl shadow-md hidden lg:block">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-bold text-gray-800">Low Stock Products</h3>
                 <button
                   onClick={async () => {
                     try {
                       const token = sessionStorage.getItem("auth_token");
-                      await api("/api/products/send-low-stock-alert", {
-                        method: "POST",
-                        headers: authHeaders(token),
-                      });
+                    await api.post("/api/products/send-low-stock-alert", null, { headers: authHeaders(token) });
                       alert("Low stock alert sent successfully!");
                     } catch (err) {
                       alert("Failed to send low stock alert.");
@@ -405,18 +441,7 @@ export default function Dashboard() {
                   Send Alert
                 </button>
               </div>
-              {lowStockProducts.length > 0 ? (
-                <ul className="divide-y divide-gray-200">
-                  {lowStockProducts.map((product) => (
-                    <li key={product.product_id} className="py-3 flex justify-between items-center">
-                      <span className="text-sm font-medium text-gray-800">{product.product_name}</span>
-                      <span className="text-sm font-bold text-red-600">{product.quantity_in_stock} left</span>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-sm text-gray-500">No products with low stock.</p>
-              )}
+            <LowStockList lowStockProducts={lowStockProducts} />
             </div>
           )}
         </div>
@@ -427,5 +452,22 @@ export default function Dashboard() {
         userData={user}
       />
     </PageLayout>
+  );
+}
+
+function LowStockList({ lowStockProducts }) {
+  if (lowStockProducts.length === 0) {
+    return <p className="text-sm text-gray-500">No products with low stock.</p>;
+  }
+
+  return (
+    <ul className="divide-y divide-gray-200">
+      {lowStockProducts.map((product) => (
+        <li key={product.product_id} className="py-3 flex justify-between items-center">
+          <span className="text-sm font-medium text-gray-800">{product.product_name}</span>
+          <span className="text-sm font-bold text-red-600">{product.quantity_in_stock} left</span>
+        </li>
+      ))}
+    </ul>
   );
 }
