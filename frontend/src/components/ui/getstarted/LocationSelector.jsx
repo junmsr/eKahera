@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { getRegions, getProvinces, getCities, getBarangays } from "../../../lib/locationApi";
 
-export default function LocationSelector({ form, errors, handleChange }) {
+export default function LocationSelector({ form, errors, handleLocationChange }) {
   const [regions, setRegions] = useState([]);
   const [provinces, setProvinces] = useState([]);
   const [cities, setCities] = useState([]);
@@ -12,15 +12,18 @@ export default function LocationSelector({ form, errors, handleChange }) {
     cities: false,
     barangays: false,
   });
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const fetchRegions = async () => {
       setLoading((l) => ({ ...l, regions: true }));
+      setError(null);
       try {
         const data = await getRegions();
         setRegions(data);
       } catch (error) {
         console.error(error);
+        setError("Failed to load regions. Please check your connection and try again.");
       } finally {
         setLoading((l) => ({ ...l, regions: false }));
       }
@@ -79,6 +82,13 @@ export default function LocationSelector({ form, errors, handleChange }) {
     }
   }, [form.city]);
 
+  const handleSelectChange = (e) => {
+    const { name, value } = e.target;
+    const selectedOption = e.target.options[e.target.selectedIndex];
+    const locationName = selectedOption ? selectedOption.text : '';
+    handleLocationChange(name, value, locationName);
+  };
+
   return (
     <div className="grid gap-4">
       <div>
@@ -88,7 +98,7 @@ export default function LocationSelector({ form, errors, handleChange }) {
         <select
           name="region"
           value={form.region}
-          onChange={handleChange}
+          onChange={handleSelectChange}
           className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           style={{ borderColor: errors.region ? '#ef4444' : '' }}
           disabled={loading.regions}
@@ -103,6 +113,9 @@ export default function LocationSelector({ form, errors, handleChange }) {
         {errors.region && (
           <p className="text-red-500 text-sm mt-1">{errors.region}</p>
         )}
+        {error && (
+          <p className="text-red-500 text-sm mt-1">{error}</p>
+        )}
       </div>
 
       <div>
@@ -112,7 +125,7 @@ export default function LocationSelector({ form, errors, handleChange }) {
         <select
           name="province"
           value={form.province}
-          onChange={handleChange}
+          onChange={handleSelectChange}
           className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           style={{ borderColor: errors.province ? '#ef4444' : '' }}
           disabled={!form.region || loading.provinces}
@@ -136,7 +149,7 @@ export default function LocationSelector({ form, errors, handleChange }) {
         <select
           name="city"
           value={form.city}
-          onChange={handleChange}
+          onChange={handleSelectChange}
           className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           style={{ borderColor: errors.city ? '#ef4444' : '' }}
           disabled={!form.province || loading.cities}
@@ -160,8 +173,8 @@ export default function LocationSelector({ form, errors, handleChange }) {
         <select
           name="barangay"
           value={form.barangay}
-          onChange={handleChange}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          onChange={handleSelectChange}
+          className="w-full px-3 py-2 border border--gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           style={{ borderColor: errors.barangay ? '#ef4444' : '' }}
           disabled={!form.city || loading.barangays}
         >

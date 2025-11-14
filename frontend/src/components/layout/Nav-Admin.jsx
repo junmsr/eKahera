@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import Logo from "../common/Logo";
+import { useAuth } from "../../hooks/useAuth";
 
 // Navigation configuration
 const NAV_ITEMS = [
@@ -182,6 +183,13 @@ const NavigationItem = ({ item, isActive }) => {
  */
 const NavAdmin = ({ isMobile, onLogoutClick }) => {
   const navigate = useNavigate();
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const { logout } = useAuth();
+
+  const confirmLogout = () => {
+    logout();
+    setShowLogoutConfirm(false);
+  };
 
   const LogoutIcon = () => (
     <svg
@@ -199,40 +207,73 @@ const NavAdmin = ({ isMobile, onLogoutClick }) => {
   );
 
   return (
-    <aside className={STYLES.sidebar}>
-      <div
-        className={`${STYLES.logoContainer} logoContainer`}
-        onClick={() => navigate("/dashboard")}
-        role="button"
-        tabIndex={0}
-      >
-        <div className="transition-all duration-300 group-hover:scale-110">
-          <Logo size={42} />
+    <>
+      <aside className={STYLES.sidebar}>
+        <div
+          className={`${STYLES.logoContainer} logoContainer`}
+          onClick={() => navigate("/dashboard")}
+          role="button"
+          tabIndex={0}
+        >
+          <div className="transition-all duration-300 group-hover:scale-110">
+            <Logo size={42} />
+          </div>
         </div>
-      </div>
 
-      <nav
-        className={`${STYLES.nav} h-full flex flex-col`}
-        aria-label="Main navigation"
-      >
-        <div className={STYLES.sectionHeader}>MENU</div>
-        {NAV_ITEMS.map((item) => (
-          <NavigationItem
-            key={item.id}
-            item={item}
-            isActive={window.location.pathname === item.path}
+        <nav
+          className={`${STYLES.nav} h-full flex flex-col`}
+          aria-label="Main navigation"
+        >
+          <div className={STYLES.sectionHeader}>MENU</div>
+          {NAV_ITEMS.map((item) => (
+            <NavigationItem
+              key={item.id}
+              item={item}
+              isActive={window.location.pathname === item.path}
+            />
+          ))}
+
+          {/* Logout Button */}
+          <div className={`${isMobile ? "block" : "mt-auto"}`}>
+            <button onClick={() => setShowLogoutConfirm(true)} className={STYLES.logoutButton} aria-label="Logout">
+              <span className={STYLES.logoutIcon}><LogoutIcon /></span>
+              <span className={STYLES.label}>Logout</span>
+            </button>
+          </div>
+        </nav>
+      </aside>
+
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 z-90 flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/80 z-90"
+            onClick={() => setShowLogoutConfirm(false)}
           />
-        ))}
-
-        {/* Logout Button */}
-        <div className={`${isMobile ? "block" : "mt-auto"}`}>
-          <button onClick={onLogoutClick} className={STYLES.logoutButton} aria-label="Logout">
-            <span className={STYLES.logoutIcon}><LogoutIcon /></span>
-            <span className={STYLES.label}>Logout</span>
-          </button>
+          <div className="relative bg-white rounded-xl shadow-xl w-[92%] max-w-md p-6 z-100">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              Confirm Logout
+            </h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Are you sure you want to log out?
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowLogoutConfirm(false)}
+                className="px-3 py-2 rounded-lg bg-gray-100 text-sm font-medium hover:bg-gray-200 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmLogout}
+                className="px-3 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition"
+              >
+                Logout
+              </button>
+            </div>
+          </div>
         </div>
-      </nav>
-    </aside>
+      )}
+    </>
   );
 };
 

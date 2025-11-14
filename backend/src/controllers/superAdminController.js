@@ -95,6 +95,14 @@ exports.getStoreById = async (req, res) => {
       ORDER BY created_at ASC
     `, [id]);
     
+    const fullAddress = [
+      business.house_number,
+      business.location,
+      business.country,
+    ]
+      .filter(Boolean)
+      .join(", ");
+
     // Format response similar to what frontend expects
     const storeDetails = {
       id: business.id,
@@ -104,7 +112,7 @@ exports.getStoreById = async (req, res) => {
       email: business.email,
       phone: business.phone,
       storeName: business.storeName,
-      location: business.location,
+      location: fullAddress,
       established: business.established?.toString(),
       documents: [
         { name: 'Business Registration.pdf', url: '#' },
@@ -121,7 +129,7 @@ exports.getStoreById = async (req, res) => {
         createdAt: business.created_at,
         lastPasswordChange: 'N/A',
         loginAttemptsToday: 0,
-        storeAddress: business.location,
+        storeAddress: fullAddress,
         status: 'Active',
         sessionTimeout: '30 minutes'
       },

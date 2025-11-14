@@ -22,6 +22,10 @@ export default function useGetStarted() {
     province: "",
     city: "",
     barangay: "",
+    regionName: "",
+    provinceName: "",
+    cityName: "",
+    barangayName: "",
     houseNumber: "",
     mobile: "",
     password: "",
@@ -50,6 +54,32 @@ export default function useGetStarted() {
     }
   }, [step, isOtpVerified, form.otp]);
 
+  const handleLocationChange = (name, code, locationName) => {
+    const reset = {};
+    if (name === 'region') {
+      reset.province = "";
+      reset.city = "";
+      reset.barangay = "";
+      reset.provinceName = "";
+      reset.cityName = "";
+      reset.barangayName = "";
+    } else if (name === 'province') {
+      reset.city = "";
+      reset.barangay = "";
+      reset.cityName = "";
+      reset.barangayName = "";
+    } else if (name === 'city') {
+      reset.barangay = "";
+      reset.barangayName = "";
+    }
+    setForm((f) => ({
+      ...f,
+      [name]: code,
+      [`${name}Name`]: locationName,
+      ...reset
+    }));
+  };
+
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     
@@ -59,15 +89,6 @@ export default function useGetStarted() {
         [name]: checked,
         businessEmail: checked ? f.email : ""
       }));
-    } else if (name === 'region') {
-      // Reset province, city and barangay when region changes
-      setForm((f) => ({ ...f, region: value, province: "", city: "", barangay: "" }));
-    } else if (name === 'province') {
-      // Reset city and barangay when province changes
-      setForm((f) => ({ ...f, province: value, city: "", barangay: "" }));
-    } else if (name === 'city') {
-      // Reset barangay when city changes
-      setForm((f) => ({ ...f, city: value, barangay: "" }));
     } else {
       setForm((f) => ({ ...f, [name]: type === 'checkbox' ? checked : value }));
     }
@@ -169,10 +190,15 @@ export default function useGetStarted() {
       formData.append('username', form.username);
       formData.append('businessName', form.businessName);
       formData.append('businessType', form.businessType === "Others" ? form.customBusinessType : form.businessType);
-      formData.append('country', form.region);
+      formData.append('country', 'Philippines');
+      formData.append('countryName', 'Philippines');
       formData.append('province', form.province);
       formData.append('city', form.city);
       formData.append('barangay', form.barangay);
+      formData.append('regionName', form.regionName);
+      formData.append('provinceName', form.provinceName);
+      formData.append('cityName', form.cityName);
+      formData.append('barangayName', form.barangayName);
       formData.append('houseNumber', form.houseNumber);
       formData.append('mobile', form.mobile);
       formData.append('password', form.password);
@@ -218,6 +244,7 @@ export default function useGetStarted() {
     setIsOtpVerified,
     inputRef,
     handleChange,
+    handleLocationChange,
     validateStep,
     handleNext,
     handleBack,

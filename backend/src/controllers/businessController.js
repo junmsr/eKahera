@@ -9,6 +9,7 @@ const supabaseStorage = require('../utils/supabaseStorage');
 const BusinessDocument = require('../models/BusinessDocument');
 const BusinessVerification = require('../models/BusinessVerification');
 const multer = require('multer');
+const axios = require('axios');
 
 // Load config from config.env file
 const configPath = path.join(__dirname, '..', '..', 'config.env');
@@ -265,6 +266,10 @@ exports.registerBusiness = async (req, res) => {
     province,
     city,
     barangay,
+    regionName,
+    provinceName,
+    cityName,
+    barangayName,
     houseNumber,
     mobile,
     password
@@ -323,7 +328,7 @@ exports.registerBusiness = async (req, res) => {
     const userId = userResult.rows[0].user_id;
 
     // Create business profile - combine address components into business_address
-    const businessAddress = `${barangay}, ${city}, ${province}`;
+    const businessAddress = `${houseNumber}, ${barangayName}, ${cityName}, ${provinceName}, Philippines`;
     const businessResult = await client.query(`
       INSERT INTO business (
         business_name, business_type, country, 
@@ -332,10 +337,11 @@ exports.registerBusiness = async (req, res) => {
       )
       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
       RETURNING business_id, business_name
-    `, [businessName, businessType, country, businessAddress, houseNumber, mobile, email]);
+    `, [businessName, businessType, 'Philippines', businessAddress, houseNumber, mobile, email]);
 
     // Update user with business_id (users table has business_id column per ekahera.sql)
     await client.query('UPDATE users SET business_id = $1 WHERE user_id = $2', [businessResult.rows[0].business_id, userId]);
+
 
     // Generate JWT token
     const token = jwt.sign(
@@ -428,8 +434,15 @@ exports.getBusinessProfile = async (req, res) => {
       });
     }
 
+    const business = result.rows[0];
+
+    // Decode PSGC codes in business_address if present
+    if (business.business_address) {
+      business.business_address = await decodePSGCAddress(business.business_address);
+    }
+
     res.json({
-      business: result.rows[0]
+      business: business
     });
 
   } catch (error) {
@@ -669,6 +682,10 @@ exports.registerBusinessWithDocuments = [
       province,
       city,
       barangay,
+      regionName,
+      provinceName,
+      cityName,
+      barangayName,
       houseNumber,
       mobile,
       password,
@@ -749,7 +766,7 @@ exports.registerBusinessWithDocuments = [
       const userId = userResult.rows[0].user_id;
 
       // Create business profile - combine address components into business_address
-      const businessAddress = `${barangay}, ${city}, ${province}`;
+      const businessAddress = `${barangayName}, ${cityName}, ${provinceName}`;
       const businessResult = await client.query(`
         INSERT INTO business (
           business_name, business_type, country,
@@ -788,17 +805,23 @@ exports.registerBusinessWithDocuments = [
           return res.status(500).json({ error: 'Failed to upload document to storage' });
         }
 
-        const documentData = {
-          business_id: businessId,
-          document_type: documentType,
-          document_name: file.originalname,
-          file_path: uploadResult.url, // Store Supabase URL
-          file_size: file.size,
-          mime_type: file.mimetype
-        };
+        // Insert document using transaction client to maintain consistency
+        const documentResult = await client.query(`
+          INSERT INTO business_documents (
+            business_id, document_type, document_name, file_path, file_size, mime_type, uploaded_at, updated_at
+          )
+          VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+          RETURNING document_id, business_id, document_type, document_name, file_path, file_size, mime_type, uploaded_at, updated_at
+        `, [
+          businessId,
+          documentType,
+          file.originalname,
+          uploadResult.url, // Store Supabase URL
+          file.size,
+          file.mimetype
+        ]);
 
-        const savedDocument = await BusinessDocument.create(documentData);
-        uploadedDocuments.push(savedDocument);
+        uploadedDocuments.push(documentResult.rows[0]);
 
         // Clean up local file
         fs.unlinkSync(file.path);
@@ -898,6 +921,72 @@ exports.registerBusinessWithDocuments = [
     }
   }
 ];
+
+// Utility function to decode PSGC codes to readable location names
+const decodePSGCAddress = async (psgcString) => {
+  try {
+    // Check if the string contains PSGC codes (numeric strings separated by commas)
+    const parts = psgcString.split(',').map(part => part.trim());
+    const isPSGC = parts.every(part => /^\d+$/.test(part));
+
+    if (!isPSGC) {
+      // Return as-is if not PSGC codes
+      return psgcString;
+    }
+
+    // PSGC codes are typically: barangay, city/municipality, province
+    const [barangayCode, cityCode, provinceCode] = parts;
+
+    const locationNames = [];
+
+    // Fetch barangay name
+    if (barangayCode) {
+      try {
+        const barangayResponse = await axios.get(`https://psgc.cloud/api/barangays/${barangayCode}`);
+        if (barangayResponse.data && barangayResponse.data.name) {
+          locationNames.push(barangayResponse.data.name);
+        }
+      } catch (error) {
+        console.warn(`Failed to fetch barangay name for code ${barangayCode}:`, error.message);
+      }
+    }
+
+    // Fetch city/municipality name
+    if (cityCode) {
+      try {
+        const cityResponse = await axios.get(`https://psgc.cloud/api/cities-municipalities/${cityCode}`);
+        if (cityResponse.data && cityResponse.data.name) {
+          locationNames.push(cityResponse.data.name);
+        }
+      } catch (error) {
+        console.warn(`Failed to fetch city name for code ${cityCode}:`, error.message);
+      }
+    }
+
+    // Fetch province name
+    if (provinceCode) {
+      try {
+        const provinceResponse = await axios.get(`https://psgc.cloud/api/provinces/${provinceCode}`);
+        if (provinceResponse.data && provinceResponse.data.name) {
+          locationNames.push(provinceResponse.data.name);
+        }
+      } catch (error) {
+        console.warn(`Failed to fetch province name for code ${provinceCode}:`, error.message);
+      }
+    }
+
+    // Return decoded address or original if decoding failed
+    if (locationNames.length > 0) {
+      return `${locationNames.join(', ')}, Philippines`;
+    } else {
+      return psgcString; // Fallback to original if all API calls failed
+    }
+
+  } catch (error) {
+    console.error('Error decoding PSGC address:', error);
+    return psgcString; // Return original string on error
+  }
+};
 
 // Export the hasRequiredDocuments function for use in other modules
 module.exports.hasRequiredDocuments = hasRequiredDocuments;

@@ -323,7 +323,7 @@ export default function GetStartedForm({ hook, isOtpVerified }) {
               <LocationSelector
                 form={form}
                 errors={errors}
-                handleChange={handleChange}
+                handleLocationChange={hook.handleLocationChange}
               />
             </div>
 
