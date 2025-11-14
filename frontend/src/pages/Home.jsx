@@ -14,7 +14,7 @@ function Home() {
   const navigate = useNavigate();
 
   const handleCustomerPortal = () => navigate("/customer-enter");
-  const handleStaffPortal = () => navigate("/select-role");
+  const handleStaffPortal = () => navigate("/login");
   const handleMobileScanner = () => navigate("/mobile-scanner");
 
   useEffect(() => {

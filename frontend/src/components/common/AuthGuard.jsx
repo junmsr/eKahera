@@ -15,17 +15,7 @@ export default function AuthGuard({ children }) {
     const checkAuth = () => {
       const token = sessionStorage.getItem('auth_token') || localStorage.getItem('token');
 
-      const publicPaths = [
-        '/', 
-        '/services', 
-        '/get-started', 
-        '/contact', 
-        '/login', 
-        '/mobile-scanner', 
-        '/select-role', 
-        '/customer-enter', 
-        '/enter-store'
-      ];
+      const publicPaths = ['/', '/services', '/get-started', '/contact'];
 
       // If no token and not on a public page, redirect to login
       if (!token && !publicPaths.includes(location.pathname) && location.pathname !== '/login') {
