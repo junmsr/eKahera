@@ -42,7 +42,9 @@ export default function VerificationGuard({ children }) {
     '/get-started',
     '/',
     '/contact',
-    '/services'
+    '/services',
+    '/customer-enter',
+    '/mobile-scanner'
   ];
 
   const shouldSkipVerification = skipVerificationRoutes.includes(location.pathname);

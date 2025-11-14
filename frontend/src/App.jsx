@@ -1,6 +1,7 @@
 import { Outlet } from 'react-router-dom';
 import SetupGuard from './components/common/SetupGuard';
 import VerificationGuard from './components/common/VerificationGuard';
+import AuthGuard from './components/common/AuthGuard';
 
 /**
  * Main App Component
@@ -10,9 +11,11 @@ function App() {
   return (
     <div className="app">
       <SetupGuard>
-        <VerificationGuard>
-          <Outlet />
-        </VerificationGuard>
+        <AuthGuard>
+          <VerificationGuard>
+            <Outlet />
+          </VerificationGuard>
+        </AuthGuard>
       </SetupGuard>
     </div>
   );
