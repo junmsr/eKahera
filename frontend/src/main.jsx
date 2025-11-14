@@ -62,7 +62,7 @@ const router = createBrowserRouter(
     },
   ],
   {
-    basename: "/eKahera/",
+    basename: import.meta.env.BASE_URL,
   }
 );
 

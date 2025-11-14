@@ -1,30 +1,7 @@
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 const pool = require('../config/database');
-const fs = require('fs');
-const path = require('path');
 
-// Load config from config.env file
-const configPath = path.join(__dirname, '..', '..', 'config.env');
-const configContent = fs.readFileSync(configPath, 'utf8');
-const config = {};
-
-configContent.split('\n').forEach(line => {
-  const [key, value] = line.split('=');
-  if (key && value && !key.startsWith('#')) {
-    config[key.trim()] = value.trim();
-  }
-});
-
-// Create transporter for sending emails
-const createTransporter = () => {
-  return nodemailer.createTransport({
-    service: 'gmail', // You can change this to your preferred email service
-    auth: {
-      user: config.EMAIL_USER || 'your-email@gmail.com',
-      pass: config.EMAIL_PASSWORD || 'your-app-password'
-    }
-  });
-};
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Log email notification to database
 const logEmailNotification = async (recipientEmail, subject, message, type, businessId = null, userId = null) => {
@@ -49,8 +26,6 @@ const logEmailNotification = async (recipientEmail, subject, message, type, busi
 
 // Send email notification for new business application
 const sendNewApplicationNotification = async (businessData, superAdminEmail) => {
-  const transporter = createTransporter();
-  
   const subject = 'New Business Application - eKahera Verification Required';
   const message = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -71,7 +46,7 @@ const sendNewApplicationNotification = async (businessData, superAdminEmail) => 
       <p>Please log in to the SuperAdmin panel to review the submitted documents and verify the business.</p>
       
       <div style="text-align: center; margin: 30px 0;">
-        <a href="${config.FRONTEND_URL || 'http://localhost:3000'}/superadmin" 
+        <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/superadmin" 
            style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
           Review Application
         </a>
@@ -83,15 +58,13 @@ const sendNewApplicationNotification = async (businessData, superAdminEmail) => 
     </div>
   `;
 
-  const mailOptions = {
-    from: config.EMAIL_USER || 'noreply@ekahera.com',
-    to: superAdminEmail,
-    subject: subject,
-    html: message
-  };
-
   try {
-    await transporter.sendMail(mailOptions);
+    await resend.emails.send({
+      from: process.env.EMAIL_USER,
+      to: superAdminEmail,
+      subject: subject,
+      html: message,
+    });
     await logEmailNotification(superAdminEmail, subject, message, 'new_application', businessData.business_id);
     console.log('New application notification sent to SuperAdmin:', superAdminEmail);
     return true;
@@ -103,8 +76,6 @@ const sendNewApplicationNotification = async (businessData, superAdminEmail) => 
 
 // Send verification status notification to business
 const sendVerificationStatusNotification = async (businessData, status, rejectionReason = null, resubmissionNotes = null) => {
-  const transporter = createTransporter();
-  
   let subject, message;
   
   if (status === 'approved') {
@@ -125,7 +96,7 @@ const sendVerificationStatusNotification = async (businessData, status, rejectio
         <p>Your business documents have been reviewed and approved by our verification team. You can now access all features of the eKahera system.</p>
         
         <div style="text-align: center; margin: 30px 0;">
-          <a href="${config.FRONTEND_URL || 'http://localhost:3000'}/login" 
+          <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/login" 
              style="background-color: #059669; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
             Access Your Dashboard
           </a>
@@ -174,7 +145,7 @@ const sendVerificationStatusNotification = async (businessData, status, rejectio
         <p>Please review the feedback and resubmit your documents with the necessary corrections or additional information.</p>
         
         <div style="text-align: center; margin: 30px 0;">
-          <a href="${config.FRONTEND_URL || 'http://localhost:3000'}/login" 
+          <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/login" 
              style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
             Update Application
           </a>
@@ -211,7 +182,7 @@ const sendVerificationStatusNotification = async (businessData, status, rejectio
         <p>Please resubmit clear, high-quality images or scans of the requested documents to continue with the verification process.</p>
         
         <div style="text-align: center; margin: 30px 0;">
-          <a href="${config.FRONTEND_URL || 'http://localhost:3000'}/login" 
+          <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/login" 
              style="background-color: #d97706; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
             Resubmit Documents
           </a>
@@ -224,15 +195,13 @@ const sendVerificationStatusNotification = async (businessData, status, rejectio
     `;
   }
 
-  const mailOptions = {
-    from: config.EMAIL_USER || 'noreply@ekahera.com',
-    to: businessData.email,
-    subject: subject,
-    html: message
-  };
-
   try {
-    await transporter.sendMail(mailOptions);
+    await resend.emails.send({
+      from: process.env.EMAIL_USER,
+      to: businessData.email,
+      subject: subject,
+      html: message,
+    });
     await logEmailNotification(businessData.email, subject, message, `verification_${status}`, businessData.business_id);
     console.log(`Verification ${status} notification sent to:`, businessData.email);
     return true;
@@ -244,8 +213,6 @@ const sendVerificationStatusNotification = async (businessData, status, rejectio
 
 // Send application submitted confirmation to business
 const sendApplicationSubmittedNotification = async (businessData) => {
-  const transporter = createTransporter();
-  
   const subject = 'Application Submitted Successfully - eKahera Verification in Progress';
   const message = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -285,15 +252,13 @@ const sendApplicationSubmittedNotification = async (businessData) => {
     </div>
   `;
 
-  const mailOptions = {
-    from: config.EMAIL_USER || 'noreply@ekahera.com',
-    to: businessData.email,
-    subject: subject,
-    html: message
-  };
-
   try {
-    await transporter.sendMail(mailOptions);
+    await resend.emails.send({
+      from: process.env.EMAIL_USER,
+      to: businessData.email,
+      subject: subject,
+      html: message,
+    });
     await logEmailNotification(businessData.email, subject, message, 'application_submitted', businessData.business_id);
     console.log('Application submitted notification sent to:', businessData.email);
     return true;
@@ -304,8 +269,6 @@ const sendApplicationSubmittedNotification = async (businessData) => {
 };
 
 const sendLowStockEmail = async (recipientEmail, lowStockProducts) => {
-  const transporter = createTransporter();
-
   const subject = 'Low Stock Alert - eKahera';
   const productList = lowStockProducts.map(p => `<li>${p.product_name} (Stock: ${p.quantity_in_stock})</li>`).join('');
   const message = `
@@ -319,15 +282,13 @@ const sendLowStockEmail = async (recipientEmail, lowStockProducts) => {
     </div>
   `;
 
-  const mailOptions = {
-    from: config.EMAIL_USER || 'noreply@ekahera.com',
-    to: recipientEmail,
-    subject: subject,
-    html: message
-  };
-
   try {
-    await transporter.sendMail(mailOptions);
+    await resend.emails.send({
+      from: process.env.EMAIL_USER,
+      to: recipientEmail,
+      subject: subject,
+      html: message,
+    });
     await logEmailNotification(recipientEmail, subject, message, 'low_stock_alert');
     console.log('Low stock alert sent to:', recipientEmail);
     return true;
@@ -337,10 +298,57 @@ const sendLowStockEmail = async (recipientEmail, lowStockProducts) => {
   }
 };
 
+const sendOTPNotification = async (recipientEmail, otp) => {
+  const subject = 'eKahera - Email Verification OTP';
+  const message = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; text-align: center;">
+        <h1 style="color: white; margin: 0;">eKahera</h1>
+      </div>
+      <div style="padding: 30px; background: #f9f9f9;">
+        <h2 style="color: #333; text-align: center;">Email Verification</h2>
+        <p style="color: #666; text-align: center; font-size: 16px;">
+          Your 4-character verification code is:
+        </p>
+        <div style="text-align: center; margin: 30px 0;">
+          <div style="display: inline-block; background: white; padding: 20px 40px; border-radius: 10px; border: 2px solid #667eea;">
+            <span style="font-size: 32px; font-weight: bold; color: #667eea; letter-spacing: 5px;">${otp}</span>
+          </div>
+        </div>
+        <p style="color: #666; text-align: center; font-size: 14px;">
+          This code will expire in 5 minutes.<br>
+          If you didn't request this code, please ignore this email.
+        </p>
+      </div>
+      <div style="background: #333; padding: 20px; text-align: center;">
+        <p style="color: white; margin: 0; font-size: 12px;">
+          © 2024 eKahera. All rights reserved.
+        </p>
+      </div>
+    </div>
+  `;
+
+  try {
+    await resend.emails.send({
+      from: process.env.EMAIL_USER,
+      to: recipientEmail,
+      subject: subject,
+      html: message,
+    });
+    await logEmailNotification(recipientEmail, subject, message, 'otp');
+    console.log('OTP sent to:', recipientEmail);
+    return true;
+  } catch (error) {
+    console.error('Error sending OTP:', error);
+    return false;
+  }
+};
+
 module.exports = {
   sendNewApplicationNotification,
   sendVerificationStatusNotification,
   sendApplicationSubmittedNotification,
   sendLowStockEmail,
-  logEmailNotification
+  logEmailNotification,
+  sendOTPNotification
 };

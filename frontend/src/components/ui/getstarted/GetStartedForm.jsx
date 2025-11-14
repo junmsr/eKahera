@@ -7,13 +7,12 @@ import PasswordInput from "../../../components/common/PasswordInput";
 import LocationSelector from "./LocationSelector";
 import DocumentUploadSection from "./DocumentUploadSection";
 
-export default function GetStartedForm({ hook }) {
+export default function GetStartedForm({ hook, isOtpVerified }) {
   const {
     step,
     form,
     errors,
     loading,
-    otpVerified,
     inputRef,
     handleChange,
   } = hook;
@@ -163,40 +162,21 @@ export default function GetStartedForm({ hook }) {
               onChange={async (e) => {
                 const value = e.target.value.slice(0, 4);
                 handleChange({ target: { name: "otp", value } });
-
                 if (errors.otp) hook.setErrors({ ...errors, otp: null });
-
-                if (value.length === 4) {
-                  hook.setLoading(true);
-                  try {
-                    await api("/otp/verify", {
-                      method: "POST",
-                      body: JSON.stringify({ email: form.email, otp: value }),
-                    });
-                    hook.setOtpVerified(true);
-                    setTimeout(() => {
-                      hook.setStep((s) => s + 1);
-                      hook.setOtpVerified(false);
-                    }, 800);
-                  } catch (err) {
-                    hook.setErrors({ otp: err.message || "OTP verification failed" });
-                  } finally {
-                    hook.setLoading(false);
-                  }
-                }
               }}
-              placeholder="Enter 4-character code (auto-verifies)"
+              placeholder="Enter 4-character code"
               type="text"
               maxLength={4}
               error={errors.otp}
+              disabled={isOtpVerified}
             />
-            {loading && form.otp.length === 4 && (
+            {loading && (
               <div className="mt-2 text-gray-700 text-sm font-medium flex items-center">
                 <Loader size="sm" className="mr-2" />
                 Verifying OTP...
               </div>
             )}
-            {otpVerified && (
+            {isOtpVerified && (
               <div className="mt-2 text-green-600 text-sm font-medium flex items-center">
                 <svg
                   className="w-4 h-4 mr-2"

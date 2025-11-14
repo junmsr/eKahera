@@ -5,6 +5,10 @@ const fs = require('fs');
 const path = require('path');
 const { sendApplicationSubmittedNotification } = require('../utils/emailService');
 const { logAction } = require('../utils/logger');
+const supabaseStorage = require('../utils/supabaseStorage');
+const BusinessDocument = require('../models/BusinessDocument');
+const BusinessVerification = require('../models/BusinessVerification');
+const multer = require('multer');
 
 // Load config from config.env file
 const configPath = path.join(__dirname, '..', '..', 'config.env');
@@ -617,6 +621,283 @@ exports.verifyBusinessAccess = async (req, res) => {
     });
   }
 };
+
+// Configure multer for file uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadDir = path.join(__dirname, '../../uploads/documents');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const ext = path.extname(file.originalname);
+    cb(null, `temp-${uniqueSuffix}${ext}`);
+  }
+});
+
+const fileFilter = (req, file, cb) => {
+  // Allow images and PDFs
+  const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'application/pdf'];
+  if (allowedTypes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error('Invalid file type. Only JPEG, PNG, GIF, and PDF files are allowed.'), false);
+  }
+};
+
+const upload = multer({
+  storage: storage,
+  fileFilter: fileFilter,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+  }
+});
+
+// Register business with documents in one transaction
+exports.registerBusinessWithDocuments = [
+  upload.array('documents', 10),
+  async (req, res) => {
+    const {
+      email,
+      username,
+      businessName,
+      businessType,
+      country,
+      province,
+      city,
+      barangay,
+      houseNumber,
+      mobile,
+      password,
+      document_types
+    } = req.body;
+
+    const files = req.files;
+
+    // Validate required fields
+    if (!email || !username || !businessName || !businessType || !country || !province || !city || !barangay || !houseNumber || !mobile || !password) {
+      return res.status(400).json({
+        error: 'All required fields must be provided'
+      });
+    }
+
+    // Validate documents
+    if (!files || files.length === 0) {
+      return res.status(400).json({ error: 'No documents uploaded' });
+    }
+
+    // Parse document types if it's a string
+    let parsedDocumentTypes;
+    try {
+      parsedDocumentTypes = typeof document_types === 'string'
+        ? JSON.parse(document_types)
+        : document_types;
+    } catch (error) {
+      return res.status(400).json({ error: 'Invalid document types format' });
+    }
+
+    if (!parsedDocumentTypes || parsedDocumentTypes.length !== files.length) {
+      return res.status(400).json({ error: 'Document types must match the number of uploaded files' });
+    }
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      // Check if user already exists (by email or username)
+      const existingUser = await client.query(
+        'SELECT user_id FROM users WHERE email = $1 OR username = $2',
+        [email, username]
+      );
+
+      if (existingUser.rows.length > 0) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({
+          error: 'User with this email or username already exists'
+        });
+      }
+
+      // Check if business with email already exists
+      const existingBiz = await client.query('SELECT business_id FROM business WHERE email = $1 LIMIT 1', [email]);
+      if (existingBiz.rows.length > 0) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ error: 'A business with this email already exists' });
+      }
+
+      // Hash password
+      const saltRounds = 10;
+      const passwordHash = await bcrypt.hash(password, saltRounds);
+
+      // Get user_type_id for 'admin'
+      const adminTypeRes = await client.query('SELECT user_type_id FROM user_type WHERE lower(user_type_name) = $1', ['admin']);
+      const adminTypeId = adminTypeRes.rows[0]?.user_type_id || null;
+      if (!adminTypeId) {
+        await client.query('ROLLBACK');
+        return res.status(500).json({ error: 'Admin user type not configured' });
+      }
+
+      // Create user account with user_type_id
+      const userResult = await client.query(`
+        INSERT INTO users (username, email, password_hash, role, contact_number, user_type_id, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+        RETURNING user_id, username, email, role
+      `, [username, email, passwordHash, 'business_owner', mobile, adminTypeId]);
+
+      const userId = userResult.rows[0].user_id;
+
+      // Create business profile - combine address components into business_address
+      const businessAddress = `${barangay}, ${city}, ${province}`;
+      const businessResult = await client.query(`
+        INSERT INTO business (
+          business_name, business_type, country,
+          business_address, house_number, mobile, email,
+          created_at, updated_at
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+        RETURNING business_id, business_name
+      `, [businessName, businessType, country, businessAddress, houseNumber, mobile, email]);
+
+      const businessId = businessResult.rows[0].business_id;
+
+      // Update user with business_id
+      await client.query('UPDATE users SET business_id = $1 WHERE user_id = $2', [businessId, userId]);
+
+      // Upload documents to Supabase and save to database
+      const uploadedDocuments = [];
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const documentType = parsedDocumentTypes[i];
+
+        // Read file buffer
+        const fileBuffer = fs.readFileSync(file.path);
+
+        // Upload to Supabase Storage
+        const uploadResult = await supabaseStorage.uploadFile(
+          fileBuffer,
+          file.originalname,
+          file.mimetype,
+          businessId
+        );
+
+        if (!uploadResult.success) {
+          console.error('Failed to upload to Supabase:', uploadResult.error);
+          await client.query('ROLLBACK');
+          return res.status(500).json({ error: 'Failed to upload document to storage' });
+        }
+
+        const documentData = {
+          business_id: businessId,
+          document_type: documentType,
+          document_name: file.originalname,
+          file_path: uploadResult.url, // Store Supabase URL
+          file_size: file.size,
+          mime_type: file.mimetype
+        };
+
+        const savedDocument = await BusinessDocument.create(documentData);
+        uploadedDocuments.push(savedDocument);
+
+        // Clean up local file
+        fs.unlinkSync(file.path);
+      }
+
+      // Create business verification record
+      await BusinessVerification.create(businessId);
+
+      // Check if all required documents are uploaded
+      const documentStatus = await hasRequiredDocuments(businessId);
+
+      // Generate JWT token
+      const token = jwt.sign(
+        {
+          userId: userId,
+          email: email,
+          role: 'business_owner',
+          businessId: businessId
+        },
+        config.JWT_SECRET,
+        { expiresIn: '24h' }
+      );
+
+      // Only send notifications and update status if all required documents are uploaded
+      if (documentStatus.hasAllRequired) {
+        // Get SuperAdmin email for notification
+        const superAdminResult = await client.query(
+          'SELECT email FROM users WHERE role = $1 LIMIT 1',
+          ['superadmin']
+        );
+
+        if (superAdminResult.rowCount > 0) {
+          const superAdminEmail = superAdminResult.rows[0].email;
+          // Send notification to super admin about new application
+          await sendApplicationSubmittedNotification(businessResult.rows[0], superAdminEmail);
+        }
+
+        // Send application submitted confirmation to the business
+        await sendApplicationSubmittedNotification(businessResult.rows[0]).catch(error => {
+          console.error('Failed to send application submitted notification:', error);
+        });
+
+        // Update business verification status to submitted
+        await client.query(
+          'UPDATE business SET verification_status = $1, verification_submitted_at = COALESCE(verification_submitted_at, NOW()), updated_at = NOW() WHERE business_id = $2',
+          ['pending', businessId]
+        );
+      }
+
+      await client.query('COMMIT');
+
+      logAction({
+        userId: userId,
+        businessId: businessId,
+        action: `Registered business with documents: ${businessResult.rows[0].business_name}`,
+      });
+
+      res.status(201).json({
+        message: documentStatus.hasAllRequired
+          ? 'Business account created successfully. Your application has been submitted for verification.'
+          : `Business account created successfully. Please upload the remaining required documents: ${documentStatus.missingTypes.join(', ')}`,
+        user: {
+          id: userId,
+          username: username,
+          email: email,
+          role: 'business_owner'
+        },
+        business: {
+          id: businessId,
+          name: businessResult.rows[0].business_name
+        },
+        token: token,
+        documents: uploadedDocuments,
+        documentStatus: documentStatus,
+        allRequiredUploaded: documentStatus.hasAllRequired
+      });
+
+    } catch (error) {
+      await client.query('ROLLBACK');
+      console.error('Business registration with documents error:', error);
+      if (error.code === '23505') {
+        return res.status(400).json({ error: 'Duplicate value violates unique constraint' });
+      }
+      res.status(500).json({
+        error: 'Failed to register business with documents. Please try again.'
+      });
+    } finally {
+      client.release();
+      // Clean up any remaining local files
+      if (files) {
+        files.forEach(file => {
+          if (fs.existsSync(file.path)) {
+            fs.unlinkSync(file.path);
+          }
+        });
+      }
+    }
+  }
+];
 
 // Export the hasRequiredDocuments function for use in other modules
 module.exports.hasRequiredDocuments = hasRequiredDocuments;

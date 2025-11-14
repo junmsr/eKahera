@@ -1,7 +1,6 @@
 import React, { useState } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import Logo from "../common/Logo";
-import LogoutModal from "../modals/LogoutModal";
 
 // Navigation configuration
 const NAV_ITEMS = [
@@ -181,22 +180,8 @@ const NavigationItem = ({ item, isActive }) => {
  *
  * @returns {JSX.Element} The admin navigation sidebar
  */
-const NavAdmin = () => {
+const NavAdmin = ({ isMobile, onLogoutClick }) => {
   const navigate = useNavigate();
-  const [showLogoutModal, setShowLogoutModal] = useState(false);
-
-  const handleLogoClick = () => {
-    setShowLogoutModal(true);
-  };
-
-  const handleLogoutConfirm = () => {
-    setShowLogoutModal(false);
-    navigate("/");
-  };
-
-  const handleLogoutCancel = () => {
-    setShowLogoutModal(false);
-  };
 
   const LogoutIcon = () => (
     <svg
@@ -214,50 +199,40 @@ const NavAdmin = () => {
   );
 
   return (
-    <>
-      <aside className={STYLES.sidebar}>
-        <div
-          className={`${STYLES.logoContainer} logoContainer`}
-          onClick={handleLogoClick}
-        >
-          <div className="transition-all duration-300 group-hover:scale-110">
-            <Logo size={42} />
-          </div>
+    <aside className={STYLES.sidebar}>
+      <div
+        className={`${STYLES.logoContainer} logoContainer`}
+        onClick={() => navigate("/dashboard")}
+        role="button"
+        tabIndex={0}
+      >
+        <div className="transition-all duration-300 group-hover:scale-110">
+          <Logo size={42} />
         </div>
+      </div>
 
-        <nav
-          className={`${STYLES.nav} h-full flex flex-col`}
-          aria-label="Main navigation"
-        >
-          <div className={STYLES.sectionHeader}>MENU</div>
-          {NAV_ITEMS.map((item) => (
-            <NavigationItem
-              key={item.id}
-              item={item}
-              isActive={window.location.pathname === item.path}
-            />
-          ))}
+      <nav
+        className={`${STYLES.nav} h-full flex flex-col`}
+        aria-label="Main navigation"
+      >
+        <div className={STYLES.sectionHeader}>MENU</div>
+        {NAV_ITEMS.map((item) => (
+          <NavigationItem
+            key={item.id}
+            item={item}
+            isActive={window.location.pathname === item.path}
+          />
+        ))}
 
-          {/* Logout Button */}
-          <button
-            onClick={handleLogoClick}
-            className={STYLES.logoutButton}
-            aria-label="Logout"
-          >
-            <span className={STYLES.logoutIcon}>
-              <LogoutIcon />
-            </span>
+        {/* Logout Button */}
+        <div className={`${isMobile ? "block" : "mt-auto"}`}>
+          <button onClick={onLogoutClick} className={STYLES.logoutButton} aria-label="Logout">
+            <span className={STYLES.logoutIcon}><LogoutIcon /></span>
             <span className={STYLES.label}>Logout</span>
           </button>
-        </nav>
-      </aside>
-
-      <LogoutModal
-        isOpen={showLogoutModal}
-        onClose={handleLogoutCancel}
-        onConfirm={handleLogoutConfirm}
-      />
-    </>
+        </div>
+      </nav>
+    </aside>
   );
 };
 
