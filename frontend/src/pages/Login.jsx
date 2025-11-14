@@ -68,16 +68,8 @@ export default function Login() {
       });
       sessionStorage.setItem('auth_token', token);
       sessionStorage.setItem('user', JSON.stringify(user));
-
-      // Check for redirect parameter
-      const urlParams = new URLSearchParams(window.location.search);
-      const redirectPath = urlParams.get('redirect');
-
       const role = (user?.role || '').toLowerCase();
-      if (redirectPath) {
-        // Redirect to the intended page
-        navigate(redirectPath, { replace: true });
-      } else if (role === 'cashier') {
+      if (role === 'cashier') {
         navigate('/cashier-pos');
       } else if (role === 'superadmin') {
         navigate('/superadmin');
