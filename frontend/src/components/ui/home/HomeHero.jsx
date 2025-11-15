@@ -100,9 +100,7 @@ function HomeHero({ onCustomerClick, onStaffClick }) {
               className="group relative mb-6"
             >
               <motion.span
-                className="inline-flex items-center px-4 py-2 rounded-full backdrop-blur-md bg-white/70 border border-white/20 shadow-lg shadow-blue-500/10 text-blue-700 text-sm font-semibold tracking-wide"
-                whileHover={{ scale: 1.05 }}
-                transition={{ type: "spring", stiffness: 400, damping: 17 }}
+                className="hover:cursor-default inline-flex items-center px-4 py-2 rounded-full backdrop-blur-md bg-white/70 border border-white/20 shadow-lg shadow-blue-500/10 text-blue-700 text-sm font-semibold tracking-wide"
               >
                 <span className="relative flex h-2 w-2 mr-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
@@ -118,11 +116,11 @@ function HomeHero({ onCustomerClick, onStaffClick }) {
               className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl leading-[1.05] font-extrabold mb-6 md:mb-8 tracking-tight"
               style={{ fontFamily: "Inter, sans-serif" }}
             >
-              <span className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 bg-clip-text text-transparent hover:cursor-default">
                 Smart POS for
               </span>
               <br />
-              <span className="bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 bg-clip-text text-transparent">
+              <span className="hover:cursor-default bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 bg-clip-text text-transparent">
                 Every Business.
               </span>
             </motion.h1>
@@ -130,7 +128,7 @@ function HomeHero({ onCustomerClick, onStaffClick }) {
             {/* Description with better typography */}
             <motion.p
               variants={fadeUp}
-              className="text-lg sm:text-xl md:text-2xl text-slate-600 mb-10 md:mb-12 font-normal leading-relaxed max-w-xl"
+              className="hover:cursor-default text-lg sm:text-xl md:text-2xl text-slate-600 mb-10 md:mb-12 font-normal leading-relaxed max-w-xl"
               style={{ fontFamily: "Inter, sans-serif" }}
             >
               Streamline checkout, manage inventory, and track sales in real time
@@ -161,8 +159,6 @@ function HomeHero({ onCustomerClick, onStaffClick }) {
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
-                      animate={{ x: [0, 4, 0] }}
-                      transition={{ duration: 1.5, repeat: Infinity }}
                     >
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                     </motion.svg>
@@ -174,7 +170,7 @@ function HomeHero({ onCustomerClick, onStaffClick }) {
                     transition={{ duration: 0.3 }}
                   />
                 </motion.button>
-                <span className="text-xs sm:text-sm text-slate-500 mt-2.5 text-center sm:text-left font-medium">
+                <span className="hover:cursor-default text-xs sm:text-sm text-slate-500 mt-2.5 text-center sm:text-left font-medium">
                   Try the Admin/Cashier experience
                 </span>
               </div>
@@ -195,7 +191,7 @@ function HomeHero({ onCustomerClick, onStaffClick }) {
                 >
                   <span className="relative z-10">Shop Now!</span>
                 </motion.button>
-                <span className="text-xs sm:text-sm text-slate-500 mt-2.5 text-center sm:text-left font-medium">
+                <span className="hover:cursor-default text-xs sm:text-sm text-slate-500 mt-2.5 text-center sm:text-left font-medium">
                   Shop in your own convenience
                 </span>
               </div>
@@ -211,9 +207,9 @@ function HomeHero({ onCustomerClick, onStaffClick }) {
               src={heroIllustration}
               alt="Digital payment illustration"
               className="w-full h-auto max-w-full lg:max-w-none drop-shadow-2xl will-change-transform"
-              style={{ objectFit: "contain", y: parallaxY }}
+              style={{ objectFit: "contain"}}
               animate={{ y: [0, -16, 0], rotateZ: [0, 0.3, 0] }}
-              transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut" }}
+              // transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut" }}
             />
           </motion.div>
         </div>

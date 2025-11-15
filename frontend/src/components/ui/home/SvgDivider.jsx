@@ -235,16 +235,6 @@ function SvgDivider({ className = "my-12", heightClass = "h-40 md:h-60" }) {
           animate={frontControls}
         />
 
-        {/* thin accent stroke for better separation */}
-        <motion.path
-          d="M0 54 C220 96 420 18 720 50 C1020 82 1220 58 1440 70"
-          fill="none"
-          stroke="#2563eb"
-          strokeOpacity="0.28"
-          strokeWidth="2"
-          style={frontStyle}
-        />
-
         {/* Moving shine overlay (subtle highlight) */}
         <motion.rect
           className="divider-shine"

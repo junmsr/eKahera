@@ -113,15 +113,15 @@ const features = [
 const Features = () => (
   <section
     id="features"
-    className="relative w-full py-20 px-2 bg-white"
+    className="hover:cursor-default relative w-full py-20 px-2 bg-white"
     style={{ fontFamily: "Inter, sans-serif" }}
   >
     <div className="max-w-6xl mx-auto">
       {/* Intro sentence */}
-      <p className="text-blue-700 text-base md:text-lg text-center mb-2 font-medium">
+      <p className="hover:cursor-default text-blue-700 text-base md:text-lg text-center mb-2 font-medium">
         Discover what makes eKahera the smart choice for your business.
       </p>
-      <h2 className="text-3xl md:text-4xl font-extrabold text-black mb-10 text-center">
+      <h2 className="hover:cursor-default text-3xl md:text-4xl font-extrabold text-black mb-10 text-center">
         Features
       </h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
@@ -131,8 +131,8 @@ const Features = () => (
             initial={{ opacity: 0, y: 24, scale: 0.98 }}
             whileInView={{ opacity: 1, y: 0, scale: 1 }}
             viewport={{ once: true, amount: 0.3 }}
-            transition={{ duration: 0.5, ease: "easeOut", delay: i * 0.06 }}
-            className="bg-white rounded-2xl shadow-lg p-8 flex flex-col items-center border border-blue-100 transition-all duration-300 hover:shadow-2xl hover:-translate-y-2 group"
+            transition={{ duration: 0.5, ease: "easeOut", delay: i * 0.04 }}
+            className="bg-white rounded-2xl shadow-lg p-8 flex flex-col items-center border border-blue-100 transition-all duration-300 hover:shadow-2xl"
           >
             <div className="mb-4 flex items-center justify-center w-16 h-16 rounded-full bg-white group-hover:bg-white transition-colors duration-200">
               {f.icon}

@@ -1,9 +1,5 @@
 import React from "react";
 
-/**
- * Input Component
- * 2025: Glassy/soft backgrounds, animated focus ring, microinteractions, bold placeholder
- */
 function Input({
   type = "text",
   name,
@@ -20,7 +16,7 @@ function Input({
 }) {
   // Base styles — use dark gray for normal text and gray for placeholder
   const baseStyles =
-    "w-full rounded-xl text-base text-gray-900 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 placeholder:text-gray-400 bg-white/60 backdrop-blur-md border border-white/30 shadow-sm";
+    "w-full rounded-xl text-base text-gray-900 transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-blue-400 placeholder:text-gray-400 bg-white/60 backdrop-blur-md border border-white/30 shadow-sm";
   // Size variants
   const sizeStyles = {
     sm: "px-3 py-1.5 text-sm",
@@ -44,8 +40,6 @@ function Input({
   };
   // Microinteraction (scale on focus)
   const microClass = microinteraction
-    ? "focus:scale-[1.02] transition-transform"
-    : "";
   // Combine all styles
   const combinedStyles = `${baseStyles} ${sizeStyles[size]} ${
     variantStyles[variant]

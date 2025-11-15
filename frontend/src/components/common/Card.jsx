@@ -15,7 +15,7 @@ function Card({
   ...props
 }) {
   // Base styles
-  const baseStyles = "rounded-3xl transition-all duration-300 backdrop-blur-xl bg-white/60 border border-white/30 shadow-xl hover:shadow-2xl focus-within:shadow-2xl";
+  const baseStyles = "rounded-3xl transition-all duration-300 backdrop-blur-xl bg-white/60 border border-white/30 shadow-xl";
   
   // Variant styles
   const variantStyles = {

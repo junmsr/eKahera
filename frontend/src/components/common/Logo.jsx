@@ -8,7 +8,7 @@ import logoImage from "../../assets/images/Logo.png";
 function Logo({ size = 35, className = "", variant = "default" }) {
   const [isLoaded, setIsLoaded] = useState(false);
   const [displayText, setDisplayText] = useState("");
-  const fullText = " | eKahera";
+  const fullText = "eKahera";
 
   // Typing effect
   useEffect(() => {
@@ -50,8 +50,7 @@ function Logo({ size = 35, className = "", variant = "default" }) {
 
       {/* Typing Text Animation */}
       <span className="ml-1 font-semibold text-black text-shadow-lg whitespace-nowrap">
-        {displayText}
-        <span className="animate-pulse">|</span> {/* blinking cursor */}
+        {fullText}
       </span>
     </div>
   );
