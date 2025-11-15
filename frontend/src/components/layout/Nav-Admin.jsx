@@ -212,7 +212,7 @@ const NavAdmin = ({ isMobile, onLogoutClick }) => {
       </div>
 
       <nav
-        className={`${STYLES.nav} h-full flex flex-col`}
+        className={`${STYLES.nav} h-full flex flex-col overflow-y-auto overflow-x-hidden`}
         aria-label="Main navigation"
       >
         <div className={STYLES.sectionHeader}>MENU</div>
@@ -226,8 +226,14 @@ const NavAdmin = ({ isMobile, onLogoutClick }) => {
 
         {/* Logout Button */}
         <div className={`${isMobile ? "block" : "mt-auto"}`}>
-          <button onClick={onLogoutClick} className={STYLES.logoutButton} aria-label="Logout">
-            <span className={STYLES.logoutIcon}><LogoutIcon /></span>
+          <button
+            onClick={onLogoutClick}
+            className={STYLES.logoutButton}
+            aria-label="Logout"
+          >
+            <span className={STYLES.logoutIcon}>
+              <LogoutIcon />
+            </span>
             <span className={STYLES.label}>Logout</span>
           </button>
         </div>

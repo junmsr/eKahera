@@ -31,14 +31,16 @@ export default function Cashiers() {
       try {
         setLoading(true);
         setApiError("");
-        const token = sessionStorage.getItem('auth_token');
-        const list = await api('/api/business/cashiers', { headers: authHeaders(token) });
-        const mapped = (list || []).map(r => ({
-          name: r.username || '-',
-          id: r.user_id || '-',
-          number: r.contact_number || '-',
-          email: r.email || '-',
-          status: 'ACTIVE',
+        const token = sessionStorage.getItem("auth_token");
+        const list = await api("/api/business/cashiers", {
+          headers: authHeaders(token),
+        });
+        const mapped = (list || []).map((r) => ({
+          name: r.username || "-",
+          id: r.user_id || "-",
+          number: r.contact_number || "-",
+          email: r.email || "-",
+          status: "ACTIVE",
         }));
         setCashiers(mapped);
       } catch (err) {
@@ -81,10 +83,10 @@ export default function Cashiers() {
     try {
       setLoading(true);
       setApiError("");
-      const token = sessionStorage.getItem('auth_token');
-      await api('/api/business/cashiers', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders(token) },
+      const token = sessionStorage.getItem("auth_token");
+      await api("/api/business/cashiers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders(token) },
         body: JSON.stringify({
           username: (form.name || "").trim(),
           password: (form.password || "").trim(),
@@ -211,7 +213,7 @@ export default function Cashiers() {
 
           <div className="w-full max-w-5xl bg-white rounded-2xl shadow-lg border border-blue-100 p-0">
             {/* Desktop / wide screens: table */}
-            <div className="w-full overflow-x-auto hidden sm:block">
+            <div className="w-full overflow-x-auto hidden [@media (orientation: landscape)]:block md:block">
               <table className="w-full min-w-0 md:min-w-[720px] text-left rounded-xl overflow-hidden">
                 <thead>
                   <tr className="bg-gradient-to-r from-blue-50/80 to-indigo-50/80 text-gray-700 font-semibold text-xs uppercase tracking-wider border-b border-blue-100">
@@ -287,11 +289,15 @@ export default function Cashiers() {
                         <td className="py-2.5 px-3 sm:px-5 font-medium text-gray-900">
                           {c.name}
                         </td>
-                        <td className="py-2.5 px-3 sm:px-5 text-gray-700">{c.id}</td>
+                        <td className="py-2.5 px-3 sm:px-5 text-gray-700">
+                          {c.id}
+                        </td>
                         <td className="py-2.5 px-3 sm:px-5 text-gray-700">
                           {c.number}
                         </td>
-                        <td className="py-2.5 px-3 sm:px-5 text-gray-700">{c.email}</td>
+                        <td className="py-2.5 px-3 sm:px-5 text-gray-700">
+                          {c.email}
+                        </td>
                         <td className="py-2.5 px-3 sm:px-5">
                           <span
                             className={
@@ -384,17 +390,26 @@ export default function Cashiers() {
                       />
                     </svg>
                   </div>
-                  <p className="text-gray-600 font-semibold">No cashiers found</p>
-                  <p className="text-gray-400 text-sm">Try changing filters or add a new cashier</p>
+                  <p className="text-gray-600 font-semibold">
+                    No cashiers found
+                  </p>
+                  <p className="text-gray-400 text-sm">
+                    Try changing filters or add a new cashier
+                  </p>
                 </div>
               )}
 
               {!loading &&
                 filteredCashiers.map((c, idx) => (
-                  <div key={`card-${idx}`} className="bg-white border rounded-lg p-3 shadow-sm">
+                  <div
+                    key={`card-${idx}`}
+                    className="bg-white border rounded-lg p-3 shadow-sm"
+                  >
                     <div className="flex items-start justify-between">
                       <div>
-                        <div className="text-sm font-semibold text-gray-900">{c.name}</div>
+                        <div className="text-sm font-semibold text-gray-900">
+                          {c.name}
+                        </div>
                         <div className="text-xs text-gray-500">ID: {c.id}</div>
                       </div>
                       <div className="text-right">
@@ -416,8 +431,18 @@ export default function Cashiers() {
                             onClick={() => handleEditCashier(idx)}
                             title="Edit"
                           >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a4 4 0 01-1.414.828l-4.243 1.414 1.414-4.243a4 4 0 01.828-1.414z" />
+                            <svg
+                              className="w-4 h-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a4 4 0 01-1.414.828l-4.243 1.414 1.414-4.243a4 4 0 01.828-1.414z"
+                              />
                             </svg>
                           </Button>
                           <Button
@@ -426,16 +451,30 @@ export default function Cashiers() {
                             onClick={() => handleDeleteCashier(idx)}
                             title="Delete"
                           >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            <svg
+                              className="w-4 h-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                              />
                             </svg>
                           </Button>
                         </div>
                       </div>
                     </div>
                     <div className="mt-3 text-sm text-gray-700">
-                      <div className="truncate"><strong>Number:</strong> {c.number}</div>
-                      <div className="truncate"><strong>Email:</strong> {c.email}</div>
+                      <div className="truncate">
+                        <strong>Number:</strong> {c.number}
+                      </div>
+                      <div className="truncate">
+                        <strong>Email:</strong> {c.email}
+                      </div>
                     </div>
                   </div>
                 ))}
