@@ -58,7 +58,7 @@ function Button({
   const disabledStyles = disabled ? "opacity-50 cursor-not-allowed pointer-events-none" : "";
   
   // Microinteraction (scale/glow on hover/focus)
-  const microClass = microinteraction && !isCloseButton && !isPasswordToggle ? 'hover:scale-[1.03] active:scale-[0.97] transition-transform focus:shadow-blue-300/40' : '';
+  // const microClass = microinteraction && !isCloseButton && !isPasswordToggle ? 'hover:scale-[1.03] active:scale-[0.97] transition-transform focus:shadow-blue-300/40' : '';
   
   // Determine which variant to use
   let finalVariant = variant;
@@ -66,7 +66,7 @@ function Button({
   if (isPasswordToggle) finalVariant = 'passwordToggle';
   
   // Combine all styles
-  const combinedStyles = `${baseStyles} ${sizeStyles[size]} ${variantStyles[finalVariant]} ${disabledStyles} ${microClass} ${className}`;
+  const combinedStyles = `${baseStyles} ${sizeStyles[size]} ${variantStyles[finalVariant]} ${disabledStyles} ${className}`;
   
   // Password toggle icon
   const passwordToggleIcon = showPassword ? (

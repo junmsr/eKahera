@@ -47,6 +47,9 @@ function Home() {
         onMobileScannerClick={handleMobileScanner}
       />
       <main id="main-content" role="main" className="flex-1">
+        {/* Divider between Hero and Features */}
+        {/* <SvgDivider className="my-8" /> */}
+
         {/* Features Section */}
         <SectionWrapper id="features" title="Key features">
           <Features />

@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
+import Logo from '../components/common/Logo';
 
 // Components
 import Background from "../components/layout/Background";
@@ -84,155 +85,119 @@ export default function Login() {
       setLoading(false);
     }
   };
-
-
+  
   return (
     <Background variant="gradientBlue" pattern="dots" overlay floatingElements>
       {/* Gradient overlay per request */}
       <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-indigo-50/30 to-purple-50/20 pointer-events-none" />
-
-      {/* Animated background orbs */}
-      <motion.div
-        className="absolute -top-24 -left-24 w-[28rem] h-[28rem] rounded-full bg-gradient-to-br from-blue-400/15 to-cyan-400/10 blur-3xl"
-        animate={{ scale: [1, 1.08, 1], opacity: [0.35, 0.5, 0.35] }}
-        transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
-      />
-      <motion.div
-        className="absolute bottom-0 -right-24 w-[30rem] h-[30rem] rounded-full bg-gradient-to-bl from-indigo-400/15 to-purple-400/10 blur-3xl"
-        animate={{ scale: [1, 1.12, 1], opacity: [0.3, 0.45, 0.3] }}
-        transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
-      />
-
       <main className="flex h-screen items-center justify-center px-2 relative z-10 overflow-hidden">
         <Card
           variant="glass"
           className="w-full max-w-4xl flex flex-col md:flex-row overflow-hidden p-0 animate-fadeIn rounded-2xl shadow-xl"
         >
-          {/* Left: Illustration / Branding Panel (modernized) */}
-          <aside className="hidden md:flex items-center rounded-l-2xl bg-gradient-to-br from-indigo-500 via-blue-400 to-sky-400 w-1/2 p-10 relative overflow-hidden">
-            <div className="absolute inset-0 opacity-7 -z-10 pointer-events-none">
-              <div className="w-full h-full bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.25)_1px,transparent_0)] bg-[length:24px_24px]" />
-            </div>
-
-            <div className="relative z-10 flex flex-col justify-center items-start max-w-sm pl-6">
-              <h2 className="text-white font-extrabold text-3xl leading-tight mb-3">
-                Welcome back!
-              </h2>
-              <p className="text-white/90 text-base max-w-xs mb-6">
-                Sign in to continue managing transactions, inventory and sales
-                from anywhere.
-              </p>
-              <div className="inline-flex items-center gap-2 rounded-full bg-white/15 text-white/90 px-3 py-1 text-xs backdrop-blur-sm ring-1 ring-white/20">
-                <span className="inline-block h-2 w-2 rounded-full bg-emerald-300 animate-pulse" />
-                Secure area • eKahera
-              </div>
-              {/* Illustration removed per request */}
-            </div>
-          </aside>
-
-          {/* Right: Login Form Panel */}
-          <section className="w-full md:w-1/2 flex flex-col justify-center items-center p-6 md:p-12 bg-white/90 backdrop-blur-xl">
-            <div className="w-full max-w-md">
-             {/* Back to home button */}
-             <div className="w-full mb-4 flex justify-start">
-               <Link
-                 to="/"
-                 className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-800"
-               >
-                 <svg
-                   className="w-4 h-4"
-                   fill="none"
-                   stroke="currentColor"
-                   viewBox="0 0 24 24"
-                 >
-                   <path
-                     strokeLinecap="round"
-                     strokeLinejoin="round"
-                     strokeWidth={2}
-                     d="M15 19l-7-7 7-7"
-                   />
-                 </svg>
-                 Back to home
-               </Link>
-             </div>
-              <div className="flex flex-col items-center mb-6">
-                <SectionHeader
-                  variant="primary"
-                  size="lg"
-                  className="text-center"
-                >
-                  Log In
-                </SectionHeader>
-                <p className="text-gray-500 text-sm mt-2">
-                  Enter your credentials to access your account
-                </p>
-              </div>
-
-              <form
-                onSubmit={handleSubmit}
-                className="w-full flex flex-col gap-4"
-                noValidate
+          {/* left: Login Form Panel */}
+        <section className="w-full md:w-1/2 flex flex-col justify-center items-center p-6 md:p-12 rounded-l-2xl bg-white/90 backdrop-blur-xl">
+          <div className="w-full max-w-md">
+            <div className="flex flex-col items-center mb-6">
+              <SectionHeader
+                variant="primary"
+                size="lg"
+                className="text-center"
               >
-                <Input
-                  name="email"
-                  value={form.email}
-                  onChange={handleChange}
-                  placeholder="Email or username"
-                  type="text"
-                  error={errors.email}
-                  autoComplete="username"
-                  required
-                />
-
-                <div className="relative">
-                  <PasswordInput
-                    name="password"
-                    value={form.password}
-                    onChange={handleChange}
-                    placeholder="Password"
-                    error={errors.password}
-                    autoComplete="current-password"
-                    required
-                    className="pr-12"
-                  />
-                </div>
-
-                
-
-                <div className="flex items-center justify-end mt-1">
-                  <div className="text-sm text-gray-500">
-                    Need an account?{" "}
-                    <Link
-                      to="/get-started"
-                      className="text-blue-600 hover:underline"
-                    >
-                      Get started
-                    </Link>
-                  </div>
-                </div>
-
-                {apiError && (
-                  <div className="text-red-600 text-sm">{apiError}</div>
-                )}
-
-                <Button
-                  type="submit"
-                  variant="primary"
-                  disabled={loading}
-                  className="w-full flex items-center justify-center h-12 mt-2 text-lg font-medium transition-all duration-300 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
-                >
-                  {loading && <Loader size="sm" className="mr-2" />}
-                  {loading ? "Logging in..." : "Login"}
-                </Button>
-              </form>
-
-              <div className="mt-6 text-center">
-                <p className="mt-6 text-gray-400 text-xs">
-                  Secure login powered by eKahera
-                </p>
-              </div>
+                Log In
+              </SectionHeader>
+              <p className="text-gray-500 text-sm mt-2">
+                Enter your credentials to access your account
+              </p>
             </div>
-          </section>
+
+            <form
+              onSubmit={handleSubmit}
+              className="w-full flex flex-col gap-4"
+              noValidate
+            >
+              <Input
+                name="email"
+                value={form.email}
+                onChange={handleChange}
+                placeholder="Email or username"
+                type="text"
+                error={errors.email}
+                autoComplete="username"
+                required
+              />
+
+              <div className="relative">
+                <PasswordInput
+                  name="password"
+                  value={form.password}
+                  onChange={handleChange}
+                  placeholder="Password"
+                  error={errors.password}
+                  autoComplete="current-password"
+                  required
+                  className="pr-12"
+                />
+              </div>
+
+              <div className="flex items-center justify-end mt-1">
+                <div className="text-sm text-gray-500">
+                  Need an account?{" "}
+                  <a
+                    href="/get-started"
+                    className="text-blue-600 hover:underline"
+                  >
+                    Get started
+                  </a>
+                </div>
+              </div>
+
+              {apiError && (
+                <div className="text-red-600 text-sm">{apiError}</div>
+              )}
+
+              <Button
+                type="submit"
+                variant="primary"
+                disabled={loading}
+                className="w-full flex items-center justify-center h-12 mt-2 text-lg font-medium transition-all duration-300 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
+              >
+                {loading && <Loader size="sm" className="mr-2" />}
+                {loading ? "Logging in..." : "Login"}
+              </Button>
+            </form>
+
+            <div className="mt-6 text-center">
+              <p className="mt-6 text-gray-400 text-xs">
+                Secure login powered by eKahera
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* right: Illustration / Branding Panel (modernized) */}
+        <aside className="hidden md:flex items-center rounded-r-2xl bg-gradient-to-br from-indigo-500 via-blue-400 to-sky-400 w-1/2 p-10 relative overflow-hidden">
+          <div className="absolute inset-0 opacity-7 -z-10 pointer-events-none">
+            <div className="w-full h-full bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.25)_1px,transparent_0)] bg-[length:24px_24px]" />
+          </div>
+
+          <div className="relative z-10 flex flex-col justify-center items-start max-w-sm pl-6">
+            {/* <Logo className="w-56 h-auto p-10 "
+            /> */}
+            <h2 className="text-white font-extrabold text-3xl leading-tight mb-3">
+              Welcome back!
+            </h2>
+            <p className="text-white/90 text-base max-w-xs mb-6">
+              Sign in to continue managing transactions, inventory and sales
+              from anywhere.
+            </p>
+            <div className="inline-flex items-center gap-2 rounded-full bg-white/15 text-white/90 px-3 py-1 text-xs backdrop-blur-sm ring-1 ring-white/20">
+              <span className="inline-block h-2 w-2 rounded-full bg-emerald-300 animate-pulse" />
+              Secure area • eKahera
+            </div>
+            {/* Illustration removed per request */}
+          </div>
+        </aside>
         </Card>
       </main>
 
