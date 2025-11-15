@@ -12,12 +12,12 @@ const loadOTPStorage = () => {
     if (fs.existsSync(otpStorageFile)) {
       const data = fs.readFileSync(otpStorageFile, 'utf8');
       const parsed = JSON.parse(data);
-      // Convert back to Map and restore Date objects
+      // Convert back to Map (expirationTime stored as number/timestamp)
       const map = new Map();
       for (const [key, value] of Object.entries(parsed)) {
         map.set(key, {
           ...value,
-          expirationTime: new Date(value.expirationTime)
+          expirationTime: value.expirationTime // Keep as number
         });
       }
       return map;
@@ -35,7 +35,7 @@ const saveOTPStorage = (storage) => {
     for (const [key, value] of storage.entries()) {
       data[key] = {
         ...value,
-        expirationTime: value.expirationTime.toISOString()
+        expirationTime: value.expirationTime // Save as number/timestamp
       };
     }
     fs.writeFileSync(otpStorageFile, JSON.stringify(data, null, 2));

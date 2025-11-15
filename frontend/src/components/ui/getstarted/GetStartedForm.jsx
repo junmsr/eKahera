@@ -122,6 +122,33 @@ export default function GetStartedForm({ hook, isOtpVerified, onOpenTerms, onOpe
                 placeholder="Enter password"
                 error={errors.password}
               />
+
+              {/* Password Requirements Checklist */}
+              <div className="mt-2 space-y-1">
+                <div className="text-xs text-gray-600 mb-2">Password must contain:</div>
+                <div className="grid grid-cols-1 gap-1 text-xs">
+                  <div className={`flex items-center ${form.password.length >= 12 ? 'text-green-600' : 'text-gray-500'}`}>
+                    <span className={`mr-2 ${form.password.length >= 12 ? '✓' : '○'}`}></span>
+                    At least 12 characters
+                  </div>
+                  <div className={`flex items-center ${/[A-Z]/.test(form.password) ? 'text-green-600' : 'text-gray-500'}`}>
+                    <span className={`mr-2 ${/[A-Z]/.test(form.password) ? '✓' : '○'}`}></span>
+                    One uppercase letter (A-Z)
+                  </div>
+                  <div className={`flex items-center ${/[a-z]/.test(form.password) ? 'text-green-600' : 'text-gray-500'}`}>
+                    <span className={`mr-2 ${/[a-z]/.test(form.password) ? '✓' : '○'}`}></span>
+                    One lowercase letter (a-z)
+                  </div>
+                  <div className={`flex items-center ${/\d/.test(form.password) ? 'text-green-600' : 'text-gray-500'}`}>
+                    <span className={`mr-2 ${/\d/.test(form.password) ? '✓' : '○'}`}></span>
+                    One number (0-9)
+                  </div>
+                  <div className={`flex items-center ${/[!@#$%^&*(),.?":{}|<>]/.test(form.password) ? 'text-green-600' : 'text-gray-500'}`}>
+                    <span className={`mr-2 ${/[!@#$%^&*(),.?":{}|<>]/.test(form.password) ? '✓' : '○'}`}></span>
+                    One special character (!@#$%^&*(),.?":{}|{'<'}{'>'})
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div>
@@ -303,18 +330,14 @@ export default function GetStartedForm({ hook, isOtpVerified, onOpenTerms, onOpe
               >
                 <option value="">Select business type</option>
                 <option value="Retail">Retail</option>
-                <option value="Restaurant">Restaurant</option>
                 <option value="Grocery Store">Grocery Store</option>
                 <option value="Pharmacy">Pharmacy</option>
                 <option value="Clothing Store">Clothing Store</option>
                 <option value="Electronics Store">Electronics Store</option>
                 <option value="Hardware Store">Hardware Store</option>
                 <option value="Beauty Salon">Beauty Salon</option>
-                <option value="Bakery">Bakery</option>
                 <option value="Bookstore">Bookstore</option>
-                <option value="Pet Store">Pet Store</option>
                 <option value="Convenience Store">Convenience Store</option>
-                <option value="Services">Services</option>
                 <option value="Others">Others</option>
               </select>
               {errors.businessType && (
@@ -388,7 +411,7 @@ export default function GetStartedForm({ hook, isOtpVerified, onOpenTerms, onOpe
           </div>
 
           <div className="space-y-4">
-            <DocumentUploadSection 
+            <DocumentUploadSection
               documents={form.documents}
               documentTypes={form.documentTypes}
               onDocumentsChange={(documents, types) => {
@@ -401,6 +424,8 @@ export default function GetStartedForm({ hook, isOtpVerified, onOpenTerms, onOpe
             {/* Existing uploaded files (if resuming) */}
             <ExistingDocumentsNotice />
           </div>
+
+
 
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-4">
             <p className="text-sm text-yellow-800">

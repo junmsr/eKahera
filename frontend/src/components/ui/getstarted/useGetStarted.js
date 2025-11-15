@@ -112,7 +112,11 @@ export default function useGetStarted() {
       else if (!/^\d{10,15}$/.test(form.mobile))
         err.mobile = "Invalid mobile number";
       if (!form.password) err.password = "Required";
-      else if (form.password.length < 6) err.password = "Min 6 chars";
+      else if (form.password.length < 12) err.password = "Password must be at least 12 characters long";
+      else if (!/[A-Z]/.test(form.password)) err.password = "Password must contain at least one uppercase letter";
+      else if (!/[a-z]/.test(form.password)) err.password = "Password must contain at least one lowercase letter";
+      else if (!/\d/.test(form.password)) err.password = "Password must contain at least one number";
+      else if (!/[!@#$%^&*(),.?":{}|<>]/.test(form.password)) err.password = "Password must contain at least one special character";
       if (form.password !== form.confirmPassword)
         err.confirmPassword = "Passwords do not match";
     }
@@ -135,12 +139,37 @@ export default function useGetStarted() {
       if (!form.barangay) err.barangay = "Required";
     }
     if (step === 3) {
+      const requiredDocuments = [
+        'Business Registration Certificate (DTI/SEC/CDA)',
+        "Mayor's Permit / Business Permit",
+        'BIR Certificate of Registration (Form 2303)'
+      ];
+
       if (!form.documents || form.documents.length === 0) {
         err.documents = "Please upload at least one business document";
       }
+
       if (form.documents.length !== form.documentTypes.length) {
         err.documentTypes = "Please specify document type for each uploaded file";
       }
+
+      // Check if all required documents are uploaded
+      const uploadedTypes = form.documentTypes.filter(type => type);
+      const missingRequired = requiredDocuments.filter(req => !uploadedTypes.includes(req));
+      if (missingRequired.length > 0) {
+        err.documents = `Missing required documents: ${missingRequired.join(', ')}`;
+      }
+
+      // Ensure no duplicate document types
+      const typeCounts = {};
+      form.documentTypes.forEach(type => {
+        if (type) typeCounts[type] = (typeCounts[type] || 0) + 1;
+      });
+      const duplicates = Object.keys(typeCounts).filter(type => typeCounts[type] > 1);
+      if (duplicates.length > 0) {
+        err.documentTypes = `Duplicate document types not allowed: ${duplicates.join(', ')}`;
+      }
+
       if (!form.acceptTerms) {
         err.accept = "You must accept the Terms and Conditions.";
       } else if (!form.acceptPrivacy) {
