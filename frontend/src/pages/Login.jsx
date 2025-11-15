@@ -98,6 +98,28 @@ export default function Login() {
           {/* left: Login Form Panel */}
         <section className="w-full md:w-1/2 flex flex-col justify-center items-center p-6 md:p-12 rounded-l-2xl bg-white/90 backdrop-blur-xl">
           <div className="w-full max-w-md">
+            {/* Back to home button */}
+            <div className="mb-4">
+              <Link
+                to="/"
+                className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-800"
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 19l-7-7 7-7"
+                  />
+                </svg>
+                Back to home
+              </Link>
+            </div>
             <div className="flex flex-col items-center mb-6">
               <SectionHeader
                 variant="primary"

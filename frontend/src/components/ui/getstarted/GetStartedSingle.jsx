@@ -66,7 +66,7 @@ export default function GetStartedSingle({ onOpenTerms, onOpenPrivacy }) {
       onNext={handleNext}
       onFinish={handleFinish}
     >
-      <GetStartedForm hook={hook} isOtpVerified={isOtpVerified} />
+      <GetStartedForm hook={hook} isOtpVerified={isOtpVerified} onOpenTerms={onOpenTerms} onOpenPrivacy={onOpenPrivacy} />
 
       {step === 3 && (
         <div className="mt-6 space-y-3 max-w-lg">

@@ -43,9 +43,9 @@ function Input({
   // Combine all styles
   const combinedStyles = `${baseStyles} ${sizeStyles[size]} ${
     variantStyles[variant]
-  } ${suffix ? "pr-10" : ""} ${microClass} ${className}`;
+  } ${suffix ? "pr-10" : ""} ${microClass} ${className} ${error ? "buzz" : ""}`;
   return (
-    <div className="relative">
+    <div className={`relative ${error ? "buzz" : ""}`}>
       <input
         type={type}
         name={name}

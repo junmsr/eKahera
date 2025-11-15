@@ -7,7 +7,7 @@ import PasswordInput from "../../../components/common/PasswordInput";
 import LocationSelector from "./LocationSelector";
 import DocumentUploadSection from "./DocumentUploadSection";
 
-export default function GetStartedForm({ hook, isOtpVerified }) {
+export default function GetStartedForm({ hook, isOtpVerified, onOpenTerms, onOpenPrivacy }) {
   const {
     step,
     form,
@@ -137,6 +137,17 @@ export default function GetStartedForm({ hook, isOtpVerified }) {
               />
             </div>
           </div>
+          <div className="text-xs text-gray-600 text-center">
+            By continuing, you agree to our{" "}
+            <button type="button" onClick={onOpenTerms} className="text-blue-700 underline hover:text-blue-800">
+              Terms & Conditions
+            </button>{" "}
+            and{" "}
+            <button type="button" onClick={onOpenPrivacy} className="text-blue-700 underline hover:text-blue-800">
+              Privacy Policy
+            </button>
+            .
+          </div>
         </div>
       );
 
@@ -159,7 +170,7 @@ export default function GetStartedForm({ hook, isOtpVerified }) {
               ref={inputRef}
               name="otp"
               value={form.otp}
-              onChange={async (e) => {
+              onChange={(e) => {
                 const value = e.target.value.slice(0, 4);
                 handleChange({ target: { name: "otp", value } });
                 if (errors.otp) hook.setErrors({ ...errors, otp: null });
@@ -170,6 +181,12 @@ export default function GetStartedForm({ hook, isOtpVerified }) {
               error={errors.otp}
               disabled={isOtpVerified}
             />
+            {form.otp.length === 4 && !isOtpVerified && !loading && (
+              <div className="mt-2 text-blue-600 text-sm font-medium flex items-center">
+                <Loader size="sm" className="mr-2" />
+                Auto-verifying OTP...
+              </div>
+            )}
             {loading && (
               <div className="mt-2 text-gray-700 text-sm font-medium flex items-center">
                 <Loader size="sm" className="mr-2" />

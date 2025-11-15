@@ -49,10 +49,15 @@ export default function useGetStarted() {
   useEffect(() => {
     if (step === 1 && isOtpVerified) {
       handleNext();
-    } else if (step === 1 && !isOtpVerified && form.otp && form.otp.length === 4) {
+    }
+  }, [step, isOtpVerified]);
+
+  // Auto-verify OTP when 4 characters are entered
+  useEffect(() => {
+    if (step === 1 && form.otp.length === 4 && !isOtpVerified && !loading) {
       handleNext();
     }
-  }, [step, isOtpVerified, form.otp]);
+  }, [form.otp, step, isOtpVerified, loading]);
 
   const handleLocationChange = (name, code, locationName) => {
     const reset = {};
@@ -136,6 +141,11 @@ export default function useGetStarted() {
       if (form.documents.length !== form.documentTypes.length) {
         err.documentTypes = "Please specify document type for each uploaded file";
       }
+      if (!form.acceptTerms) {
+        err.accept = "You must accept the Terms and Conditions.";
+      } else if (!form.acceptPrivacy) {
+        err.accept = "You must acknowledge the Privacy Policy.";
+      }
     }
     setErrors(err);
     return Object.keys(err).length === 0;
@@ -158,16 +168,24 @@ export default function useGetStarted() {
         setLoading(false);
       }
     } else if (step === 1) {
+      // If already verified, just proceed to next step
+      if (isOtpVerified) {
+        setStep((s) => s + 1);
+        return;
+      }
+
       setLoading(true);
       try {
-        await api("/otp/verify", {
+        const response = await api("/otp/verify", {
           method: "POST",
           body: JSON.stringify({ email: form.email, otp: form.otp }),
         });
         setIsOtpVerified(true);
         setStep((s) => s + 1);
       } catch (err) {
+        console.error('OTP verification error:', err);
         setErrors({ otp: err.message || "Failed to verify OTP" });
+        setForm((f) => ({ ...f, otp: "" }));
       } finally {
         setLoading(false);
       }
