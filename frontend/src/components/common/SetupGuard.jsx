@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { api } from "../../lib/api";
 import Background from "../layout/Background";
-import Logo from "../../assets/images/Logo.png"; // ✅ Kept as you requested
+import Logo from "../../assets/images/Logo.png";
 
 /**
  * SetupGuard Component
@@ -16,10 +16,10 @@ export default function SetupGuard({ children }) {
 
   useEffect(() => {
     // Only check setup status once per session to prevent loops
-    const hasChecked = sessionStorage.getItem('setup_checked');
+    const hasChecked = sessionStorage.getItem("setup_checked");
     if (!hasChecked) {
       checkSetupStatus();
-      sessionStorage.setItem('setup_checked', 'true');
+      sessionStorage.setItem("setup_checked", "true");
     } else {
       setLoading(false);
     }
@@ -32,13 +32,13 @@ export default function SetupGuard({ children }) {
         return;
       }
 
-      const response = await api('/api/auth/setup/status');
+      const response = await api("/api/auth/setup/status");
 
       if (response.needsSetup) {
         setNeedsSetup(true);
         // Only redirect if not already on setup page
-        if (location.pathname !== '/setup') {
-          navigate('/setup', { replace: true });
+        if (location.pathname !== "/setup") {
+          navigate("/setup", { replace: true });
         }
       } else {
         setNeedsSetup(false);
