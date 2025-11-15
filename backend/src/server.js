@@ -1,4 +1,5 @@
 const path = require('path');
+const fs = require('fs');
 
 // Load environment variables from .env file for local development
 // In production (like on Render), these variables should be set in the dashboard
@@ -45,6 +46,7 @@ const logsRoutes = require('./routes/logsRoutes');
 const paymentsRoutes = require('./routes/paymentsRoutes');
 const superAdminRoutes = require('./routes/superAdminRoutes');
 const documentRoutes = require('./routes/documentRoutes');
+const locationRoutes = require('./routes/locationRoutes');
 
 const app = express();
 
@@ -52,7 +54,7 @@ const app = express();
 const { paymongoWebhook } = require('./controllers/paymentsController');
 app.post('/api/payments/paymongo/webhook', express.raw({ type: '*/*' }), paymongoWebhook);
 
-app.use(cors({ origin: ['https://ekahera.netlify.app', 'http://localhost:5173'], credentials: true }));
+app.use(cors({ origin: ['http://localhost:5173', 'http://localhost:5174', 'https://www.ekahera.online', 'https://ekahera.onrender.com'], credentials: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -74,6 +76,7 @@ app.use('/api/logs', logsRoutes);
 app.use('/api/payments', paymentsRoutes);
 app.use('/api/superadmin', superAdminRoutes);
 app.use('/api/documents', documentRoutes);
+app.use('/api/locations', locationRoutes);
 
 const port = config.PORT || 5000;
 

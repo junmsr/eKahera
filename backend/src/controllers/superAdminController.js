@@ -95,6 +95,14 @@ exports.getStoreById = async (req, res) => {
       ORDER BY created_at ASC
     `, [id]);
     
+    const fullAddress = [
+      business.house_number,
+      business.location,
+      business.country,
+    ]
+      .filter(Boolean)
+      .join(", ");
+
     // Format response similar to what frontend expects
     const storeDetails = {
       id: business.id,
@@ -104,7 +112,7 @@ exports.getStoreById = async (req, res) => {
       email: business.email,
       phone: business.phone,
       storeName: business.storeName,
-      location: business.location,
+      location: fullAddress,
       established: business.established?.toString(),
       documents: [
         { name: 'Business Registration.pdf', url: '#' },
@@ -121,7 +129,7 @@ exports.getStoreById = async (req, res) => {
         createdAt: business.created_at,
         lastPasswordChange: 'N/A',
         loginAttemptsToday: 0,
-        storeAddress: business.location,
+        storeAddress: fullAddress,
         status: 'Active',
         sessionTimeout: '30 minutes'
       },
@@ -234,6 +242,21 @@ exports.rejectStore = async (req, res) => {
       ['rejected', req.user.userId, rejection_reason, id]
     );
 
+    // Fetch updated business data to send email
+    const updatedBusinessResult = await pool.query(
+      `SELECT business_id, business_name, email FROM business WHERE business_id = $1`,
+      [id]
+    );
+    const updatedBusiness = updatedBusinessResult.rows[0];
+
+    // Send rejection email notification
+    try {
+      await sendVerificationStatusNotification(updatedBusiness, 'rejected', rejection_reason);
+      console.log(`Rejection email sent to ${updatedBusiness.email}`);
+    } catch (emailError) {
+      console.error('Error sending rejection email:', emailError);
+    }
+
     // Log the rejection action
     logAction({
       userId: req.user.userId,
@@ -333,7 +356,7 @@ exports.deleteStore = async (req, res) => {
 
     const isPasswordValid = await bcrypt.compare(password, superAdminResult.rows[0].password_hash);
     if (!isPasswordValid) {
-      return res.status(401).json({ error: 'Invalid password' });
+      return res.status(401).json({ error: 'The password you entered is incorrect. Please try again.' });
     }
 
     // Check if store exists
@@ -405,5 +428,78 @@ exports.deleteStore = async (req, res) => {
   } catch (err) {
     console.error('Delete store error:', err);
     res.status(500).json({ error: 'Failed to delete store' });
+  }
+};
+
+// Update SuperAdmin credentials
+exports.updateSuperAdmin = async (req, res) => {
+  try {
+    const { username, email, password } = req.body;
+    const { userId } = req.user;
+
+    // Validate input
+    if (!username && !email && !password) {
+      return res.status(400).json({ error: 'No fields to update' });
+    }
+
+    let hashedPassword;
+    if (password) {
+      hashedPassword = await bcrypt.hash(password, 12);
+    }
+
+    // Build update query
+    const updateFields = [];
+    const queryParams = [];
+    let paramIndex = 1;
+
+    if (username) {
+      updateFields.push(`username = $${paramIndex++}`);
+      queryParams.push(username);
+    }
+    if (email) {
+      updateFields.push(`email = $${paramIndex++}`);
+      queryParams.push(email);
+    }
+    if (hashedPassword) {
+      updateFields.push(`password_hash = $${paramIndex++}`);
+      queryParams.push(hashedPassword);
+    }
+
+    queryParams.push(userId);
+
+    const updateQuery = `
+      UPDATE users
+      SET ${updateFields.join(', ')}, updated_at = NOW()
+      WHERE user_id = $${paramIndex} AND role = 'superadmin'
+      RETURNING user_id, username, email, updated_at
+    `;
+
+    const result = await pool.query(updateQuery, queryParams);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'SuperAdmin not found' });
+    }
+
+    const updatedSuperAdmin = result.rows[0];
+
+    logAction({
+      userId: userId,
+      action: 'Updated SuperAdmin credentials'
+    });
+
+    console.log(`SuperAdmin ${req.user.email} updated their credentials`);
+
+    res.json({
+      message: 'SuperAdmin credentials updated successfully',
+      user: {
+        id: updatedSuperAdmin.user_id,
+        username: updatedSuperAdmin.username,
+        email: updatedSuperAdmin.email,
+        updatedAt: updatedSuperAdmin.updated_at
+      }
+    });
+  } catch (err) {
+    console.error('Update SuperAdmin error:', err);
+    res.status(500).json({ error: 'Failed to update SuperAdmin credentials' });
   }
 };

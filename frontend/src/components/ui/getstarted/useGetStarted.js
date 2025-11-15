@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { api } from "../../../lib/api";
 
 export default function useGetStarted() {
   const steps = [
@@ -17,11 +18,14 @@ export default function useGetStarted() {
     useAdminEmail: false,
     businessType: "",
     customBusinessType: "",
-    country: "Philippines",
+    region: "",
     province: "",
     city: "",
     barangay: "",
-    businessAddress: "",
+    regionName: "",
+    provinceName: "",
+    cityName: "",
+    barangayName: "",
     houseNumber: "",
     mobile: "",
     password: "",
@@ -29,16 +33,52 @@ export default function useGetStarted() {
     otp: "",
     documents: [],
     documentTypes: [],
+    acceptTerms: false,
+    acceptPrivacy: false,
   });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [otpVerified, setOtpVerified] = useState(false);
+  const [isOtpVerified, setIsOtpVerified] = useState(false);
   const inputRef = useRef(null);
 
   useEffect(() => {
     if (inputRef.current) inputRef.current.focus();
   }, [step]);
+
+  useEffect(() => {
+    if (step === 1 && isOtpVerified) {
+      handleNext();
+    } else if (step === 1 && !isOtpVerified && form.otp && form.otp.length === 4) {
+      handleNext();
+    }
+  }, [step, isOtpVerified, form.otp]);
+
+  const handleLocationChange = (name, code, locationName) => {
+    const reset = {};
+    if (name === 'region') {
+      reset.province = "";
+      reset.city = "";
+      reset.barangay = "";
+      reset.provinceName = "";
+      reset.cityName = "";
+      reset.barangayName = "";
+    } else if (name === 'province') {
+      reset.city = "";
+      reset.barangay = "";
+      reset.cityName = "";
+      reset.barangayName = "";
+    } else if (name === 'city') {
+      reset.barangay = "";
+      reset.barangayName = "";
+    }
+    setForm((f) => ({
+      ...f,
+      [name]: code,
+      [`${name}Name`]: locationName,
+      ...reset
+    }));
+  };
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -49,12 +89,6 @@ export default function useGetStarted() {
         [name]: checked,
         businessEmail: checked ? f.email : ""
       }));
-    } else if (name === 'province') {
-      // Reset city and barangay when province changes
-      setForm((f) => ({ ...f, province: value, city: "", barangay: "" }));
-    } else if (name === 'city') {
-      // Reset barangay when city changes
-      setForm((f) => ({ ...f, city: value, barangay: "" }));
     } else {
       setForm((f) => ({ ...f, [name]: type === 'checkbox' ? checked : value }));
     }
@@ -90,10 +124,10 @@ export default function useGetStarted() {
       if (!form.businessType) err.businessType = "Required";
       if (form.businessType === "Others" && !form.customBusinessType) 
         err.customBusinessType = "Please specify business type";
+      if (!form.region) err.region = "Required";
       if (!form.province) err.province = "Required";
       if (!form.city) err.city = "Required";
       if (!form.barangay) err.barangay = "Required";
-      if (!form.businessAddress) err.businessAddress = "Required";
     }
     if (step === 3) {
       if (!form.documents || form.documents.length === 0) {
@@ -113,19 +147,27 @@ export default function useGetStarted() {
     if (step === 0) {
       setLoading(true);
       try {
-        const response = await fetch("http://localhost:5000/api/otp/send", {
+        await api("/otp/send", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email: form.email }),
         });
-        if (response.ok) {
-          setStep((s) => s + 1);
-        } else {
-          const error = await response.json();
-          setErrors({ email: error.error || "Failed to send OTP" });
-        }
-      } catch {
-        setErrors({ email: "Network error. Please try again." });
+        setStep((s) => s + 1);
+      } catch (err) {
+        setErrors({ email: err.message || "Failed to send OTP" });
+      } finally {
+        setLoading(false);
+      }
+    } else if (step === 1) {
+      setLoading(true);
+      try {
+        await api("/otp/verify", {
+          method: "POST",
+          body: JSON.stringify({ email: form.email, otp: form.otp }),
+        });
+        setIsOtpVerified(true);
+        setStep((s) => s + 1);
+      } catch (err) {
+        setErrors({ otp: err.message || "Failed to verify OTP" });
       } finally {
         setLoading(false);
       }
@@ -140,65 +182,46 @@ export default function useGetStarted() {
     if (!validateStep()) return;
     setLoading(true);
     try {
-      // First register the business
-      const businessResponse = await fetch(
-        "http://localhost:5000/api/business/register",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            email: form.email,
-            username: form.username,
-            businessName: form.businessName,
-            businessEmail: form.useAdminEmail ? form.email : form.businessEmail,
-            businessType: form.businessType === "Others" ? form.customBusinessType : form.businessType,
-            country: form.country,
-            province: form.province,
-            city: form.city,
-            barangay: form.barangay,
-            businessAddress: form.businessAddress,
-            houseNumber: form.houseNumber,
-            mobile: form.mobile,
-            password: form.password,
-          }),
-        }
-      );
-      
-      if (businessResponse.ok) {
-        const result = await businessResponse.json();
-        const businessId = result.business.id;
-        
-        // Upload documents
-        const formData = new FormData();
-        formData.append('business_id', businessId);
-        formData.append('document_types', JSON.stringify(form.documentTypes));
-        
-        form.documents.forEach((file) => {
-          formData.append('documents', file);
-        });
+      // Register business with documents in one transaction
+      const formData = new FormData();
 
-        const documentResponse = await fetch(
-          "http://localhost:5000/api/documents/upload",
-          {
-            method: "POST",
-            body: formData,
-          }
-        );
+      // Add business registration fields
+      formData.append('email', form.email);
+      formData.append('username', form.username);
+      formData.append('businessName', form.businessName);
+      formData.append('businessType', form.businessType === "Others" ? form.customBusinessType : form.businessType);
+      formData.append('country', 'Philippines');
+      formData.append('countryName', 'Philippines');
+      formData.append('province', form.province);
+      formData.append('city', form.city);
+      formData.append('barangay', form.barangay);
+      formData.append('regionName', form.regionName);
+      formData.append('provinceName', form.provinceName);
+      formData.append('cityName', form.cityName);
+      formData.append('barangayName', form.barangayName);
+      formData.append('houseNumber', form.houseNumber);
+      formData.append('mobile', form.mobile);
+      formData.append('password', form.password);
 
-        if (documentResponse.ok) {
-          localStorage.setItem("token", result.token);
-          localStorage.setItem("user", JSON.stringify(result.user));
-          setSuccess(true);
-        } else {
-          const docError = await documentResponse.json();
-          setErrors({ general: docError.error || "Document upload failed" });
-        }
-      } else {
-        const error = await businessResponse.json();
-        setErrors({ general: error.error || "Registration failed" });
-      }
-    } catch {
-      setErrors({ general: "Network error. Please try again." });
+      // Add document types
+      formData.append('document_types', JSON.stringify(form.documentTypes));
+
+      // Add documents
+      form.documents.forEach((file) => {
+        formData.append('documents', file);
+      });
+
+      const result = await api("/business/register-with-documents", {
+        method: "POST",
+        body: formData,
+      });
+
+      localStorage.setItem("token", result.token);
+      localStorage.setItem("user", JSON.stringify(result.user));
+      setSuccess(true);
+
+    } catch (err) {
+      setErrors({ general: err.message || "An error occurred." });
     } finally {
       setLoading(false);
     }
@@ -217,10 +240,11 @@ export default function useGetStarted() {
     loading,
     setLoading,
     success,
-    otpVerified,
-    setOtpVerified,
+    isOtpVerified,
+    setIsOtpVerified,
     inputRef,
     handleChange,
+    handleLocationChange,
     validateStep,
     handleNext,
     handleBack,

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import Logo from "../common/Logo";
-import LogoutModal from "../modals/LogoutModal";
+import { useAuth } from "../../hooks/useAuth";
 
 // Navigation configuration
 const NAV_ITEMS = [
@@ -181,21 +181,14 @@ const NavigationItem = ({ item, isActive }) => {
  *
  * @returns {JSX.Element} The admin navigation sidebar
  */
-const NavAdmin = () => {
+const NavAdmin = ({ isMobile, onLogoutClick }) => {
   const navigate = useNavigate();
-  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const { logout } = useAuth();
 
-  const handleLogoClick = () => {
-    setShowLogoutModal(true);
-  };
-
-  const handleLogoutConfirm = () => {
-    setShowLogoutModal(false);
-    navigate("/");
-  };
-
-  const handleLogoutCancel = () => {
-    setShowLogoutModal(false);
+  const confirmLogout = () => {
+    logout();
+    setShowLogoutConfirm(false);
   };
 
   const LogoutIcon = () => (
@@ -218,7 +211,9 @@ const NavAdmin = () => {
       <aside className={STYLES.sidebar}>
         <div
           className={`${STYLES.logoContainer} logoContainer`}
-          onClick={handleLogoClick}
+          onClick={() => navigate("/dashboard")}
+          role="button"
+          tabIndex={0}
         >
           <div className="transition-all duration-300 group-hover:scale-110">
             <Logo size={42} />
@@ -239,24 +234,45 @@ const NavAdmin = () => {
           ))}
 
           {/* Logout Button */}
-          <button
-            onClick={handleLogoClick}
-            className={STYLES.logoutButton}
-            aria-label="Logout"
-          >
-            <span className={STYLES.logoutIcon}>
-              <LogoutIcon />
-            </span>
-            <span className={STYLES.label}>Logout</span>
-          </button>
+          <div className={`${isMobile ? "block" : "mt-auto"}`}>
+            <button onClick={() => setShowLogoutConfirm(true)} className={STYLES.logoutButton} aria-label="Logout">
+              <span className={STYLES.logoutIcon}><LogoutIcon /></span>
+              <span className={STYLES.label}>Logout</span>
+            </button>
+          </div>
         </nav>
       </aside>
 
-      <LogoutModal
-        isOpen={showLogoutModal}
-        onClose={handleLogoutCancel}
-        onConfirm={handleLogoutConfirm}
-      />
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 z-90 flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/80 z-90"
+            onClick={() => setShowLogoutConfirm(false)}
+          />
+          <div className="relative bg-white rounded-xl shadow-xl w-[92%] max-w-md p-6 z-100">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              Confirm Logout
+            </h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Are you sure you want to log out?
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowLogoutConfirm(false)}
+                className="px-3 py-2 rounded-lg bg-gray-100 text-sm font-medium hover:bg-gray-200 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmLogout}
+                className="px-3 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition"
+              >
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };

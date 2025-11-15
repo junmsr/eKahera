@@ -30,21 +30,38 @@ function StatsCard({
   const changePrefix = change > 0 ? "+" : "";
 
   return (
-    <Card className={`bg-white/80 backdrop-blur-md border border-white/60 shadow-xl hover:shadow-2xl transition-all duration-500 group ${className}`} {...props}>
-      <div className={`flex flex-col gap-5 p-6 ${loading ? "opacity-60" : ""}`}>
+    <Card
+      className={`bg-white/80 backdrop-blur-md border border-white/60 shadow-xl hover:shadow-2xl hover:-translate-y-1 hover:scale-[1.01] transition-all duration-500 group ${className}`}
+      {...props}
+    >
+      <div
+        className={`flex flex-col gap-5 p-5 sm:p-6 md:p-7 min-h-[148px] md:min-h-[184px] ${
+          loading ? "opacity-60" : ""
+        }`}
+      >
         <div className="flex items-center justify-between">
-          <div className="bg-gradient-to-br from-blue-100 to-indigo-100 rounded-2xl p-4 shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">{icon}</div>
-          <div className={`text-sm font-bold px-4 py-2 rounded-full shadow-md ${changeColor} ${change > 0 ? 'bg-gradient-to-r from-emerald-50 to-green-50 border border-emerald-200' : 'bg-gradient-to-r from-red-50 to-orange-50 border border-red-200'}`}>
+          <div className="bg-gradient-to-br from-blue-100 to-indigo-100 rounded-2xl p-4 md:p-5 shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
+            {icon}
+          </div>
+          <div
+            className={`text-xs md:text-sm font-bold px-3 md:px-4 py-1.5 md:py-2 rounded-full shadow-md ${changeColor} ${
+              change > 0
+                ? "bg-gradient-to-r from-emerald-50 to-green-50 border border-emerald-200"
+                : "bg-gradient-to-r from-red-50 to-orange-50 border border-red-200"
+            }`}
+          >
             {changePrefix}
             {change}%
           </div>
         </div>
 
         <div className="space-y-3">
-          <div className="text-4xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors duration-300">
+          <div className="text-3xl md:text-5xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors duration-300">
             {formatDisplayValue()}
           </div>
-          <div className="text-sm font-bold text-gray-700 uppercase tracking-wide">{label}</div>
+          <div className="text-xs md:text-sm font-bold text-gray-700 uppercase tracking-wide">
+            {label}
+          </div>
         </div>
 
         <div className="text-xs text-gray-500 bg-gradient-to-r from-gray-50/80 to-blue-50/80 rounded-xl p-3 border border-gray-100/50">

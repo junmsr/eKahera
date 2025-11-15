@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
 import Logo from '../components/common/Logo';
 
@@ -67,8 +67,8 @@ export default function Login() {
         method: "POST",
         body: JSON.stringify({ email: form.email, password: form.password }),
       });
-      localStorage.setItem('auth_token', token);
-      localStorage.setItem('user', JSON.stringify(user));
+      sessionStorage.setItem('auth_token', token);
+      sessionStorage.setItem('user', JSON.stringify(user));
       const role = (user?.role || '').toLowerCase();
       if (role === 'cashier') {
         navigate('/cashier-pos');

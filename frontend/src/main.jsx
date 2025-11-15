@@ -26,38 +26,45 @@ import SuperAdminView from "./pages/SuperAdminView.jsx";
 import InitialSetup from "./pages/InitialSetup.jsx";
 import StoreQR from "./pages/StoreQR.jsx";
 import Receipt from "./pages/Receipt.jsx";
+import Documents from "./pages/Documents.jsx";
 
 // Router Configuration
-const router = createBrowserRouter([
+const router = createBrowserRouter(
+  [
+    {
+      path: "/",
+      element: <App />,
+      children: [
+        { index: true, element: <Home /> },
+        { path: "services", element: <Services /> },
+        { path: "get-started", element: <GetStarted /> },
+        { path: "contact", element: <Contact /> },
+        { path: "login", element: <Login /> },
+        { path: "dashboard", element: <Dashboard /> },
+        { path: "dashboard/store-qr", element: <StoreQR /> },
+        { path: "pos", element: <POS /> },
+        { path: "cashier-pos", element: <CashierPOS /> },
+        { path: "inventory", element: <Inventory /> },
+        { path: "mobile-scanner", element: <MobileScanner /> },
+        { path: "select-role", element: <SelectRole /> },
+        { path: "customer", element: <Customer /> },
+        { path: "customer-enter", element: <CustomerEnter /> },
+        { path: "receipt", element: <Receipt /> },
+        { path: "enter-store", element: <EnterStore /> },
+        { path: "cashiers", element: <Cashiers /> },
+        { path: "logs", element: <Logs /> },
+        { path: "profile", element: <Profile /> },
+        { path: "documents", element: <Documents /> },
+        { path: "superadmin", element: <SuperAdmin /> },
+        { path: "superadmin/stores/:id", element: <SuperAdminView /> },
+        { path: "setup", element: <InitialSetup /> },
+      ],
+    },
+  ],
   {
-    path: "/",
-    element: <App />,
-    children: [
-      { index: true, element: <Home /> },
-      { path: "services", element: <Services /> },
-      { path: "get-started", element: <GetStarted /> },
-      { path: "contact", element: <Contact /> },
-      { path: "login", element: <Login /> },
-      { path: "dashboard", element: <Dashboard /> },
-      { path: "dashboard/store-qr", element: <StoreQR /> },
-      { path: "pos", element: <POS /> },
-      { path: "cashier-pos", element: <CashierPOS /> },
-      { path: "inventory", element: <Inventory /> },
-      { path: "mobile-scanner", element: <MobileScanner /> },
-      { path: "select-role", element: <SelectRole /> },
-      { path: "customer", element: <Customer /> },
-      { path: "customer-enter", element: <CustomerEnter /> },
-      { path: "receipt", element: <Receipt /> },
-      { path: "enter-store", element: <EnterStore /> },
-      { path: "cashiers", element: <Cashiers /> },
-      { path: "logs", element: <Logs /> },
-      { path: "profile", element: <Profile /> },
-      { path: "superadmin", element: <SuperAdmin /> },
-      { path: "superadmin/stores/:id", element: <SuperAdminView /> },
-      { path: "setup", element: <InitialSetup /> },
-    ],
-  },
-]);
+    basename: import.meta.env.BASE_URL,
+  }
+);
 
 // Render Application
 createRoot(document.getElementById("root")).render(

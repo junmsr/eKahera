@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const { logAction } = require('../utils/logger');
 const { hasRequiredDocuments } = require('./businessController');
+const { sendOTP } = require('./otpController');
 
 // Load config from config.env file
 const configPath = path.join(__dirname, '..', '..', 'config.env');
@@ -38,7 +39,30 @@ exports.register = async (req, res) => {
       'INSERT INTO users (name, email, password_hash, role, user_type_id, business_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING user_id, name, email, role, user_type_id, business_id',
       [name, email, hashedPassword, desiredRole, userTypeId, business_id || null]
     );
-    res.status(201).json({ user: result.rows[0] });
+    const newUser = result.rows[0];
+    logAction({
+      userId: newUser.user_id,
+      businessId: newUser.business_id,
+      action: `User registered: ${newUser.name} (${newUser.email})`,
+    });
+
+    // Send OTP email
+    try {
+      const mockReq = { body: { email: newUser.email } };
+      const mockRes = {
+        status: (code) => ({
+          json: (data) => {
+            console.log(`OTP email sent to ${newUser.email} with status ${code} and data:`, data);
+          }
+        })
+      };
+      await sendOTP(mockReq, mockRes);
+    } catch (otpError) {
+      console.error(`Failed to send OTP to ${newUser.email}:`, otpError);
+      // We don't want to fail the registration if the OTP fails to send
+    }
+
+    res.status(201).json({ user: newUser });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
