@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import NavAdmin from "../components/layout/Nav-Admin";
 import PageLayout from "../components/layout/PageLayout";
 import Button from "../components/common/Button";
@@ -12,6 +12,8 @@ const LogsPage = () => {
   const [clearing, setClearing] = useState(false);
   const [roleFilter, setRoleFilter] = useState("all");
   const [sortOrder, setSortOrder] = useState("desc");
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
 
   const fetchLogs = async () => {
     try {
@@ -28,7 +30,10 @@ const LogsPage = () => {
         action: l.action || `Action by ${l.username || l.user_id}`,
         time: new Date(l.date_time).toLocaleString(),
         dateTime: l.date_time,
-        role: (l.role === 'business_owner' ? 'admin' : l.role || "").toLowerCase(),
+        role: (l.role === "business_owner"
+          ? "admin"
+          : l.role || ""
+        ).toLowerCase(),
       }));
       setLogs(normalized);
     } catch (err) {
@@ -42,6 +47,19 @@ const LogsPage = () => {
     fetchLogs();
   }, []);
 
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
   const filteredLogs = useMemo(() => {
     let filtered = logs;
 
@@ -51,9 +69,10 @@ const LogsPage = () => {
 
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter((l) =>
-        (l.action || "").toLowerCase().includes(query) ||
-        (l.username || "").toLowerCase().includes(query)
+      filtered = filtered.filter(
+        (l) =>
+          (l.action || "").toLowerCase().includes(query) ||
+          (l.username || "").toLowerCase().includes(query)
       );
     }
 
@@ -68,13 +87,7 @@ const LogsPage = () => {
 
   const exportToCSV = () => {
     try {
-      const headers = [
-        "User ID",
-        "Username",
-        "Role",
-        "Action",
-        "Time",
-      ];
+      const headers = ["User ID", "Username", "Role", "Action", "Time"];
 
       const csvRows = [
         headers.join(","),
@@ -150,6 +163,17 @@ const LogsPage = () => {
     }
   };
 
+  const roleOptions = [
+    { value: "all", label: "All Roles" },
+    { value: "cashier", label: "Cashier" },
+    { value: "admin", label: "Admin" },
+    { value: "user", label: "User" },
+  ];
+
+  const selectedRole = roleOptions.find(
+    (option) => option.value === roleFilter
+  );
+
   return (
     <PageLayout
       title="LOGS"
@@ -185,16 +209,53 @@ const LogsPage = () => {
           </div>
 
           <div className="flex flex-wrap gap-3 w-full sm:w-auto">
-            <select
-              value={roleFilter}
-              onChange={(e) => setRoleFilter(e.target.value)}
-              className="w-full sm:w-auto pl-4 pr-10 py-3 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-            >
-              <option value="all">All Roles</option>
-              <option value="cashier">Cashier</option>
-              <option value="admin">Admin</option>
-              <option value="user">User</option>
-            </select>
+            <div className="relative" ref={dropdownRef}>
+              <button
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                className="w-full sm:w-auto pl-4 pr-10 py-3 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 flex items-center justify-between"
+              >
+                <div className="flex items-center gap-2">
+                  <span>{selectedRole.icon}</span>
+                  <span>{selectedRole.label}</span>
+                </div>
+                <svg
+                  className={`w-4 h-4 transition-transform duration-200 ${
+                    isDropdownOpen ? "rotate-180" : ""
+                  }`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 9l-7 7-7-7"
+                  />
+                </svg>
+              </button>
+              {isDropdownOpen && (
+                <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg max-h-60 overflow-auto">
+                  {roleOptions.map((option) => (
+                    <button
+                      key={option.value}
+                      onClick={() => {
+                        setRoleFilter(option.value);
+                        setIsDropdownOpen(false);
+                      }}
+                      className={`w-full px-4 py-3 text-left text-sm hover:bg-gray-50 flex items-center gap-2 transition-colors duration-150 ${
+                        roleFilter === option.value
+                          ? "bg-blue-50 text-blue-600"
+                          : "text-gray-700"
+                      }`}
+                    >
+                      <span>{option.icon}</span>
+                      <span>{option.label}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             <Button
               onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
               variant="secondary"
@@ -245,36 +306,63 @@ const LogsPage = () => {
           <table className="min-w-full bg-white/80 backdrop-blur-md rounded-xl overflow-hidden">
             <thead className="bg-gray-100/50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Timestamp</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  User
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Role
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Action
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Timestamp
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200/50">
               {loading ? (
                 <tr>
-                  <td colSpan="4" className="text-center py-8 text-gray-500">Loading logs...</td>
+                  <td colSpan="4" className="text-center py-8 text-gray-500">
+                    Loading logs...
+                  </td>
                 </tr>
               ) : filteredLogs.length === 0 ? (
                 <tr>
-                  <td colSpan="4" className="text-center py-8 text-gray-500">No logs found.</td>
+                  <td colSpan="4" className="text-center py-8 text-gray-500">
+                    No logs found.
+                  </td>
                 </tr>
               ) : (
                 filteredLogs.map((log) => (
                   <tr key={log.id}>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{log.username}</div>
-                      <div className="text-sm text-gray-500">ID: {log.userId}</div>
+                      <div className="text-sm font-medium text-gray-900">
+                        {log.username}
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        ID: {log.userId}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
-                        className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${log.role === "admin" || log.role === "business_owner" ? "bg-purple-100 text-purple-800" : log.role === "cashier" ? "bg-blue-100 text-blue-800" : "bg-green-100 text-green-800"}`}>
+                        className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                          log.role === "admin" || log.role === "business_owner"
+                            ? "bg-purple-100 text-purple-800"
+                            : log.role === "cashier"
+                            ? "bg-blue-100 text-blue-800"
+                            : "bg-green-100 text-green-800"
+                        }`}
+                      >
                         {log.role}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">{log.action}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{log.time}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
+                      {log.action}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {log.time}
+                    </td>
                   </tr>
                 ))
               )}
