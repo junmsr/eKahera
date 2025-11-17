@@ -225,6 +225,7 @@ const Profile = () => {
   const [profileData, setProfileData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [isSidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     fetchProfileData();
@@ -295,40 +296,36 @@ const Profile = () => {
 
   // Header actions with modern styling
   const headerActions = (
-    <div className="flex flex-wrap gap-2 sm:gap-3">
+    <div className="flex items-center justify-end gap-2 sm:gap-3">
       <Button
         onClick={fetchProfileData}
         variant="secondary"
         size="sm"
         icon={<RefreshIcon />}
         iconPosition="left"
-        className="whitespace-nowrap"
+        className="whitespace-nowrap [&>span]:hidden sm:[&>span]:inline"
       >
-        Refresh
+        <span>Refresh</span>
       </Button>
       <Button
         variant="secondary"
         size="sm"
         icon={<LockIcon />}
         iconPosition="left"
-        onClick={() =>
-          alert("Change password functionality would be implemented here")
-        }
-        className="whitespace-nowrap"
+        onClick={() => alert("Change password functionality would be implemented here")}
+        className="whitespace-nowrap [&>span]:hidden sm:[&>span]:inline"
       >
-        Change Password
+        <span>Change Password</span>
       </Button>
       <Button
         variant="primary"
         size="sm"
         icon={<EditIcon />}
         iconPosition="left"
-        onClick={() =>
-          alert("Edit profile functionality would be implemented here")
-        }
-        className="whitespace-nowrap"
+        onClick={() => alert("Edit profile functionality would be implemented here")}
+        className="whitespace-nowrap [&>span]:hidden sm:[&>span]:inline"
       >
-        Edit Profile
+        <span>Edit Profile</span>
       </Button>
     </div>
   );
@@ -339,6 +336,8 @@ const Profile = () => {
         title="PROFILE"
         subtitle="Store and admin credentials"
         sidebar={<NavAdmin />}
+        isSidebarOpen={isSidebarOpen}
+        setSidebarOpen={setSidebarOpen}
         className="bg-gray-50"
       >
         <div className="flex justify-center items-center h-64">
@@ -351,9 +350,11 @@ const Profile = () => {
   return (
     <PageLayout
       title="PROFILE"
-      subtitle="Store and admin credentials"
+      subtitle=""
       sidebar={<NavAdmin />}
       headerActions={headerActions}
+      isSidebarOpen={isSidebarOpen}
+      setSidebarOpen={setSidebarOpen}
       className="bg-gray-50"
     >
       <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">

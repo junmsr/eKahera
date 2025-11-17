@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import NavAdmin from "../components/layout/Nav-Admin";
+import { BiRefresh } from "react-icons/bi";
 import PageLayout from "../components/layout/PageLayout";
 import Button from "../components/common/Button";
 import { api, authHeaders } from "../lib/api";
@@ -12,6 +13,7 @@ const LogsPage = () => {
   const [clearing, setClearing] = useState(false);
   const [roleFilter, setRoleFilter] = useState("all");
   const [sortOrder, setSortOrder] = useState("desc");
+  const [isSidebarOpen, setSidebarOpen] = useState(false);
 
   const fetchLogs = async () => {
     try {
@@ -150,11 +152,27 @@ const LogsPage = () => {
     }
   };
 
+  const headerActions = (
+    <div className="flex items-center justify-end gap-2 sm:gap-3">
+      <Button
+        onClick={fetchLogs}
+        variant="secondary"
+        size="sm"
+        icon={<BiRefresh className={`w-5 h-5 ${loading ? "animate-spin" : ""}`} />}
+        className="whitespace-nowrap [&>span]:hidden sm:[&>span]:inline"
+      >
+        <span>Refresh</span>
+      </Button>
+    </div>
+  );
   return (
     <PageLayout
       title="LOGS"
       subtitle="System activity and transaction logs"
       sidebar={<NavAdmin />}
+      headerActions={headerActions}
+      isSidebarOpen={isSidebarOpen}
+      setSidebarOpen={setSidebarOpen}
       className="h-screen overflow-hidden"
     >
       <div className="flex-1 bg-transparent overflow-hidden p-4 flex flex-col">

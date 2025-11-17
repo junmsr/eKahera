@@ -31,6 +31,7 @@ export default function InventoryPage() {
   const [entriesPerPage, setEntriesPerPage] = useState(10);
   const [page, setPage] = useState(1);
   const [apiError, setApiError] = useState("");
+  const [isSidebarOpen, setSidebarOpen] = useState(false);
 
   // Load inventory from API
   useEffect(() => {
@@ -420,6 +421,8 @@ export default function InventoryPage() {
       title="INVENTORY"
       subtitle="Manage your products and stock"
       sidebar={<NavAdmin />}
+      isSidebarOpen={isSidebarOpen}
+      setSidebarOpen={setSidebarOpen}
       showHeader={true}
       showNavbar={false}
       showFooter={false}

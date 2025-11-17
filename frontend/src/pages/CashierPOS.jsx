@@ -340,8 +340,8 @@ function CashierPOS() {
 
         {/* Main Area */}
         <main
-          className="flex-1 bg-g radient-to-br from-gray-50/50 via-blue-50/30 to-indigo-50/50 overflow-y-auto p-2 sm:p-3 md:p-4 pb-55 lg:pb-4"
-          style={{ height: "calc(100vh - 64px)" }}
+          className="flex-1 bg-gradient-to-br from-gray-50/50 via-blue-50/30 to-indigo-50/50 overflow-y-auto p-2 sm:p-3 md:p-4 pb-55 lg:pb-4"
+          
         >
           <div className="grid gap-2 sm:gap-3 md:gap-4 h-full grid-cols-1 lg:grid-cols-12">
             {/* Left Column - Scanner, SKU Form, Transaction */}
