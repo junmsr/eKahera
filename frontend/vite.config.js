@@ -21,5 +21,12 @@ export default defineConfig(({ mode }) => {
     server: {
       proxy: proxySettings,
     },
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks: undefined,
+        },
+      },
+    },
   };
 });
