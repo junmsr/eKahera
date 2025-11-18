@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import Card from "../../common/Card";
 import Button from "../../common/Button";
 import { Scanner } from "@yudiel/react-qr-scanner";
+import Quagga from "@ericblade/quagga2";
 
 /**
  * Scanner Card Component
@@ -13,18 +14,26 @@ function ScannerCard({
   onResume,
   textMain = "text-blue-800",
   className = "",
+  modalContext = false, // New prop to indicate if scanner is used in modal
   ...props
 }) {
-  const [facingMode, setFacingMode] = useState("user"); // Start with front camera (better for laptops)
+  const [facingMode, setFacingMode] = useState("environment"); // Start with rear camera (better for scanning)
   const [hasPermission, setHasPermission] = useState(null);
   const [error, setError] = useState("");
-  const [isInitializing, setIsInitializing] = useState(true);
+  const [isInitializing, setIsInitializing] = useState(!modalContext); // Don't auto-initialize in modal
   const [torchEnabled, setTorchEnabled] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [videoDevices, setVideoDevices] = useState([]);
   const [hasMultipleCameras, setHasMultipleCameras] = useState(false);
   const audioContext = useRef(null);
   const [retryCount, setRetryCount] = useState(0);
+  const [scanHistory, setScanHistory] = useState([]);
+  const [showManualInput, setShowManualInput] = useState(false);
+  const [manualInput, setManualInput] = useState("");
+  const [useQuagga, setUseQuagga] = useState(false);
+  const [quaggaInitialized, setQuaggaInitialized] = useState(false);
+  const scannerRef = useRef(null);
+  const [modalInitialized, setModalInitialized] = useState(false);
 
   useEffect(() => {
     // Check camera permissions and try to initialize camera
@@ -89,8 +98,18 @@ function ScannerCard({
       }
     };
 
-    checkPermissions();
-  }, []);
+    // Only check permissions if not in modal context or if modal is already initialized
+    if (!modalContext || modalInitialized) {
+      checkPermissions();
+    }
+  }, [modalContext, modalInitialized]);
+
+  // Initialize scanner when modal context is activated
+  useEffect(() => {
+    if (modalContext && !modalInitialized) {
+      setModalInitialized(true);
+    }
+  }, [modalContext, modalInitialized]);
 
   // Detect mobile device
   useEffect(() => {
@@ -116,7 +135,119 @@ function ScannerCard({
     }
   };
 
-  // Single camera devices (laptops) don't need camera toggle
+  // Trigger vibration on mobile devices for successful scan
+  const vibrateOnScan = () => {
+    if (isMobile && 'vibrate' in navigator) {
+      navigator.vibrate(100); // 100ms vibration
+    }
+  };
+
+  // Initialize Quagga scanner
+  const initQuagga = async () => {
+    if (quaggaInitialized) return;
+
+    try {
+      await Quagga.init({
+        inputStream: {
+          name: "Live",
+          type: "LiveStream",
+          target: scannerRef.current,
+          constraints: {
+            facingMode: facingMode === "environment" ? "environment" : "user",
+            width: { min: 640, ideal: 1920 },
+            height: { min: 480, ideal: 1080 },
+          },
+        },
+        locator: {
+          patchSize: "medium",
+          halfSample: true,
+        },
+        numOfWorkers: 2,
+        decoder: {
+          readers: [
+            "code_128_reader",
+            "ean_reader",
+            "ean_8_reader",
+            "code_39_reader",
+            "code_39_vin_reader",
+            "codabar_reader",
+            "upc_reader",
+            "upc_e_reader",
+            "i2of5_reader",
+            "2of5_reader",
+            "code_93_reader",
+          ],
+        },
+        locate: true,
+      });
+
+      Quagga.onDetected((result) => {
+        if (result && result.codeResult) {
+          const code = result.codeResult.code;
+          console.log("Quagga detected:", code);
+          playBeep();
+          vibrateOnScan();
+          setScanHistory(prev => {
+            const newHistory = [code, ...prev.filter(item => item !== code)].slice(0, 5);
+            return newHistory;
+          });
+          onScan([{ rawValue: code }]);
+        }
+      });
+
+      Quagga.onProcessed((result) => {
+        // Optional: Draw boxes around detected barcodes
+        const drawingCtx = Quagga.canvas.ctx.overlay;
+        const drawingCanvas = Quagga.canvas.dom.overlay;
+
+        if (result) {
+          if (result.boxes) {
+            drawingCtx.clearRect(0, 0, parseInt(drawingCanvas.getAttribute("width")), parseInt(drawingCanvas.getAttribute("height")));
+            result.boxes.filter(box => box !== result.box).forEach(box => {
+              Quagga.ImageDebug.drawPath(box, { x: 0, y: 1 }, drawingCtx, { color: "green", lineWidth: 2 });
+            });
+          }
+
+          if (result.box) {
+            Quagga.ImageDebug.drawPath(result.box, { x: 0, y: 1 }, drawingCtx, { color: "#00F", lineWidth: 2 });
+          }
+
+          if (result.codeResult && result.codeResult.code) {
+            Quagga.ImageDebug.drawPath(result.line, { x: 'x', y: 'y' }, drawingCtx, { color: 'red', lineWidth: 3 });
+          }
+        }
+      });
+
+      await Quagga.start();
+      setQuaggaInitialized(true);
+      console.log("Quagga scanner initialized");
+    } catch (err) {
+      console.error("Quagga initialization failed:", err);
+      setError("Advanced scanner initialization failed. Using fallback scanner.");
+    }
+  };
+
+  // Cleanup Quagga on unmount
+  useEffect(() => {
+    return () => {
+      if (quaggaInitialized) {
+        Quagga.offDetected();
+        Quagga.offProcessed();
+        Quagga.stop();
+      }
+    };
+  }, [quaggaInitialized]);
+
+  // Toggle between scanners
+  const toggleScanner = () => {
+    if (useQuagga && quaggaInitialized) {
+      Quagga.stop();
+      setQuaggaInitialized(false);
+    }
+    setUseQuagga(!useQuagga);
+    setIsInitializing(true);
+    setTimeout(() => setIsInitializing(false), 1000);
+  };
 
   const handleError = (err) => {
     console.error("Scanner error:", err);
@@ -234,6 +365,21 @@ function ScannerCard({
                 />
               </div>
             </div>
+          ) : useQuagga ? (
+            <div className="w-full h-full relative">
+              <div ref={scannerRef} className="w-full h-full rounded-xl overflow-hidden"></div>
+              {!quaggaInitialized && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                  <Button
+                    label="Start Advanced Scanner"
+                    size="sm"
+                    variant="primary"
+                    onClick={initQuagga}
+                    microinteraction
+                  />
+                </div>
+              )}
+            </div>
           ) : (
             <Scanner
               onScan={(result) => {
@@ -243,6 +389,12 @@ function ScannerCard({
                   console.log("Detected code:", code);
                   if (code) {
                     playBeep(); // Audio feedback
+                    vibrateOnScan(); // Haptic feedback on mobile
+                    // Add to scan history for quick re-selection
+                    setScanHistory(prev => {
+                      const newHistory = [code, ...prev.filter(item => item !== code)].slice(0, 5);
+                      return newHistory;
+                    });
                     onScan(result);
                   }
                 }
@@ -254,20 +406,20 @@ function ScannerCard({
                 facingMode !== null
                   ? {
                       facingMode,
-                      width: { ideal: 1280, min: 640 },
-                      height: { ideal: 720, min: 480 },
+                      width: { ideal: 1920, min: 640 },
+                      height: { ideal: 1080, min: 480 },
                       frameRate: { ideal: 30, min: 15 },
                     }
                   : {
-                      width: { ideal: 1280, min: 640 },
-                      height: { ideal: 720, min: 480 },
+                      width: { ideal: 1920, min: 640 },
+                      height: { ideal: 1080, min: 480 },
                       frameRate: { ideal: 30, min: 15 },
                     }
               }
-              // Reduce delay between decode attempts
-              scanDelay={160}
-              // Focus decoding to a center region to speed up detection
-              area={{ top: "20%", right: "20%", bottom: "20%", left: "20%" }}
+              // Minimal delay for fastest scanning, especially for moving objects
+              scanDelay={50}
+              // Maximize scan area for better detection in various conditions
+              area={{ top: "5%", right: "5%", bottom: "5%", left: "5%" }}
               styles={{
                 container: {
                   width: "100%",
@@ -299,6 +451,8 @@ function ScannerCard({
               ]}
               // Improve robustness on dark-on-light vs light-on-dark
               inversionAttempts="attemptBoth"
+              // Enable multiple attempts for better detection in poor lighting
+              multiple="true"
             />
           )}
           {!error && !isInitializing && paused && (
@@ -334,6 +488,99 @@ function ScannerCard({
                   title={torchEnabled ? "Turn off flashlight" : "Turn on flashlight"}
                 />
               )}
+              <Button
+                label="⌨️"
+                size="sm"
+                variant="secondary"
+                onClick={() => setShowManualInput(!showManualInput)}
+                microinteraction
+                title="Manual input"
+              />
+              <Button
+                label={useQuagga ? "🔄" : "⚡"}
+                size="sm"
+                variant="secondary"
+                onClick={toggleScanner}
+                microinteraction
+                title={useQuagga ? "Switch to standard scanner" : "Switch to advanced scanner"}
+              />
+            </div>
+          )}
+
+          {/* Manual Input Modal */}
+          {showManualInput && (
+            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-20">
+              <div className="bg-white rounded-xl p-4 w-80 max-w-[90vw]">
+                <h3 className="text-lg font-semibold mb-3 text-center">Manual SKU Input</h3>
+                <input
+                  type="text"
+                  value={manualInput}
+                  onChange={(e) => setManualInput(e.target.value)}
+                  placeholder="Enter SKU or barcode"
+                  className="w-full p-3 border border-gray-300 rounded-lg mb-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter' && manualInput.trim()) {
+                      onScan([{ rawValue: manualInput.trim() }]);
+                      setManualInput("");
+                      setShowManualInput(false);
+                      playBeep();
+                      vibrateOnScan();
+                    }
+                  }}
+                />
+                <div className="flex gap-2">
+                  <Button
+                    label="Cancel"
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => {
+                      setShowManualInput(false);
+                      setManualInput("");
+                    }}
+                    className="flex-1"
+                  />
+                  <Button
+                    label="Submit"
+                    size="sm"
+                    variant="primary"
+                    onClick={() => {
+                      if (manualInput.trim()) {
+                        onScan([{ rawValue: manualInput.trim() }]);
+                        setManualInput("");
+                        setShowManualInput(false);
+                        playBeep();
+                        vibrateOnScan();
+                      }
+                    }}
+                    className="flex-1"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Scan History */}
+          {scanHistory.length > 0 && !error && !isInitializing && paused && (
+            <div className="absolute top-2 left-2 z-10">
+              <div className="bg-white/90 backdrop-blur-sm rounded-lg p-2 max-w-32">
+                <p className="text-xs font-medium text-gray-700 mb-1">Recent:</p>
+                <div className="space-y-1">
+                  {scanHistory.slice(0, 3).map((code, index) => (
+                    <button
+                      key={index}
+                      onClick={() => {
+                        onScan([{ rawValue: code }]);
+                        playBeep();
+                        vibrateOnScan();
+                      }}
+                      className="block w-full text-left text-xs text-blue-600 hover:text-blue-800 truncate"
+                      title={`Scan ${code}`}
+                    >
+                      {code.length > 10 ? `${code.substring(0, 10)}...` : code}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
         </div>

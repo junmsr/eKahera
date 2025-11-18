@@ -334,7 +334,7 @@ function InventoryTable({
             </thead>
             <tbody className="divide-y divide-gray-100">
               {products.length === 0 ? (
-                <tr className="absolute inset-0 w-full h-full bg-white/80 backdrop-blur-sm flex items-center justify-center"> {/* Centered empty state */}
+                <tr>
                   <td colSpan={8} className="text-center py-16">
                     <div className="flex flex-col items-center justify-center">
                       <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4">
