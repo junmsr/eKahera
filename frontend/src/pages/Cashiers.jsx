@@ -137,6 +137,26 @@ export default function Cashiers() {
     }
   };
 
+  // Export to CSV
+  const exportToCSV = () => {
+    const headers = ["Name", "Cashier ID", "Number", "Email", "Status"];
+    const rows = filteredCashiers.map((c) => [
+      c.name,
+      c.id,
+      c.number,
+      c.email,
+      c.status,
+    ]);
+    const csvContent = [headers, ...rows]
+      .map((row) => row.join(","))
+      .join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "cashiers.csv";
+    link.click();
+  };
+
   return (
     <PageLayout
       title="Cashiers"
@@ -182,13 +202,15 @@ export default function Cashiers() {
                 <option value="INACTIVE">Inactive</option>
               </select>
             </div>
-            <Button
-              className="bg-blue-600 text-white font-semibold px-4 py-1.5 rounded-xl shadow hover:bg-blue-700 transition"
-              onClick={handleAddCashier}
-            >
-              <div className="flex items-center gap-2">
+            <div className="flex gap-2">
+              <Button
+                onClick={exportToCSV}
+                size="lg"
+                variant="secondary"
+                className="flex items-center gap-2 w-full sm:w-auto shrink-0"
+              >
                 <svg
-                  className="w-4 h-4"
+                  className="w-5 h-5"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -197,12 +219,34 @@ export default function Cashiers() {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M12 4v16m8-8H4"
+                    d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                   />
                 </svg>
-                Add Cashier
-              </div>
-            </Button>
+                <span className="hidden sm:inline">Export</span>
+                <span className="sm:hidden">Export</span>
+              </Button>
+              <Button
+                className="bg-blue-600 text-white font-semibold px-4 py-1.5 rounded-xl shadow hover:bg-blue-700 transition"
+                onClick={handleAddCashier}
+              >
+                <div className="flex items-center gap-2">
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 4v16m8-8H4"
+                    />
+                  </svg>
+                  Add Cashier
+                </div>
+              </Button>
+            </div>
           </div>
 
           {apiError && (
