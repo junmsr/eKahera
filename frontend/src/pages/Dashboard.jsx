@@ -22,6 +22,7 @@ import NavAdmin from "../components/layout/Nav-Admin";
 import StatsCard from "../components/ui/Dashboard/StatsCard";
 import ChartCard from "../components/ui/Dashboard/ChartCard";
 import DashboardStatsCard from "../components/ui/Dashboard/DashboardStatsCard";
+import DashboardBusinessReport from "../components/ui/Dashboard/DashboardBusinessReport";
 import Button from "../components/common/Button";
 import { BiBell, BiUser, BiRefresh } from "react-icons/bi";
 import ProfileModal from "../components/modals/ProfileModal";
@@ -448,7 +449,9 @@ export default function Dashboard() {
         ) : (
           <div className="bg-white p-6 rounded-xl shadow-md">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-bold text-gray-800">Low Stock Products</h3>
+              <h3 className="text-lg font-bold text-gray-800">
+                Low Stock Products
+              </h3>
               <button
                 onClick={async () => {
                   try {
@@ -505,19 +508,19 @@ export default function Dashboard() {
               <div className="h-8 bg-gray-300 rounded w-1/2"></div>
             </div>
           ) : (
-          <div className="hidden lg:block">
-            <DashboardStatsCard stats={highlight} />
-          </div>
+            <div className="hidden lg:block">
+              <DashboardStatsCard stats={highlight} />
+            </div>
           )}
           {loading ? (
-          <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200 animate-pulse hidden lg:block">
+            <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200 animate-pulse hidden lg:block">
               <div className="h-6 bg-gray-200 rounded w-1/2 mb-6"></div>
               <div className="h-4 bg-gray-200 rounded w-full mb-3"></div>
               <div className="h-4 bg-gray-200 rounded w-full mb-3"></div>
               <div className="h-4 bg-gray-200 rounded w-4/5"></div>
             </div>
           ) : (
-          <div className="bg-white p-6 rounded-xl shadow-md hidden lg:block">
+            <div className="bg-white p-6 rounded-xl shadow-md hidden lg:block">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-bold text-gray-800">
                   Low Stock Products
@@ -526,7 +529,11 @@ export default function Dashboard() {
                   onClick={async () => {
                     try {
                       const token = sessionStorage.getItem("auth_token");
-                    await api.post("/api/products/send-low-stock-alert", null, { headers: authHeaders(token) });
+                      await api.post(
+                        "/api/products/send-low-stock-alert",
+                        null,
+                        { headers: authHeaders(token) }
+                      );
                       alert("Low stock alert sent successfully!");
                     } catch (err) {
                       alert("Failed to send low stock alert.");
@@ -562,6 +569,9 @@ export default function Dashboard() {
           )}
         </div>
       </div>
+      <div className="max-w-10lx mx-auto w-full px-6">
+        <DashboardBusinessReport />
+      </div>
       <ProfileModal
         isOpen={showProfileModal}
         onClose={() => setShowProfileModal(false)}
@@ -579,9 +589,16 @@ function LowStockList({ lowStockProducts }) {
   return (
     <ul className="divide-y divide-gray-200">
       {lowStockProducts.map((product) => (
-        <li key={product.product_id} className="py-3 flex justify-between items-center">
-          <span className="text-sm font-medium text-gray-800">{product.product_name}</span>
-          <span className="text-sm font-bold text-red-600">{product.quantity_in_stock} left</span>
+        <li
+          key={product.product_id}
+          className="py-3 flex justify-between items-center"
+        >
+          <span className="text-sm font-medium text-gray-800">
+            {product.product_name}
+          </span>
+          <span className="text-sm font-bold text-red-600">
+            {product.quantity_in_stock} left
+          </span>
         </li>
       ))}
     </ul>
