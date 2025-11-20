@@ -428,7 +428,7 @@ const ProfileModal = ({ isOpen, onClose, userData }) => {
               <div className="flex-1 h-px bg-gradient-to-r from-slate-200 to-transparent"></div>
             </div>
             <p className="text-xs text-slate-500 bg-amber-50 border border-amber-100/50 rounded-xl px-3 py-2">
-              💡 Leave blank to keep your current password
+              Leave blank to keep your current password
             </p>
 
             {/* Current Password Field */}
