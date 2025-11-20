@@ -16,6 +16,8 @@ const LogsPage = () => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
 
+  const [isSidebarOpen, setSidebarOpen] = useState(false);
+
   const fetchLogs = async () => {
     try {
       setLoading(true);
@@ -173,6 +175,29 @@ const LogsPage = () => {
 
   const selectedRole = roleOptions.find(
     (option) => option.value === roleFilter
+  );
+
+  const headerActions = (
+    <div className="flex items-center gap-3">
+      <button
+        onClick={fetchLogs}
+        disabled={loading}
+        title="Refresh Logs"
+        className="bg-white/80 backdrop-blur-sm hover:bg-white text-gray-700 p-2 rounded-lg border border-gray-200/80 text-sm font-medium transition-all duration-200 hover:shadow-md"
+      >
+        <BiRefresh className={`w-5 h-5 ${loading ? "animate-spin" : ""}`} />
+      </button>
+
+      <Button
+        onClick={exportToCSV}
+        variant="secondary"
+        size="md"
+        className="flex items-center gap-2"
+        disabled={filteredLogs.length === 0 || loading}
+      >
+        Export
+      </Button>
+    </div>
   );
 
   return (
