@@ -220,23 +220,29 @@ const NavAdmin = ({ isMobile, onLogoutClick }) => {
           </div>
         </div>
 
-        <nav
-          className={`${STYLES.nav} h-full flex flex-col`}
-          aria-label="Main navigation"
-        >
-          <div className={STYLES.sectionHeader}>MENU</div>
-          {NAV_ITEMS.map((item) => (
-            <NavigationItem
-              key={item.id}
-              item={item}
-              isActive={window.location.pathname === item.path}
-            />
-          ))}
+      <nav
+        className={`${STYLES.nav} h-full flex flex-col overflow-y-auto overflow-x-hidden`}
+        aria-label="Main navigation"
+      >
+        <div className={STYLES.sectionHeader}>MENU</div>
+        {NAV_ITEMS.map((item) => (
+          <NavigationItem
+            key={item.id}
+            item={item}
+            isActive={window.location.pathname === item.path}
+          />
+        ))}
 
           {/* Logout Button */}
           <div className={`${isMobile ? "block" : "mt-auto"}`}>
-            <button onClick={() => setShowLogoutConfirm(true)} className={STYLES.logoutButton} aria-label="Logout">
-              <span className={STYLES.logoutIcon}><LogoutIcon /></span>
+            <button
+            onClick={() => setShowLogoutConfirm(true)}
+            className={STYLES.logoutButton}
+            aria-label="Logout"
+          >
+              <span className={STYLES.logoutIcon}>
+              <LogoutIcon />
+            </span>
               <span className={STYLES.label}>Logout</span>
             </button>
           </div>

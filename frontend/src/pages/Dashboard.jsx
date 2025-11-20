@@ -22,7 +22,8 @@ import NavAdmin from "../components/layout/Nav-Admin";
 import StatsCard from "../components/ui/Dashboard/StatsCard";
 import ChartCard from "../components/ui/Dashboard/ChartCard";
 import DashboardStatsCard from "../components/ui/Dashboard/DashboardStatsCard";
-import { BiBell, BiUser, BiRefresh } from "react-icons/bi";
+import Button from "../components/common/Button";
+import { BiBell, BiUser } from "react-icons/bi";
 import ProfileModal from "../components/modals/ProfileModal";
 
 // Constants
@@ -149,19 +150,24 @@ export default function Dashboard() {
     try {
       setLoading(true);
       const token = sessionStorage.getItem("auth_token");
-      const [summary, timeseries, customersTs, pie, lowStock] = await Promise.all([
-        api("/api/stats/summary", { headers: authHeaders(token) }),
-        api(
-          `/api/stats/sales-timeseries?days=${range === "week" ? 7 : range === "month" ? 30 : 365}`,
-          { headers: authHeaders(token) }
-        ),
-        api(
-          `/api/stats/customers-timeseries?days=${range === "week" ? 7 : range === "month" ? 30 : 365}`,
-          { headers: authHeaders(token) }
-        ),
-        api("/api/stats/sales-by-category", { headers: authHeaders(token) }),
-        api("/api/products/low-stock", { headers: authHeaders(token) }),
-      ]);
+      const [summary, timeseries, customersTs, pie, lowStock] =
+        await Promise.all([
+          api("/api/stats/summary", { headers: authHeaders(token) }),
+          api(
+            `/api/stats/sales-timeseries?days=${
+              range === "week" ? 7 : range === "month" ? 30 : 365
+            }`,
+            { headers: authHeaders(token) }
+          ),
+          api(
+            `/api/stats/customers-timeseries?days=${
+              range === "week" ? 7 : range === "month" ? 30 : 365
+            }`,
+            { headers: authHeaders(token) }
+          ),
+          api("/api/stats/sales-by-category", { headers: authHeaders(token) }),
+          api("/api/products/low-stock", { headers: authHeaders(token) }),
+        ]);
 
       const derived = timeseries.map((d) => ({
         ...d,
@@ -174,15 +180,27 @@ export default function Dashboard() {
       }));
 
       setStats([
-        { label: "Total Revenue", value: summary.totalRevenue, change: summary.growthRate },
+        {
+          label: "Total Revenue",
+          value: summary.totalRevenue,
+          change: summary.growthRate,
+        },
         { label: "New Customers", value: summary.newCustomers, change: 0 },
         { label: "Active Accounts", value: summary.activeAccounts, change: 0 },
-        { label: "Growth Rate", value: summary.growthRate, change: summary.growthRate },
+        {
+          label: "Growth Rate",
+          value: summary.growthRate,
+          change: summary.growthRate,
+        },
       ]);
       setChartData(derived);
       setPieData(piePercent);
       const totalTx = timeseries.reduce((s, d) => s + Number(d.value || 0), 0);
-      const top = (pie || []).slice().sort((a, b) => Number(b.value || 0) - Number(a.value || 0))[0]?.name || "-";
+      const top =
+        (pie || [])
+          .slice()
+          .sort((a, b) => Number(b.value || 0) - Number(a.value || 0))[0]
+          ?.name || "-";
       setHighlight({
         sales: Number(summary.totalRevenue || 0),
         transactions: totalTx,
@@ -200,7 +218,9 @@ export default function Dashboard() {
     try {
       const token = sessionStorage.getItem("auth_token");
       const resp = await api("/api/logs", { headers: authHeaders(token) });
-      const readIds = new Set(JSON.parse(sessionStorage.getItem("read_notif_ids") || "[]"));
+      const readIds = new Set(
+        JSON.parse(sessionStorage.getItem("read_notif_ids") || "[]")
+      );
       const mapped = (resp || []).map((log) => ({
         id: log.log_id,
         title: log.action,
@@ -216,12 +236,42 @@ export default function Dashboard() {
   };
 
   const handleMarkAsRead = (id) => {
-    const readIds = JSON.parse(sessionStorage.getItem("read_notif_ids") || "[]");
+    const readIds = JSON.parse(
+      sessionStorage.getItem("read_notif_ids") || "[]"
+    );
     if (!readIds.includes(id)) {
-      sessionStorage.setItem("read_notif_ids", JSON.stringify([...readIds, id]));
+      sessionStorage.setItem(
+        "read_notif_ids",
+        JSON.stringify([...readIds, id])
+      );
     }
-    setNotifications((notifs) => notifs.map((n) => (n.id === id ? { ...n, isRead: true } : n)));
+    setNotifications((notifs) =>
+      notifs.map((n) => (n.id === id ? { ...n, isRead: true } : n))
+    );
     setUnreadCount((c) => Math.max(0, c - 1));
+  };
+
+  // Export to CSV
+  const exportToCSV = () => {
+    const headers = ["Label", "Value", "Change"];
+    const rows = stats.map((s) => [s.label, s.value, s.change]);
+    // Add low stock products
+    if (lowStockProducts.length > 0) {
+      rows.push(["", "", ""]); // separator
+      rows.push(["Low Stock Products", "", ""]);
+      rows.push(["Product Name", "Quantity Left", ""]);
+      lowStockProducts.forEach((p) =>
+        rows.push([p.product_name, p.quantity_in_stock, ""])
+      );
+    }
+    const csvContent = [headers, ...rows]
+      .map((row) => row.join(","))
+      .join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "dashboard-data.csv";
+    link.click();
   };
 
   useEffect(() => {
@@ -306,10 +356,12 @@ export default function Dashboard() {
         onClick={() => setShowProfileModal(true)}
         className="flex items-center gap-2 bg-white/80 backdrop-blur-sm p-1 sm:p-1.5 sm:px-3 sm:py-2 rounded-lg border border-gray-200/80 hover:bg-white transition-all duration-200 hover:shadow-md hover:scale-[1.02]"
       >
-        <div className="w-6 h-6 sm:w-7 sm:h-7 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-full flex items-center justify-center text-sm font-medium shadow-md">
-          {user.username?.[0]?.toUpperCase() || 'A'}
+        <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-full flex items-center justify-center text-sm font-medium shadow-lg">
+          {user.username?.[0]?.toUpperCase() || "A"}
         </div>
-        <span className="text-sm font-medium text-gray-700 hidden sm:inline">{user.username || 'Admin'}</span>
+        <span className="text-sm font-medium text-gray-700">
+          {user.username || "Admin"}
+        </span>
       </button>
     </div>
   );
@@ -322,24 +374,63 @@ export default function Dashboard() {
       headerActions={headerActions}
       className="bg-gray-50 min-h-screen"
     >
+      <div className="-mt-2 -mb-11 py-8 px-8 flex justify-end">
+        <Button
+          onClick={exportToCSV}
+          size="lg"
+          variant="secondary"
+          className="flex items-center gap-2 w-full sm:w-auto shrink-0"
+        >
+          <svg
+            className="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+            />
+          </svg>
+          <span className="hidden sm:inline">Export</span>
+          <span className="sm:hidden">Export</span>
+        </Button>
+      </div>
       {/* Stats Cards - Mobile View */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 lg:hidden">
         {loading
           ? Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 animate-pulse">
+              <div
+                key={i}
+                className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 animate-pulse"
+              >
                 <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
                 <div className="h-8 bg-gray-300 rounded w-1/2"></div>
               </div>
             ))
           : stats.map((stat, index) => (
-              <div key={index} className="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
-                <h4 className="text-sm font-medium text-gray-500">{stat.label}</h4>
+              <div
+                key={index}
+                className="bg-white p-4 rounded-xl shadow-sm border border-gray-200"
+              >
+                <h4 className="text-sm font-medium text-gray-500">
+                  {stat.label}
+                </h4>
                 <p className="text-2xl font-bold text-gray-900 mt-1">
-                  {typeof stat.value === "number" ? stat.value.toLocaleString() : stat.value}
+                  {typeof stat.value === "number"
+                    ? stat.value.toLocaleString()
+                    : stat.value}
                 </p>
                 {stat.change ? (
-                  <p className={`text-xs font-medium mt-1 ${stat.change > 0 ? "text-green-600" : "text-red-600"}`}>
-                    {stat.change > 0 ? "+" : ""}{stat.change.toFixed(2)}%
+                  <p
+                    className={`text-xs font-medium mt-1 ${
+                      stat.change > 0 ? "text-green-600" : "text-red-600"
+                    }`}
+                  >
+                    {stat.change > 0 ? "+" : ""}
+                    {stat.change.toFixed(2)}%
                   </p>
                 ) : null}
               </div>
@@ -388,8 +479,12 @@ export default function Dashboard() {
         <div className="lg:col-span-8 flex flex-col gap-6">
           {loading ? (
             <>
-              <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200 h-[336px] animate-pulse flex items-center justify-center"><div className="w-full h-64 bg-gray-200 rounded-lg"></div></div>
-              <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200 h-[336px] animate-pulse flex items-center justify-center"><div className="w-64 h-64 bg-gray-200 rounded-full"></div></div>
+              <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200 h-[336px] animate-pulse flex items-center justify-center">
+                <div className="w-full h-64 bg-gray-200 rounded-lg"></div>
+              </div>
+              <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200 h-[336px] animate-pulse flex items-center justify-center">
+                <div className="w-64 h-64 bg-gray-200 rounded-full"></div>
+              </div>
             </>
           ) : (
             <>
@@ -425,7 +520,9 @@ export default function Dashboard() {
           ) : (
           <div className="bg-white p-6 rounded-xl shadow-md hidden lg:block">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-bold text-gray-800">Low Stock Products</h3>
+                <h3 className="text-lg font-bold text-gray-800">
+                  Low Stock Products
+                </h3>
                 <button
                   onClick={async () => {
                     try {
@@ -441,7 +538,27 @@ export default function Dashboard() {
                   Send Alert
                 </button>
               </div>
-            <LowStockList lowStockProducts={lowStockProducts} />
+              {lowStockProducts.length > 0 ? (
+                <ul className="divide-y divide-gray-200">
+                  {lowStockProducts.map((product) => (
+                    <li
+                      key={product.product_id}
+                      className="py-3 flex justify-between items-center"
+                    >
+                      <span className="text-sm font-medium text-gray-800">
+                        {product.product_name}
+                      </span>
+                      <span className="text-sm font-bold text-red-600">
+                        {product.quantity_in_stock} left
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-gray-500">
+                  No products with low stock.
+                </p>
+              )}
             </div>
           )}
         </div>
