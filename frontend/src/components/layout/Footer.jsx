@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { motion } from "framer-motion";
 import TermsModal from "../modals/TermsModal";
 import PrivacyPolicyModal from "../modals/PrivacyPolicyModal";
 import Logo from "../common/Logo";
@@ -64,7 +65,7 @@ function Footer({ className = "" }) {
       <div className="absolute inset-0 bg-[linear-gradient(rgba(59,130,246,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(59,130,246,0.02)_1px,transparent_1px)] bg-[size:3rem_3rem] opacity-40" />
 
       <div className="relative z-10 max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 pt-24 pb-16">
-        <div
+        <motion.div
           variants={footerVariants}
           initial="hidden"
           whileInView="visible"
@@ -87,14 +88,14 @@ function Footer({ className = "" }) {
 
             {/* Contact Info with enhanced styling */}
             <div className="space-y-4 mb-8">
-              <a
+              <motion.a
                 href="mailto:support@ekahera.com"
                 className="flex items-center gap-3 text-sm text-slate-700 hover:text-blue-600 transition-all duration-300 group"
                 whileHover={{ x: 6, scale: 1.02 }}
               >
-                <div
-                  className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-50 to-blue-100 group-hover:from-blue-100 group-hover:to-blue-200 flex items-center justify-center transition-all duration-300 shadow-sm group-hover:shadow-md"
+                <motion.div
                   whileHover={{ rotate: 5 }}
+                  className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-50 to-blue-100 group-hover:from-blue-100 group-hover:to-blue-200 flex items-center justify-center transition-all duration-300 shadow-sm group-hover:shadow-md"
                 >
                   <svg
                     width="18"
@@ -108,7 +109,7 @@ function Footer({ className = "" }) {
                     <rect x="2" y="4" width="20" height="16" rx="2" />
                     <path d="M22 6l-10 7L2 6" />
                   </svg>
-                </div>
+                </motion.div>
                 <span className="font-medium">support@ekahera.com</span>
               </motion.a>
 
@@ -118,8 +119,8 @@ function Footer({ className = "" }) {
                 whileHover={{ x: 6, scale: 1.02 }}
               >
                 <motion.div
-                  className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-50 to-blue-100 group-hover:from-blue-100 group-hover:to-blue-200 flex items-center justify-center transition-all duration-300 shadow-sm group-hover:shadow-md"
                   whileHover={{ rotate: 5 }}
+                  className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-50 to-blue-100 group-hover:from-blue-100 group-hover:to-blue-200 flex items-center justify-center transition-all duration-300 shadow-sm group-hover:shadow-md"
                 >
                   <svg
                     width="18"
@@ -148,8 +149,8 @@ function Footer({ className = "" }) {
                 whileHover={{ x: 6, scale: 1.02 }}
               >
                 <motion.div
-                  className="h-10 w-10 min-w-[2.5rem] rounded-xl bg-gradient-to-br from-blue-50 to-blue-100 group-hover:from-blue-100 group-hover:to-blue-200 flex items-center justify-center transition-all duration-300 shadow-sm group-hover:shadow-md"
                   whileHover={{ rotate: 5 }}
+                  className="h-10 w-10 min-w-[2.5rem] rounded-xl bg-gradient-to-br from-blue-50 to-blue-100 group-hover:from-blue-100 group-hover:to-blue-200 flex items-center justify-center transition-all duration-300 shadow-sm group-hover:shadow-md"
                 >
                   <svg
                     width="18"
@@ -378,7 +379,7 @@ function Footer({ className = "" }) {
                 </a>
               </li>
             </ul>
-          </motion.div>
+          </div>
         </motion.div>
 
         {/* Enhanced Divider */}
@@ -400,7 +401,7 @@ function Footer({ className = "" }) {
         </div>
 
         {/* Enhanced Bottom Bar */}
-        <div
+        <motion.div
           className="flex flex-col md:flex-row items-center justify-center gap-3 md:gap-6 text-sm"
           variants={itemVariants}
           initial="hidden"
