@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import Modal from "./Modal";
+import BaseModal from "./BaseModal";
+import Button from "../common/Button";
 
 function DiscountModal({ isOpen, onClose, onApplyDiscount }) {
   // Main modal tab (FIX or PERCENTAGE)
@@ -10,7 +11,7 @@ function DiscountModal({ isOpen, onClose, onApplyDiscount }) {
 
   // Discounts state
   const [percentageDiscounts, setPercentageDiscounts] = useState([
-    { label: "PWD/Senior Citizen", value: "5%" }
+    { label: "PWD/Senior Citizen", value: "5%" },
   ]);
   const [fixedDiscounts, setFixedDiscounts] = useState([]);
 
@@ -25,9 +26,15 @@ function DiscountModal({ isOpen, onClose, onApplyDiscount }) {
   const handleAddDiscount = () => {
     if (!newDesc || !newValue) return;
     if (settingsTab === "PERCENTAGE") {
-      setPercentageDiscounts([...percentageDiscounts, { label: newDesc, value: newValue + "%" }]);
+      setPercentageDiscounts([
+        ...percentageDiscounts,
+        { label: newDesc, value: newValue + "%" },
+      ]);
     } else {
-      setFixedDiscounts([...fixedDiscounts, { label: newDesc, value: parseFloat(newValue).toFixed(2) }]);
+      setFixedDiscounts([
+        ...fixedDiscounts,
+        { label: newDesc, value: parseFloat(newValue).toFixed(2) },
+      ]);
     }
     setNewDesc("");
     setNewValue("");
@@ -49,7 +56,8 @@ function DiscountModal({ isOpen, onClose, onApplyDiscount }) {
 
   // Confirm handler
   const handleConfirm = () => {
-    const discounts = tab === "PERCENTAGE" ? percentageDiscounts : fixedDiscounts;
+    const discounts =
+      tab === "PERCENTAGE" ? percentageDiscounts : fixedDiscounts;
     if (selectedIdx !== null && discounts[selectedIdx]) {
       onApplyDiscount(discounts[selectedIdx]);
       setSelectedIdx(null);
@@ -57,165 +65,242 @@ function DiscountModal({ isOpen, onClose, onApplyDiscount }) {
     }
   };
 
+  // Settings Footer
+  const settingsFooterContent = (
+    <Button
+      label="Save Settings"
+      variant="primary"
+      onClick={handleSaveSettings}
+      className="w-full"
+    />
+  );
+
+  // Main Footer
+  const mainFooterContent = (
+    <div className="w-full space-y-2">
+      <Button
+        label="Confirm Selection"
+        variant="primary"
+        onClick={handleConfirm}
+        disabled={selectedIdx === null}
+        className="w-full"
+      />
+      <Button
+        label="Manage Discounts"
+        variant="secondary"
+        onClick={() => setShowSettings(true)}
+        className="w-full"
+      />
+    </div>
+  );
+
   // Main Discount Modal
   const renderMain = () => {
-    const discounts = tab === "PERCENTAGE" ? percentageDiscounts : fixedDiscounts;
+    const discounts =
+      tab === "PERCENTAGE" ? percentageDiscounts : fixedDiscounts;
     return (
-      <div className="flex flex-col items-center px-4 pb-4 pt-2">
+      <div className="space-y-4">
         {/* Tabs */}
-        <div className="flex w-full justify-center mb-4 gap-2">
+        <div className="flex gap-2">
           <button
-            className={`px-4 py-1 rounded-full font-bold text-sm ${tab === "FIX" ? "bg-blue-600 text-white" : "bg-transparent text-gray-700"}`}
-            onClick={() => { setTab("FIX"); setSelectedIdx(null); }}
+            className={`flex-1 px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
+              tab === "FIX"
+                ? "bg-blue-600 text-white"
+                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+            }`}
+            onClick={() => {
+              setTab("FIX");
+              setSelectedIdx(null);
+            }}
           >
-            FIX
+            Fixed Amount
           </button>
           <button
-            className={`px-4 py-1 rounded-full font-bold text-sm ${tab === "PERCENTAGE" ? "bg-blue-600 text-white" : "bg-transparent text-gray-700"}`}
-            onClick={() => { setTab("PERCENTAGE"); setSelectedIdx(null); }}
+            className={`flex-1 px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
+              tab === "PERCENTAGE"
+                ? "bg-blue-600 text-white"
+                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+            }`}
+            onClick={() => {
+              setTab("PERCENTAGE");
+              setSelectedIdx(null);
+            }}
           >
-            PERCENTAGE
+            Percentage
           </button>
         </div>
-        {/* Divider and info */}
-        <div className="w-full text-left text-xs text-gray-600 mb-1">Select discounts below</div>
-        <hr className="w-full mb-2" />
+
         {/* Discount List */}
-        <div className="w-full flex flex-col gap-2 mb-6">
+        <div className="space-y-2">
           {discounts.length === 0 ? (
-            <div className="w-full text-center text-gray-400 text-sm">
-              No option available.<br />
-              Discount has not yet been setup.
+            <div className="text-center py-8 text-gray-500">
+              <p>No discounts available yet.</p>
+              <p className="text-xs mt-1">Set up discounts in settings.</p>
             </div>
           ) : (
             discounts.map((d, idx) => (
               <button
                 key={idx}
                 type="button"
-                className={`flex gap-2 w-full items-center border rounded px-2 py-1 text-sm transition ${
+                className={`w-full border-2 rounded-lg px-4 py-3 text-sm transition-all flex items-center justify-between ${
                   selectedIdx === idx
                     ? "border-blue-600 bg-blue-50 ring-2 ring-blue-300"
-                    : "border-gray-200 bg-white"
+                    : "border-gray-200 bg-white hover:border-gray-300"
                 }`}
                 onClick={() => setSelectedIdx(idx)}
               >
-                <input className="flex-1 bg-transparent outline-none" value={d.label} readOnly />
-                <input className="w-20 bg-transparent text-center outline-none" value={d.value} readOnly />
-                {selectedIdx === idx && (
-                  <span className="ml-2 text-blue-600 font-bold">&#10003;</span>
-                )}
+                <span className="font-medium">{d.label}</span>
+                <span
+                  className={`font-bold ${
+                    selectedIdx === idx ? "text-blue-600" : "text-gray-700"
+                  }`}
+                >
+                  {d.value}
+                </span>
               </button>
             ))
           )}
         </div>
-        {/* Buttons */}
-        <button
-          className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 rounded-lg mb-3 shadow disabled:opacity-50"
-          onClick={handleConfirm}
-          disabled={selectedIdx === null}
-        >
-          CONFIRM
-        </button>
-        <button
-          className="w-full bg-blue-900 hover:bg-blue-800 text-white font-bold py-2 rounded-lg shadow"
-          onClick={() => setShowSettings(true)}
-        >
-          SETTINGS
-        </button>
       </div>
     );
   };
 
   // Settings Modal Content
   const renderSettings = () => (
-    <div className="flex flex-col items-center px-4 pb-4 pt-2">
+    <div className="space-y-4">
       {/* Settings Tabs */}
-      <div className="flex w-full justify-center mb-4 gap-2">
+      <div className="flex gap-2">
         <button
-          className={`px-4 py-1 rounded-full font-bold text-sm ${settingsTab === "PERCENTAGE" ? "bg-blue-600 text-white" : "bg-gray-300 text-gray-700"}`}
+          className={`flex-1 px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
+            settingsTab === "PERCENTAGE"
+              ? "bg-blue-600 text-white"
+              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+          }`}
           onClick={() => setSettingsTab("PERCENTAGE")}
         >
-          Percentage Discount
+          Percentage
         </button>
         <button
-          className={`px-4 py-1 rounded-full font-bold text-sm ${settingsTab === "FIXED" ? "bg-blue-600 text-white" : "bg-gray-300 text-gray-700"}`}
+          className={`flex-1 px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
+            settingsTab === "FIXED"
+              ? "bg-blue-600 text-white"
+              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+          }`}
           onClick={() => setSettingsTab("FIXED")}
         >
-          Fixed Amount Discount
+          Fixed Amount
         </button>
       </div>
+
       {/* Discount List */}
-      <div className="flex flex-col w-full gap-2 mb-4">
-        {(settingsTab === "PERCENTAGE" ? percentageDiscounts : fixedDiscounts).map((d, idx) => (
-          <div key={idx} className="flex gap-2 items-center">
+      <div className="space-y-2 max-h-60 overflow-y-auto">
+        {(settingsTab === "PERCENTAGE"
+          ? percentageDiscounts
+          : fixedDiscounts
+        ).map((d, idx) => (
+          <div
+            key={idx}
+            className="flex gap-2 items-center bg-gray-50 p-3 rounded-lg"
+          >
             <input
-              className="flex-1 border rounded px-2 py-1 text-sm"
+              className="flex-1 bg-transparent outline-none text-sm font-medium"
               value={d.label}
               readOnly
             />
             <input
-              className="w-20 border rounded px-2 py-1 text-sm text-center"
+              className="w-20 bg-transparent text-center outline-none text-sm font-medium"
               value={d.value}
               readOnly
             />
             <button
-              className="text-blue-600 hover:text-red-500"
+              className="text-red-500 hover:text-red-700 transition-colors p-1"
               onClick={() => handleRemove(idx)}
               title="Remove"
+              type="button"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="inline w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="w-5 h-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             </button>
           </div>
         ))}
-        {/* Add new discount */}
-        <div className="flex gap-2 items-center">
+      </div>
+
+      {/* Add new discount */}
+      <div className="space-y-2 p-4 bg-blue-50 rounded-lg border border-blue-200">
+        <div className="text-sm font-semibold text-blue-900 mb-2">
+          Add New Discount
+        </div>
+        <div className="flex gap-2">
           <input
-            className="flex-1 border rounded px-2 py-1 text-sm"
+            className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="Description"
             value={newDesc}
-            onChange={e => setNewDesc(e.target.value)}
+            onChange={(e) => setNewDesc(e.target.value)}
           />
           <input
-            className="w-20 border rounded px-2 py-1 text-sm text-center"
+            className="w-24 border border-gray-300 rounded-lg px-3 py-2 text-sm text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder={settingsTab === "PERCENTAGE" ? "0%" : "0.00"}
             value={newValue}
-            onChange={e => setNewValue(e.target.value)}
+            onChange={(e) => setNewValue(e.target.value)}
             type="number"
             min="0"
           />
           <button
-            className="text-blue-600 hover:text-blue-800 font-bold text-lg"
+            className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-bold"
             onClick={handleAddDiscount}
             title="Add"
             type="button"
-          >+</button>
+          >
+            +
+          </button>
         </div>
       </div>
-      {/* Save Button */}
-      <button
-        className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 rounded-lg shadow"
-        onClick={handleSaveSettings}
-      >
-        SAVE
-      </button>
     </div>
   );
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Enter Discount" className="max-w-md">
-      {/* Exit "X" Button */}
-      <button
-        onClick={onClose}
-        className="absolute top-4 right-4 text-2xl text-gray-400 hover:text-blue-600 focus:outline-none z-10"
-        aria-label="Close"
-        type="button"
-      >
-        ×
-      </button>
+    <BaseModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={showSettings ? "Manage Discounts" : "Select Discount"}
+      subtitle={
+        showSettings
+          ? "Add or remove discount options"
+          : "Choose a discount to apply"
+      }
+      icon={
+        <svg
+          className="w-5 h-5 text-white"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
+          />
+        </svg>
+      }
+      footer={showSettings ? settingsFooterContent : mainFooterContent}
+      size="md"
+      contentClassName="space-y-4"
+    >
       {showSettings ? renderSettings() : renderMain()}
-    </Modal>
+    </BaseModal>
   );
 }
 

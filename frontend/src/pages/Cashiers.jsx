@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import PageLayout from "../components/layout/PageLayout";
 import NavAdmin from "../components/layout/Nav-Admin";
 import Button from "../components/common/Button";
-import Modal from "../components/modals/Modal";
+import CashierFormModal from "../components/modals/CashierFormModal";
 import { api, authHeaders } from "../lib/api";
 
 // (Assuming initialCashiers is defined elsewhere or is intended to be empty)
@@ -16,7 +16,8 @@ export default function Cashiers() {
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [editIndex, setEditIndex] = useState(null);
+  const [editingCashier, setEditingCashier] = useState(null);
+  const [modalLoading, setModalLoading] = useState(false);
   const [form, setForm] = useState({
     name: "",
     password: "",
@@ -76,23 +77,23 @@ export default function Cashiers() {
       email: "",
       status: "ACTIVE",
     });
+    setEditingCashier(null);
     setShowAddModal(true);
   };
 
-  const handleSaveAdd = async (e) => {
-    e.preventDefault();
+  const handleSaveAdd = async (formData) => {
     try {
-      setLoading(true);
+      setModalLoading(true);
       setApiError("");
       const token = sessionStorage.getItem("auth_token");
       await api("/api/business/cashiers", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...authHeaders(token) },
         body: JSON.stringify({
-          username: (form.name || "").trim(),
-          password: (form.password || "").trim(),
-          contact_number: (form.number || "").trim() || null,
-          email: (form.email || "").trim() || null,
+          username: (formData.name || "").trim(),
+          password: (formData.password || "").trim(),
+          contact_number: (formData.number || "").trim() || null,
+          email: (formData.email || "").trim() || null,
         }),
       });
       // refresh list
@@ -111,24 +112,30 @@ export default function Cashiers() {
     } catch (err) {
       setApiError(err.message || "Failed to create cashier");
     } finally {
-      setLoading(false);
+      setModalLoading(false);
     }
   };
 
   // Handle Edit Cashier
   const handleEditCashier = (idx) => {
-    setEditIndex(idx);
+    setEditingCashier(idx);
     setForm({ ...cashiers[idx] });
     setShowEditModal(true);
   };
 
-  const handleSaveEdit = (e) => {
-    e.preventDefault();
-    const updated = [...cashiers];
-    updated[editIndex] = form;
-    setCashiers(updated);
-    setShowEditModal(false);
-    setEditIndex(null);
+  const handleSaveEdit = async (formData) => {
+    try {
+      setModalLoading(true);
+      const updated = [...cashiers];
+      updated[editingCashier] = formData;
+      setCashiers(updated);
+      setShowEditModal(false);
+      setEditingCashier(null);
+    } catch (err) {
+      setApiError(err.message || "Failed to update cashier");
+    } finally {
+      setModalLoading(false);
+    }
   };
 
   // Handle Delete Cashier
@@ -532,121 +539,25 @@ export default function Cashiers() {
         </div>
       </div>
       {/* Add Cashier Modal */}
-      <Modal
+      <CashierFormModal
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
-        title="Add Cashier"
-        size="sm"
-        variant="glass"
-      >
-        <form className="flex flex-col gap-4" onSubmit={handleSaveAdd}>
-          <input
-            type="text"
-            className="border rounded px-3 py-2"
-            placeholder="Name"
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-            required
-          />
-          <input
-            type="password"
-            className="border rounded px-3 py-2"
-            placeholder="Password"
-            value={form.password}
-            onChange={(e) => setForm({ ...form, password: e.target.value })}
-            required
-          />
-          <input
-            type="text"
-            className="border rounded px-3 py-2"
-            placeholder="Number"
-            value={form.number}
-            onChange={(e) => setForm({ ...form, number: e.target.value })}
-            required
-          />
-          <input
-            type="email"
-            className="border rounded px-3 py-2"
-            placeholder="Email"
-            value={form.email}
-            onChange={(e) => setForm({ ...form, email: e.target.value })}
-            required
-          />
-          <select
-            className="border rounded px-3 py-2"
-            value={form.status}
-            onChange={(e) => setForm({ ...form, status: e.target.value })}
-          >
-            <option value="ACTIVE">ACTIVE</option>
-            <option value="INACTIVE">INACTIVE</option>
-          </select>
-          <Button
-            type="submit"
-            variant="primary"
-            className="bg-blue-600 text-white font-bold py-2 rounded shadow hover:bg-blue-700 transition"
-          >
-            Save
-          </Button>
-        </form>
-      </Modal>
+        onSubmit={handleSaveAdd}
+        title="Add New Cashier"
+        submitButtonText="Create Cashier"
+        isLoading={modalLoading}
+      />
+
       {/* Edit Cashier Modal */}
-      <Modal
+      <CashierFormModal
         isOpen={showEditModal}
         onClose={() => setShowEditModal(false)}
+        onSubmit={handleSaveEdit}
         title="Edit Cashier"
-        size="sm"
-        variant="glass"
-      >
-        <form className="flex flex-col gap-4" onSubmit={handleSaveEdit}>
-          <input
-            type="text"
-            className="border rounded px-3 py-2"
-            placeholder="Name"
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-            required
-          />
-          <input
-            type="password"
-            className="border rounded px-3 py-2"
-            placeholder="Password"
-            value={form.password}
-            onChange={(e) => setForm({ ...form, password: e.target.value })}
-            required
-          />
-          <input
-            type="text"
-            className="border rounded px-3 py-2"
-            placeholder="Number"
-            value={form.number}
-            onChange={(e) => setForm({ ...form, number: e.target.value })}
-            required
-          />
-          <input
-            type="email"
-            className="border rounded px-3 py-2"
-            placeholder="Email"
-            value={form.email}
-            onChange={(e) => setForm({ ...form, email: e.target.value })}
-            required
-          />
-          <select
-            className="border rounded px-3 py-2"
-            value={form.status}
-            onChange={(e) => setForm({ ...form, status: e.target.value })}
-          >
-            <option value="ACTIVE">ACTIVE</option>
-            <option value="INACTIVE">INACTIVE</option>
-          </select>
-          <Button
-            type="submit"
-            variant="primary"
-            className="bg-blue-600 text-white font-bold py-2 rounded shadow hover:bg-blue-700 transition"
-          >
-            Save Changes
-          </Button>
-        </form>
-      </Modal>
+        submitButtonText="Update Cashier"
+        initialData={form}
+        isLoading={modalLoading}
+      />
     </PageLayout>
   );
 }
