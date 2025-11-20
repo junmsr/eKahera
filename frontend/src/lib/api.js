@@ -1,5 +1,5 @@
 export async function api(path, options = {}, returnRawResponse = false) {
-  const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
+  const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://ekahera.onrender.com';
 
   const headers = { ...(options.headers || {}) };
   // Let the browser set the Content-Type for FormData
