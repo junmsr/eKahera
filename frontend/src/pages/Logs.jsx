@@ -17,6 +17,19 @@ const LogsPage = () => {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const dropdownRef = useRef(null);
 
+  const headerActions = (
+    <div className="flex items-center gap-2">
+      <button
+        onClick={fetchLogs}
+        disabled={loading}
+        title="Refresh Logs"
+        className="bg-white/80 backdrop-blur-sm hover:bg-white text-gray-700 p-2 rounded-lg border border-gray-200/80 text-sm font-medium transition-all duration-200 hover:shadow-md hover:scale-[1.02]"
+      >
+        <BiRefresh className={`w-5 h-5 ${loading ? "animate-spin" : ""}`} />
+      </button>
+    </div>
+  );
+
   const fetchLogs = async () => {
     try {
       setLoading(true);
