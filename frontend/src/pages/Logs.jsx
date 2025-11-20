@@ -14,6 +14,7 @@ const LogsPage = () => {
   const [roleFilter, setRoleFilter] = useState("all");
   const [sortOrder, setSortOrder] = useState("desc");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isSidebarOpen, setSidebarOpen] = useState(false);
   const dropdownRef = useRef(null);
 
   const fetchLogs = async () => {
