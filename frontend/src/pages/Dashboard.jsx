@@ -121,6 +121,7 @@ export default function Dashboard() {
   const [showNotifications, setShowNotifications] = useState(false);
   const notificationRef = React.useRef(null);
   const { logout } = useAuth();
+  const [isSidebarOpen, setSidebarOpen] = useState(false);
 
   const user = useMemo(() => {
     try {
@@ -372,6 +373,8 @@ export default function Dashboard() {
       subtitle=""
       sidebar={<NavAdmin onLogoutClick={logout} />}
       headerActions={headerActions}
+      isSidebarOpen={isSidebarOpen}
+      setSidebarOpen={setSidebarOpen}
       className="bg-gray-50 min-h-screen"
     >
       <div className="-mt-2 -mb-11 py-8 px-8 flex justify-end">

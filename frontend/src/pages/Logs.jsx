@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState, useRef } from "react";
 import NavAdmin from "../components/layout/Nav-Admin";
+import { BiRefresh } from "react-icons/bi";
 import PageLayout from "../components/layout/PageLayout";
 import Button from "../components/common/Button";
 import { api, authHeaders } from "../lib/api";
@@ -179,6 +180,9 @@ const LogsPage = () => {
       title="LOGS"
       subtitle="System activity and transaction logs"
       sidebar={<NavAdmin />}
+      headerActions={headerActions}
+      isSidebarOpen={isSidebarOpen}
+      setSidebarOpen={setSidebarOpen}
       className="h-screen overflow-hidden"
     >
       <div className="flex-1 bg-transparent overflow-hidden p-4 flex flex-col">

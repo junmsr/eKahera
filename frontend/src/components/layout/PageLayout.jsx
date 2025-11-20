@@ -21,10 +21,11 @@ export default function PageLayout({
   showNavbar = false,
   showFooter = false,
   className = "",
+  isSidebarOpen,
+  setSidebarOpen,
 }) {
   const [theme, setTheme] = useState("light");
   const toggleTheme = () => setTheme(theme === "light" ? "dark" : "light");
-  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const touchStartXRef = useRef(null);
   const touchActiveRef = useRef(false);
   const navigate = useNavigate();
@@ -66,10 +67,10 @@ export default function PageLayout({
         onTouchStart={(e) => {
           if (window.innerWidth >= 768) return;
           const x = e.touches?.[0]?.clientX ?? 0;
-          if (!isMobileNavOpen && x <= 24) {
+          if (!isSidebarOpen && x <= 24) {
             touchActiveRef.current = true;
             touchStartXRef.current = x;
-          } else if (isMobileNavOpen) {
+          } else if (isSidebarOpen) {
             touchActiveRef.current = true;
             touchStartXRef.current = x;
           }
@@ -78,12 +79,12 @@ export default function PageLayout({
           if (!touchActiveRef.current) return;
           const x = e.touches?.[0]?.clientX ?? 0;
           const delta = x - (touchStartXRef.current ?? x);
-          if (!isMobileNavOpen && delta > 60) {
-            setIsMobileNavOpen(true);
+          if (!isSidebarOpen && delta > 60) {
+            setSidebarOpen(true);
             touchActiveRef.current = false;
             touchStartXRef.current = null;
-          } else if (isMobileNavOpen && delta < -60) {
-            setIsMobileNavOpen(false);
+          } else if (isSidebarOpen && delta < -60) {
+            setSidebarOpen(false);
             touchActiveRef.current = false;
             touchStartXRef.current = null;
           }
@@ -101,7 +102,7 @@ export default function PageLayout({
         {sidebar && (
           <aside
             className={`md:hidden fixed inset-y-0 left-0 z-50 w-48 max-w-[80vw] bg-white shadow-xl transform transition-transform duration-300 ${
-              isMobileNavOpen ? "translate-x-0" : "-translate-x-full"
+              isSidebarOpen ? "translate-x-0" : "-translate-x-full"
             }`}
             role="dialog"
             aria-modal="true"
@@ -109,29 +110,31 @@ export default function PageLayout({
             {React.cloneElement(sidebar, { isMobile: true, onLogoutClick: handleLogoutClick })}
           </aside>
         )}
-        {sidebar && isMobileNavOpen && (
+        {sidebar && isSidebarOpen && (
           <div
             className="md:hidden fixed inset-0 bg-black/30 z-40"
-            onClick={() => setIsMobileNavOpen(false)}
+            onClick={() => setSidebarOpen(false)}
           />
         )}
 
         {/* Main Content */}
-        <main className={`flex-1 flex flex-col ${sidebar ? "md:ml-48" : ""}`}>
+        <main
+          className={`flex-1 flex flex-col transition-all duration-300 ${sidebar ? "md:ml-48" : ""} ${isSidebarOpen ? "blur-sm" : ""} max-h-screen`}
+        >
           {/* Header */}
           {showHeader && (
             <Header
               title={title}
               subtitle={subtitle}
               headerActions={headerActions}
-              isMobileNavOpen={isMobileNavOpen}
-              onMenuClick={() => setIsMobileNavOpen(!isMobileNavOpen)}
-              className="sticky top-0 z-50 bg-white"
+              isMobileNavOpen={isSidebarOpen}
+              onMenuClick={() => setSidebarOpen(!isSidebarOpen)}
+              className="sticky top-0 z-30 bg-white"
             />
           )}
 
           {/* Page Content */}
-          <div className="flex-1 relative z-40 overflow-x-hidden">
+          <div className="flex-1 relative z-20 overflow-y-auto">
             {children}
           </div>
         </main>

@@ -24,6 +24,7 @@ export default function Cashiers() {
     email: "",
     status: "ACTIVE",
   });
+  const [isSidebarOpen, setSidebarOpen] = useState(false);
 
   // Load cashiers from API
   useEffect(() => {
@@ -162,6 +163,8 @@ export default function Cashiers() {
       title="Cashiers"
       subtitle="Manage cashier accounts and permissions"
       sidebar={<NavAdmin />}
+      isSidebarOpen={isSidebarOpen}
+      setSidebarOpen={setSidebarOpen}
       className="min-h-screen bg-white"
     >
       <div className="flex-1 bg-transparent overflow-hidden p-3 sm:p-4">
