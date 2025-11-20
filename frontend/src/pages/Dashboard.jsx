@@ -23,7 +23,7 @@ import StatsCard from "../components/ui/Dashboard/StatsCard";
 import ChartCard from "../components/ui/Dashboard/ChartCard";
 import DashboardStatsCard from "../components/ui/Dashboard/DashboardStatsCard";
 import Button from "../components/common/Button";
-import { BiBell, BiUser } from "react-icons/bi";
+import { BiBell, BiUser, BiRefresh } from "react-icons/bi";
 import ProfileModal from "../components/modals/ProfileModal";
 
 // Constants
