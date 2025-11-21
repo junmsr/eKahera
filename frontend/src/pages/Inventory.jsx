@@ -3,6 +3,7 @@ import PageLayout from "../components/layout/PageLayout";
 import NavAdmin from "../components/layout/Nav-Admin";
 import Inventory from "../components/inventory/Inventory";
 import Modal from "../components/modals/Modal";
+import ProductFormModal from "../components/modals/ProductFormModal";
 import { api, authHeaders } from "../lib/api";
 
 const initialProducts = [];
@@ -481,8 +482,6 @@ export default function InventoryPage() {
       <Modal
         isOpen={showProductModal}
         onClose={() => setShowProductModal(false)}
-        title={editingProduct ? "Update Product" : "Add Product"}
-        variant="product"
         editingProduct={editingProduct}
         productForm={productForm}
         onChange={handleProductFormChange}
