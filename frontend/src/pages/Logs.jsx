@@ -14,6 +14,7 @@ const LogsPage = () => {
   const [roleFilter, setRoleFilter] = useState("all");
   const [sortOrder, setSortOrder] = useState("desc");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isSidebarOpen, setSidebarOpen] = useState(false);
   const dropdownRef = useRef(null);
 
   const [isSidebarOpen, setSidebarOpen] = useState(false);
@@ -205,7 +206,6 @@ const LogsPage = () => {
       title="LOGS"
       subtitle="System activity and transaction logs"
       sidebar={<NavAdmin />}
-      headerActions={headerActions}
       isSidebarOpen={isSidebarOpen}
       setSidebarOpen={setSidebarOpen}
       className="h-screen overflow-hidden"
@@ -400,8 +400,20 @@ const LogsPage = () => {
         </div>
 
         {error && (
-          <div className="mt-4 text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
-            {error}
+          <div className="bg-red-50 border-l-4 border-red-500 rounded-lg p-3 flex items-start gap-2 mt-4">
+            <svg className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+            <p className="text-sm font-medium text-red-700">
+              {(() => {
+                try {
+                  const parsed = JSON.parse(error);
+                  return parsed.error || parsed.message || error;
+                } catch {
+                  return error;
+                }
+              })()}
+            </p>
           </div>
         )}
       </div>
