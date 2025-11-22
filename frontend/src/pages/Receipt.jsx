@@ -1,14 +1,17 @@
 import React, { useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Background from '../components/layout/Background';
 import Navbar from '../components/layout/Navbar';
 import Card from '../components/common/Card';
 
 export default function Receipt() {
+	const navigate = useNavigate();
 	const params = new URLSearchParams(window.location.search);
 	const tn = params.get('tn');
 	const tid = params.get('tid');
 	const total = params.get('total');
 	const businessId = localStorage.getItem('business_id');
+	const user = JSON.parse(sessionStorage.getItem("user") || "{}");
 
 	const payload = useMemo(() => {
 		return JSON.stringify({ t: 'receipt', tn, tid: tid ? Number(tid) : null, total: total ? Number(total) : 0, b: businessId ? Number(businessId) : null });
@@ -36,6 +39,17 @@ export default function Receipt() {
 						<div className="pt-2">
 							<img src={qrSrc} alt="Receipt QR" className="w-[260px] h-[260px] border rounded-xl bg-white" />
 							<div className="text-blue-700 text-sm mt-2">QR contains a summary of this transaction.</div>
+						</div>
+						<div className="pt-4">
+							<button
+								onClick={() => {
+									if (user && user.role === 'cashier') navigate('/cashier-pos');
+									else navigate('/pos');
+								}}
+								className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition-colors duration-200"
+							>
+								Proceed
+							</button>
 						</div>
 					</Card>
 				</div>

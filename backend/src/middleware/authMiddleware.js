@@ -3,17 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const { hasRequiredDocuments } = require('../controllers/businessController');
 
-// Load config from config.env file
-const configPath = path.join(__dirname, '..', '..', 'config.env');
-const configContent = fs.readFileSync(configPath, 'utf8');
-const config = {};
-
-configContent.split('\n').forEach(line => {
-  const [key, value] = line.split('=');
-  if (key && value && !key.startsWith('#')) {
-    config[key.trim()] = value.trim();
-  }
-});
+const config = process.env;
 
 exports.authenticate = (req, res, next) => {
   console.log('Authentication middleware called for:', req.method, req.path);
@@ -27,7 +17,7 @@ exports.authenticate = (req, res, next) => {
   }
   
   try {
-    const payload = jwt.verify(token, config.JWT_SECRET);
+    const payload = jwt.verify(token, process.env.JWT_SECRET);
     console.log('Token verified successfully, payload:', payload);
     req.user = payload;
     next();

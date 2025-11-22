@@ -1,43 +1,57 @@
-const { Pool } = require('pg');
-const fs = require('fs');
+
 const path = require('path');
 
-// Load config from config.env
-const configPath = path.join(__dirname, '..', '..', 'config.env');
-const configContent = fs.readFileSync(configPath, 'utf8');
-const config = {};
+// Use dotenv to load the environment file (server.js already does this,
+// but using it here ensures this module works when loaded directly).
+require('dotenv').config({ path: path.join(__dirname, '..', '..', 'config.env') });
 
-configContent.split('\n').forEach(line => {
-  const [key, value] = line.split('=');
-  if (key && value && !key.startsWith('#')) {
-    config[key.trim()] = value.trim();
+// For local development against some hosted DBs (e.g. Supabase) that
+// present certificate chains not trusted by the local OS, allow skipping
+// TLS verification. This must be set before loading `pg` so Node's TLS
+// behavior is applied to the DB client.
+try {
+  const dbUrl = process.env.DATABASE_URL || '';
+  const dbHost = process.env.DB_HOST || '';
+  const looksLikeSupabase = dbUrl.includes('supabase') || dbHost.includes('supabase');
+  // Disable TLS verification also in production on Render environment for now
+  if (looksLikeSupabase && (process.env.NODE_ENV !== 'production' || process.env.RENDER === 'true')) {
+    process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+    process.env.PGSSLMODE = process.env.PGSSLMODE || 'no-verify';
+    console.warn('Disabled TLS certificate verification for DB connections (database.js) in Render or non-production');
   }
-});
+} catch (e) {
+  // no-op
+}
 
-// Build Pool config
-const poolConfig = config.DATABASE_URL
+const { Pool } = require('pg');
+
+// Prefer process.env (dotenv) which correctly handles quoted values and
+// values containing '='. This avoids truncation seen with naive splitting.
+const env = process.env;
+
+const poolConfig = env.DATABASE_URL
   ? {
-      connectionString: config.DATABASE_URL,
+      connectionString: env.DATABASE_URL,
       ssl: { rejectUnauthorized: false },
-      max: 10, // increased pool size for better resilience
-      min: 1, // maintain at least 1 connection
-      idleTimeoutMillis: 60000, // increased idle timeout
-      connectionTimeoutMillis: 20000, // increased connection timeout
+      max: 10,
+      min: 1,
+      idleTimeoutMillis: 60000,
+      connectionTimeoutMillis: 20000,
       keepAlive: true,
       keepAliveInitialDelayMillis: 10000,
-      allowExitOnIdle: true, // allow pool to close when idle
+      allowExitOnIdle: true,
     }
   : {
-      host: config.DB_HOST || 'localhost',
-      port: config.DB_PORT || 5432,
-      database: config.DB_NAME || 'ekahera_db',
-      user: config.DB_USER || 'postgres',
-      password: config.DB_PASSWORD,
+      host: env.DB_HOST || 'localhost',
+      port: env.DB_PORT ? parseInt(env.DB_PORT, 10) : 5432,
+      database: env.DB_NAME || 'ekahera_db',
+      user: env.DB_USER || 'postgres',
+      password: env.DB_PASSWORD,
       ssl: { rejectUnauthorized: false },
-      max: 10, // increased pool size
-      min: 1, // maintain at least 1 connection
-      idleTimeoutMillis: 60000, // increased idle timeout
-      connectionTimeoutMillis: 20000, // increased connection timeout
+      max: 10,
+      min: 1,
+      idleTimeoutMillis: 60000,
+      connectionTimeoutMillis: 20000,
       keepAlive: true,
       keepAliveInitialDelayMillis: 10000,
       allowExitOnIdle: true,

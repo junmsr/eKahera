@@ -4,8 +4,7 @@ import Button from "../common/Button";
 import { api } from "../../lib/api";
 import ScannerCard from "../ui/POS/ScannerCard";
 
-function PriceCheckModal({ isOpen, onClose }) {
-  const [sku, setSku] = useState("");
+function PriceCheckModal({ isOpen, onClose, sku, setSku }) {
   const [product, setProduct] = useState(null);
 
   const handleCheck = async () => {

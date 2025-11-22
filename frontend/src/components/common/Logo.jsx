@@ -24,9 +24,7 @@ function Logo({ size = 35, className = "", variant = "default" }) {
   }, []);
 
   // Base styles
-  const baseStyles = `flex items-center justify-center transition-all duration-300 ease-in-out ${
-    isLoaded ? "animate-bounce-in" : "opacity-0 scale-75"
-  }`;
+  const baseStyles = `flex items-center justify-center`;
 
   // Variant styles
   const variantStyles = {

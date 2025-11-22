@@ -173,63 +173,58 @@ export default function Dashboard() {
     try {
       setLoading(true);
       const token = sessionStorage.getItem("auth_token");
-      const [summary, timeseries, customersTs, pie, lowStock] =
+      // Prefer the view-backed dashboard endpoints we added
+      const [overview, timeseries, pie, inventoryMovement, oldLowStock] =
         await Promise.all([
-          api("/api/stats/summary", { headers: authHeaders(token) }),
-          api(
-            `/api/stats/sales-timeseries?days=${
-              range === "week" ? 7 : range === "month" ? 30 : 365
-            }`,
-            { headers: authHeaders(token) }
-          ),
+          api('/api/dashboard/overview', { headers: authHeaders(token) }),
           api(
             `/api/stats/customers-timeseries?days=${
-              range === "week" ? 7 : range === "month" ? 30 : 365
+              range === 'week' ? 7 : range === 'month' ? 30 : range === 'year' ? 365 : 180
             }`,
             { headers: authHeaders(token) }
           ),
-          api("/api/stats/sales-by-category", { headers: authHeaders(token) }),
-          api("/api/products/low-stock", { headers: authHeaders(token) }),
+          api('/api/stats/sales-by-category', { headers: authHeaders(token) }),
+          api('/api/dashboard/inventory-movement', { headers: authHeaders(token) }),
+          api('/api/products/low-stock', { headers: authHeaders(token) }),
         ]);
 
-      const derived = timeseries.map((d) => ({
+      const derived = (timeseries || []).map((d) => ({
         ...d,
-        value: Number(d.value || 0),
+        value: Number(d.customers || d.total || d.value || 0),
       }));
-      const pieTotal = pie.reduce((s, p) => s + Number(p.value || 0), 0) || 1;
-      const piePercent = pie.map((p) => ({
+
+      // Build pie data (categories) based on existing stats endpoint or overview
+      const pieTotal = (pie || []).reduce((s, p) => s + Number(p.value || 0), 0) || 1;
+      const piePercent = (pie || []).map((p) => ({
         ...p,
         percent: (Number(p.value || 0) / pieTotal) * 100,
       }));
 
-      setStats([
-        {
-          label: "Total Revenue",
-          value: summary.totalRevenue,
-          change: summary.growthRate,
-        },
-        { label: "New Customers", value: summary.newCustomers, change: 0 },
-        { label: "Active Accounts", value: summary.activeAccounts, change: 0 },
-        {
-          label: "Growth Rate",
-          value: summary.growthRate,
-          change: summary.growthRate,
-        },
-      ]);
+      // If overview is available use it for KPIs
+      if (overview && overview.totalSales !== undefined) {
+        setStats([
+          { label: 'Total Revenue', value: overview.totalSales, change: 0 },
+          { label: 'Total Transactions', value: overview.totalTransactions, change: 0 },
+          { label: 'Total Items Sold', value: overview.totalItemsSold, change: 0 },
+          { label: 'Avg TX Value', value: overview.averageTransactionValue, change: 0 },
+        ]);
+        setHighlight({
+          sales: Number(overview.totalSales || 0),
+          transactions: Number(overview.totalTransactions || 0),
+          topProduct:
+            (overview.topProducts && overview.topProducts[0]?.product_name) ||
+            (piePercent[0]?.name || '-'),
+        });
+      }
+
       setChartData(derived);
       setPieData(piePercent);
-      const totalTx = timeseries.reduce((s, d) => s + Number(d.value || 0), 0);
-      const top =
-        (pie || [])
-          .slice()
-          .sort((a, b) => Number(b.value || 0) - Number(a.value || 0))[0]
-          ?.name || "-";
-      setHighlight({
-        sales: Number(summary.totalRevenue || 0),
-        transactions: totalTx,
-        topProduct: top,
-      });
-      setLowStockProducts(lowStock || []);
+
+      // Prefer inventoryMovement for low stock list (fallback to old endpoint)
+      const low = (inventoryMovement || []).filter(
+        (p) => Number(p.quantity_in_stock || 0) <= 10
+      );
+      setLowStockProducts(low.length ? low : oldLowStock || []);
     } catch (err) {
       console.error("Failed to fetch dashboard data", err);
     } finally {
