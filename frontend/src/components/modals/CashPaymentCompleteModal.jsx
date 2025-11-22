@@ -7,20 +7,11 @@ function CashPaymentCompleteModal({
   onClose,
   change = 0,
   payable = 0,
-  onNewEntry,
   onReceipt,
+  onNewEntry,
 }) {
   const footerContent = (
     <div className="w-full flex flex-col gap-3">
-      <Button
-        label="NEW ENTRY"
-        className="w-full h-11 text-sm font-semibold"
-        variant="primary"
-        onClick={() => {
-          if (onNewEntry) onNewEntry();
-          else onClose();
-        }}
-      />
       <Button
         label="RECEIPT"
         className="w-full h-11 text-sm font-semibold bg-blue-700 hover:bg-blue-800 text-white"

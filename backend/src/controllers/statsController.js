@@ -362,3 +362,81 @@ exports.getBusinessStats = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+// Cash ledger: totals grouped by payment method for the current business, filtered by user role and today's transactions
+exports.getCashLedger = async (req, res) => {
+  try {
+    console.log('getCashLedger req.user:', req.user); // Log user info for debug
+    const role = (req.user?.role || '').toLowerCase();
+    const businessId = role === 'superadmin' ? (req.query?.business_id ? Number(req.query.business_id) : null) : (req.user?.businessId || null);
+    if (!businessId) return res.json([]);
+
+    let params = [businessId];
+    let whereClause = 'WHERE t.business_id = $1 AND DATE(t.created_at) = CURRENT_DATE';
+    if (role === 'cashier') {
+      params.push(req.user?.userId);
+      whereClause += ` AND t.cashier_user_id = $${params.length}`;
+    }
+
+    const q = `
+      SELECT tp.payment_type, COALESCE(SUM(t.total_amount),0) AS total
+      FROM transaction_payment tp
+      JOIN transactions t ON t.transaction_id = tp.transaction_id
+      ${whereClause}
+      GROUP BY tp.payment_type
+      ORDER BY total DESC
+    `;
+    const r = await pool.query(q, params);
+    res.json(r.rows.map(row => ({ name: row.payment_type, balance: Number(row.total) })));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Cash transactions list: optionally filter by payment_type and limit results, filtered by user role and today's transactions
+exports.getCashTransactions = async (req, res) => {
+  try {
+    console.log('getCashTransactions req.user:', req.user); // Log user info for debug
+    const role = (req.user?.role || '').toLowerCase();
+    const businessId = role === 'superadmin' ? (req.query?.business_id ? Number(req.query.business_id) : null) : (req.user?.businessId || null);
+    if (!businessId) return res.json([]);
+
+    const paymentType = req.query?.payment_type || null;
+    const limit = Math.min(200, Math.max(1, Number(req.query?.limit) || 50));
+
+    let params = [businessId];
+    let whereClause = 'WHERE t.business_id = $1 AND DATE(t.created_at) = CURRENT_DATE';
+    if (role === 'cashier') {
+      params.push(req.user?.userId);
+      whereClause += ` AND t.cashier_user_id = $${params.length}`;
+    }
+    if (paymentType) {
+      params.push(paymentType);
+      whereClause += ` AND tp.payment_type = $${params.length}`;
+    }
+
+    params.push(limit);
+
+    const q = `
+      SELECT t.transaction_id, t.total_amount, tp.payment_type, tp.money_received, tp.money_change, t.created_at, t.cashier_user_id
+      FROM transactions t
+      JOIN transaction_payment tp ON tp.transaction_id = t.transaction_id
+      ${whereClause}
+      ORDER BY t.created_at DESC
+      LIMIT $${params.length}
+    `;
+
+    const r = await pool.query(q, params);
+    res.json(r.rows.map(row => ({
+      transaction_id: row.transaction_id,
+      total: Number(row.total_amount),
+      payment_type: row.payment_type,
+      money_received: row.money_received,
+      money_change: row.money_change,
+      created_at: row.created_at,
+      cashier_user_id: row.cashier_user_id
+    })));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};

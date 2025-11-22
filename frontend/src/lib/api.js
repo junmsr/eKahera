@@ -3,7 +3,21 @@ export async function api(path, options = {}, returnRawResponse = false) {
   const LOCAL_DEFAULT = 'http://localhost:5000';
   const envUrl = import.meta.env.VITE_API_BASE_URL;
   const isLocalHost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-  const API_BASE = envUrl || (import.meta.env.DEV || isLocalHost ? LOCAL_DEFAULT : RENDER_URL);
+
+  // During development prefer relative paths so Vite dev server proxy handles
+  // routing to the backend. If `VITE_API_BASE_URL` is provided, use that.
+  let API_BASE;
+  if (envUrl) {
+    API_BASE = envUrl;
+  } else if (import.meta.env.DEV) {
+    // During development prefer the local backend directly. Using an explicit
+    // backend URL prevents 404s when Vite's proxy isn't active (e.g. when
+    // running a preview build). If you prefer the Vite proxy, set
+    // VITE_API_BASE_URL in your env.
+    API_BASE = LOCAL_DEFAULT;
+  } else {
+    API_BASE = isLocalHost ? LOCAL_DEFAULT : RENDER_URL;
+  }
 
   const headers = { ...(options.headers || {}) };
   // Let the browser set the Content-Type for FormData
@@ -26,11 +40,15 @@ export async function api(path, options = {}, returnRawResponse = false) {
 
   if (!res.ok) {
     const errorText = await res.text();
+    // Try to extract JSON error, otherwise return a concise status message.
     try {
-        const errorJson = JSON.parse(errorText);
-        throw new Error(errorJson?.error || errorText || 'Request failed');
+      const errorJson = JSON.parse(errorText);
+      const msg = errorJson?.error || errorJson?.message || JSON.stringify(errorJson);
+      throw new Error(`${res.status} ${res.statusText}: ${msg}`);
     } catch (e) {
-        throw new Error(errorText || 'Request failed');
+      // If the body looks like HTML (e.g. Vite/Express default page), hide raw HTML.
+      const bodySnippet = /<[^>]+>/.test(errorText) ? 'Server returned an HTML error page' : errorText;
+      throw new Error(`${res.status} ${res.statusText}: ${bodySnippet}`);
     }
   }
 

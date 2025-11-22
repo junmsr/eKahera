@@ -64,6 +64,7 @@ const paymentsRoutes = require('./routes/paymentsRoutes');
 const superAdminRoutes = require('./routes/superAdminRoutes');
 const documentRoutes = require('./routes/documentRoutes');
 const locationRoutes = require('./routes/locationRoutes');
+const dashboardRoutes = require('./routes/dashboardRoutes');
 
 const app = express();
 
@@ -94,6 +95,7 @@ app.use('/api/payments', paymentsRoutes);
 app.use('/api/superadmin', superAdminRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/locations', locationRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 const port = config.PORT || 5000;
 

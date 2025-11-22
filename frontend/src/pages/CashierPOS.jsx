@@ -18,6 +18,7 @@ function CashierPOS() {
   const navigate = useNavigate();
 
   const [sku, setSku] = useState("");
+  const [priceCheckSku, setPriceCheckSku] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [cart, setCart] = useState([]);
   const [appliedDiscount, setAppliedDiscount] = useState(null);
@@ -44,6 +45,41 @@ function CashierPOS() {
   const token = sessionStorage.getItem("auth_token");
   const user = JSON.parse(sessionStorage.getItem("user") || "{}");
   const hasFinalizedRef = React.useRef(false);
+
+  // Add keyboard shortcuts for buttons: F4-F8
+  useEffect(() => {
+    const keyDownHandler = (e) => {
+      if (e.repeat) return;
+      switch (e.key) {
+        case "F4":
+          e.preventDefault();
+          setShowCashLedger(true);
+          break;
+        case "F5":
+          e.preventDefault();
+          setShowDiscount(true);
+          break;
+        case "F6":
+          e.preventDefault();
+          setShowPriceCheck(true);
+          break;
+        case "F7":
+          e.preventDefault();
+          setShowImportCart(true);
+          break;
+        case "F8":
+          e.preventDefault();
+          if (cart.length > 0) {
+            setShowCheckout(true);
+          }
+          break;
+        default:
+          break;
+      }
+    };
+    window.addEventListener("keydown", keyDownHandler);
+    return () => window.removeEventListener("keydown", keyDownHandler);
+  }, [cart.length]);
 
   // Generate a client-side provisional transaction number when POS opens
   useEffect(() => {
@@ -348,12 +384,16 @@ function CashierPOS() {
             <div className="lg:col-span-4 flex flex-col gap-2 sm:gap-3 md:gap-4">
               {/* ScannerCard */}
               <div className="flex-shrink-0">
-                <ScannerCard
+              <ScannerCard
                   onScan={async (result) => {
                     const code = result?.[0]?.rawValue;
                     if (!code) return;
                     setScannerPaused(true);
-                    await addSkuToCart(code, 1);
+                    if (showPriceCheck) {
+                      setPriceCheckSku(code);
+                    } else {
+                      await addSkuToCart(code, 1);
+                    }
                   }}
                   paused={scannerPaused}
                   onResume={() => setScannerPaused(false)}
@@ -407,32 +447,32 @@ function CashierPOS() {
                 {/* Grouped Buttons */}
                 <div className="col-span-8">
                   <div className="grid grid-cols-2 sm:grid-cols-2 gap-2 sm:gap-3">
+<Button
+  label="CASH LEDGER (F4)"
+  size="md"
+  className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
+  variant="secondary"
+  microinteraction
+  onClick={() => setShowCashLedger(true)}
+  icon={
+    <svg
+      className="w-4 h-4"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+      />
+    </svg>
+  }
+  iconPosition="left"
+/>
                     <Button
-                      label="CASH LEDGER"
-                      size="md"
-                      className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
-                      variant="secondary"
-                      microinteraction
-                      onClick={() => setShowCashLedger(true)}
-                      icon={
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                          />
-                        </svg>
-                      }
-                      iconPosition="left"
-                    />
-                    <Button
-                      label="DISCOUNT"
+                      label="DISCOUNT (F5)"
                       size="md"
                       className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
                       onClick={() => setShowDiscount(true)}
@@ -456,7 +496,7 @@ function CashierPOS() {
                       iconPosition="left"
                     />
                     <Button
-                      label="PRICE CHECK"
+                      label="PRICE CHECK (F6)"
                       size="md"
                       className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
                       onClick={() => setShowPriceCheck(true)}
@@ -480,7 +520,7 @@ function CashierPOS() {
                       iconPosition="left"
                     />
                     <Button
-                      label="IMPORT CART"
+                      label="IMPORT CART (F7)"
                       size="md"
                       className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
                       onClick={() => setShowImportCart(true)}
@@ -508,31 +548,31 @@ function CashierPOS() {
 
                 {/* Checkout Button */}
                 <div className="col-span-4">
-                  <Button
-                    label="CHECKOUT"
-                    size="md"
-                    className="w-full h-full text-sm sm:text-base font-bold"
-                    variant="primary"
-                    microinteraction
-                    onClick={() => setShowCheckout(true)}
-                    disabled={cart.length === 0}
-                    icon={
-                      <svg
-                        className="w-5 h-5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                        />
-                      </svg>
-                    }
-                    iconPosition="left"
-                  />
+                    <Button
+                      label="CHECKOUT (F8)"
+                      size="md"
+                      className="w-full h-full text-sm sm:text-base font-bold"
+                      variant="primary"
+                      microinteraction
+                      onClick={() => setShowCheckout(true)}
+                      disabled={cart.length === 0}
+                      icon={
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
+                        </svg>
+                      }
+                      iconPosition="left"
+                    />
                 </div>
               </div>
             </div>
@@ -579,7 +619,12 @@ function CashierPOS() {
             setShowDiscount(false);
           }}
         />
-        <PriceCheckModal isOpen={showPriceCheck} onClose={() => setShowPriceCheck(false)} />
+        <PriceCheckModal
+          isOpen={showPriceCheck}
+          onClose={() => setShowPriceCheck(false)}
+          sku={priceCheckSku}
+          setSku={setPriceCheckSku}
+        />
         <CashLedgerModal isOpen={showCashLedger} onClose={() => setShowCashLedger(false)} />
         <CheckoutModal
           isOpen={showCheckout}
