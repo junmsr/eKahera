@@ -1,23 +1,25 @@
 export async function api(path, options = {}, returnRawResponse = false) {
-  const RENDER_URL = 'https://ekahera.onrender.com';
+  // Prefer the explicitly provided env var. If absent:
+  // - in dev use the local backend so `npm run dev` + Vite proxy still works
+  // - in production use a relative path (empty string) so callers can set the
+  //   correct API host during the build/deploy (recommended)
   const LOCAL_DEFAULT = 'http://localhost:5000';
   const envUrl = import.meta.env.VITE_API_BASE_URL;
   const isLocalHost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 
-  // During development prefer relative paths so Vite dev server proxy handles
-  // routing to the backend. If `VITE_API_BASE_URL` is provided, use that.
-  let API_BASE;
+  let API_BASE = '';
   if (envUrl) {
     API_BASE = envUrl;
   } else if (import.meta.env.DEV) {
-    // During development prefer the local backend directly. Using an explicit
-    // backend URL prevents 404s when Vite's proxy isn't active (e.g. when
-    // running a preview build). If you prefer the Vite proxy, set
-    // VITE_API_BASE_URL in your env.
     API_BASE = LOCAL_DEFAULT;
   } else {
-    API_BASE = isLocalHost ? LOCAL_DEFAULT : RENDER_URL;
+    // production: default to relative paths. Deployment should set
+    // VITE_API_BASE_URL to the deployed backend (e.g. https://api.example.com)
+    API_BASE = '';
   }
+
+  // Normalize: remove trailing slash if present so concatenation is consistent
+  if (API_BASE && API_BASE.endsWith('/')) API_BASE = API_BASE.slice(0, -1);
 
   const headers = { ...(options.headers || {}) };
   // Let the browser set the Content-Type for FormData
@@ -31,7 +33,7 @@ export async function api(path, options = {}, returnRawResponse = false) {
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const finalUrl = API_BASE + (path.startsWith('/api') ? path : `/api${path}`);
+  const finalUrl = (API_BASE || '') + (path.startsWith('/api') ? path : `/api${path}`);
   const res = await fetch(finalUrl, {
     ...options,
     credentials: 'include',
