@@ -11,17 +11,8 @@ const BusinessVerification = require('../models/BusinessVerification');
 const multer = require('multer');
 const axios = require('axios');
 
-// Load config from config.env file
-const configPath = path.join(__dirname, '..', '..', 'config.env');
-const configContent = fs.readFileSync(configPath, 'utf8');
-const config = {};
-
-configContent.split('\n').forEach(line => {
-  const [key, value] = line.split('=');
-  if (key && value && !key.startsWith('#')) {
-    config[key.trim()] = value.trim();
-  }
-});
+// Use environment variables directly, no manual config.env reading
+const config = process.env;
 
 // Required document types for business verification (canonical labels)
 const REQUIRED_DOCUMENT_TYPES = [
@@ -343,6 +334,7 @@ exports.registerBusiness = async (req, res) => {
     await client.query('UPDATE users SET business_id = $1 WHERE user_id = $2', [businessResult.rows[0].business_id, userId]);
 
 
+
     // Generate JWT token
     const token = jwt.sign(
       { 
@@ -351,9 +343,10 @@ exports.registerBusiness = async (req, res) => {
         role: 'business_owner',
         businessId: businessResult.rows[0].business_id
       },
-      config.JWT_SECRET,
+      process.env.JWT_SECRET,
       { expiresIn: '24h' }
     );
+
 
     await client.query('COMMIT');
 

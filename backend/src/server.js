@@ -1,9 +1,11 @@
 const path = require('path');
 const fs = require('fs');
 
-// Load environment variables from .env file for local development
-// In production (like on Render), these variables should be set in the dashboard
-require('dotenv').config({ path: path.join(__dirname, '..', 'config.env') });
+if (process.env.NODE_ENV !== 'production') {
+  // Load environment variables from .env file for local development
+  // In production (like on Render), these variables should be set in the dashboard
+  require('dotenv').config({ path: path.join(__dirname, '..', 'config.env') });
+}
 
 // If connecting to a hosted DB that uses a certificate not trusted by
 // the local environment (e.g. some Supabase setups), allow skipping
