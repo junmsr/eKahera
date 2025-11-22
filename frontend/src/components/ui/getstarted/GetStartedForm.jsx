@@ -329,13 +329,11 @@ export default function GetStartedForm({ hook, isOtpVerified, onOpenTerms, onOpe
                 style={{ borderColor: errors.businessType ? '#ef4444' : '' }}
               >
                 <option value="">Select business type</option>
-                <option value="Retail">Retail</option>
                 <option value="Grocery Store">Grocery Store</option>
                 <option value="Pharmacy">Pharmacy</option>
                 <option value="Clothing Store">Clothing Store</option>
                 <option value="Electronics Store">Electronics Store</option>
                 <option value="Hardware Store">Hardware Store</option>
-                <option value="Beauty Salon">Beauty Salon</option>
                 <option value="Bookstore">Bookstore</option>
                 <option value="Convenience Store">Convenience Store</option>
                 <option value="Others">Others</option>

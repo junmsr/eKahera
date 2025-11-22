@@ -8,10 +8,116 @@ import { api, authHeaders } from "../lib/api";
 const initialProducts = [];
 const initialCategories = [];
 
+// Function to get predefined categories based on business type
+function getCategoriesByBusinessType(businessType) {
+  const categoryMap = {
+    "Grocery Store": [
+      "Food & Beverages",
+      "Dairy & Eggs",
+      "Meat & Poultry",
+      "Fruits & Vegetables",
+      "Bakery",
+      "Snacks",
+      "Canned Goods",
+      "Frozen Foods",
+      "Household Essentials",
+      "Personal Care",
+      "Others"
+    ],
+    "Pharmacy": [
+      "Prescription Drugs",
+      "Over-the-Counter Medicines",
+      "Vitamins & Supplements",
+      "Personal Care",
+      "Baby Care",
+      "Health & Wellness",
+      "Medical Supplies",
+      "Cosmetics",
+      "Household Essentials",
+      "Others"
+    ],
+    "Clothing Store": [
+      "Men's Clothing",
+      "Women's Clothing",
+      "Children's Clothing",
+      "Shoes & Accessories",
+      "Sportswear",
+      "Formal Wear",
+      "Casual Wear",
+      "Underwear & Sleepwear",
+      "Others"
+    ],
+    "Electronics Store": [
+      "Smartphones & Accessories",
+      "Laptops & Computers",
+      "TV & Home Entertainment",
+      "Audio Equipment",
+      "Gaming",
+      "Cameras & Photography",
+      "Wearable Technology",
+      "Home Appliances",
+      "Others"
+    ],
+    "Hardware Store": [
+      "Tools & Hardware",
+      "Plumbing",
+      "Electrical",
+      "Paint & Supplies",
+      "Building Materials",
+      "Garden & Outdoor",
+      "Home Improvement",
+      "Safety Equipment",
+      "Others"
+    ],
+    "Bookstore": [
+      "Fiction",
+      "Non-Fiction",
+      "Educational",
+      "Children's Books",
+      "Comics & Graphic Novels",
+      "Magazines",
+      "Stationery",
+      "Others"
+    ],
+    "Convenience Store": [
+      "Snacks & Candy",
+      "Beverages",
+      "Tobacco Products",
+      "Household Items",
+      "Personal Care",
+      "Frozen Foods",
+      "Bakery",
+      "Others"
+    ],
+    "Others": [
+      "Food & Beverages",
+      "Electronics",
+      "Clothing & Apparel",
+      "Health & Beauty",
+      "Home & Garden",
+      "Sports & Outdoors",
+      "Books & Media",
+      "Toys & Games",
+      "Automotive",
+      "Office Supplies",
+      "Pet Supplies",
+      "Jewelry & Accessories",
+      "Hardware & Tools",
+      "Baby & Kids",
+      "Pharmacy",
+      "Grocery",
+      "Others"
+    ]
+  };
+
+  return categoryMap[businessType] || categoryMap["Others"];
+}
+
 export default function InventoryPage() {
   // State
   const [products, setProducts] = useState(initialProducts);
   const [categories, setCategories] = useState(initialCategories);
+  const [businessType, setBusinessType] = useState("");
   const [showProductModal, setShowProductModal] = useState(false);
   const [showStockModal, setShowStockModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
@@ -33,25 +139,34 @@ export default function InventoryPage() {
   const [apiError, setApiError] = useState("");
   const [isSidebarOpen, setSidebarOpen] = useState(false);
 
-  // Load inventory from API
+  // Load inventory and business type from API
   useEffect(() => {
     const fetchInventory = async () => {
       try {
         setLoading(true);
         setApiError("");
         const token = sessionStorage.getItem("auth_token");
+
+        // Fetch business type
+        const userData = await api("/api/auth/me", {
+          headers: authHeaders(token),
+        });
+        const businessType = userData?.business?.business_type || "Others";
+        setBusinessType(businessType);
+
+        // Set predefined categories based on business type
+        const predefinedCategories = getCategoriesByBusinessType(businessType);
+        setCategories(
+          predefinedCategories.map((name, index) => ({
+            id: index + 1,
+            name: name,
+          }))
+        );
+
+        // Fetch inventory
         const data = await api("/api/inventory", {
           headers: authHeaders(token),
         });
-        const cats = await api("/api/products/categories/all", {
-          headers: authHeaders(token),
-        });
-        setCategories(
-          (cats || []).map((c) => ({
-            id: c.product_category_id,
-            name: c.product_category_name,
-          }))
-        );
 
         // Map backend rows to UI shape with correct column mapping
         const mapped = (data || []).map((row) => ({
