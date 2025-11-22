@@ -17,8 +17,6 @@ const LogsPage = () => {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const dropdownRef = useRef(null);
 
-  const [isSidebarOpen, setSidebarOpen] = useState(false);
-
   const fetchLogs = async () => {
     try {
       setLoading(true);
