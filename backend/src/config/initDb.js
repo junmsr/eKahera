@@ -1,19 +1,12 @@
 const pool = require('./database');
 const bcrypt = require('bcryptjs');
-const fs = require('fs');
-const path = require('path');
 
-// Load config from config.env file
-const configPath = path.join(__dirname, '..', '..', 'config.env');
-const configContent = fs.readFileSync(configPath, 'utf8');
-const config = {};
-
-configContent.split('\n').forEach(line => {
-  const [key, value] = line.split('=');
-  if (key && value && !key.startsWith('#')) {
-    config[key.trim()] = value.trim();
-  }
-});
+const config = {
+  CREATE_INITIAL_SUPERADMIN: process.env.CREATE_INITIAL_SUPERADMIN,
+  SUPERADMIN_EMAIL: process.env.SUPERADMIN_EMAIL,
+  SUPERADMIN_PASSWORD: process.env.SUPERADMIN_PASSWORD,
+  SUPERADMIN_NAME: process.env.SUPERADMIN_NAME
+};
 
 async function initializeDatabase() {
   const client = await pool.connect();
