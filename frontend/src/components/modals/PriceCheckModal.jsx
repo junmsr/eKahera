@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import Modal from "./Modal";
+import BaseModal from "./BaseModal";
+import Button from "../common/Button";
 import { api } from "../../lib/api";
 import ScannerCard from "../ui/POS/ScannerCard";
 
@@ -10,9 +11,13 @@ function PriceCheckModal({ isOpen, onClose }) {
   const handleCheck = async () => {
     if (!sku) return;
     try {
-      const businessId = localStorage.getItem('business_id');
-      const query = businessId ? `?business_id=${encodeURIComponent(businessId)}` : '';
-      const res = await api(`/api/products/public/sku/${encodeURIComponent(sku)}${query}`);
+      const businessId = localStorage.getItem("business_id");
+      const query = businessId
+        ? `?business_id=${encodeURIComponent(businessId)}`
+        : "";
+      const res = await api(
+        `/api/products/public/sku/${encodeURIComponent(sku)}${query}`
+      );
       if (res) {
         setProduct({
           name: res.product_name,
@@ -39,55 +44,87 @@ function PriceCheckModal({ isOpen, onClose }) {
     return () => clearTimeout(t);
   }, [sku]);
 
+  const footerContent = (
+    <Button
+      label="Close"
+      variant="secondary"
+      onClick={onClose}
+      className="w-full"
+    />
+  );
+
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Price Check" className="max-w-md">
-      {/* Exit X Button */}
-      <button
-        onClick={onClose}
-        className="absolute top-4 right-4 text-2xl text-gray-400 hover:text-blue-600 focus:outline-none"
-        aria-label="Close"
-        type="button"
-      >
-        ×
-      </button>
-      <div className="flex flex-col items-center gap-4 p-4">
-        {/* Optional embedded scanner */}
-        <div className="w-full">
-          <ScannerCard
-            onScan={(result) => {
-              const code = result?.[0]?.rawValue;
-              if (code) {
-                setSku(code);
-              }
-            }}
-            paused={false}
-            onResume={() => {}}
-            className="w-full"
-            textMain="text-blue-700"
+    <BaseModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Price Check"
+      subtitle="Scan or enter SKU/barcode"
+      icon={
+        <svg
+          className="w-5 h-5 text-white"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
           />
-        </div>
-        <div className="w-full">
-          <label className="block text-blue-700 font-semibold mb-2">Enter SKU or Barcode</label>
-          <input
-            type="text"
-            value={sku}
-            onChange={e => setSku(e.target.value)}
-            className="w-full border border-blue-200 rounded px-4 py-2 text-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
-            placeholder="Enter SKU or scan barcode"
-          />
-        </div>
-        {/* Auto-updates; no need for a button */}
-        {product ? (
-          <div className="w-full bg-blue-50 rounded-lg shadow p-4 mt-2 flex flex-col items-center">
-            <div className="text-lg font-semibold text-blue-700">{product.name}</div>
-            <div className="text-2xl font-bold text-blue-900 mt-1 mb-1">₱{product.price.toFixed(2)}</div>
-            <div className="text-xs text-gray-500">SKU: {product.sku}</div>
-          </div>
-        ) : sku ? (
-          <div className="text-red-500 text-sm mt-2">No product found.</div>
-        ) : null}
+        </svg>
+      }
+      footer={footerContent}
+      size="md"
+      contentClassName="space-y-4"
+    >
+      {/* Scanner */}
+      <div className="w-full">
+        <ScannerCard
+          onScan={(result) => {
+            const code = result?.[0]?.rawValue;
+            if (code) {
+              setSku(code);
+            }
+          }}
+          paused={false}
+          onResume={() => {}}
+          className="w-full"
+          textMain="text-blue-700"
+        />
       </div>
-    </Modal>
+
+      {/* Manual Input */}
+      <div className="w-full">
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Enter SKU or Barcode
+        </label>
+        <input
+          type="text"
+          value={sku}
+          onChange={(e) => setSku(e.target.value)}
+          className="w-full border border-gray-300 rounded-lg px-4 py-2 text-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          placeholder="Enter SKU or scan barcode"
+        />
+      </div>
+
+      {/* Results */}
+      {product ? (
+        <div className="w-full bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-200/50">
+          <div className="text-lg font-semibold text-blue-900 mb-1">
+            {product.name}
+          </div>
+          <div className="text-3xl font-bold text-blue-600 mb-2">
+            ₱{product.price.toFixed(2)}
+          </div>
+          <div className="text-xs text-gray-500">SKU: {product.sku}</div>
+        </div>
+      ) : sku ? (
+        <div className="text-red-500 text-sm text-center py-4">
+          No product found.
+        </div>
+      ) : null}
+    </BaseModal>
   );
 }
 

@@ -22,9 +22,11 @@ import NavAdmin from "../components/layout/Nav-Admin";
 import StatsCard from "../components/ui/Dashboard/StatsCard";
 import ChartCard from "../components/ui/Dashboard/ChartCard";
 import DashboardStatsCard from "../components/ui/Dashboard/DashboardStatsCard";
+import DashboardBusinessReport from "../components/ui/Dashboard/DashboardBusinessReport";
 import Button from "../components/common/Button";
 import { BiBell, BiUser, BiRefresh } from "react-icons/bi";
 import ProfileModal from "../components/modals/ProfileModal";
+import NotificationDropdown from "../components/common/NotificationDropdown";
 
 // Constants
 const BLUE_COLORS = ["#2563eb", "#60a5fa", "#93c5fd", "#dbeafe"];
@@ -222,13 +224,18 @@ export default function Dashboard() {
       const readIds = new Set(
         JSON.parse(sessionStorage.getItem("read_notif_ids") || "[]")
       );
-      const mapped = (resp || []).map((log) => ({
-        id: log.log_id,
-        title: log.action,
-        message: `${log.username} (${log.role}) did an action: ${log.action}`,
-        time: new Date(log.date_time).toLocaleString(),
-        isRead: readIds.has(log.log_id),
-      }));
+      const deletedIds = new Set(
+        JSON.parse(sessionStorage.getItem("deleted_notif_ids") || "[]")
+      );
+      const mapped = (resp || [])
+        .filter((log) => !deletedIds.has(log.log_id))
+        .map((log) => ({
+          id: log.log_id,
+          title: log.action,
+          message: `${log.username} (${log.role}) did an action: ${log.action}`,
+          time: new Date(log.date_time).toLocaleString(),
+          isRead: readIds.has(log.log_id),
+        }));
       setNotifications(mapped);
       setUnreadCount(mapped.filter((n) => !n.isRead).length);
     } catch (e) {
@@ -250,6 +257,34 @@ export default function Dashboard() {
       notifs.map((n) => (n.id === id ? { ...n, isRead: true } : n))
     );
     setUnreadCount((c) => Math.max(0, c - 1));
+  };
+
+  const handleMarkAsUnread = (id) => {
+    const readIds = JSON.parse(
+      sessionStorage.getItem("read_notif_ids") || "[]"
+    );
+    const filtered = readIds.filter((rid) => rid !== id);
+    sessionStorage.setItem("read_notif_ids", JSON.stringify(filtered));
+    setNotifications((notifs) =>
+      notifs.map((n) => (n.id === id ? { ...n, isRead: false } : n))
+    );
+    setUnreadCount((c) => c + 1);
+  };
+
+  const handleDeleteNotification = (id) => {
+    const deletedIds = JSON.parse(
+      sessionStorage.getItem("deleted_notif_ids") || "[]"
+    );
+    sessionStorage.setItem(
+      "deleted_notif_ids",
+      JSON.stringify([...deletedIds, id])
+    );
+    setNotifications((notifs) => notifs.filter((n) => n.id !== id));
+    // Update unread count if deleted notification was unread
+    const notif = notifications.find((n) => n.id === id);
+    if (notif && !notif.isRead) {
+      setUnreadCount((c) => Math.max(0, c - 1));
+    }
   };
 
   // Export to CSV
@@ -303,54 +338,16 @@ export default function Dashboard() {
       </select>
 
       <div className="relative" ref={notificationRef}>
-        <button
-          className="p-2 rounded-full hover:bg-gray-200/80 transition-colors relative"
-          onClick={() => setShowNotifications(!showNotifications)}
-          title="Notifications"
-        >
-          <BiBell className="w-5 h-5 text-gray-700" />
-          {unreadCount > 0 && (
-            <span className="absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
-              {unreadCount}
-            </span>
-          )}
-        </button>
-        {showNotifications && (
-          <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
-            <div className="p-4 border-b border-gray-200 flex justify-between items-center">
-              <h3 className="font-semibold text-gray-900">Notifications</h3>
-            </div>
-            <div className="max-h-96 overflow-y-auto">
-              {notifications.length > 0 ? (
-                notifications.map((notification) => (
-                  <div
-                    key={notification.id}
-                    className={`p-4 border-b border-gray-100 hover:bg-gray-50 cursor-pointer ${
-                      !notification.isRead ? "bg-blue-50" : ""
-                    }`}
-                    onClick={() => handleMarkAsRead(notification.id)}
-                  >
-                    <div className="flex justify-between items-start">
-                      <h4 className="font-medium text-gray-900">
-                        {notification.title}
-                      </h4>
-                      <span className="text-xs text-gray-500">
-                        {notification.time}
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-600 mt-1">
-                      {notification.message}
-                    </p>
-                  </div>
-                ))
-              ) : (
-                <div className="p-4 text-center text-gray-500">
-                  No notifications
-                </div>
-              )}
-            </div>
-          </div>
-        )}
+        <NotificationDropdown
+          notifications={notifications}
+          unreadCount={unreadCount}
+          onMarkAsRead={handleMarkAsRead}
+          onMarkAsUnread={handleMarkAsUnread}
+          onDelete={handleDeleteNotification}
+          isOpen={showNotifications}
+          onToggle={() => setShowNotifications(!showNotifications)}
+          containerRef={notificationRef}
+        />
       </div>
 
       <button
@@ -452,7 +449,9 @@ export default function Dashboard() {
         ) : (
           <div className="bg-white p-6 rounded-xl shadow-md">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-bold text-gray-800">Low Stock Products</h3>
+              <h3 className="text-lg font-bold text-gray-800">
+                Low Stock Products
+              </h3>
               <button
                 onClick={async () => {
                   try {
@@ -509,19 +508,19 @@ export default function Dashboard() {
               <div className="h-8 bg-gray-300 rounded w-1/2"></div>
             </div>
           ) : (
-          <div className="hidden lg:block">
-            <DashboardStatsCard stats={highlight} />
-          </div>
+            <div className="hidden lg:block">
+              <DashboardStatsCard stats={highlight} />
+            </div>
           )}
           {loading ? (
-          <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200 animate-pulse hidden lg:block">
+            <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200 animate-pulse hidden lg:block">
               <div className="h-6 bg-gray-200 rounded w-1/2 mb-6"></div>
               <div className="h-4 bg-gray-200 rounded w-full mb-3"></div>
               <div className="h-4 bg-gray-200 rounded w-full mb-3"></div>
               <div className="h-4 bg-gray-200 rounded w-4/5"></div>
             </div>
           ) : (
-          <div className="bg-white p-6 rounded-xl shadow-md hidden lg:block">
+            <div className="bg-white p-6 rounded-xl shadow-md hidden lg:block">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-bold text-gray-800">
                   Low Stock Products
@@ -530,7 +529,11 @@ export default function Dashboard() {
                   onClick={async () => {
                     try {
                       const token = sessionStorage.getItem("auth_token");
-                    await api.post("/api/products/send-low-stock-alert", null, { headers: authHeaders(token) });
+                      await api.post(
+                        "/api/products/send-low-stock-alert",
+                        null,
+                        { headers: authHeaders(token) }
+                      );
                       alert("Low stock alert sent successfully!");
                     } catch (err) {
                       alert("Failed to send low stock alert.");
@@ -566,6 +569,9 @@ export default function Dashboard() {
           )}
         </div>
       </div>
+      <div className="max-w-10lx mx-auto w-full px-6">
+        <DashboardBusinessReport />
+      </div>
       <ProfileModal
         isOpen={showProfileModal}
         onClose={() => setShowProfileModal(false)}
@@ -583,9 +589,16 @@ function LowStockList({ lowStockProducts }) {
   return (
     <ul className="divide-y divide-gray-200">
       {lowStockProducts.map((product) => (
-        <li key={product.product_id} className="py-3 flex justify-between items-center">
-          <span className="text-sm font-medium text-gray-800">{product.product_name}</span>
-          <span className="text-sm font-bold text-red-600">{product.quantity_in_stock} left</span>
+        <li
+          key={product.product_id}
+          className="py-3 flex justify-between items-center"
+        >
+          <span className="text-sm font-medium text-gray-800">
+            {product.product_name}
+          </span>
+          <span className="text-sm font-bold text-red-600">
+            {product.quantity_in_stock} left
+          </span>
         </li>
       ))}
     </ul>

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import Button from "../common/Button";
+import BaseModal from "./BaseModal";
 import CashPaymentCompleteModal from "./CashPaymentCompleteModal";
 
 function CashPaymentModal({ isOpen, onClose, total, onConfirm }) {
@@ -37,78 +38,108 @@ function CashPaymentModal({ isOpen, onClose, total, onConfirm }) {
 
   const handleExactAmount = () => setAmountReceived(total.toString());
 
+  const handleProceed = () => {
+    if (!amountReceived || Number(amountReceived) < total) {
+      alert("Amount received must be greater than or equal to total.");
+      return;
+    }
+    const received = Number(amountReceived);
+    // notify parent/payment handler
+    if (onConfirm) onConfirm(received);
+
+    // compute change and show completion modal
+    const change = received - total;
+    setCompleteData({ change, payable: total });
+    setShowComplete(true);
+  };
+
+  const footerContent = (
+    <>
+      <Button
+        label="Cancel"
+        variant="secondary"
+        onClick={onClose}
+        type="button"
+        className="flex-1"
+      />
+      <Button
+        label="Proceed"
+        variant="primary"
+        type="button"
+        onClick={handleProceed}
+        className="flex-1"
+      />
+    </>
+  );
+
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-50">
-      <div className="bg-white rounded-2xl shadow-lg w-[350px] p-6 relative">
-        {/* Close button */}
-        <button
-          className="absolute top-3 right-3 text-gray-500 hover:text-gray-800"
-          onClick={onClose}
+    <BaseModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Cash Payment"
+      subtitle="Enter amount received"
+      icon={
+        <svg
+          className="w-5 h-5 text-white"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
         >
-          ✕
-        </button>
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+          />
+        </svg>
+      }
+      footer={footerContent}
+      size="md"
+      contentClassName="space-y-4"
+    >
+      {/* Total Amount */}
+      <div className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-2xl py-6 px-4 text-center">
+        <div className="text-sm opacity-90 mb-2">Total Amount</div>
+        <div className="text-4xl font-bold">₱{total.toFixed(2)}</div>
+      </div>
 
-        {/* Total Amount */}
-        <div className="bg-blue-500 text-white rounded-xl py-4 text-center text-2xl font-bold mb-4">
-          ₱{total.toFixed(2)}
-        </div>
-
-        {/* Input */}
+      {/* Input */}
+      <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Amount Received
         </label>
         <input
           type="number"
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 mb-4 text-center text-lg"
+          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-center text-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           placeholder="₱0.00"
           value={amountReceived}
           onChange={(e) => setAmountReceived(e.target.value)}
         />
+      </div>
 
-        {/* Quick Select Buttons */}
-        <div className="grid grid-cols-3 gap-2 mb-4">
+      {/* Quick Select Buttons */}
+      <div>
+        <p className="text-xs text-gray-600 mb-2">Quick amounts:</p>
+        <div className="grid grid-cols-3 gap-2">
           {[100, 200, 300, 400, 500, 600, 700, 800, 900].map((val) => (
             <button
               key={val}
-              className="bg-blue-100 hover:bg-blue-200 text-blue-700 font-bold py-2 rounded-lg"
+              className="bg-blue-100 hover:bg-blue-200 text-blue-700 font-bold py-2 rounded-lg transition-colors text-sm"
               onClick={() => handleQuickAmount(val)}
             >
               {val}
             </button>
           ))}
         </div>
-
-        {/* Exact Amount Button */}
-        <Button
-          label="EXACT AMOUNT"
-          className="w-full h-12 text-base font-bold mb-3"
-          onClick={handleExactAmount}
-        />
-
-        {/* Proceed Button */}
-        <Button
-          label="PROCEED"
-          className="w-full h-12 text-base font-bold"
-          variant="primary"
-          onClick={() => {
-            if (!amountReceived || Number(amountReceived) < total) {
-              alert("Amount received must be greater than or equal to total.");
-              return;
-            }
-            const received = Number(amountReceived);
-            // notify parent/payment handler
-            if (onConfirm) onConfirm(received);
-
-            // compute change and show completion modal
-            const change = received - total;
-            setCompleteData({ change, payable: total });
-            setShowComplete(true);
-          }}
-        />
-        
-        {/* completion modal is rendered in place of this modal when showComplete is true */}
       </div>
-    </div>
+
+      {/* Exact Amount Button */}
+      <Button
+        label="Use Exact Amount"
+        className="w-full h-10 text-sm font-bold bg-slate-600 hover:bg-slate-700 text-white"
+        onClick={handleExactAmount}
+      />
+    </BaseModal>
   );
 }
 

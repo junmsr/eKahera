@@ -5,6 +5,7 @@ import Card from "../components/common/Card";
 import Loader from "../components/common/Loader";
 import { api } from "../lib/api";
 import Button from "../components/common/Button";
+import ProfileModal from "../components/modals/ProfileModal";
 
 // Icon Components
 const UserIcon = (props) => (
@@ -207,7 +208,7 @@ const getQrCodeData = (profileData) => {
   url.searchParams.set("business_id", String(businessId));
   const urlString = url.toString();
   const data = encodeURIComponent(urlString);
-  
+
   // Use a slightly larger size for better download quality, but display size remains 260x260
   const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${data}&qzone=2&format=png&_=${Date.now()}`;
   const downloadSrc = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${data}&qzone=2&format=png&_=${Date.now()}`;
@@ -226,6 +227,7 @@ const Profile = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [isSidebarOpen, setSidebarOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   useEffect(() => {
     fetchProfileData();
@@ -312,7 +314,9 @@ const Profile = () => {
         size="sm"
         icon={<LockIcon />}
         iconPosition="left"
-        onClick={() => alert("Change password functionality would be implemented here")}
+        onClick={() =>
+          alert("Change password functionality would be implemented here")
+        }
         className="whitespace-nowrap [&>span]:hidden sm:[&>span]:inline"
       >
         <span>Change Password</span>
@@ -322,7 +326,7 @@ const Profile = () => {
         size="sm"
         icon={<EditIcon />}
         iconPosition="left"
-        onClick={() => alert("Edit profile functionality would be implemented here")}
+        onClick={() => setIsEditModalOpen(true)}
         className="whitespace-nowrap [&>span]:hidden sm:[&>span]:inline"
       >
         <span>Edit Profile</span>
@@ -357,6 +361,11 @@ const Profile = () => {
       setSidebarOpen={setSidebarOpen}
       className="bg-gray-50"
     >
+      <ProfileModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        userData={profileData?.user}
+      />
       <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
         {error && (
           <Card className="bg-gradient-to-br from-red-50 to-orange-50 border-red-200/50">
