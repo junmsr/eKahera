@@ -13,10 +13,11 @@ try {
   const dbUrl = process.env.DATABASE_URL || '';
   const dbHost = process.env.DB_HOST || '';
   const looksLikeSupabase = dbUrl.includes('supabase') || dbHost.includes('supabase');
-  if (looksLikeSupabase && process.env.NODE_ENV !== 'production') {
+  // Disable TLS verification also in production on Render environment for now
+  if (looksLikeSupabase && (process.env.NODE_ENV !== 'production' || process.env.RENDER === 'true')) {
     process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
     process.env.PGSSLMODE = process.env.PGSSLMODE || 'no-verify';
-    console.warn('Local dev: disabled TLS certificate verification for DB connections (database.js)');
+    console.warn('Disabled TLS certificate verification for DB connections (database.js) in Render or non-production');
   }
 } catch (e) {
   // no-op
