@@ -7,17 +7,9 @@ const { logAction } = require('../utils/logger');
 const { hasRequiredDocuments } = require('./businessController');
 const { sendOTP } = require('./otpController');
 
-// Load config from config.env file
-const configPath = path.join(__dirname, '..', '..', 'config.env');
-const configContent = fs.readFileSync(configPath, 'utf8');
-const config = {};
-
-configContent.split('\n').forEach(line => {
-  const [key, value] = line.split('=');
-  if (key && value && !key.startsWith('#')) {
-    config[key.trim()] = value.trim();
-  }
-});
+const config = {
+  JWT_SECRET: process.env.JWT_SECRET
+};
 
 exports.register = async (req, res) => {
   const { name, email, password, role, business_id } = req.body;

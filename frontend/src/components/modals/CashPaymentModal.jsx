@@ -27,8 +27,12 @@ function CashPaymentModal({ isOpen, onClose, total, onConfirm }) {
           if (onClose) onClose();
         }}
         onReceipt={() => {
-          // placeholder: can wire receipt logic here
-          alert("Receipt generated");
+          // Call parent confirm (which performs checkout/navigation) when user
+          // explicitly requests the receipt. This prevents immediate navigation
+          // that would close the completion modal too soon.
+          if (onConfirm && completeData?.received != null) {
+            onConfirm(Number(completeData.received));
+          }
         }}
       />
     );
@@ -44,12 +48,10 @@ function CashPaymentModal({ isOpen, onClose, total, onConfirm }) {
       return;
     }
     const received = Number(amountReceived);
-    // notify parent/payment handler
-    if (onConfirm) onConfirm(received);
-
-    // compute change and show completion modal
+    // compute change and show completion modal; delay calling parent onConfirm
+    // so cashier can view the completion screen before the app navigates
     const change = received - total;
-    setCompleteData({ change, payable: total });
+    setCompleteData({ change, payable: total, received });
     setShowComplete(true);
   };
 

@@ -1,9 +1,28 @@
 const path = require('path');
 const fs = require('fs');
 
-// Load environment variables from .env file for local development
-// In production (like on Render), these variables should be set in the dashboard
-require('dotenv').config({ path: path.join(__dirname, '..', 'config.env') });
+if (process.env.NODE_ENV !== 'production') {
+  // Load environment variables from .env file for local development
+  // In production (like on Render), these variables should be set in the dashboard
+  require('dotenv').config({ path: path.join(__dirname, '..', 'config.env') });
+}
+
+// If connecting to a hosted DB that uses a certificate not trusted by
+// the local environment (e.g. some Supabase setups), allow skipping
+// certificate verification for local development only. This prevents
+// `SELF_SIGNED_CERT_IN_CHAIN` errors when running locally against
+// a remote DB. Do not enable this in production.
+try {
+  const dbUrl = process.env.DATABASE_URL || '';
+  const dbHost = process.env.DB_HOST || '';
+  const looksLikeSupabase = dbUrl.includes('supabase') || dbHost.includes('supabase');
+  if (looksLikeSupabase && process.env.NODE_ENV !== 'production') {
+    process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+    console.warn('Local dev: disabled TLS certificate verification for DB connections');
+  }
+} catch (e) {
+  // Swallow any unexpected errors here; we don't want startup to fail.
+}
 
 // The config object is populated from environment variables.
 // This is compatible with hosting platforms like Render.
@@ -47,6 +66,7 @@ const paymentsRoutes = require('./routes/paymentsRoutes');
 const superAdminRoutes = require('./routes/superAdminRoutes');
 const documentRoutes = require('./routes/documentRoutes');
 const locationRoutes = require('./routes/locationRoutes');
+const dashboardRoutes = require('./routes/dashboardRoutes');
 
 const app = express();
 
@@ -77,6 +97,7 @@ app.use('/api/payments', paymentsRoutes);
 app.use('/api/superadmin', superAdminRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/locations', locationRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 const port = config.PORT || 5000;
 

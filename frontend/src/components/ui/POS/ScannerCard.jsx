@@ -34,6 +34,8 @@ function ScannerCard({
   const [quaggaInitialized, setQuaggaInitialized] = useState(false);
   const scannerRef = useRef(null);
   const [modalInitialized, setModalInitialized] = useState(false);
+  const [usbInputBuffer, setUsbInputBuffer] = useState("");
+  const [lastKeyTime, setLastKeyTime] = useState(0);
 
   useEffect(() => {
     // Check camera permissions and try to initialize camera
@@ -141,6 +143,48 @@ function ScannerCard({
       navigator.vibrate(100); // 100ms vibration
     }
   };
+
+  // USB Barcode Scanner Keyboard Input Handler
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      // Only process if not in an input field and scanner is not paused
+      if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA' || paused) {
+        return;
+      }
+
+      const currentTime = Date.now();
+      const timeDiff = currentTime - lastKeyTime;
+
+      // If more than 100ms since last key, start new scan
+      if (timeDiff > 100) {
+        setUsbInputBuffer(event.key);
+      } else {
+        // Accumulate input
+        setUsbInputBuffer(prev => prev + event.key);
+      }
+      setLastKeyTime(currentTime);
+
+      // If Enter key pressed, process the barcode
+      if (event.key === 'Enter') {
+        event.preventDefault();
+          const barcode = usbInputBuffer.trim();
+          if (barcode) {
+            console.log("USB Scanner detected:", barcode);
+            playBeep();
+            vibrateOnScan();
+            setScanHistory(prev => {
+              const newHistory = [barcode, ...prev.filter(item => item !== barcode)].slice(0, 5);
+              return newHistory;
+            });
+            onScan([{ rawValue: barcode }]);
+          }
+        setUsbInputBuffer("");
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [paused, lastKeyTime, usbInputBuffer, onScan, playBeep, vibrateOnScan]);
 
   // Initialize Quagga scanner
   const initQuagga = async () => {
