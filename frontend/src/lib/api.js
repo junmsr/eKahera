@@ -1,5 +1,9 @@
 export async function api(path, options = {}, returnRawResponse = false) {
-  const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://ekahera.onrender.com';
+  const RENDER_URL = 'https://ekahera.onrender.com';
+  const LOCAL_DEFAULT = 'http://localhost:5000';
+  const envUrl = import.meta.env.VITE_API_BASE_URL;
+  const isLocalHost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+  const API_BASE = envUrl || (import.meta.env.DEV || isLocalHost ? LOCAL_DEFAULT : RENDER_URL);
 
   const headers = { ...(options.headers || {}) };
   // Let the browser set the Content-Type for FormData

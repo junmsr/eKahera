@@ -123,6 +123,27 @@ function ScannerCard({
     audioContext.current = new (window.AudioContext || window.webkitAudioContext)();
   }, []);
 
+  // Play beep sound on successful scan
+  const playBeep = () => {
+    if (audioContext.current) {
+      const oscillator = audioContext.current.createOscillator();
+      const gainNode = audioContext.current.createGain();
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.current.destination);
+      oscillator.frequency.setValueAtTime(800, audioContext.current.currentTime);
+      gainNode.gain.setValueAtTime(0.3, audioContext.current.currentTime);
+      oscillator.start();
+      oscillator.stop(audioContext.current.currentTime + 0.1);
+    }
+  };
+
+  // Trigger vibration on mobile devices for successful scan
+  const vibrateOnScan = () => {
+    if (isMobile && 'vibrate' in navigator) {
+      navigator.vibrate(100); // 100ms vibration
+    }
+  };
+
   // USB Barcode Scanner Keyboard Input Handler
   useEffect(() => {
     const handleKeyDown = (event) => {
@@ -146,17 +167,17 @@ function ScannerCard({
       // If Enter key pressed, process the barcode
       if (event.key === 'Enter') {
         event.preventDefault();
-        const barcode = usbInputBuffer.trim();
-        if (barcode) {
-          console.log("USB Scanner detected:", barcode);
-          playBeep();
-          vibrateOnScan();
-          setScanHistory(prev => {
-            const newHistory = [barcode, ...prev.filter(item => item !== barcode)].slice(0, 5);
-            return newHistory;
-          });
-          onScan([{ rawValue: barcode }]);
-        }
+          const barcode = usbInputBuffer.trim();
+          if (barcode) {
+            console.log("USB Scanner detected:", barcode);
+            playBeep();
+            vibrateOnScan();
+            setScanHistory(prev => {
+              const newHistory = [barcode, ...prev.filter(item => item !== barcode)].slice(0, 5);
+              return newHistory;
+            });
+            onScan([{ rawValue: barcode }]);
+          }
         setUsbInputBuffer("");
       }
     };
@@ -164,27 +185,6 @@ function ScannerCard({
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [paused, lastKeyTime, usbInputBuffer, onScan, playBeep, vibrateOnScan]);
-
-  // Play beep sound on successful scan
-  const playBeep = () => {
-    if (audioContext.current) {
-      const oscillator = audioContext.current.createOscillator();
-      const gainNode = audioContext.current.createGain();
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.current.destination);
-      oscillator.frequency.setValueAtTime(800, audioContext.current.currentTime);
-      gainNode.gain.setValueAtTime(0.3, audioContext.current.currentTime);
-      oscillator.start();
-      oscillator.stop(audioContext.current.currentTime + 0.1);
-    }
-  };
-
-  // Trigger vibration on mobile devices for successful scan
-  const vibrateOnScan = () => {
-    if (isMobile && 'vibrate' in navigator) {
-      navigator.vibrate(100); // 100ms vibration
-    }
-  };
 
   // Initialize Quagga scanner
   const initQuagga = async () => {

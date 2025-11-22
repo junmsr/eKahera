@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   BarChart,
   Bar,
@@ -14,43 +14,7 @@ import {
   Pie,
   Cell,
 } from "recharts";
-
-// Example data
-const reportData = {
-  salesByLocation: [
-    { location: "Main", sales: 32000 },
-    { location: "East", sales: 18500 },
-    { location: "West", sales: 14200 },
-  ],
-  productPerformance: [
-    { name: "Grocery", sales: 28000, trend: "up" },
-    { name: "Beverages", sales: 18000, trend: "up" },
-    { name: "Snacks", sales: 12000, trend: "down" },
-    { name: "Stationery", sales: 4200, trend: "down" },
-    { name: "Toys", sales: 2500, trend: "flat" },
-  ],
-  revenueVsExpenses: [
-    { month: "Oct", revenue: 58000, expenses: 38000 },
-    { month: "Nov", revenue: 64700, expenses: 42000 },
-  ],
-  profitTrend: [
-    { month: "Sep", profit: 18000 },
-    { month: "Oct", profit: 20000 },
-    { month: "Nov", profit: 22700 },
-  ],
-  paymentMethods: [
-    { name: "Cash", value: 35, fill: "#3b82f6" },
-    { name: "GCash", value: 45, fill: "#10b981" },
-    { name: "Credit Card", value: 20, fill: "#f59e0b" },
-  ],
-  revenue: 64700,
-  expenses: 42000,
-  netProfit: 22700,
-  grossMargin: 35,
-  operatingCosts: 12000,
-  cashFlow: 8500,
-  profitGrowth: 13.5,
-};
+import { api } from "../../../lib/api";
 
 const TrendIcon = ({ trend }) => {
   if (trend === "up")
@@ -61,6 +25,42 @@ const TrendIcon = ({ trend }) => {
 };
 
 export default function DashboardBusinessReport() {
+  const [keyMetrics, setKeyMetrics] = useState({ revenue: 0, expenses: 0, netProfit: 0, grossMargin: 0 });
+  const [salesByLocation, setSalesByLocation] = useState([]);
+  const [revenueVsExpenses, setRevenueVsExpenses] = useState([]);
+  const [profitTrend, setProfitTrend] = useState([]);
+  const [paymentMethods, setPaymentMethods] = useState([]);
+  const [productPerformance, setProductPerformance] = useState([]);
+  const [businessStats, setBusinessStats] = useState({ cashFlow: 0, operatingCosts: 0, profitGrowth: 0 });
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [keyMetricsRes, salesByLocationRes, revenueVsExpensesRes, profitTrendRes, paymentMethodsRes, productPerformanceRes, businessStatsRes] = await Promise.all([
+          api('/api/stats/key-metrics'),
+          api('/api/stats/sales-by-location'),
+          api('/api/stats/revenue-vs-expenses'),
+          api('/api/stats/profit-trend'),
+          api('/api/stats/payment-methods'),
+          api('/api/stats/product-performance'),
+          api('/api/stats/business-stats')
+        ]);
+
+        setKeyMetrics(keyMetricsRes || {});
+        setSalesByLocation(salesByLocationRes || []);
+        setRevenueVsExpenses(revenueVsExpensesRes || []);
+        setProfitTrend(profitTrendRes || []);
+        setPaymentMethods(paymentMethodsRes || []);
+        setProductPerformance(productPerformanceRes || []);
+        setBusinessStats(businessStatsRes || {});
+      } catch (error) {
+        console.error('Error fetching business report data:', error);
+      }
+    };
+
+    fetchData();
+  }, []);
+
   return (
     <section className="w-full">
       {/* Key Metrics */}
@@ -70,7 +70,7 @@ export default function DashboardBusinessReport() {
             Total Revenue
           </p>
           <p className="text-2xl font-bold text-gray-900">
-            ₱{reportData.revenue.toLocaleString()}
+            ₱{keyMetrics.revenue.toLocaleString()}
           </p>
           <p className="text-xs text-green-600 mt-2">↗ +11.2%</p>
         </div>
@@ -79,7 +79,7 @@ export default function DashboardBusinessReport() {
             Operating Expenses
           </p>
           <p className="text-2xl font-bold text-gray-900">
-            ₱{reportData.expenses.toLocaleString()}
+            ₱{keyMetrics.expenses.toLocaleString()}
           </p>
           <p className="text-xs text-orange-600 mt-2">↗ +8.5%</p>
         </div>
@@ -88,7 +88,7 @@ export default function DashboardBusinessReport() {
             Net Profit
           </p>
           <p className="text-2xl font-bold text-gray-900">
-            ₱{reportData.netProfit.toLocaleString()}
+            ₱{keyMetrics.netProfit.toLocaleString()}
           </p>
           <p className="text-xs text-green-600 mt-2">↗ +13.5%</p>
         </div>
@@ -97,7 +97,7 @@ export default function DashboardBusinessReport() {
             Gross Margin
           </p>
           <p className="text-2xl font-bold text-gray-900">
-            {reportData.grossMargin}%
+            {keyMetrics.grossMargin}%
           </p>
           <p className="text-xs text-green-600 mt-2">↗ +2.1%</p>
         </div>
@@ -112,7 +112,7 @@ export default function DashboardBusinessReport() {
           </h3>
           <ResponsiveContainer width="100%" height={280}>
             <BarChart
-              data={reportData.salesByLocation}
+              data={salesByLocation}
               margin={{ top: 10, right: 10, left: 0, bottom: 10 }}
             >
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -131,7 +131,7 @@ export default function DashboardBusinessReport() {
           </h3>
           <ResponsiveContainer width="100%" height={280}>
             <BarChart
-              data={reportData.revenueVsExpenses}
+              data={revenueVsExpenses}
               margin={{ top: 10, right: 10, left: 0, bottom: 10 }}
             >
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -155,7 +155,7 @@ export default function DashboardBusinessReport() {
           </h3>
           <ResponsiveContainer width="100%" height={280}>
             <LineChart
-              data={reportData.profitTrend}
+              data={profitTrend}
               margin={{ top: 10, right: 10, left: 0, bottom: 10 }}
             >
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -181,7 +181,7 @@ export default function DashboardBusinessReport() {
           <ResponsiveContainer width="100%" height={280}>
             <PieChart margin={{ top: 10, right: 10, left: 10, bottom: 10 }}>
               <Pie
-                data={reportData.paymentMethods}
+                data={paymentMethods}
                 cx="50%"
                 cy="50%"
                 labelLine={false}
@@ -190,7 +190,7 @@ export default function DashboardBusinessReport() {
                 fill="#8884d8"
                 dataKey="value"
               >
-                {reportData.paymentMethods.map((entry, index) => (
+                {paymentMethods.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.fill} />
                 ))}
               </Pie>
@@ -206,7 +206,7 @@ export default function DashboardBusinessReport() {
           Product Performance
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {reportData.productPerformance.map((product) => (
+          {productPerformance.map((product) => (
             <div
               key={product.name}
               className="bg-gray-50 rounded-lg p-4 border border-gray-150"
@@ -240,7 +240,7 @@ export default function DashboardBusinessReport() {
             Cash Flow
           </p>
           <p className="text-2xl font-bold text-green-900">
-            ₱{reportData.cashFlow.toLocaleString()}
+            ₱{businessStats.cashFlow.toLocaleString()}
           </p>
           <p className="text-xs text-green-700 mt-2">Positive this month</p>
         </div>
@@ -249,7 +249,7 @@ export default function DashboardBusinessReport() {
             Operating Costs
           </p>
           <p className="text-2xl font-bold text-blue-900">
-            ₱{reportData.operatingCosts.toLocaleString()}
+            ₱{businessStats.operatingCosts.toLocaleString()}
           </p>
           <p className="text-xs text-blue-700 mt-2">Controlled & optimized</p>
         </div>
@@ -258,7 +258,7 @@ export default function DashboardBusinessReport() {
             Profit Growth
           </p>
           <p className="text-2xl font-bold text-purple-900">
-            +{reportData.profitGrowth}%
+            +{businessStats.profitGrowth}%
           </p>
           <p className="text-xs text-purple-700 mt-2">vs. previous month</p>
         </div>

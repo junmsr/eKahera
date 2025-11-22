@@ -13,102 +13,93 @@ const initialCategories = [];
 function getCategoriesByBusinessType(businessType) {
   const categoryMap = {
     "Grocery Store": [
-      "Food & Beverages",
-      "Dairy & Eggs",
+      "Fresh Produce",
       "Meat & Poultry",
-      "Fruits & Vegetables",
-      "Bakery",
-      "Snacks",
-      "Canned Goods",
-      "Frozen Foods",
+      "Seafood",
+      "Dairy & Eggs",
+      "Bread & Bakery",
+      "Snacks & Chips",
+      "Beverages",
+      "Canned & Packaged Goods",
+      "Frozen Food",
+      "Rice, Pasta & Grains",
+      "Condiments & Spices",
+      "Cleaning Supplies",
       "Household Essentials",
-      "Personal Care",
-      "Others"
+      "Baby Products",
+      "Pet Supplies",
     ],
     "Pharmacy": [
-      "Prescription Drugs",
-      "Over-the-Counter Medicines",
+      "Prescription Medicines",
+      "OTC Medicines",
       "Vitamins & Supplements",
+      "First Aid Supplies",
+      "Medical Devices",
       "Personal Care",
+      "Hygiene Products",
+      "Beauty & Cosmetics",
       "Baby Care",
-      "Health & Wellness",
-      "Medical Supplies",
-      "Cosmetics",
-      "Household Essentials",
-      "Others"
+      "Adult Care",
+      "PPE & Sanitizers",
     ],
     "Clothing Store": [
-      "Men's Clothing",
-      "Women's Clothing",
-      "Children's Clothing",
-      "Shoes & Accessories",
-      "Sportswear",
-      "Formal Wear",
-      "Casual Wear",
-      "Underwear & Sleepwear",
-      "Others"
+      "Men’s Clothing",
+      "Women’s Clothing",
+      "Kids’ Clothing",
+      "Baby Clothing",
+      "Footwear",
+      "Bags & Accessories",
+      "Underwear & Socks",
     ],
     "Electronics Store": [
-      "Smartphones & Accessories",
-      "Laptops & Computers",
-      "TV & Home Entertainment",
-      "Audio Equipment",
-      "Gaming",
+      "Mobile Devices",
+      "Computers & Laptops",
+      "Computer Accessories",
+      "Phone Accessories",
+      "Audio Devices",
       "Cameras & Photography",
-      "Wearable Technology",
       "Home Appliances",
-      "Others"
+      "Personal Appliances",
+      "Gaming Consoles & Accessories",
+      "Cables, Adapters & Chargers",
     ],
     "Hardware Store": [
-      "Tools & Hardware",
-      "Plumbing",
-      "Electrical",
-      "Paint & Supplies",
-      "Building Materials",
-      "Garden & Outdoor",
-      "Home Improvement",
-      "Safety Equipment",
-      "Others"
+      "Hand Tools",
+      "Power Tools",
+      "Construction Materials",
+      "Electrical Supplies",
+      "Plumbing Supplies",
+      "Paint & Painting Supplies",
+      "Gardening Tools",
+      "Fasteners (Nails, Screws, Bolts)",
+      "Safety Gear",
     ],
     "Bookstore": [
-      "Fiction",
-      "Non-Fiction",
-      "Educational",
-      "Children's Books",
-      "Comics & Graphic Novels",
-      "Magazines",
-      "Stationery",
-      "Others"
+      "Fiction Books",
+      "Non-Fiction Books",
+      "Educational Books",
+      "Children’s Books",
+      "Comics & Manga",
+      "School Supplies",
+      "Art Materials",
+      "Office Supplies",
+      "Stationery & Gifts",
     ],
     "Convenience Store": [
-      "Snacks & Candy",
+      "Snacks",
       "Beverages",
-      "Tobacco Products",
-      "Household Items",
-      "Personal Care",
-      "Frozen Foods",
-      "Bakery",
-      "Others"
+      "Ready-to-Eat Food",
+      "Instant Noodles / Cup Meals",
+      "Frozen Food",
+      "Basic Grocery Items",
+      "Toiletries",
+      "Basic OTC Medicines",
+      "Household Essentials",
+      "Phone Load",
+      "Ice Cream & Desserts",
+      "Tobacco & Lighters",
     ],
-    "Others": [
-      "Food & Beverages",
-      "Electronics",
-      "Clothing & Apparel",
-      "Health & Beauty",
-      "Home & Garden",
-      "Sports & Outdoors",
-      "Books & Media",
-      "Toys & Games",
-      "Automotive",
-      "Office Supplies",
-      "Pet Supplies",
-      "Jewelry & Accessories",
-      "Hardware & Tools",
-      "Baby & Kids",
-      "Pharmacy",
-      "Grocery",
-      "Others"
-    ]
+    "Others": ["General"],
   };
 
   return categoryMap[businessType] || categoryMap["Others"];
@@ -117,8 +108,36 @@ function getCategoriesByBusinessType(businessType) {
 export default function InventoryPage() {
   // State
   const [products, setProducts] = useState(initialProducts);
-  const [categories, setCategories] = useState(initialCategories);
-  const [businessType, setBusinessType] = useState("");
+  const [categories, setCategories] = useState(() => {
+    try {
+      let storedType = null;
+      try {
+        storedType = (typeof window !== 'undefined' && sessionStorage.getItem('business_type')) || null;
+      } catch (e) {
+        storedType = null;
+      }
+      // Fallback: try `user` object saved at login
+      if (!storedType && typeof window !== 'undefined') {
+        try {
+          const raw = sessionStorage.getItem('user') || localStorage.getItem('user');
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            storedType = parsed?.business?.business_type || parsed?.business_type || null;
+            if (storedType) {
+              try { sessionStorage.setItem('business_type', storedType); } catch (e) { /* ignore */ }
+            }
+          }
+        } catch (e) {
+          storedType = null;
+        }
+      }
+      storedType = storedType || 'Others';
+      const list = getCategoriesByBusinessType(storedType) || [];
+      return list.map((name, index) => ({ id: index + 1, name }));
+    } catch {
+      return initialCategories;
+    }
+  });
   const [showProductModal, setShowProductModal] = useState(false);
   const [showStockModal, setShowStockModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
@@ -149,11 +168,18 @@ export default function InventoryPage() {
         const token = sessionStorage.getItem("auth_token");
 
         // Fetch business type
-        const userData = await api("/api/auth/me", {
+        const userData = await api("/api/auth/profile", {
           headers: authHeaders(token),
         });
         const businessType = userData?.business?.business_type || "Others";
-        setBusinessType(businessType);
+        // persist business type so modals can use it before API completes
+        try {
+          if (typeof window !== "undefined") sessionStorage.setItem("business_type", businessType);
+        } catch (storageErr) {
+          // ignore storage errors (e.g. private mode)
+           
+          console.debug("Could not persist business_type", storageErr);
+        }
 
         // Set predefined categories based on business type
         const predefinedCategories = getCategoriesByBusinessType(businessType);
@@ -597,6 +623,8 @@ export default function InventoryPage() {
       <Modal
         isOpen={showProductModal}
         onClose={() => setShowProductModal(false)}
+        variant="product"
+        title={editingProduct ? "Edit Product" : "Add New Product"}
         editingProduct={editingProduct}
         productForm={productForm}
         onChange={handleProductFormChange}

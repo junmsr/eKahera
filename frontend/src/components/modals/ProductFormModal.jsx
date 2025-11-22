@@ -24,6 +24,120 @@ export default function ProductFormModal({
     onSubmit(e);
   };
 
+  // Compute effective categories (use passed `categories` if valid,
+  // otherwise derive from stored `business_type`).
+  const getFallbackCategories = () => {
+    const map = {
+      "Grocery Store": [
+        "Fresh Produce",
+        "Meat & Poultry",
+        "Seafood",
+        "Dairy & Eggs",
+        "Bread & Bakery",
+        "Snacks & Chips",
+        "Beverages",
+        "Canned & Packaged Goods",
+        "Frozen Food",
+        "Rice, Pasta & Grains",
+        "Condiments & Spices",
+        "Cleaning Supplies",
+        "Household Essentials",
+        "Baby Products",
+        "Pet Supplies",
+      ],
+      "Pharmacy": [
+        "Prescription Medicines",
+        "OTC Medicines",
+        "Vitamins & Supplements",
+        "First Aid Supplies",
+        "Medical Devices",
+        "Personal Care",
+        "Hygiene Products",
+        "Beauty & Cosmetics",
+        "Baby Care",
+        "Adult Care",
+        "PPE & Sanitizers",
+      ],
+      "Clothing Store": [
+        "Men’s Clothing",
+        "Women’s Clothing",
+        "Kids’ Clothing",
+        "Baby Clothing",
+        "Footwear",
+        "Bags & Accessories",
+        "Underwear & Socks",
+      ],
+      "Electronics Store": [
+        "Mobile Devices",
+        "Computers & Laptops",
+        "Computer Accessories",
+        "Phone Accessories",
+        "Audio Devices",
+        "Cameras & Photography",
+        "Home Appliances",
+        "Personal Appliances",
+        "Gaming Consoles & Accessories",
+        "Cables, Adapters & Chargers",
+      ],
+      "Hardware Store": [
+        "Hand Tools",
+        "Power Tools",
+        "Construction Materials",
+        "Electrical Supplies",
+        "Plumbing Supplies",
+        "Paint & Painting Supplies",
+        "Gardening Tools",
+        "Fasteners (Nails, Screws, Bolts)",
+        "Safety Gear",
+      ],
+      "Bookstore": [
+        "Fiction Books",
+        "Non-Fiction Books",
+        "Educational Books",
+        "Children’s Books",
+        "Comics & Manga",
+        "School Supplies",
+        "Art Materials",
+        "Office Supplies",
+        "Stationery & Gifts",
+      ],
+      "Convenience Store": [
+        "Snacks",
+        "Beverages",
+        "Ready-to-Eat Food",
+        "Instant Noodles / Cup Meals",
+        "Frozen Food",
+        "Basic Grocery Items",
+        "Toiletries",
+        "Basic OTC Medicines",
+        "Household Essentials",
+        "Phone Load",
+        "Ice Cream & Desserts",
+        "Tobacco & Lighters",
+      ],
+      Others: ["General"],
+    };
+
+    const stored = (typeof window !== "undefined" && sessionStorage.getItem("business_type")) || "Others";
+    const list = map[stored] || map["Others"];
+    return list.map((name, i) => ({ id: `fb-${i}`, name }));
+  };
+
+  const normalizeCategories = (cats) =>
+    cats.map((c, i) => ({ id: c.id || `p-${i}`, name: c.name || c }));
+
+  const effectiveCategories = (() => {
+    if (categories && categories.length > 0) {
+      const first = categories[0];
+      const firstName = first && (first.name || first);
+      if (categories.length === 1 && (firstName === "General" || firstName === "Others")) {
+        return getFallbackCategories();
+      }
+      return normalizeCategories(categories);
+    }
+    return getFallbackCategories();
+  })();
+
   // Calculate profit margin
   const costPrice = Number(productForm.cost_price) || 0;
   const sellingPrice = Number(productForm.selling_price) || 0;
@@ -174,26 +288,7 @@ export default function ProductFormModal({
               required
             >
               <option value="">Select a category</option>
-              <option value="Food & Beverages">Food & Beverages</option>
-              <option value="Electronics">Electronics</option>
-              <option value="Clothing & Apparel">Clothing & Apparel</option>
-              <option value="Health & Beauty">Health & Beauty</option>
-              <option value="Home & Garden">Home & Garden</option>
-              <option value="Sports & Outdoors">Sports & Outdoors</option>
-              <option value="Books & Media">Books & Media</option>
-              <option value="Toys & Games">Toys & Games</option>
-              <option value="Automotive">Automotive</option>
-              <option value="Office Supplies">Office Supplies</option>
-              <option value="Pet Supplies">Pet Supplies</option>
-              <option value="Jewelry & Accessories">
-                Jewelry & Accessories
-              </option>
-              <option value="Hardware & Tools">Hardware & Tools</option>
-              <option value="Baby & Kids">Baby & Kids</option>
-              <option value="Pharmacy">Pharmacy</option>
-              <option value="Grocery">Grocery</option>
-              <option value="Others">Others</option>
-              {categories.map((c) => (
+              {effectiveCategories.map((c) => (
                 <option key={c.id} value={c.name}>
                   {c.name}
                 </option>

@@ -5,6 +5,23 @@ const fs = require('fs');
 // In production (like on Render), these variables should be set in the dashboard
 require('dotenv').config({ path: path.join(__dirname, '..', 'config.env') });
 
+// If connecting to a hosted DB that uses a certificate not trusted by
+// the local environment (e.g. some Supabase setups), allow skipping
+// certificate verification for local development only. This prevents
+// `SELF_SIGNED_CERT_IN_CHAIN` errors when running locally against
+// a remote DB. Do not enable this in production.
+try {
+  const dbUrl = process.env.DATABASE_URL || '';
+  const dbHost = process.env.DB_HOST || '';
+  const looksLikeSupabase = dbUrl.includes('supabase') || dbHost.includes('supabase');
+  if (looksLikeSupabase && process.env.NODE_ENV !== 'production') {
+    process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+    console.warn('Local dev: disabled TLS certificate verification for DB connections');
+  }
+} catch (e) {
+  // Swallow any unexpected errors here; we don't want startup to fail.
+}
+
 // The config object is populated from environment variables.
 // This is compatible with hosting platforms like Render.
 const config = {
