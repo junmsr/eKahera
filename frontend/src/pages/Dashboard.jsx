@@ -31,31 +31,40 @@ import NotificationDropdown from "../components/common/NotificationDropdown";
 // Constants
 const BLUE_COLORS = ["#2563eb", "#60a5fa", "#93c5fd", "#dbeafe"];
 
-// Chart Components
+const SOFT_BLUE = "#93c5fd";
+const SOFT_GREEN = "#1e2cecff";
+const SOFT_PURPLE = "#3e209bff";
+
 function VisitorsChart({ data, className = "" }) {
   return (
     <ChartCard
-      title="Visitors for the last 6 months"
-      className={`bg-white border border-gray-200 ${className}`}
+      title={
+        <span className="text-blue-700">Visitors for the last 6 months</span>
+      }
+      className={`bg-white/80 backdrop-blur-md border border-white/60 shadow-xl hover:shadow-2xl p-6 ${className}`}
     >
       <div className="h-72">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart
             data={data}
-            margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
+            margin={{ top: 20, right: 20, left: 0, bottom: 5 }}
           >
             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-            <XAxis dataKey="name" tick={{ fill: "#374151" }} />
-            <YAxis tick={{ fill: "#374151" }} />
+            <XAxis dataKey="name" tick={{ fill: "#374151", fontSize: 14 }} />
+            <YAxis tick={{ fill: "#374151", fontSize: 14 }} />
             <Tooltip
-              contentStyle={{ background: "#fff", borderColor: "#e5e7eb" }}
+              contentStyle={{
+                background: "#fff",
+                borderColor: "#e5e7eb",
+                borderRadius: 8,
+              }}
             />
             <Line
               type="monotone"
               dataKey="value"
-              stroke="#2563eb"
-              strokeWidth={2}
-              dot={{ r: 4, fill: "#2563eb" }}
+              stroke={SOFT_BLUE}
+              strokeWidth={3}
+              dot={{ r: 5, fill: SOFT_BLUE }}
             />
           </LineChart>
         </ResponsiveContainer>
@@ -66,7 +75,10 @@ function VisitorsChart({ data, className = "" }) {
 
 function SalesPieChart({ data, className = "" }) {
   return (
-    <ChartCard title="Sales by Product Category" className={className}>
+    <ChartCard
+      title={<span className="text-blue-700">Sales by Product Category</span>}
+      className={`bg-white/80 backdrop-blur-md border border-white/60 shadow-xl hover:shadow-2xl p-6 ${className}`}
+    >
       <div className="h-72">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
@@ -80,13 +92,17 @@ function SalesPieChart({ data, className = "" }) {
               label={(entry) =>
                 `${entry.name} (${Number(entry.percent || 0).toFixed(1)}%)`
               }
+              fill={SOFT_PURPLE}
             >
-              {data.map((entry, idx) => (
-                <Cell
-                  key={`cell-${idx}`}
-                  fill={BLUE_COLORS[idx % BLUE_COLORS.length]}
-                />
-              ))}
+              {data.map((entry, idx) => {
+                const colors = [SOFT_BLUE, SOFT_GREEN, SOFT_PURPLE];
+                return (
+                  <Cell
+                    key={`cell-${idx}`}
+                    fill={colors[idx % colors.length]}
+                  />
+                );
+              })}
             </Pie>
             <Legend />
             <Tooltip
@@ -94,7 +110,11 @@ function SalesPieChart({ data, className = "" }) {
                 `${Number(value).toFixed(1)}%`,
                 props?.payload?.name,
               ]}
-              contentStyle={{ background: "#f3e8ff", borderColor: "#2563eb" }}
+              contentStyle={{
+                background: "#fafafa",
+                borderColor: SOFT_PURPLE,
+                borderRadius: 8,
+              }}
             />
           </PieChart>
         </ResponsiveContainer>

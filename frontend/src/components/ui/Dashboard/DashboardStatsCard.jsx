@@ -17,7 +17,7 @@ function DashboardStatsCard({ stats, className = "", ...props }) {
             <span className="text-xs font-medium text-gray-500 uppercase tracking-tight mb-1">
               Today's Sales
             </span>
-            <span className="text-3xl md:text-4xl font-bold text-gray-900">
+            <span className="text-3xl md:text-base font-bold text-gray-900">
               ₱{Number(stats.sales || 0).toLocaleString()}
             </span>
           </div>
@@ -32,7 +32,7 @@ function DashboardStatsCard({ stats, className = "", ...props }) {
             <span className="text-xs font-medium text-gray-500 uppercase tracking-tight mb-1">
               Transactions
             </span>
-            <span className="text-3xl md:text-4xl font-bold text-gray-900">
+            <span className="text-3xl md:text-base font-bold text-gray-900">
               {Number(stats.transactions || 0).toLocaleString()}
             </span>
           </div>
@@ -47,7 +47,7 @@ function DashboardStatsCard({ stats, className = "", ...props }) {
             <span className="text-xs font-medium text-gray-500 uppercase tracking-tight mb-1">
               Top Product
             </span>
-            <span className="text-2xl md:text-3xl font-bold text-gray-900 text-center line-clamp-2">
+            <span className="text-2xl md:text-base font-bold text-gray-900 text-center line-clamp-2">
               {stats.topProduct || "-"}
             </span>
           </div>
