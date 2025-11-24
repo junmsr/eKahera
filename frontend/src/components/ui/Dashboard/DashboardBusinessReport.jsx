@@ -276,39 +276,43 @@ export default function DashboardBusinessReport() {
           Product Performance
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {productPerformance.map((product) => {
-            return (
-              <div
-                key={product.name}
-                className="bg-gray-50 rounded-lg p-4 border border-gray-150"
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <span className="font-semibold text-gray-800 text-sm">
-                    {product.name}
-                  </span>
-                  <TrendIcon trend={product.trend} />
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
-                  <div
-                    className="w-full bg-gray-300 rounded-full h-3 mb-3"
-                    role="progressbar"
-                    aria-valuenow={progressPercent}
-                    aria-valuemin={0}
-                    aria-valuemax={100}
-                    aria-label={`Sales progress for ${product.name}`}
-                  >
-                    <div
-                      className="bg-blue-500 h-3 rounded-full transition-all duration-300"
-                      style={{ width: `${progressPercent}%` }}
-                    ></div>
+          {(() => {
+            const maxSales = Math.max(...productPerformance.map((p) => p.sales || 0));
+            return productPerformance.map((product) => {
+              const progressPercent = maxSales ? Math.round((product.sales / maxSales) * 100) : 0;
+              return (
+                <div
+                  key={product.name}
+                  className="bg-gray-50 rounded-lg p-4 border border-gray-150"
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="font-semibold text-gray-800 text-sm">
+                      {product.name}
+                    </span>
+                    <TrendIcon trend={product.trend} />
                   </div>
-                  <p className="text-sm text-gray-600 font-semibold">
-                    ₱{product.sales.toLocaleString()}
-                  </p>
+                  <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
+                    <div
+                      className="w-full bg-gray-300 rounded-full h-3 mb-3"
+                      role="progressbar"
+                      aria-valuenow={progressPercent}
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-label={`Sales progress for ${product.name}`}
+                    >
+                      <div
+                        className="bg-blue-500 h-3 rounded-full transition-all duration-300"
+                        style={{ width: `${progressPercent}%` }}
+                      ></div>
+                    </div>
+                    <p className="text-sm text-gray-600 font-semibold">
+                      ₱{product.sales.toLocaleString()}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            });
+          })()}
         </div>
       </div>
 
