@@ -7,9 +7,11 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "build:gh": "vite build --outDir ../docs",
+    "build:gh": "vite build --outDir ../docs && node scripts/copy-404.js",
+    "postbuild": "node scripts/copy-404.js",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "deploy": "npm run build && git add docs && git commit -m \"Deploy\" && git push origin main"
   },
   "dependencies": {
     "@ericblade/quagga2": "^1.10.2",
