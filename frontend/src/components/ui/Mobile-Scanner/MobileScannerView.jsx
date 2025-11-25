@@ -248,11 +248,7 @@ function MobileScannerView() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
           >
-            <Card
-              className="w-full emphasized-card"
-              variant="glass"
-              microinteraction
-            >
+            <Card className="w-full" variant="glass">
               <OrderDrawer
                 open={drawerOpen}
                 onToggle={() => setDrawerOpen((v) => !v)}
