@@ -29,7 +29,7 @@ export default function CustomerEnter() {
   const [isScanning, setIsScanning] = useState(false);
   const navigate = useNavigate();
 
-  const handleScan = (result) => {
+  const handleScan = async (result) => {
     const code = result?.[0]?.rawValue;
     if (!code) return;
     setPaused(true);
@@ -37,6 +37,31 @@ export default function CustomerEnter() {
     const bid = parseBusinessId(code);
     if (bid) {
       localStorage.setItem("business_id", String(bid));
+
+      // New: Call backend /public/enter-store to create user
+      try {
+        const response = await fetch("/api/sales/public/enter-store", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ business_id: bid }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          console.error("Failed to create user after scanning store QR:", errorData.error || "Unknown error");
+        } else {
+          const data = await response.json();
+          // Store user_id and username in localStorage for use later (optional)
+          if (data.user_id) localStorage.setItem("customer_user_id", data.user_id);
+          if (data.username) localStorage.setItem("customer_username", data.username);
+          console.log("Anonymous user created after scanning store QR:", data);
+        }
+      } catch (err) {
+        console.error("Error calling enter-store API:", err);
+      }
+
       // Small delay for better UX feedback
       setTimeout(() => {
         navigate("/customer");

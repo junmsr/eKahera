@@ -803,110 +803,125 @@ const Profile = () => {
             {/* Business Users */}
             {profileData?.business?.users &&
               profileData.business.users.length > 0 && (
-                <Card className="bg-white shadow-sm">
-                  <div className="p-6 md:p-8">
-                    <div className="flex items-center mb-6 pb-4 border-b border-gray-200">
-                      <div className="w-10 h-10 bg-gradient-to-br bg-blue-500 text-white rounded-xl flex items-center justify-center mr-3">
-                        <svg
-                          className="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-                          />
-                        </svg>
-                      </div>
-                      <div>
-                        <h2 className="text-xl font-bold text-gray-900">
-                          Business Team
-                        </h2>
-                        <p className="text-sm text-gray-500">
-                          All users associated with this business (
-                          {profileData.business.total_users} total)
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-                      {profileData.business.users.map((user, index) => (
-                        <div
-                          key={user.user_id}
-                          className="group bg-gradient-to-br from-white to-gray-50/50 rounded-2xl p-5 border border-gray-200/50 hover:border-purple-300 hover:shadow-lg transition-all duration-300"
-                        >
-                          <div className="flex items-center mb-4">
-                            <div className="relative">
-                              <div className="w-12 h-12 bg-gradient-to-br bg-blue-500 text-white rounded-xl flex items-center justify-center text-lg font-bold shadow-md ring-2 ring-white">
-                                {user.username?.charAt(0)?.toUpperCase() || "U"}
-                              </div>
-                              <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
-                            </div>
-                            <div className="ml-3 flex-1 min-w-0">
-                              <h4 className="font-bold text-gray-900 truncate">
-                                {user.username}
-                              </h4>
-                              <span
-                                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold mt-1 ${
-                                  user.user_type_name === "admin" ||
-                                  user.role === "business_owner"
-                                    ? "bg-red-100 text-red-800 border border-red-200"
-                                    : user.user_type_name === "cashier" ||
-                                      user.role === "cashier"
-                                    ? "bg-green-100 text-green-800 border border-green-200"
-                                    : "bg-gray-100 text-gray-800 border border-gray-200"
-                                }`}
+                <>
+                  {(() => {
+                    const filteredBusinessUsers = profileData.business.users.filter(
+                      (user) =>
+                        user.user_type_name === "admin" ||
+                        user.user_type_name === "cashier" ||
+                        user.role === "admin" ||
+                        user.role === "cashier" ||
+                        user.role === "business_owner"
+                    );
+                    return (
+                      <Card className="bg-white shadow-sm">
+                        <div className="p-6 md:p-8">
+                          <div className="flex items-center mb-6 pb-4 border-b border-gray-200">
+                            <div className="w-10 h-10 bg-gradient-to-br bg-blue-500 text-white rounded-xl flex items-center justify-center mr-3">
+                              <svg
+                                className="w-5 h-5"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
                               >
-                                {user.user_type_name || user.role}
-                              </span>
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                                />
+                              </svg>
+                            </div>
+                            <div>
+                              <h2 className="text-xl font-bold text-gray-900">
+                                Business Team
+                              </h2>
+                              <p className="text-sm text-gray-500">
+                                All users associated with this business (
+                                {filteredBusinessUsers.length} total)
+                              </p>
                             </div>
                           </div>
 
-                          <div className="space-y-3 text-sm">
-                            <div className="flex items-start gap-2">
-                              <EmailIcon className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
-                              <div className="min-w-0 flex-1">
-                                <div className="text-xs text-gray-500 mb-0.5">
-                                  Email
-                                </div>
-                                <div className="font-medium text-gray-900 truncate">
-                                  {user.email}
-                                </div>
-                              </div>
-                            </div>
-                            {user.contact_number && (
-                              <div className="flex items-start gap-2">
-                                <PhoneIcon className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
-                                <div className="min-w-0 flex-1">
-                                  <div className="text-xs text-gray-500 mb-0.5">
-                                    Contact
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                            {filteredBusinessUsers.map((user, index) => (
+                              <div
+                                key={user.user_id}
+                                className="group bg-gradient-to-br from-white to-gray-50/50 rounded-2xl p-5 border border-gray-200/50 hover:border-purple-300 hover:shadow-lg transition-all duration-300"
+                              >
+                                <div className="flex items-center mb-4">
+                                  <div className="relative">
+                                    <div className="w-12 h-12 bg-gradient-to-br bg-blue-500 text-white rounded-xl flex items-center justify-center text-lg font-bold shadow-md ring-2 ring-white">
+                                      {user.username?.charAt(0)?.toUpperCase() ||
+                                        "U"}
+                                    </div>
+                                    <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
                                   </div>
-                                  <div className="font-medium text-gray-900">
-                                    {user.contact_number}
+                                  <div className="ml-3 flex-1 min-w-0">
+                                    <h4 className="font-bold text-gray-900 truncate">
+                                      {user.username}
+                                    </h4>
+                                    <span
+                                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold mt-1 ${
+                                        user.user_type_name === "admin" ||
+                                        user.role === "business_owner"
+                                          ? "bg-red-100 text-red-800 border border-red-200"
+                                          : user.user_type_name === "cashier" ||
+                                            user.role === "cashier"
+                                          ? "bg-green-100 text-green-800 border border-green-200"
+                                          : "bg-gray-100 text-gray-800 border border-gray-200"
+                                      }`}
+                                    >
+                                      {user.user_type_name || user.role}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                <div className="space-y-3 text-sm">
+                                  <div className="flex items-start gap-2">
+                                    <EmailIcon className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                                    <div className="min-w-0 flex-1">
+                                      <div className="text-xs text-gray-500 mb-0.5">
+                                        Email
+                                      </div>
+                                      <div className="font-medium text-gray-900 truncate">
+                                        {user.email}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  {user.contact_number && (
+                                    <div className="flex items-start gap-2">
+                                      <PhoneIcon className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                                      <div className="min-w-0 flex-1">
+                                        <div className="text-xs text-gray-500 mb-0.5">
+                                          Contact
+                                        </div>
+                                        <div className="font-medium text-gray-900">
+                                          {user.contact_number}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
+                                  <div className="flex items-start gap-2">
+                                    <CalendarIcon className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                                    <div className="min-w-0 flex-1">
+                                      <div className="text-xs text-gray-500 mb-0.5">
+                                        Joined
+                                      </div>
+                                      <div className="font-medium text-gray-900">
+                                        {formatDate(user.created_at)}
+                                      </div>
+                                    </div>
                                   </div>
                                 </div>
                               </div>
-                            )}
-                            <div className="flex items-start gap-2">
-                              <CalendarIcon className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
-                              <div className="min-w-0 flex-1">
-                                <div className="text-xs text-gray-500 mb-0.5">
-                                  Joined
-                                </div>
-                                <div className="font-medium text-gray-900">
-                                  {formatDate(user.created_at)}
-                                </div>
-                              </div>
-                            </div>
+                            ))}
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                </Card>
+                      </Card>
+                    );
+                  })()}
+                </>
               )}
           </React.Fragment>
         )}

@@ -156,8 +156,13 @@ function CashierPOS() {
     if (!skuValue || qty < 1) return;
     setError("");
     try {
+      const businessId = user?.businessId || user?.business_id || null;
+      const url = businessId
+        ? `/api/products/sku/${encodeURIComponent(skuValue)}?business_id=${businessId}`
+        : `/api/products/sku/${encodeURIComponent(skuValue)}`;
+
       const product = await api(
-        `/api/products/sku/${encodeURIComponent(skuValue)}`,
+        url,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -228,6 +233,21 @@ function CashierPOS() {
   // For now, total equals subtotal
   const total = subtotal;
 
+  const completeTransactionCall = async (transId) => {
+    if (!transId) return;
+    try {
+      const resp = await api(`/api/sales/${transId}/complete`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return resp;
+    } catch (err) {
+      console.error('Failed to complete transaction:', err);
+      setError(err.message || 'Failed to complete transaction');
+      return null;
+    }
+  };
+
   const handleCheckout = async (
     paymentType = "cash",
     moneyReceived = total
@@ -236,6 +256,7 @@ function CashierPOS() {
     setError("");
     try {
       const body = {
+        transaction_id: transactionId || null,
         items: cart.map((i) => ({
           product_id: i.product_id,
           quantity: i.quantity,
@@ -256,6 +277,12 @@ function CashierPOS() {
       if (resp?.transaction_number)
         setTransactionNumber(resp.transaction_number);
       if (resp?.transaction_id) setTransactionId(resp.transaction_id);
+
+      // Removed redundant call to completeTransaction endpoint as checkout already sets status and cashier_user_id
+      // if (resp?.transaction_id) {
+      //   await completeTransactionCall(resp.transaction_id);
+      // }
+
       setCart([]);
       try {
         const url = new URL(window.location.origin + '/receipt');
@@ -392,7 +419,74 @@ function CashierPOS() {
                     if (showPriceCheck) {
                       setPriceCheckSku(code);
                     } else {
-                      await addSkuToCart(code, 1);
+try {
+  let scannedData;
+  try {
+    scannedData = JSON.parse(code);
+  } catch (e) {
+    scannedData = null;
+  }
+if (scannedData && scannedData.t === "cart" && Array.isArray(scannedData.items)) {
+    // set transactionId from scanned data if present
+    if (scannedData.transaction_id) {
+      setTransactionId(scannedData.transaction_id);
+    }
+    const items = scannedData.items.map((it) => ({
+      product_id: it.p,
+      quantity: it.q,
+      sku: it.sku || "",
+    }));
+    try {
+      const fetchedProducts = await Promise.all(
+        items.map(async (item) => {
+          const res = await api(`/api/products/${item.product_id}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          return {
+            product_id: item.product_id,
+            sku: res.sku || item.sku || "",
+            name: res.product_name || "",
+            price: Number(res.selling_price) || 0,
+            quantity: item.quantity,
+          };
+        })
+      );
+      setCart((prev) => {
+        const byProductId = new Map(prev.map(i => [i.product_id, i]));
+        for (const it of fetchedProducts) {
+          const existing = byProductId.get(it.product_id);
+          if (existing) {
+            existing.quantity += it.quantity;
+          } else {
+            byProductId.set(it.product_id, { ...it });
+          }
+        }
+        return Array.from(byProductId.values());
+      });
+      return;
+    } catch (err) {
+      console.error("Error fetching product details for scanned cart:", err);
+      // fallback to merging raw scanned items without product details
+      setCart((prev) => {
+        const byProductId = new Map(prev.map(i => [i.product_id, i]));
+        for (const it of items) {
+          const existing = byProductId.get(it.product_id);
+          if (existing) {
+            existing.quantity += it.quantity;
+          } else {
+            byProductId.set(it.product_id, { ...it, name: "", price: 0 });
+          }
+        }
+        return Array.from(byProductId.values());
+      });
+      return;
+    }
+  }
+  await addSkuToCart(code, 1);
+} catch (err) {
+  console.error("Error processing scanned code:", err);
+  await addSkuToCart(code, 1);
+}
                     }
                   }}
                   paused={scannerPaused}
@@ -686,7 +780,37 @@ function CashierPOS() {
         <ScanCustomerCartModal
           isOpen={showImportCart}
           onClose={() => setShowImportCart(false)}
-          onImport={(items) => {
+        onImport={async (items) => {
+          try {
+            console.log("Scanned items:", items);
+            // Fetch product details by product_id for all scanned items concurrently
+            const fetchedProducts = await Promise.all(
+              items.map(async (item) => {
+                const res = await api(`/api/products/${item.product_id}`, {
+                  headers: { Authorization: `Bearer ${token}` },
+                });
+                console.log("Fetched product for id", item.product_id, ":", res);
+                return {
+                  product_id: item.product_id,
+                  sku: res.sku || item.sku || "",
+                  name: res.product_name || "",
+                  price: Number(res.selling_price) || 0,
+                  quantity: item.quantity,
+                };
+              })
+            );
+            setCart((prev) => {
+              const bySku = new Map(prev.map((i) => [i.sku, i]));
+              for (const it of fetchedProducts) {
+                const existing = bySku.get(it.sku);
+                if (existing) existing.quantity += it.quantity;
+                else bySku.set(it.sku, { ...it });
+              }
+              return Array.from(bySku.values());
+            });
+          } catch (e) {
+            console.error("Error fetching products for scanned items:", e);
+            // Fallback to use raw items if fetch fails
             setCart((prev) => {
               const bySku = new Map(prev.map((i) => [i.sku, i]));
               for (const it of items) {
@@ -696,7 +820,8 @@ function CashierPOS() {
               }
               return Array.from(bySku.values());
             });
-          }}
+          }
+        }}
         />
         <ProfileModal
           isOpen={showProfileModal}

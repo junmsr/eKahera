@@ -467,23 +467,6 @@ export default function Dashboard() {
               <h3 className="text-lg font-bold text-gray-800">
                 Low Stock Products
               </h3>
-              <button
-                onClick={async () => {
-                  try {
-                    const token = sessionStorage.getItem("auth_token");
-                    await api("/api/products/send-low-stock-alert", {
-                      method: "POST",
-                      headers: authHeaders(token),
-                    });
-                    alert("Low stock alert sent successfully!");
-                  } catch (err) {
-                    alert("Failed to send low stock alert.");
-                  }
-                }}
-                className="text-sm font-medium text-blue-600 hover:text-blue-800"
-              >
-                Send Alert
-              </button>
             </div>
             <LowStockList lowStockProducts={lowStockProducts} />
           </div>
@@ -540,24 +523,6 @@ export default function Dashboard() {
                 <h3 className="text-lg font-bold text-gray-800">
                   Low Stock Products
                 </h3>
-                <button
-                  onClick={async () => {
-                    try {
-                      const token = sessionStorage.getItem("auth_token");
-                      await api.post(
-                        "/api/products/send-low-stock-alert",
-                        null,
-                        { headers: authHeaders(token) }
-                      );
-                      alert("Low stock alert sent successfully!");
-                    } catch (err) {
-                      alert("Failed to send low stock alert.");
-                    }
-                  }}
-                  className="text-sm font-medium text-blue-600 hover:text-blue-800"
-                >
-                  Send Alert
-                </button>
               </div>
               {lowStockProducts.length > 0 ? (
                 <ul className="divide-y divide-gray-200">

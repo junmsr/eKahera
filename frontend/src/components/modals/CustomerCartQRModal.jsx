@@ -1,4 +1,5 @@
 import React, { useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import BaseModal from "./BaseModal";
 
 export default function CustomerCartQRModal({
@@ -6,8 +7,13 @@ export default function CustomerCartQRModal({
   onClose,
   cartItems,
   businessId,
+  qrPayload,
 }) {
+  const navigate = useNavigate();
+
   const payload = useMemo(() => {
+    if (qrPayload) return qrPayload;
+
     const items = (cartItems || []).map((i) => ({
       p: i.product_id,
       q: i.quantity,
@@ -17,7 +23,7 @@ export default function CustomerCartQRModal({
       b: businessId ? Number(businessId) : null,
       items,
     });
-  }, [cartItems, businessId]);
+  }, [cartItems, businessId, qrPayload]);
 
   const qrSrc = useMemo(() => {
     const data = encodeURIComponent(payload);
@@ -56,6 +62,12 @@ export default function CustomerCartQRModal({
       <div className="text-blue-800 text-sm font-medium">
         Cashier scans this in POS to load your cart.
       </div>
+      <button
+        onClick={() => navigate("/customer-enter")}
+        className="mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg transition-colors duration-300"
+      >
+        Done
+      </button>
     </BaseModal>
   );
 }

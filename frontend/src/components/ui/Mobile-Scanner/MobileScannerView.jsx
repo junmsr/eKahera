@@ -21,8 +21,18 @@ function MobileScannerView() {
   const [showCartQR, setShowCartQR] = useState(false);
   const hasFinalizedRef = useRef(false);
 
+  const [qrPayload, setQrPayload] = useState(null);
+  const [transactionId, setTransactionId] = useState(null);
+
   const total = useMemo(
-    () => cart.reduce((sum, item) => sum + item.price * item.quantity, 0),
+    () =>
+      cart.reduce(
+        (sum, item) =>
+          item && typeof item.price === "number" && typeof item.quantity === "number"
+            ? sum + item.price * item.quantity
+            : sum,
+        0
+      ),
     [cart]
   );
 
@@ -292,8 +302,36 @@ function MobileScannerView() {
                 return;
               }
               if (method === "Cash") {
+                const customerUserId = localStorage.getItem("customer_user_id");
                 setShowCheckout(false);
-                setShowCartQR(true);
+                try {
+                  const body = {
+                    items: cart.map((i) => ({
+                      product_id: i.product_id,
+                      sku: i.sku,
+                      quantity: i.quantity,
+                    })),
+                    payment_type: method.toLowerCase(),
+                    money_received: total,
+                    business_id: Number(businessId),
+                    customer_user_id: customerUserId ? Number(customerUserId) : null,
+                  };
+                  const res = await api("/api/sales/public/checkout", {
+                    method: "POST",
+                    body: JSON.stringify(body),
+                  });
+                  setCart([]);
+                  if (res.qr_payload) {
+                    setShowCartQR(true);
+                    setCheckoutMessage("");
+                    setQrPayload(res.qr_payload);
+                    setTransactionId(res.transaction_id);
+                  } else {
+                    setCheckoutMessage("Failed to generate payment QR");
+                  }
+                } catch (err) {
+                  setCheckoutMessage("Checkout failed");
+                }
                 return;
               }
               if (method === "GCash") {
@@ -307,6 +345,7 @@ function MobileScannerView() {
                     JSON.stringify({
                       items: cart.map((i) => ({
                         product_id: i.product_id,
+                        sku: i.sku,
                         quantity: i.quantity,
                       })),
                       total,
@@ -330,26 +369,38 @@ function MobileScannerView() {
               }
               // default: fallback to immediate record (e.g., PayMaya placeholder)
               try {
-                const body = {
-                  items: cart.map((i) => ({
-                    product_id: i.product_id,
-                    quantity: i.quantity,
-                  })),
-                  payment_type: method,
-                  money_received: total,
-                  business_id: Number(businessId),
-                };
+                const customerUserId = localStorage.getItem("customer_user_id");
+                  const body = {
+                    items: cart.map((i) => ({
+                      product_id: i.product_id,
+                      sku: i.sku,
+                      quantity: i.quantity,
+                    })),
+                    payment_type: method,
+                    money_received: total,
+                    business_id: Number(businessId),
+                    customer_user_id: customerUserId ? Number(customerUserId) : null,
+                  };
                 const res = await api("/api/sales/public/checkout", {
                   method: "POST",
                   body: JSON.stringify(body),
                 });
                 setCart([]);
-                // Redirect to receipt after non-GCash online record
-                const url = new URL(window.location.origin + "/receipt");
-                url.searchParams.set("tn", res.transaction_number);
-                url.searchParams.set("tid", String(res.transaction_id));
-                url.searchParams.set("total", String(res.total || 0));
-                window.location.href = url.toString();
+                // Show cashier QR for cash payments (returned in qr_payload)
+                if (res.qr_payload) {
+                  setShowCartQR(true);
+                  setCheckoutMessage("");
+                  // Pass qr_payload to modal
+                  setQrPayload(res.qr_payload);
+                  setTransactionId(res.transaction_id);
+                } else {
+                  // Redirect to receipt after non-GCash online record
+                  const url = new URL(window.location.origin + "/receipt");
+                  url.searchParams.set("tn", res.transaction_number);
+                  url.searchParams.set("tid", String(res.transaction_id));
+                  url.searchParams.set("total", String(res.total || 0));
+                  window.location.href = url.toString();
+                }
               } catch (err) {
                 setCheckoutMessage("Checkout failed");
               } finally {
@@ -364,6 +415,8 @@ function MobileScannerView() {
           onClose={() => setShowCartQR(false)}
           cartItems={cart}
           businessId={localStorage.getItem("business_id")}
+          qrPayload={qrPayload}
+          transactionId={transactionId}
         />
 
         <AnimatePresence>
