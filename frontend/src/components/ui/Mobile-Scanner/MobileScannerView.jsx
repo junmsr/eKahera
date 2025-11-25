@@ -14,7 +14,7 @@ function MobileScannerView() {
   const [scannerPaused, setScannerPaused] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("GCash");
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(true);
   const [loading, setLoading] = useState(false);
   const [checkoutMessage, setCheckoutMessage] = useState("");
   const [error, setError] = useState("");
