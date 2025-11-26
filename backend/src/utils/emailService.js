@@ -1,7 +1,13 @@
 const { Resend } = require('resend');
 const pool = require('../config/database');
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+let resend;
+if (process.env.RESEND_API_KEY) {
+  resend = new Resend(process.env.RESEND_API_KEY);
+} else {
+  console.warn('WARNING: RESEND_API_KEY not found in environment variables. Email sending will be disabled.');
+}
+
 
 // Log email notification to database
 const logEmailNotification = async (recipientEmail, subject, message, type, businessId = null, userId = null) => {
@@ -26,6 +32,10 @@ const logEmailNotification = async (recipientEmail, subject, message, type, busi
 
 // Send email notification for new business application
 const sendNewApplicationNotification = async (businessData, superAdminEmails) => {
+  if (!resend) {
+    console.error('Email sending is disabled. Cannot send new application notification.');
+    return false;
+  }
   const subject = 'New Business Application - eKahera Verification Required';
   const message = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -78,6 +88,10 @@ const sendNewApplicationNotification = async (businessData, superAdminEmails) =>
 
 // Send verification status notification to business
 const sendVerificationStatusNotification = async (businessData, status, rejectionReason = null, resubmissionNotes = null) => {
+  if (!resend) {
+    console.error('Email sending is disabled. Cannot send verification status notification.');
+    return false;
+  }
   let subject, message;
   
   if (status === 'approved') {
@@ -215,6 +229,10 @@ const sendVerificationStatusNotification = async (businessData, status, rejectio
 
 // Send application submitted confirmation to business
 const sendApplicationSubmittedNotification = async (businessData) => {
+  if (!resend) {
+    console.error('Email sending is disabled. Cannot send application submitted notification.');
+    return false;
+  }
   const subject = 'Application Submitted Successfully - eKahera Verification in Progress';
   const message = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -271,6 +289,10 @@ const sendApplicationSubmittedNotification = async (businessData) => {
 };
 
 const sendLowStockEmail = async (recipientEmail, lowStockProducts) => {
+  if (!resend) {
+    console.error('Email sending is disabled. Cannot send low stock alert.');
+    return false;
+  }
   const subject = 'Low Stock Alert - eKahera';
   const productList = lowStockProducts.map(p => `<li>${p.product_name} (Stock: ${p.quantity_in_stock})</li>`).join('');
   const message = `
@@ -301,6 +323,10 @@ const sendLowStockEmail = async (recipientEmail, lowStockProducts) => {
 };
 
 const sendOTPNotification = async (recipientEmail, otp) => {
+  if (!resend) {
+    console.error('Email sending is disabled. Cannot send OTP.');
+    return false;
+  }
   const subject = 'eKahera - Email Verification OTP';
   const message = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">

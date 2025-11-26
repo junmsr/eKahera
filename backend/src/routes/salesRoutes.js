@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { authenticate } = require('../middleware/authMiddleware');
-const { checkout, publicCheckout, enterStore, completeTransaction, getTransactionStatus } = require('../controllers/salesController');
+const { checkout, publicCheckout, enterStore, completeTransaction, getTransactionStatus, getSaleDetailsByTransactionNumber } = require('../controllers/salesController');
 
 router.post('/checkout', authenticate, checkout);
 router.post('/public/checkout', publicCheckout);
@@ -11,5 +11,9 @@ router.post('/public/enter-store', enterStore);
 router.post('/:id/complete', authenticate, completeTransaction);
 // Public check transaction status (customer can poll this)
 router.get('/public/transaction/:id', getTransactionStatus);
+// Get full sale details for a receipt (authenticated)
+router.get('/details/:tn', authenticate, getSaleDetailsByTransactionNumber);
+// Get full sale details for a receipt (public)
+router.get('/public/details/:tn', getSaleDetailsByTransactionNumber);
 
 module.exports = router;

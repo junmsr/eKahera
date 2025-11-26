@@ -28,6 +28,7 @@ import StoreQR from "./pages/StoreQR.jsx";
 import Receipt from "./pages/Receipt.jsx";
 import Documents from "./pages/Documents.jsx";
 import NotFound from "./pages/NotFound.jsx";
+import CustomerWaitingPage from "./pages/CustomerWaitingPage.jsx";
 
 // Router Configuration
 const router = createBrowserRouter(
@@ -51,6 +52,7 @@ const router = createBrowserRouter(
         { path: "customer", element: <Customer /> },
         { path: "customer-enter", element: <CustomerEnter /> },
         { path: "receipt", element: <Receipt /> },
+        { path: "customer-waiting", element: <CustomerWaitingPage /> },
         { path: "enter-store", element: <EnterStore /> },
         { path: "cashiers", element: <Cashiers /> },
         { path: "logs", element: <Logs /> },

@@ -1,29 +1,55 @@
-import React, { useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useMemo, useEffect, useState } from "react";
+import { api } from "../../lib/api";
 import BaseModal from "./BaseModal";
+import Loader from "../common/Loader";
 
 export default function CustomerCartQRModal({
   isOpen,
   onClose,
-  cartItems,
-  businessId,
   qrPayload,
+  transactionId,
+  onTransactionComplete,
 }) {
-  const navigate = useNavigate();
+  const [status, setStatus] = useState("pending");
+  const [error, setError] = useState("");
 
   const payload = useMemo(() => {
     if (qrPayload) return qrPayload;
+    return "{}"; // Fallback for safety
+  }, [qrPayload]);
 
-    const items = (cartItems || []).map((i) => ({
-      p: i.product_id,
-      q: i.quantity,
-    }));
-    return JSON.stringify({
-      t: "cart",
-      b: businessId ? Number(businessId) : null,
-      items,
-    });
-  }, [cartItems, businessId, qrPayload]);
+  useEffect(() => {
+    if (isOpen && transactionId) {
+      const interval = setInterval(async () => {
+        try {
+          const response = await api(`/sales/public/transaction/${transactionId}`);
+          if (response.status === 'completed') {
+            setStatus('completed');
+            clearInterval(interval);
+            if (onTransactionComplete) {
+              onTransactionComplete(response.tn);
+            }
+          }
+        } catch (err) {
+          console.error('Error fetching transaction status:', err);
+          setError('Could not fetch transaction status.');
+          clearInterval(interval);
+        }
+      }, 3000); // Poll every 3 seconds
+
+      return () => clearInterval(interval);
+    }
+  }, [isOpen, transactionId, onTransactionComplete]);
+
+  // Reset internal state when the modal is closed
+  useEffect(() => {
+    if (!isOpen) {
+      setTimeout(() => {
+        setStatus('pending');
+        setError('');
+      }, 300); // Delay reset to allow for closing animation
+    }
+  }, [isOpen]);
 
   const qrSrc = useMemo(() => {
     const data = encodeURIComponent(payload);
@@ -35,22 +61,7 @@ export default function CustomerCartQRModal({
       isOpen={isOpen}
       onClose={onClose}
       title="Show to Cashier"
-      subtitle="Let the cashier scan this QR code"
-      icon={
-        <svg
-          className="w-5 h-5 text-white"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M12 4v16m8-8H4"
-          />
-        </svg>
-      }
+      subtitle="Let the cashier scan this QR code to finalize payment."
       size="sm"
       contentClassName="text-center space-y-3"
     >
@@ -59,15 +70,28 @@ export default function CustomerCartQRModal({
         alt="Customer Cart QR"
         className="w-[300px] h-[300px] border-4 border-blue-200 rounded-2xl bg-white mx-auto shadow-lg"
       />
-      <div className="text-blue-800 text-sm font-medium">
-        Cashier scans this in POS to load your cart.
+
+      <div className="h-8">
+        {status === 'pending' && (
+          <div className="flex items-center justify-center space-x-2 text-blue-800 animate-pulse">
+            <Loader size="sm" />
+            <span>Waiting for cashier...</span>
+          </div>
+        )}
+        {status === 'completed' && (
+          <div className="text-green-600 font-bold">Transaction Complete! Redirecting...</div>
+        )}
+        {error && <div className="text-red-500 text-sm">{error}</div>}
       </div>
-      <button
-        onClick={() => navigate("/customer-enter")}
-        className="mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg transition-colors duration-300"
-      >
-        Done
-      </button>
+
+      <div className="pt-4">
+        <button
+          onClick={onClose}
+          className="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-3 px-4 rounded-lg transition-colors duration-300"
+        >
+          Cancel
+        </button>
+      </div>
     </BaseModal>
   );
 }

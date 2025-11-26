@@ -345,11 +345,125 @@ exports.getTransactionStatus = async (req, res) => {
   if (!transactionId) return res.status(400).json({ error: 'transaction id is required' });
 
   try {
-    const result = await pool.query('SELECT transaction_id, status, total_amount FROM transactions WHERE transaction_id = $1', [transactionId]);
+    const result = await pool.query('SELECT transaction_id, status, total_amount, transaction_number FROM transactions WHERE transaction_id = $1', [transactionId]);
     if (result.rowCount === 0) return res.status(404).json({ error: 'Transaction not found' });
     const row = result.rows[0];
-    res.json({ transaction_id: row.transaction_id, status: row.status, total: Number(row.total_amount) });
+    res.json({
+      transaction_id: row.transaction_id,
+      status: row.status,
+      total: Number(row.total_amount),
+      tn: row.transaction_number
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+};
+
+exports.getSaleDetailsByTransactionNumber = async (req, res) => {
+  const { tn } = req.params;
+
+  if (!tn) {
+    return res.status(400).json({ error: 'Transaction number is required' });
+  }
+
+  const client = await pool.connect();
+  try {
+    // 1. Get transaction details
+    const transactionRes = await client.query(
+      `SELECT t.transaction_id, t.business_id, t.cashier_user_id, t.total_amount, t.created_at, u_cashier.username as cashier_name
+       FROM transactions t
+       LEFT JOIN users u_cashier ON t.cashier_user_id = u_cashier.user_id
+       WHERE t.transaction_number = $1`,
+      [tn]
+    );
+
+    if (transactionRes.rowCount === 0) {
+      return res.status(404).json({ error: 'Transaction not found' });
+    }
+
+    const transaction = transactionRes.rows[0];
+    const { transaction_id, business_id, total_amount, created_at, cashier_name } = transaction;
+
+    // 2. Get business details
+    const businessRes = await client.query(
+      'SELECT business_name, business_address, mobile, email FROM business WHERE business_id = $1',
+      [business_id]
+    );
+    const business = businessRes.rows[0] || {};
+
+    // 3. Get payment details
+    const paymentRes = await client.query(
+      `SELECT tp.payment_type, tp.money_received, tp.money_change, d.discount_percentage, d.discount_name
+       FROM transaction_payment tp
+       LEFT JOIN discounts d ON tp.discount_id = d.discount_id
+       WHERE tp.transaction_id = $1`,
+      [transaction_id]
+    );
+    const payment = paymentRes.rows[0] || {};
+
+    // 4. Get transaction items
+    const itemsRes = await client.query(
+      `SELECT p.product_name, p.sku, ti.product_quantity, ti.price_at_sale, ti.subtotal
+       FROM transaction_items ti
+       JOIN products p ON ti.product_id = p.product_id
+       WHERE ti.transaction_id = $1
+       ORDER BY p.product_name`,
+      [transaction_id]
+    );
+    const items = itemsRes.rows;
+    
+    // 5. Calculate subtotal from items
+    const subtotal = items.reduce((acc, item) => acc + Number(item.subtotal), 0);
+    const discountAmount = subtotal - Number(total_amount); 
+
+    // 6. Calculate tax (assuming 12% VAT applied on the total)
+    const grandTotal = Number(total_amount);
+    const vatableSales = grandTotal / 1.12;
+    const vatAmount = grandTotal - vatableSales;
+
+
+    // 7. Assemble response
+    const receiptDetails = {
+      transactionNumber: tn,
+      date: created_at,
+      total: grandTotal,
+      subtotal: subtotal,
+      discountTotal: discountAmount,
+      taxDetails: {
+          vatableSales: vatableSales,
+          vatAmount: vatAmount
+      },
+      cashierName: cashier_name,
+      business: {
+        name: business.business_name,
+        address: business.business_address,
+        contact: business.mobile,
+        email: business.email,
+        tin: business.tin || null // schema doesn't have TIN yet, but good to have
+      },
+      payment: {
+        method: payment.payment_type,
+        amountTendered: payment.money_received,
+        change: payment.money_change,
+        discountName: payment.discount_name,
+        discountPercentage: payment.discount_percentage
+      },
+      items: items.map(i => ({
+        name: i.product_name,
+        sku: i.sku,
+        quantity: i.product_quantity,
+        price: Number(i.price_at_sale).toFixed(2),
+        subtotal: Number(i.subtotal).toFixed(2)
+      })),
+      totalQuantity: items.reduce((acc, item) => acc + item.product_quantity, 0)
+    };
+
+    res.json(receiptDetails);
+
+  } catch (err) {
+    console.error(`Error fetching sale details for TN: ${tn}`, err);
+    res.status(500).json({ error: 'Internal server error' });
+  } finally {
+    client.release();
   }
 };

@@ -19,7 +19,14 @@ export default defineConfig(({ mode }) => {
 
   return {
     base: '/',
-    plugins: [react(), tailwindcss()],
+    plugins: [
+      react({
+        babel: {
+          plugins: ['styled-jsx/babel'],
+        },
+      }),
+      tailwindcss()
+    ],
     server: {
       proxy: proxySettings,
     },

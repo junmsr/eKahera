@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import Background from "../../layout/Background";
 import ScannerCard from "../../ui/POS/ScannerCard";
 import Card from "../../common/Card";
@@ -10,6 +11,7 @@ import { api, createGcashCheckout } from "../../../lib/api";
 import CustomerCartQRModal from "../../modals/CustomerCartQRModal";
 
 function MobileScannerView() {
+  const navigate = useNavigate();
   const [cart, setCart] = useState([]);
   const [scannerPaused, setScannerPaused] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
@@ -166,6 +168,11 @@ function MobileScannerView() {
   const handleCopyTn = () => {
     const storedTxn = localStorage.getItem("provisionalTransactionNumber");
     navigator.clipboard.writeText(storedTxn || "");
+  };
+
+  const handleTransactionComplete = (tn) => {
+    setShowCartQR(false);
+    navigate(`/receipt?tn=${tn}&from=customer`);
   };
 
   return (
@@ -442,8 +449,7 @@ function MobileScannerView() {
         <CustomerCartQRModal
           isOpen={showCartQR}
           onClose={() => setShowCartQR(false)}
-          cartItems={cart}
-          businessId={localStorage.getItem("business_id")}
+          onTransactionComplete={handleTransactionComplete}
           qrPayload={qrPayload}
           transactionId={transactionId}
         />
