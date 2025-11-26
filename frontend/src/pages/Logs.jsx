@@ -330,7 +330,7 @@ const LogsPage = () => {
         </div>
 
         <div className="flex-1 overflow-y-auto">
-          <table className="min-w-full bg-white/80 backdrop-blur-md rounded-xl overflow-hidden">
+          <table className="min-w-full bg-white/80 backdrop-blur-md rounded-xl overflow-hidden hidden sm:table">
             <thead className="bg-gray-100/50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -395,6 +395,51 @@ const LogsPage = () => {
               )}
             </tbody>
           </table>
+        </div>
+        {/* Mobile Card View */}
+        <div className="flex-1 overflow-y-auto sm:hidden space-y-3">
+          {loading ? (
+            Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="bg-white/80 backdrop-blur-md rounded-xl p-4 border border-gray-200/50 animate-pulse">
+                <div className="flex justify-between items-center mb-2">
+                  <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+                  <div className="h-3 bg-gray-200 rounded w-1/4"></div>
+                </div>
+                <div className="h-3 bg-gray-200 rounded w-full mb-3"></div>
+                <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+              </div>
+            ))
+          ) : filteredLogs.length === 0 ? (
+            <div className="text-center py-8 text-gray-500 bg-white/80 backdrop-blur-md rounded-xl">
+              No logs found.
+            </div>
+          ) : (
+            filteredLogs.map((log) => (
+              <div key={log.id} className="bg-white/80 backdrop-blur-md rounded-xl p-4 border border-gray-200/50 shadow-sm">
+                <div className="flex justify-between items-start mb-2">
+                  <div>
+                    <div className="text-sm font-semibold text-gray-900">{log.username}</div>
+                    <div className="text-xs text-gray-500">ID: {log.userId}</div>
+                  </div>
+                  <span
+                    className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full capitalize ${
+                      log.role === "admin" || log.role === "business_owner"
+                        ? "bg-purple-100 text-purple-800"
+                        : log.role === "cashier"
+                        ? "bg-blue-100 text-blue-800"
+                        : "bg-green-100 text-green-800"
+                    }`}
+                  >
+                    {log.role}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-800 mb-2">{log.action}</p>
+                <div className="text-xs text-gray-500 text-right border-t border-gray-200/50 pt-2 mt-2">
+                  {log.time}
+                </div>
+              </div>
+            ))
+          )}
         </div>
 
         {error && (
