@@ -384,7 +384,7 @@ function POS() {
   };
 
   const headerActions = (
-    <div className="flex items-center justify-end gap-1 sm:gap-4 w-full">
+    <div className="flex items-center gap-1 sm:gap-4 mr-3">
       {/* Transaction Number display */}
       <div className="flex-1 flex items-center justify-center">
         <button

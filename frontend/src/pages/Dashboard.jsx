@@ -331,18 +331,18 @@ export default function Dashboard() {
   }, [range]);
 
   const headerActions = (
-    <div className="flex flex-nowrap items-center justify-end -gap-3 sm:gap-2">
+    <div className="flex flex-nowrap items-center justify-end -gap-1 sm:gap-2 mr-3">
       <button
         onClick={fetchData}
         disabled={loading}
         title="Refresh Data"
-        className="bg-white/80 backdrop-blur-sm hover:bg-white text-gray-700 p-2 rounded-lg border border-gray-200/80 text-sm font-medium transition-all duration-200 hover:shadow-md hover:scale-[1.02]"
+        className="bg-white/80 backdrop-blur-sm hover:bg-white text-gray-700 p-1.5 sm:p-2 rounded-lg border border-gray-200/80 text-sm font-medium transition-all duration-200 hover:shadow-md hover:scale-[1.02]"
       >
-        <BiRefresh className={`w-5 h-5 ${loading ? "animate-spin" : ""}`} />
+        <BiRefresh className={`w-4 h-4 sm:w-5 sm:h-5 ${loading ? "animate-spin" : ""}`} />
       </button>
 
       <select
-        className="bg-white/80 backdrop-blur-sm hover:bg-white text-gray-700 px-2 sm:px-3 py-2 rounded-lg border border-gray-200/80 text-sm font-medium transition-all duration-200 outline-none cursor-pointer hover:shadow-md"
+        className="bg-white/80 backdrop-blur-sm hover:bg-white text-gray-700 px-1.5 sm:px-3 py-1.5 sm:py-2 rounded-lg border border-gray-200/80 text-xs sm:text-sm font-medium transition-all duration-200 outline-none cursor-pointer hover:shadow-md"
         value={range}
         onChange={(e) => setRange(e.target.value)}
         disabled={loading}
@@ -367,12 +367,12 @@ export default function Dashboard() {
 
       <button
         onClick={() => setShowProfileModal(true)}
-        className="flex items-center gap-2 bg-white/80 backdrop-blur-sm p-1 sm:p-1.5 sm:px-3 sm:py-2 rounded-lg border border-gray-200/80 hover:bg-white transition-all duration-200 hover:shadow-md hover:scale-[1.02]"
+        className="flex items-center gap-2 bg-white/80 backdrop-blur-sm p-1 sm:p-1.5 sm:px-3 sm:py-2 rounded-lg border border-gray-200/80 hover:bg-white transition-all duration-200 hover:shadow-md hover:scale-[1.02] -mr-1"
       >
-        <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-full flex items-center justify-center text-sm font-medium shadow-lg">
+        <div className="w-7 h-7 sm:w-8 sm:h-8 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-full flex items-center justify-center text-sm font-medium shadow-lg">
           {user.username?.[0]?.toUpperCase() || "A"}
         </div>
-        <span className="text-sm font-medium text-gray-700">
+        <span className="text-sm font-medium text-gray-700 hidden sm:inline">
           {user.username || "Admin"}
         </span>
       </button>
@@ -389,7 +389,7 @@ export default function Dashboard() {
       setSidebarOpen={setSidebarOpen}
       className="bg-gray-50 min-h-screen"
     >
-      <div className="-mt-2 -mb-11 py-8 px-8 flex justify-end">
+      <div className="-mt-2 -mb-11 py-8 px-8 pr-12 flex justify-end">
         <Button
           onClick={exportToCSV}
           size="lg"
