@@ -1,8 +1,15 @@
 const pool = require('../config/database');
 const { logAction } = require('../utils/logger');
 
+const generateTransactionNumber = (businessId) => {
+  const businessPart = businessId ? String(businessId).padStart(2, '0') : '00';
+  const timePart = new Date().toISOString().replace(/[-:T.Z]/g, '').slice(0, 14);
+  const randPart = Math.floor(1000 + Math.random() * 9000);
+  return `T-${businessPart}-${timePart}-${randPart}`;
+};
+
 exports.checkout = async (req, res) => {
-  const { discount_id, payment_type, money_received, discount_percentage, discount_amount, transaction_id } = req.body || {};
+  const { discount_id, payment_type, money_received, discount_percentage, discount_amount, transaction_id, transaction_number: frontendTxnNumber } = req.body || {};
   // Accept items from multiple possible keys to be resilient
   let items = Array.isArray(req.body?.items) ? req.body.items
     : Array.isArray(req.body?.cart) ? req.body.cart
@@ -16,21 +23,26 @@ exports.checkout = async (req, res) => {
     await client.query('BEGIN');
 
     let effectiveTransactionId = transaction_id;
+    let transaction_number;
 
     if (!transaction_id) {
+      // Prioritize frontend transaction number, fall back to generating one
+      transaction_number = frontendTxnNumber || generateTransactionNumber(req.user?.businessId);
+
       // Insert new transaction if no transaction_id provided
       const transRes = await client.query(
-        'INSERT INTO transactions (business_id, cashier_user_id, created_at, updated_at, status) VALUES ($1, $2, now(), now(), $3) RETURNING transaction_id',
-        [req.user?.businessId || null, req.user?.userId || null, 'completed']
+        'INSERT INTO transactions (business_id, cashier_user_id, created_at, updated_at, status, transaction_number) VALUES ($1, $2, now(), now(), $3, $4) RETURNING transaction_id',
+        [req.user?.businessId || null, req.user?.userId || null, 'completed', transaction_number]
       );
       effectiveTransactionId = transRes.rows[0].transaction_id;
     } else {
-      // Lock the existing transaction row for update
-      const tRes = await client.query('SELECT transaction_id, status FROM transactions WHERE transaction_id = $1 FOR UPDATE', [transaction_id]);
+      // Lock the existing transaction row for update and fetch its transaction_number
+      const tRes = await client.query('SELECT transaction_id, status, transaction_number FROM transactions WHERE transaction_id = $1 FOR UPDATE', [transaction_id]);
       if (tRes.rowCount === 0) {
         await client.query('ROLLBACK');
         return res.status(404).json({ error: 'Transaction not found' });
       }
+      transaction_number = tRes.rows[0].transaction_number;
       // Update transaction with cashier_user_id, status 'completed', updated_at
       await client.query(
         'UPDATE transactions SET cashier_user_id = $1, status = $2, updated_at = NOW() WHERE transaction_id = $3',
@@ -94,11 +106,6 @@ exports.checkout = async (req, res) => {
       [effectiveTransactionId, req.user?.userId || null, discount_id || null, (payment_type || 'cash').toString(), money_received || null, money_change]
     );
 
-    const businessPart = req.user?.businessId ? String(req.user.businessId).padStart(2, '0') : '00';
-    const timePart = new Date().toISOString().replace(/[-:T.Z]/g, '').slice(0, 14);
-    const randPart = Math.floor(1000 + Math.random() * 9000);
-    const transaction_number = `T-${businessPart}-${timePart}-${randPart}`;
-
     await client.query('COMMIT');
     // Log the sale
     logAction({
@@ -117,7 +124,7 @@ exports.checkout = async (req, res) => {
 
 // Public checkout endpoint for customer app (no auth); requires business_id
 exports.publicCheckout = async (req, res) => {
-  const { items, payment_type, money_received, business_id, customer_user_id, discount_id, discount_percentage, discount_amount } = req.body || {};
+  const { items, payment_type, money_received, business_id, customer_user_id, discount_id, discount_percentage, discount_amount, transaction_number: frontendTxnNumber } = req.body || {};
   console.log("[DEBUG publicCheckout] Received items in req.body:", items);
   if (!Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ error: 'items are required' });
@@ -129,10 +136,12 @@ exports.publicCheckout = async (req, res) => {
   try {
     await client.query('BEGIN');
 
+    const transaction_number = frontendTxnNumber || generateTransactionNumber(business_id);
+
     // Create transaction with status pending (customer flow)
     const transRes = await client.query(
-      'INSERT INTO transactions (business_id, customer_user_id, status, created_at, updated_at) VALUES ($1, $2, $3, now(), now()) RETURNING transaction_id',
-      [business_id, customer_user_id || null, 'pending']
+      'INSERT INTO transactions (business_id, customer_user_id, status, created_at, updated_at, transaction_number) VALUES ($1, $2, $3, now(), now(), $4) RETURNING transaction_id',
+      [business_id, customer_user_id || null, 'pending', transaction_number]
     );
     const transaction_id = transRes.rows[0].transaction_id;
 
@@ -183,11 +192,6 @@ exports.publicCheckout = async (req, res) => {
       [transaction_id, customer_user_id || null, discount_id || null, (payment_type || 'cash').toString(), money_received || null, money_change]
     );
 
-    const businessPart = String(business_id).padStart(2, '0');
-    const timePart = new Date().toISOString().replace(/[-:T.Z]/g, '').slice(0, 14);
-    const randPart = Math.floor(1000 + Math.random() * 9000);
-    const transaction_number = `T-${businessPart}-${timePart}-${randPart}`;
-
     await client.query('COMMIT');
     // Log sale for visibility in logs dashboard
     try {
@@ -205,6 +209,7 @@ exports.publicCheckout = async (req, res) => {
         t: 'cart',
         b: business_id,
         transaction_id,
+        transaction_number: transaction_number,
         items: items.map(item => ({
           p: item.product_id,
           q: item.quantity,

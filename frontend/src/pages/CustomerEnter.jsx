@@ -36,7 +36,16 @@ export default function CustomerEnter() {
     setIsScanning(true);
     const bid = parseBusinessId(code);
     if (bid) {
+      // Set business ID and generate a transaction number for this session
       localStorage.setItem("business_id", String(bid));
+      // Clear old transaction data
+      localStorage.removeItem('provisionalTransactionNumber');
+      localStorage.removeItem('customerCart');
+      // Generate and save new transaction number
+      const timePart = new Date().toISOString().replace(/[-:T.Z]/g, '').slice(0, 14);
+      const randPart = Math.floor(1000 + Math.random() * 9000);
+      const transactionNumber = `T-${String(bid).padStart(2, '0')}-${timePart}-${randPart}`;
+      localStorage.setItem('provisionalTransactionNumber', transactionNumber);
 
       // New: Call backend /public/enter-store to create user
       try {

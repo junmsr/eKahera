@@ -90,7 +90,7 @@ function CashierPOS() {
         .replace(/[-:T.Z]/g, "")
         .slice(0, 14);
       const randPart = Math.floor(1000 + Math.random() * 9000);
-      setTransactionNumber(`T-${businessId}-${timePart}-${randPart}`);
+      setTransactionNumber(`T-${businessId.toString().padStart(2, "0")}-${timePart}-${randPart}`);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -114,6 +114,8 @@ function CashierPOS() {
               items: parsed.items || [],
               payment_type: "gcash",
               money_received: parsed.total || null,
+              transaction_id: parsed.transactionId || null,
+              transaction_number: parsed.transactionNumber || null,
             };
             const resp = await api("/api/sales/checkout", {
               method: "POST",
@@ -257,6 +259,7 @@ function CashierPOS() {
     try {
       const body = {
         transaction_id: transactionId || null,
+        transaction_number: transactionNumber || null,
         items: cart.map((i) => ({
           product_id: i.product_id,
           quantity: i.quantity,
@@ -298,8 +301,9 @@ function CashierPOS() {
         .replace(/[-:T.Z]/g, "")
         .slice(0, 14);
       const randPart = Math.floor(1000 + Math.random() * 9000);
-      setTransactionNumber(`T-${businessId}-${timePart}-${randPart}`);
+      setTransactionNumber(`T-${businessId.toString().padStart(2, "0")}-${timePart}-${randPart}`);
       setAppliedDiscount(null);
+      setTransactionId(null);
     } catch (err) {
       setError(err.message || "Checkout failed");
     }
@@ -430,6 +434,10 @@ if (scannedData && scannedData.t === "cart" && Array.isArray(scannedData.items))
     // set transactionId from scanned data if present
     if (scannedData.transaction_id) {
       setTransactionId(scannedData.transaction_id);
+    }
+    // set transaction_number from scanned data if present
+    if (scannedData.transaction_number) {
+      setTransactionNumber(scannedData.transaction_number);
     }
     const items = scannedData.items.map((it) => ({
       product_id: it.p,
@@ -746,6 +754,8 @@ if (scannedData && scannedData.t === "cart" && Array.isArray(scannedData.items))
                           quantity: i.quantity,
                         })),
                         total,
+                        transactionId: transactionId,
+                        transactionNumber: transactionNumber,
                       })
                     );
                     const { checkoutUrl } = await createGcashCheckout({

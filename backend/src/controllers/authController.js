@@ -202,7 +202,7 @@ exports.login = async (req, res) => {
       role: roleName,
       username: user.username,
       email: user.email,
-      businessId: user.business_id || null
+      businessId: user.business_id ? parseInt(user.business_id, 10) : null
     };
     
     console.log('Creating JWT token with payload:', tokenPayload);

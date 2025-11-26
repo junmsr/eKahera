@@ -57,6 +57,7 @@ function MobileScannerView() {
               payment_type: "gcash",
               money_received: parsed.total || null,
               business_id: Number(businessId),
+              transaction_number: parsed.transactionNumber || null,
             };
             const resp = await api("/api/sales/public/checkout", {
               method: "POST",
@@ -162,6 +163,11 @@ function MobileScannerView() {
   const removeItem = (sku) =>
     setCart((prev) => prev.filter((p) => p.sku !== sku));
 
+  const handleCopyTn = () => {
+    const storedTxn = localStorage.getItem("provisionalTransactionNumber");
+    navigator.clipboard.writeText(storedTxn || "");
+  };
+
   return (
     <Background variant="gradientBlue" pattern="dots" floatingElements overlay>
       {/* Animated background orbs */}
@@ -183,6 +189,31 @@ function MobileScannerView() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
+          {/* Transaction Number Display */}
+          <div className="flex items-center justify-center p-2">
+            <button
+              onClick={handleCopyTn}
+              title="Copy transaction number"
+              className="inline-flex items-center gap-2 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg px-2.5 py-1.5 shadow-sm hover:bg-blue-100 transition-colors"
+            >
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2M8 16h8a2 2 0 002-2v-6m-10 8l-2 2m2-2l2 2"
+                />
+              </svg>
+              <span className="font-mono text-xs sm:text-sm md:text-base font-bold tracking-wider truncate max-w-[50vw]">
+                {localStorage.getItem("provisionalTransactionNumber") || 'Scan Store QR to Begin'}
+              </span>
+            </button>
+          </div>
           {/* Scanner Card */}
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
@@ -315,6 +346,7 @@ function MobileScannerView() {
                     money_received: total,
                     business_id: Number(businessId),
                     customer_user_id: customerUserId ? Number(customerUserId) : null,
+                    transaction_number: localStorage.getItem("provisionalTransactionNumber"),
                   };
                   const res = await api("/api/sales/public/checkout", {
                     method: "POST",
@@ -340,18 +372,18 @@ function MobileScannerView() {
                     window.location.origin + "/customer?payment=success";
                   const cancelUrl =
                     window.location.origin + "/customer?payment=cancel";
-                  localStorage.setItem(
-                    "pending_gcash_cart_public",
-                    JSON.stringify({
-                      items: cart.map((i) => ({
-                        product_id: i.product_id,
-                        sku: i.sku,
-                        quantity: i.quantity,
-                      })),
-                      total,
-                    })
-                  );
-                  const { checkoutUrl } = await createGcashCheckout({
+                                      localStorage.setItem(
+                                      "pending_gcash_cart_public",
+                                      JSON.stringify({
+                                        items: cart.map((i) => ({
+                                          product_id: i.product_id,
+                                          sku: i.sku,
+                                          quantity: i.quantity,
+                                        })),
+                                        total,
+                                        transactionNumber: localStorage.getItem("provisionalTransactionNumber"),
+                                      })
+                                    );                  const { checkoutUrl } = await createGcashCheckout({
                     amount: Number(total || 0),
                     description: "Self-checkout Order",
                     referenceNumber: `SC-${Date.now()}`,
@@ -380,6 +412,7 @@ function MobileScannerView() {
                     money_received: total,
                     business_id: Number(businessId),
                     customer_user_id: customerUserId ? Number(customerUserId) : null,
+                    transaction_number: localStorage.getItem("provisionalTransactionNumber"),
                   };
                 const res = await api("/api/sales/public/checkout", {
                   method: "POST",
