@@ -14,7 +14,7 @@ function MobileScannerView() {
   const [scannerPaused, setScannerPaused] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("GCash");
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(true);
   const [loading, setLoading] = useState(false);
   const [checkoutMessage, setCheckoutMessage] = useState("");
   const [error, setError] = useState("");
@@ -284,31 +284,27 @@ function MobileScannerView() {
           </AnimatePresence>
 
           {/* Order Drawer */}
-          <AnimatePresence>
-            {cart.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 20 }}
-                transition={{ duration: 0.3 }}
-              >
-                <Card
-                  className="w-full emphasized-card"
-                  variant="glass"
-                  microinteraction
-                >
-                  <OrderDrawer
-                    open={drawerOpen}
-                    onToggle={() => setDrawerOpen((v) => !v)}
-                    cart={cart}
-                    onIncrement={increment}
-                    onDecrement={decrement}
-                    onRemove={removeItem}
-                  />
-                </Card>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <Card className="w-full" variant="glass">
+              <OrderDrawer
+                open={drawerOpen}
+                onToggle={() => setDrawerOpen((v) => !v)}
+                cart={cart}
+                onIncrement={increment}
+                onDecrement={decrement}
+                onRemove={removeItem}
+              />
+              {cart.length === 0 && (
+                <div className="p-4 text-center text-gray-500">
+                  Cart is empty
+                </div>
+              )}
+            </Card>
+          </motion.div>
         </motion.div>
 
         <ActionBar
