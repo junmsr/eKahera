@@ -119,7 +119,7 @@ export default function PageLayout({
 
         {/* Main Content */}
         <main
-          className={`flex-1 flex flex-col transition-all duration-300 ${sidebar ? "md:ml-48" : ""} ${isSidebarOpen ? "blur-sm" : ""} max-h-screen`}
+          className={`flex-1 flex flex-col transition-all duration-300 ${sidebar ? "md:ml-48" : ""} ${isSidebarOpen ? "blur-sm" : ""} overflow-y-auto`}
         >
           {/* Header */}
           {showHeader && (
@@ -129,12 +129,12 @@ export default function PageLayout({
               headerActions={headerActions}
               isMobileNavOpen={isSidebarOpen}
               onMenuClick={() => setSidebarOpen(!isSidebarOpen)}
-              className="sticky top-0 z-30 bg-white"
+              className="bg-white"
             />
           )}
 
           {/* Page Content */}
-          <div className="flex-1 relative z-20 overflow-y-auto">
+          <div className="flex-1 relative">
             {children}
           </div>
         </main>
