@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict 7NGxVBFrome8gaUajht0KR5bU129E025dYtp6NnUAth9d3lwlcRv0XY2IPgWppU
+\restrict 8odg9lSfiEmE3u70xo54Q2EKJIqSLmeops6UUPZHeJngfexE8Az0hVCu8WkPNob
 
 -- Dumped from database version 17.6
 -- Dumped by pg_dump version 17.6
@@ -127,7 +127,8 @@ CREATE TABLE public.transactions (
     status character varying(30) DEFAULT 'completed'::character varying NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    business_id integer
+    business_id integer,
+    transaction_number text
 );
 
 
@@ -752,6 +753,14 @@ ALTER TABLE ONLY public.transaction_payment
 
 ALTER TABLE ONLY public.transactions
     ADD CONSTRAINT transactions_pkey PRIMARY KEY (transaction_id);
+
+
+--
+-- Name: transactions transactions_transaction_number_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.transactions
+    ADD CONSTRAINT transactions_transaction_number_key UNIQUE (transaction_number);
 
 
 --
@@ -1566,5 +1575,5 @@ ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin IN SCHEMA public GRANT ALL ON T
 -- PostgreSQL database dump complete
 --
 
-\unrestrict 7NGxVBFrome8gaUajht0KR5bU129E025dYtp6NnUAth9d3lwlcRv0XY2IPgWppU
+\unrestrict 8odg9lSfiEmE3u70xo54Q2EKJIqSLmeops6UUPZHeJngfexE8Az0hVCu8WkPNob
 
