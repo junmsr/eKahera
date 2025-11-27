@@ -12,7 +12,6 @@ import CustomerCartQRModal from "../../modals/CustomerCartQRModal";
 
 function MobileScannerView() {
   const navigate = useNavigate();
-  const navigate = useNavigate();
   const [cart, setCart] = useState([]);
   const [scannerPaused, setScannerPaused] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);

@@ -6,7 +6,7 @@ export function useAuth() {
   const logout = () => {
     sessionStorage.removeItem('auth_token');
     sessionStorage.removeItem('user');
-    navigate('/login');
+    navigate('/');
   };
 
   return { logout };
