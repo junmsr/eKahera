@@ -41,7 +41,7 @@ function CartTableCard({
 
   return (
     <Card
-      className={`flex-1 flex flex-col bg-white/80 backdrop-blur-md border border-white/60 shadow-xl hover:shadow-2xl transition-all duration-300 h-full min-h-0 overflow-hidden ${className}`}
+      className={`flex-1 flex flex-col bg-white/80 backdrop-blur-md border border-white/60 shadow-xl ${className}`}
       variant="glass"
       microinteraction
       {...props}

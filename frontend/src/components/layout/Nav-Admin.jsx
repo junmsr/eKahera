@@ -124,12 +124,17 @@ const STYLES = {
   logoContainer: "mb-8 flex items-center gap-3 group cursor-pointer px-2",
   logoText:
     "text-gray-800 font-semibold text-lg tracking-wide transition-all duration-300 group-hover:text-gray-900",
-  nav: "flex-col gap-10 w-full",
+  nav: "flex-col gap-5 w-full",
   navItem:
     "group flex items-center w-full py-3 px-3 rounded-lg transition-all duration-200 font-medium text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 relative",
   navItemActive: "bg-blue-600/80 backdrop-blur-sm text-white shadow-lg",
-  navItemInactive:
-    "bg-transparent text-gray-700 hover:bg-white/30 hover:text-gray-900 hover:backdrop-blur-sm",
+  // navItemInactive: "bg-transparent text-gray-700 hover:bg-blue/30 hover:text-gray-900 hover:backdrop-blur-sm",
+  // navItemActive: "bg-blue-600/80 backdrop-blur-sm text-white shadow-lg",
+  // navItemInactive: "bg-transparent text-gray-700 hover:bg-blue/30 hover:text-gray-900 hover:backdrop-blur-sm",
+  // navItemActive: "bg-blue-600/80 backdrop-blur-sm text-white shadow-lg",
+// improved hover highlight for inactive items
+ navItemInactive:
+   "bg-transparent text-gray-700 hover:bg-blue-100 hover:text-gray-900 hover:backdrop-blur-sm",
   iconContainer: "mr-3 relative flex-shrink-0",
   label: "leading-tight",
   tooltip:
@@ -137,7 +142,7 @@ const STYLES = {
   sectionHeader:
     "text-gray-600 text-xs font-semibold uppercase tracking-wider mb-2 mt-0 px-3",
   logoutButton:
-    "mt-auto flex items-center w-full py-3 px-3 rounded-lg transition-all duration-200 font-medium text-sm text-gray-700 hover:bg-white/30 hover:text-gray-900 hover:backdrop-blur-sm",
+    "mt-auto flex items-center w-full py-3 px-3 rounded-lg transition-all duration-200 font-medium text-sm text-gray-700 hover:bg-red-50 hover:text-red-700 hover:backdrop-blur-sm hover:shadow-md relative group",
   logoutIcon: "mr-3 flex-shrink-0",
 };
 
@@ -215,7 +220,7 @@ const NavAdmin = ({ isMobile, onLogoutClick }) => {
           role="button"
           tabIndex={0}
         >
-          <div className="transition-all duration-300 group-hover:scale-110">
+          <div className="transition-all duration-300">
             <Logo size={42} />
           </div>
         </div>

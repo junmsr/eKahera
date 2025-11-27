@@ -80,7 +80,7 @@ export default function Login() {
         navigate("/");
       }
     } catch (err) {
-      setApiError(err.message || "Login failed");
+      setApiError("Login Failed");
     } finally {
       setLoading(false);
     }

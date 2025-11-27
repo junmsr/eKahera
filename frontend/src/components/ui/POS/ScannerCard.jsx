@@ -353,7 +353,7 @@ function ScannerCard({
   };
   return (
     <Card
-      className={`flex-shrink-0 bg-white/80 backdrop-blur-md border border-white/60 shadow-xl hover:shadow-2xl transition-all duration-300 overflow-hidden ${className}`}
+      className={`flex-shrink-0 bg-white/80 backdrop-blur-md border border-white/60 shadow-xl ${className}`}
       variant="glass"
       microinteraction
       {...props}

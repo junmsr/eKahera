@@ -31,7 +31,7 @@ function StatsCard({
 
   return (
     <Card
-      className={`bg-white/80 backdrop-blur-md border border-white/60 shadow-xl hover:shadow-2xl hover:-translate-y-1 hover:scale-[1.01] transition-all duration-500 group ${className}`}
+      className={`bg-white/80 backdrop-blur-md border border-white/60 shadow-xl hover:shadow-2xl group ${className}`}
       {...props}
     >
       <div
@@ -40,7 +40,7 @@ function StatsCard({
         }`}
       >
         <div className="flex items-center justify-between">
-          <div className="bg-gradient-to-br from-blue-100 to-indigo-100 rounded-2xl p-4 md:p-5 shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
+          <div className="bg-gradient-to-br from-blue-100 to-indigo-100 rounded-2xl p-4 md:p-5 shadow-lg">
             {icon}
           </div>
           <div

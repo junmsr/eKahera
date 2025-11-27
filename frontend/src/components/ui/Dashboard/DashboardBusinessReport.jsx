@@ -106,7 +106,7 @@ export default function DashboardBusinessReport() {
       {/* Charts Row 1: Sales by Location and Revenue vs Expenses */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8 w-full min-h-[350px]">
         {/* Sales by Location */}
-        <div className="bg-white rounded-lg p-6 border border-blue-300 shadow-lg hover:shadow-xl transition-shadow duration-300">
+        <div className="bg-white rounded-lg p-6 border border-blue-300 shadow-lg">
           <h3 className="text-xl font-extrabold text-blue-700 mb-5 select-none">
             Sales by Location
           </h3>
@@ -143,7 +143,7 @@ export default function DashboardBusinessReport() {
         </div>
 
         {/* Revenue vs Expenses */}
-        <div className="bg-white rounded-lg p-6 border border-blue-300 shadow-lg hover:shadow-xl transition-shadow duration-300">
+        <div className="bg-white rounded-lg p-6 border border-blue-300 shadow-lg">
           <h3 className="text-xl font-extrabold text-blue-700 mb-5 select-none">
             Revenue vs Expenses
           </h3>
@@ -194,7 +194,7 @@ export default function DashboardBusinessReport() {
       {/* Charts Row 2: Profit Trend and Payment Methods */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8 w-full min-h-[350px]">
         {/* Profit Trends */}
-        <div className="bg-white rounded-lg p-6 border border-blue-300 shadow-lg hover:shadow-xl transition-shadow duration-300">
+        <div className="bg-white rounded-lg p-6 border border-blue-300 shadow-lg">
           <h3 className="text-xl font-extrabold text-blue-700 mb-5 select-none">
             Profit Trends
           </h3>
@@ -231,7 +231,7 @@ export default function DashboardBusinessReport() {
         </div>
 
         {/* Payment Methods */}
-        <div className="bg-white rounded-lg p-6 border border-blue-300 shadow-lg hover:shadow-xl transition-shadow duration-300">
+        <div className="bg-white rounded-lg p-6 border border-blue-300 shadow-lg">
           <h3 className="text-xl font-extrabold text-blue-700 mb-5 select-none">
             Payment Methods
           </h3>
@@ -319,7 +319,7 @@ export default function DashboardBusinessReport() {
       {/* Bottom KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full">
         {/* Cash Flow */}
-        <div className="bg-gradient-to-br from-green-100 to-green-200 rounded-lg p-6 border border-green-300 shadow-md flex flex-col justify-center hover:shadow-lg transition-shadow duration-300">
+        <div className="bg-gradient-to-br from-green-100 to-green-200 rounded-lg p-6 border border-green-300 shadow-md flex flex-col justify-center">
           <p className="text-xs font-semibold text-green-700 uppercase tracking-wider mb-2">
             Cash Flow
           </p>
@@ -332,7 +332,7 @@ export default function DashboardBusinessReport() {
         </div>
 
         {/* Operating Costs */}
-        <div className="bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg p-6 border border-blue-300 shadow-md flex flex-col justify-center hover:shadow-lg transition-shadow duration-300">
+        <div className="bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg p-6 border border-blue-300 shadow-md flex flex-col justify-center">
           <p className="text-xs font-semibold text-blue-700 uppercase tracking-wider mb-2">
             Operating Costs
           </p>
@@ -345,7 +345,7 @@ export default function DashboardBusinessReport() {
         </div>
 
         {/* Profit Growth */}
-        <div className="bg-gradient-to-br from-purple-100 to-purple-200 rounded-lg p-6 border border-purple-300 shadow-md flex flex-col justify-center hover:shadow-lg transition-shadow duration-300">
+        <div className="bg-gradient-to-br from-purple-100 to-purple-200 rounded-lg p-6 border border-purple-300 shadow-md flex flex-col justify-center">
           <p className="text-xs font-semibold text-purple-700 uppercase tracking-wider mb-2">
             Profit Growth
           </p>
