@@ -385,7 +385,7 @@ export default function Dashboard() {
     <PageLayout
       title="DASHBOARD"
       subtitle=""
-      sidebar={<NavAdmin onLogoutClick={logout} />}
+      sidebar={<NavAdmin />}
       headerActions={headerActions}
       isSidebarOpen={isSidebarOpen}
       setSidebarOpen={setSidebarOpen}
