@@ -9,7 +9,7 @@ import SectionHeader from "../../layout/SectionHeader";
 function ChartCard({ title, children, className = "", ...props }) {
   return (
     <Card
-      className={`bg-white/80 backdrop-blur-md border border-white/60 shadow-xl hover:shadow-2xl hover:-translate-y-0.5 hover:scale-[1.01] transition-all duration-500 p-4 sm:p-6 md:p-7 group ${className}`}
+      className={`bg-white/80 backdrop-blur-md border border-white/60 shadow-xl group ${className}`}
       {...props}
     >
       {title && (

@@ -41,7 +41,7 @@ function VisitorsChart({ data, className = "" }) {
       title={
         <span className="text-blue-700">Visitors for the last 6 months</span>
       }
-      className={`bg-white/80 backdrop-blur-md border border-white/60 shadow-xl hover:shadow-2xl p-6 ${className}`}
+      className={`bg-white/80 backdrop-blur-md border border-white/60 shadow-xl ${className}`}
     >
       <div className="h-72">
         <ResponsiveContainer width="100%" height="100%">
@@ -77,7 +77,7 @@ function SalesPieChart({ data, className = "" }) {
   return (
     <ChartCard
       title={<span className="text-blue-700">Sales by Product Category</span>}
-      className={`bg-white/80 backdrop-blur-md border border-white/60 shadow-xl hover:shadow-2xl p-6 ${className}`}
+      className={`bg-white/80 backdrop-blur-md border border-white/60 shadow-xl ${className}`}
     >
       <div className="h-72">
         <ResponsiveContainer width="100%" height="100%">
