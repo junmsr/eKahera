@@ -36,19 +36,41 @@ export default function DashboardBusinessReport() {
   const [profitTrend, setProfitTrend] = useState([]);
   const [paymentMethods, setPaymentMethods] = useState([]);
   const [productPerformance, setProductPerformance] = useState([]);
-  const [businessStats, setBusinessStats] = useState({ cashFlow: 0, operatingCosts: 0, profitGrowth: 0 });
+  const [businessStats, setBusinessStats] = useState({
+    cashFlow: 0,
+    operatingCosts: 0,
+    profitGrowth: 0,
+  });
+
+  const blueShades = [
+    "#3b82f6",
+    "#1d4ed8",
+    "#1e40af",
+    "#2563eb",
+    "#60a5fa",
+    "#93c5fd",
+    "#bfdbfe",
+  ];
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [keyMetricsRes, salesByLocationRes, revenueVsExpensesRes, profitTrendRes, paymentMethodsRes, productPerformanceRes, businessStatsRes] = await Promise.all([
-          api('/api/stats/key-metrics'),
-          api('/api/stats/sales-by-location'),
-          api('/api/stats/revenue-vs-expenses'),
-          api('/api/stats/profit-trend'),
-          api('/api/stats/payment-methods'),
-          api('/api/stats/product-performance'),
-          api('/api/stats/business-stats')
+        const [
+          keyMetricsRes,
+          salesByLocationRes,
+          revenueVsExpensesRes,
+          profitTrendRes,
+          paymentMethodsRes,
+          productPerformanceRes,
+          businessStatsRes,
+        ] = await Promise.all([
+          api("/api/stats/key-metrics"),
+          api("/api/stats/sales-by-location"),
+          api("/api/stats/revenue-vs-expenses"),
+          api("/api/stats/profit-trend"),
+          api("/api/stats/payment-methods"),
+          api("/api/stats/product-performance"),
+          api("/api/stats/business-stats"),
         ]);
 
         setKeyMetrics(keyMetricsRes || {});
@@ -59,7 +81,7 @@ export default function DashboardBusinessReport() {
         setProductPerformance(productPerformanceRes || []);
         setBusinessStats(businessStatsRes || {});
       } catch (error) {
-        console.error('Error fetching business report data:', error);
+        console.error("Error fetching business report data:", error);
       }
     };
 
@@ -257,11 +279,13 @@ export default function DashboardBusinessReport() {
                 labelLine={false}
                 label={({ name, value }) => `${name} ${value}%`}
                 outerRadius={90}
-                fill="#2563eb"
                 dataKey="value"
               >
                 {paymentMethods.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.fill} />
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={blueShades[index % blueShades.length]}
+                  />
                 ))}
               </Pie>
               <Tooltip
@@ -290,9 +314,13 @@ export default function DashboardBusinessReport() {
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {(() => {
-            const maxSales = Math.max(...productPerformance.map((p) => p.sales || 0));
+            const maxSales = Math.max(
+              ...productPerformance.map((p) => p.sales || 0)
+            );
             return productPerformance.map((product) => {
-              const progressPercent = maxSales ? Math.round((product.sales / maxSales) * 100) : 0;
+              const progressPercent = maxSales
+                ? Math.round((product.sales / maxSales) * 100)
+                : 0;
               return (
                 <div
                   key={product.name}
@@ -304,17 +332,20 @@ export default function DashboardBusinessReport() {
                     </span>
                     <TrendIcon trend={product.trend} />
                   </div>
-                  <div className="flex items-center gap-4">
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div
-                        className="bg-blue-500 h-2 rounded-full"
-                        style={{ width: `${progressPercent}%` }}
-                      ></div>
-                    </div>
-                    <p className="text-sm text-gray-700 font-semibold whitespace-nowrap">
-                      ₱{product.sales.toLocaleString()}
-                    </p>
+                  <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
+                    <div
+                      className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                      role="progressbar"
+                      aria-valuenow={progressPercent}
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-label={`Sales progress for ${product.name}`}
+                      style={{ width: `${progressPercent}%` }}
+                    ></div>
                   </div>
+                  <p className="text-sm text-gray-600 font-semibold">
+                    ₱{product.sales.toLocaleString()}
+                  </p>
                 </div>
               );
             });

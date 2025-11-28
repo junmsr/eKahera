@@ -41,9 +41,8 @@ function CartTableCard({
 
   return (
     <Card
-      className={`flex-1 flex flex-col bg-white/80 backdrop-blur-md border border-white/60 shadow-xl ${className}`}
+      className={`flex-1 flex flex-col bg-white/80 backdrop-blur-md border border-white/60 shadow-xl transition-all duration-300 h-full min-h-0 overflow-hidden ${className}`}
       variant="glass"
-      microinteraction
       {...props}
     >
       <div className="flex-1 min-h-0 flex flex-col p-2 sm:p-3">

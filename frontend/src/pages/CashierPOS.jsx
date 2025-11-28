@@ -33,7 +33,7 @@ function CashierPOS() {
   const [scannerPaused, setScannerPaused] = useState(false);
   const [error, setError] = useState("");
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-  const [transactionNumber, setTransactionNumber] = useState('');
+  const [transactionNumber, setTransactionNumber] = useState("");
   const [transactionId, setTransactionId] = useState(null);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
@@ -90,7 +90,9 @@ function CashierPOS() {
         .replace(/[-:T.Z]/g, "")
         .slice(0, 14);
       const randPart = Math.floor(1000 + Math.random() * 9000);
-      setTransactionNumber(`T-${businessId.toString().padStart(2, "0")}-${timePart}-${randPart}`);
+      setTransactionNumber(
+        `T-${businessId.toString().padStart(2, "0")}-${timePart}-${randPart}`
+      );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -127,10 +129,13 @@ function CashierPOS() {
             if (resp?.transaction_id) setTransactionId(resp.transaction_id);
             setCart([]);
             try {
-              const url = new URL(window.location.origin + '/receipt');
-              if (resp?.transaction_number) url.searchParams.set('tn', resp.transaction_number);
-              if (resp?.transaction_id) url.searchParams.set('tid', String(resp.transaction_id));
-              if (resp?.total != null) url.searchParams.set('total', String(resp.total));
+              const url = new URL(window.location.origin + "/receipt");
+              if (resp?.transaction_number)
+                url.searchParams.set("tn", resp.transaction_number);
+              if (resp?.transaction_id)
+                url.searchParams.set("tid", String(resp.transaction_id));
+              if (resp?.total != null)
+                url.searchParams.set("total", String(resp.total));
               navigate(url.pathname + url.search);
             } catch (_) {}
           } catch (e) {
@@ -160,15 +165,14 @@ function CashierPOS() {
     try {
       const businessId = user?.businessId || user?.business_id || null;
       const url = businessId
-        ? `/api/products/sku/${encodeURIComponent(skuValue)}?business_id=${businessId}`
+        ? `/api/products/sku/${encodeURIComponent(
+            skuValue
+          )}?business_id=${businessId}`
         : `/api/products/sku/${encodeURIComponent(skuValue)}`;
 
-      const product = await api(
-        url,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      const product = await api(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       const price = Number(product.selling_price || 0);
       const stockQty = Number(product.stock_quantity ?? 0);
       if (stockQty <= 0) {
@@ -244,8 +248,8 @@ function CashierPOS() {
       });
       return resp;
     } catch (err) {
-      console.error('Failed to complete transaction:', err);
-      setError(err.message || 'Failed to complete transaction');
+      console.error("Failed to complete transaction:", err);
+      setError(err.message || "Failed to complete transaction");
       return null;
     }
   };
@@ -266,7 +270,9 @@ function CashierPOS() {
         })),
         payment_type: paymentType,
         money_received: moneyReceived,
-        ...(appliedDiscount && typeof appliedDiscount.value === 'string' && appliedDiscount.value.endsWith('%')
+        ...(appliedDiscount &&
+        typeof appliedDiscount.value === "string" &&
+        appliedDiscount.value.endsWith("%")
           ? { discount_percentage: parseFloat(appliedDiscount.value) }
           : appliedDiscount
           ? { discount_amount: Number(appliedDiscount.value) }
@@ -288,10 +294,13 @@ function CashierPOS() {
 
       setCart([]);
       try {
-        const url = new URL(window.location.origin + '/receipt');
-        if (resp?.transaction_number) url.searchParams.set('tn', resp.transaction_number);
-        if (resp?.transaction_id) url.searchParams.set('tid', String(resp.transaction_id));
-        if (resp?.total != null) url.searchParams.set('total', String(resp.total));
+        const url = new URL(window.location.origin + "/receipt");
+        if (resp?.transaction_number)
+          url.searchParams.set("tn", resp.transaction_number);
+        if (resp?.transaction_id)
+          url.searchParams.set("tid", String(resp.transaction_id));
+        if (resp?.total != null)
+          url.searchParams.set("total", String(resp.total));
         navigate(url.pathname + url.search);
       } catch (_) {}
       // Start a fresh provisional transaction number after successful checkout
@@ -301,7 +310,9 @@ function CashierPOS() {
         .replace(/[-:T.Z]/g, "")
         .slice(0, 14);
       const randPart = Math.floor(1000 + Math.random() * 9000);
-      setTransactionNumber(`T-${businessId.toString().padStart(2, "0")}-${timePart}-${randPart}`);
+      setTransactionNumber(
+        `T-${businessId.toString().padStart(2, "0")}-${timePart}-${randPart}`
+      );
       setAppliedDiscount(null);
       setTransactionId(null);
     } catch (err) {
@@ -364,7 +375,7 @@ function CashierPOS() {
     </div>
   );
 
-  const cardClass = 'bg-white border border-blue-100 rounded-2xl p-6 shadow-lg';
+  const cardClass = "bg-white border border-blue-100 rounded-2xl p-6 shadow-lg";
 
   return (
     <div className="bg-white min-h-screen">
@@ -406,16 +417,13 @@ function CashierPOS() {
         </header>
 
         {/* Main Area */}
-        <main
-          className="flex-1 bg-gradient-to-br from-gray-50/50 via-blue-50/30 to-indigo-50/50 overflow-y-auto p-2 sm:p-3 md:p-4 pb-55 lg:pb-4"
-          
-        >
+        <main className="flex-1 bg-gradient-to-br from-gray-50/50 via-blue-50/30 to-indigo-50/50 overflow-y-auto p-2 sm:p-3 md:p-4 pb-55 lg:pb-4">
           <div className="grid gap-2 sm:gap-3 md:gap-4 h-full grid-cols-1 lg:grid-cols-12">
             {/* Left Column - Scanner, SKU Form, Transaction */}
             <div className="lg:col-span-4 flex flex-col gap-2 sm:gap-3 md:gap-4">
               {/* ScannerCard */}
               <div className="flex-shrink-0">
-              <ScannerCard
+                <ScannerCard
                   onScan={async (result) => {
                     const code = result?.[0]?.rawValue;
                     if (!code) return;
@@ -423,78 +431,100 @@ function CashierPOS() {
                     if (showPriceCheck) {
                       setPriceCheckSku(code);
                     } else {
-try {
-  let scannedData;
-  try {
-    scannedData = JSON.parse(code);
-  } catch (e) {
-    scannedData = null;
-  }
-if (scannedData && scannedData.t === "cart" && Array.isArray(scannedData.items)) {
-    // set transactionId from scanned data if present
-    if (scannedData.transaction_id) {
-      setTransactionId(scannedData.transaction_id);
-    }
-    // set transaction_number from scanned data if present
-    if (scannedData.transaction_number) {
-      setTransactionNumber(scannedData.transaction_number);
-    }
-    const items = scannedData.items.map((it) => ({
-      product_id: it.p,
-      quantity: it.q,
-      sku: it.sku || "",
-    }));
-    try {
-      const fetchedProducts = await Promise.all(
-        items.map(async (item) => {
-          const res = await api(`/api/products/${item.product_id}`, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          return {
-            product_id: item.product_id,
-            sku: res.sku || item.sku || "",
-            name: res.product_name || "",
-            price: Number(res.selling_price) || 0,
-            quantity: item.quantity,
-          };
-        })
-      );
-      setCart((prev) => {
-        const byProductId = new Map(prev.map(i => [i.product_id, i]));
-        for (const it of fetchedProducts) {
-          const existing = byProductId.get(it.product_id);
-          if (existing) {
-            existing.quantity += it.quantity;
-          } else {
-            byProductId.set(it.product_id, { ...it });
-          }
-        }
-        return Array.from(byProductId.values());
-      });
-      return;
-    } catch (err) {
-      console.error("Error fetching product details for scanned cart:", err);
-      // fallback to merging raw scanned items without product details
-      setCart((prev) => {
-        const byProductId = new Map(prev.map(i => [i.product_id, i]));
-        for (const it of items) {
-          const existing = byProductId.get(it.product_id);
-          if (existing) {
-            existing.quantity += it.quantity;
-          } else {
-            byProductId.set(it.product_id, { ...it, name: "", price: 0 });
-          }
-        }
-        return Array.from(byProductId.values());
-      });
-      return;
-    }
-  }
-  await addSkuToCart(code, 1);
-} catch (err) {
-  console.error("Error processing scanned code:", err);
-  await addSkuToCart(code, 1);
-}
+                      try {
+                        let scannedData;
+                        try {
+                          scannedData = JSON.parse(code);
+                        } catch (e) {
+                          scannedData = null;
+                        }
+                        if (
+                          scannedData &&
+                          scannedData.t === "cart" &&
+                          Array.isArray(scannedData.items)
+                        ) {
+                          // set transactionId from scanned data if present
+                          if (scannedData.transaction_id) {
+                            setTransactionId(scannedData.transaction_id);
+                          }
+                          // set transaction_number from scanned data if present
+                          if (scannedData.transaction_number) {
+                            setTransactionNumber(
+                              scannedData.transaction_number
+                            );
+                          }
+                          const items = scannedData.items.map((it) => ({
+                            product_id: it.p,
+                            quantity: it.q,
+                            sku: it.sku || "",
+                          }));
+                          try {
+                            const fetchedProducts = await Promise.all(
+                              items.map(async (item) => {
+                                const res = await api(
+                                  `/api/products/${item.product_id}`,
+                                  {
+                                    headers: {
+                                      Authorization: `Bearer ${token}`,
+                                    },
+                                  }
+                                );
+                                return {
+                                  product_id: item.product_id,
+                                  sku: res.sku || item.sku || "",
+                                  name: res.product_name || "",
+                                  price: Number(res.selling_price) || 0,
+                                  quantity: item.quantity,
+                                };
+                              })
+                            );
+                            setCart((prev) => {
+                              const byProductId = new Map(
+                                prev.map((i) => [i.product_id, i])
+                              );
+                              for (const it of fetchedProducts) {
+                                const existing = byProductId.get(it.product_id);
+                                if (existing) {
+                                  existing.quantity += it.quantity;
+                                } else {
+                                  byProductId.set(it.product_id, { ...it });
+                                }
+                              }
+                              return Array.from(byProductId.values());
+                            });
+                            return;
+                          } catch (err) {
+                            console.error(
+                              "Error fetching product details for scanned cart:",
+                              err
+                            );
+                            // fallback to merging raw scanned items without product details
+                            setCart((prev) => {
+                              const byProductId = new Map(
+                                prev.map((i) => [i.product_id, i])
+                              );
+                              for (const it of items) {
+                                const existing = byProductId.get(it.product_id);
+                                if (existing) {
+                                  existing.quantity += it.quantity;
+                                } else {
+                                  byProductId.set(it.product_id, {
+                                    ...it,
+                                    name: "",
+                                    price: 0,
+                                  });
+                                }
+                              }
+                              return Array.from(byProductId.values());
+                            });
+                            return;
+                          }
+                        }
+                        await addSkuToCart(code, 1);
+                      } catch (err) {
+                        console.error("Error processing scanned code:", err);
+                        await addSkuToCart(code, 1);
+                      }
                     }
                   }}
                   paused={scannerPaused}
@@ -514,8 +544,18 @@ if (scannedData && scannedData.t === "cart" && Array.isArray(scannedData.items))
                 />
                 {error && (
                   <div className="bg-red-50 border-l-4 border-red-500 rounded-lg p-3 flex items-start gap-2 mt-3">
-                    <svg className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                    <svg
+                      className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
+                      />
                     </svg>
                     <p className="text-sm font-medium text-red-700">
                       {(() => {
@@ -549,30 +589,30 @@ if (scannedData && scannedData.t === "cart" && Array.isArray(scannedData.items))
                 {/* Grouped Buttons */}
                 <div className="col-span-8">
                   <div className="grid grid-cols-2 sm:grid-cols-2 gap-2 sm:gap-3">
-<Button
-  label="CASH LEDGER (F4)"
-  size="md"
-  className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
-  variant="secondary"
-  microinteraction
-  onClick={() => setShowCashLedger(true)}
-  icon={
-    <svg
-      className="w-4 h-4"
-      fill="none"
-      stroke="currentColor"
-      viewBox="0 0 24 24"
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={2}
-        d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-      />
-    </svg>
-  }
-  iconPosition="left"
-/>
+                    <Button
+                      label="CASH LEDGER (F4)"
+                      size="md"
+                      className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
+                      variant="secondary"
+                      microinteraction
+                      onClick={() => setShowCashLedger(true)}
+                      icon={
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
+                        </svg>
+                      }
+                      iconPosition="left"
+                    />
                     <Button
                       label="DISCOUNT (F5)"
                       size="md"
@@ -650,31 +690,31 @@ if (scannedData && scannedData.t === "cart" && Array.isArray(scannedData.items))
 
                 {/* Checkout Button */}
                 <div className="col-span-4">
-                    <Button
-                      label="CHECKOUT (F8)"
-                      size="md"
-                      className="w-full h-full text-sm sm:text-base font-bold"
-                      variant="primary"
-                      microinteraction
-                      onClick={() => setShowCheckout(true)}
-                      disabled={cart.length === 0}
-                      icon={
-                        <svg
-                          className="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                          />
-                        </svg>
-                      }
-                      iconPosition="left"
-                    />
+                  <Button
+                    label="CHECKOUT (F8)"
+                    size="md"
+                    className="w-full h-full text-sm sm:text-base font-bold"
+                    variant="primary"
+                    microinteraction
+                    onClick={() => setShowCheckout(true)}
+                    disabled={cart.length === 0}
+                    icon={
+                      <svg
+                        className="w-5 h-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                    }
+                    iconPosition="left"
+                  />
                 </div>
               </div>
             </div>
@@ -727,7 +767,10 @@ if (scannedData && scannedData.t === "cart" && Array.isArray(scannedData.items))
           sku={priceCheckSku}
           setSku={setPriceCheckSku}
         />
-        <CashLedgerModal isOpen={showCashLedger} onClose={() => setShowCashLedger(false)} />
+        <CashLedgerModal
+          isOpen={showCashLedger}
+          onClose={() => setShowCashLedger(false)}
+        />
         <CheckoutModal
           isOpen={showCheckout}
           onClose={() => setShowCheckout(false)}
@@ -790,48 +833,53 @@ if (scannedData && scannedData.t === "cart" && Array.isArray(scannedData.items))
         <ScanCustomerCartModal
           isOpen={showImportCart}
           onClose={() => setShowImportCart(false)}
-        onImport={async (items) => {
-          try {
-            console.log("Scanned items:", items);
-            // Fetch product details by product_id for all scanned items concurrently
-            const fetchedProducts = await Promise.all(
-              items.map(async (item) => {
-                const res = await api(`/api/products/${item.product_id}`, {
-                  headers: { Authorization: `Bearer ${token}` },
-                });
-                console.log("Fetched product for id", item.product_id, ":", res);
-                return {
-                  product_id: item.product_id,
-                  sku: res.sku || item.sku || "",
-                  name: res.product_name || "",
-                  price: Number(res.selling_price) || 0,
-                  quantity: item.quantity,
-                };
-              })
-            );
-            setCart((prev) => {
-              const bySku = new Map(prev.map((i) => [i.sku, i]));
-              for (const it of fetchedProducts) {
-                const existing = bySku.get(it.sku);
-                if (existing) existing.quantity += it.quantity;
-                else bySku.set(it.sku, { ...it });
-              }
-              return Array.from(bySku.values());
-            });
-          } catch (e) {
-            console.error("Error fetching products for scanned items:", e);
-            // Fallback to use raw items if fetch fails
-            setCart((prev) => {
-              const bySku = new Map(prev.map((i) => [i.sku, i]));
-              for (const it of items) {
-                const existing = bySku.get(it.sku);
-                if (existing) existing.quantity += it.quantity;
-                else bySku.set(it.sku, { ...it });
-              }
-              return Array.from(bySku.values());
-            });
-          }
-        }}
+          onImport={async (items) => {
+            try {
+              console.log("Scanned items:", items);
+              // Fetch product details by product_id for all scanned items concurrently
+              const fetchedProducts = await Promise.all(
+                items.map(async (item) => {
+                  const res = await api(`/api/products/${item.product_id}`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                  });
+                  console.log(
+                    "Fetched product for id",
+                    item.product_id,
+                    ":",
+                    res
+                  );
+                  return {
+                    product_id: item.product_id,
+                    sku: res.sku || item.sku || "",
+                    name: res.product_name || "",
+                    price: Number(res.selling_price) || 0,
+                    quantity: item.quantity,
+                  };
+                })
+              );
+              setCart((prev) => {
+                const bySku = new Map(prev.map((i) => [i.sku, i]));
+                for (const it of fetchedProducts) {
+                  const existing = bySku.get(it.sku);
+                  if (existing) existing.quantity += it.quantity;
+                  else bySku.set(it.sku, { ...it });
+                }
+                return Array.from(bySku.values());
+              });
+            } catch (e) {
+              console.error("Error fetching products for scanned items:", e);
+              // Fallback to use raw items if fetch fails
+              setCart((prev) => {
+                const bySku = new Map(prev.map((i) => [i.sku, i]));
+                for (const it of items) {
+                  const existing = bySku.get(it.sku);
+                  if (existing) existing.quantity += it.quantity;
+                  else bySku.set(it.sku, { ...it });
+                }
+                return Array.from(bySku.values());
+              });
+            }
+          }}
         />
         <ProfileModal
           isOpen={showProfileModal}
