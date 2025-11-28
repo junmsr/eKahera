@@ -175,7 +175,7 @@ function SuperAdmin() {
       setDeleteModal({ isOpen: false, store: null });
       setError("");
     } catch (err) {
-      setDeleteError(err.message || "Unknown error");
+      setDeleteError("Unknown error");
     } finally {
       setDeleteLoading(false);
     }
@@ -313,7 +313,7 @@ function SuperAdmin() {
       window.location.reload();
     } catch (err) {
       setProfileError(
-        err.message || "Failed to update profile. Please try again."
+        "Failed to update profile. Please try again."
       );
       console.error("Profile update error:", err);
     } finally {

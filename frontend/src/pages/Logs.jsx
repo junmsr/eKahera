@@ -39,7 +39,7 @@ const LogsPage = () => {
       }));
       setLogs(normalized);
     } catch (err) {
-      setError(err.message || "Failed to load logs");
+      setError("Failed to load logs");
     } finally {
       setLoading(false);
     }
@@ -159,7 +159,7 @@ const LogsPage = () => {
 
       await fetchLogs();
     } catch (err) {
-      setError(err.message || "Failed to clear logs");
+      setError("Failed to clear logs");
     } finally {
       setClearing(false);
     }

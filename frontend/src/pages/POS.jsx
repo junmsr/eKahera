@@ -138,7 +138,7 @@ function POS() {
               window.location.href = url.toString();
             } catch (_) {}
           } catch (e) {
-            setError(e.message || "Failed to record GCASH payment");
+            setError("Failed to record GCASH payment");
           } finally {
             localStorage.removeItem("pending_gcash_cart");
             // remove query param
@@ -213,7 +213,7 @@ function POS() {
       setQuantity(1);
       setScannerPaused(false);
     } catch (err) {
-      setError(err.message || "Product not found");
+      setError("Product not found");
     }
   };
 
@@ -278,7 +278,7 @@ function POS() {
       setTransactionNumber(`T-${businessId}-${timePart}-${randPart}`);
       // setAppliedDiscount(null); // if using discount
     } catch (err) {
-      setError(err.message || "Checkout failed");
+      setError("Checkout failed");
     }
   };
 
@@ -716,7 +716,7 @@ function POS() {
                   });
                   window.location.href = checkoutUrl;
                 } catch (e) {
-                  setError(e.message || "Failed to init GCash");
+                  setError("Failed to init GCash");
                   localStorage.removeItem("pending_gcash_cart");
                 }
               })();

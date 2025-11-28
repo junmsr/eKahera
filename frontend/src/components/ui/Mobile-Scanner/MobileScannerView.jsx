@@ -72,7 +72,7 @@ function MobileScannerView() {
             url.searchParams.set("total", String(resp.total || 0));
             window.location.href = url.toString();
           } catch (e) {
-            setError(e.message || "Failed to record payment");
+            setError("Failed to record payment");
           } finally {
             localStorage.removeItem("pending_gcash_cart_public");
             const url = new URL(window.location.href);
@@ -144,7 +144,7 @@ function MobileScannerView() {
         throw new Error("Product not found in this store");
       }
     } catch (err) {
-      setError(err.message || "Product not found");
+      setError("Product not found");
       console.error("Error fetching product:", err);
     } finally {
       setLoading(false);
@@ -425,7 +425,7 @@ function MobileScannerView() {
                   });
                   window.location.href = checkoutUrl;
                 } catch (e) {
-                  setError(e.message || "Failed to initialize online payment");
+                  setError("Failed to initialize online payment");
                   localStorage.removeItem("pending_gcash_cart_public");
                 } finally {
                   setShowCheckout(false);
