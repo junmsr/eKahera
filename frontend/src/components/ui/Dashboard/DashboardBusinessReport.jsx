@@ -25,7 +25,12 @@ const TrendIcon = ({ trend }) => {
 };
 
 export default function DashboardBusinessReport() {
-  const [keyMetrics, setKeyMetrics] = useState({ revenue: 0, expenses: 0, netProfit: 0, grossMargin: 0 });
+  const [keyMetrics, setKeyMetrics] = useState({
+    revenue: { value: 0, change: 0 },
+    expenses: { value: 0, change: 0 },
+    netProfit: { value: 0, change: 0 },
+    grossMargin: { value: 0, change: 0 },
+  });
   const [salesByLocation, setSalesByLocation] = useState([]);
   const [revenueVsExpenses, setRevenueVsExpenses] = useState([]);
   const [profitTrend, setProfitTrend] = useState([]);
@@ -70,36 +75,44 @@ export default function DashboardBusinessReport() {
             Total Revenue
           </p>
           <p className="text-2xl font-bold text-gray-900">
-            ₱{keyMetrics.revenue.toLocaleString()}
+            ₱{keyMetrics.revenue.value.toLocaleString()}
           </p>
-          <p className="text-xs text-green-600 mt-2">↗ +11.2%</p>
+          <p className={`text-xs mt-2 ${keyMetrics.revenue.change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            {keyMetrics.revenue.change >= 0 ? '↗' : '↘'} {keyMetrics.revenue.change}%
+          </p>
         </div>
         <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
           <p className="text-xs font-medium text-gray-500 uppercase mb-1">
             Operating Expenses
           </p>
           <p className="text-2xl font-bold text-gray-900">
-            ₱{keyMetrics.expenses.toLocaleString()}
+            ₱{keyMetrics.expenses.value.toLocaleString()}
           </p>
-          <p className="text-xs text-orange-600 mt-2">↗ +8.5%</p>
+          <p className={`text-xs mt-2 ${keyMetrics.expenses.change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            {keyMetrics.expenses.change >= 0 ? '↗' : '↘'} {keyMetrics.expenses.change}%
+          </p>
         </div>
         <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
           <p className="text-xs font-medium text-gray-500 uppercase mb-1">
             Net Profit
           </p>
           <p className="text-2xl font-bold text-gray-900">
-            ₱{keyMetrics.netProfit.toLocaleString()}
+            ₱{keyMetrics.netProfit.value.toLocaleString()}
           </p>
-          <p className="text-xs text-green-600 mt-2">↗ +13.5%</p>
+          <p className={`text-xs mt-2 ${keyMetrics.netProfit.change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            {keyMetrics.netProfit.change >= 0 ? '↗' : '↘'} {keyMetrics.netProfit.change}%
+          </p>
         </div>
         <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
           <p className="text-xs font-medium text-gray-500 uppercase mb-1">
             Gross Margin
           </p>
           <p className="text-2xl font-bold text-gray-900">
-            {keyMetrics.grossMargin}%
+            {keyMetrics.grossMargin.value}%
           </p>
-          <p className="text-xs text-green-600 mt-2">↗ +2.1%</p>
+          <p className={`text-xs mt-2 ${keyMetrics.grossMargin.change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            {keyMetrics.grossMargin.change >= 0 ? '↗' : '↘'} {keyMetrics.grossMargin.change}%
+          </p>
         </div>
       </div>
 
@@ -291,21 +304,14 @@ export default function DashboardBusinessReport() {
                     </span>
                     <TrendIcon trend={product.trend} />
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
-                    <div
-                      className="w-full bg-gray-300 rounded-full h-3 mb-3"
-                      role="progressbar"
-                      aria-valuenow={progressPercent}
-                      aria-valuemin={0}
-                      aria-valuemax={100}
-                      aria-label={`Sales progress for ${product.name}`}
-                    >
+                  <div className="flex items-center gap-4">
+                    <div className="w-full bg-gray-200 rounded-full h-2">
                       <div
-                        className="bg-blue-500 h-3 rounded-full transition-all duration-300"
+                        className="bg-blue-500 h-2 rounded-full"
                         style={{ width: `${progressPercent}%` }}
                       ></div>
                     </div>
-                    <p className="text-sm text-gray-600 font-semibold">
+                    <p className="text-sm text-gray-700 font-semibold whitespace-nowrap">
                       ₱{product.sales.toLocaleString()}
                     </p>
                   </div>

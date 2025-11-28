@@ -310,18 +310,6 @@ const Profile = () => {
         <span>Refresh</span>
       </Button>
       <Button
-        variant="secondary"
-        size="sm"
-        icon={<LockIcon />}
-        iconPosition="left"
-        onClick={() =>
-          alert("Change password functionality would be implemented here")
-        }
-        className="whitespace-nowrap [&>span]:hidden sm:[&>span]:inline"
-      >
-        <span>Change Password</span>
-      </Button>
-      <Button
         variant="primary"
         size="sm"
         icon={<EditIcon />}

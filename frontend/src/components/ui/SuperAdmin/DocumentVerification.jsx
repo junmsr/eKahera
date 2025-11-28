@@ -480,6 +480,7 @@ function BusinessVerificationDetails({
       </Card>
 
       {/* Verification Actions */}
+      {business.verification_status !== "approved" && (
       <Card className="p-6">
         <h3 className="text-lg font-semibold mb-4">Complete Verification</h3>
         <div className="flex space-x-3">
@@ -512,6 +513,7 @@ function BusinessVerificationDetails({
           </p>
         )}
       </Card>
+      )}
 
       {/* Reject Modal */}
       {showRejectModal && (

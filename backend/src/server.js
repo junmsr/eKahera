@@ -67,6 +67,8 @@ const superAdminRoutes = require('./routes/superAdminRoutes');
 const documentRoutes = require('./routes/documentRoutes');
 const locationRoutes = require('./routes/locationRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
+const cleanupRoutes = require('./routes/cleanupRoutes');
+const { startPendingTransactionCleanup } = require('./utils/cleanup');
 
 const app = express();
 
@@ -98,6 +100,7 @@ app.use('/api/superadmin', superAdminRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/locations', locationRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/cleanup', cleanupRoutes);
 
 const port = config.PORT || 5000;
 
@@ -106,6 +109,7 @@ if (config.AUTO_INIT_DB === 'true') {
     .then(() => {
       app.listen(port, () => {
         console.log(`API server listening on port ${port}`);
+        startPendingTransactionCleanup();
       });
     })
     .catch((err) => {
@@ -115,6 +119,7 @@ if (config.AUTO_INIT_DB === 'true') {
 } else {
   app.listen(port, () => {
     console.log(`API server listening on port ${port} (DB init skipped)`);
+    startPendingTransactionCleanup();
     // Print a one-time DB host diagnostic
     try {
       const cfgPath = path.join(__dirname, '..', 'config.env');
