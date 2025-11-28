@@ -138,9 +138,6 @@ const getPeriodMetrics = async (businessId, startDate, endDate) => {
   );
   const revenue = Number(revenueRes.rows[0].total) || 0;
 
-  // Expenses: assume 65% of revenue for demo
-  const expenses = Math.round(revenue * 0.65);
-
   // Cost of goods sold
   const costRes = await pool.query(
     `SELECT COALESCE(SUM(p.cost_price * ti.product_quantity),0) AS total_cost
@@ -151,6 +148,8 @@ const getPeriodMetrics = async (businessId, startDate, endDate) => {
     [businessId, startDate, endDate]
   );
   const costOfGoods = Number(costRes.rows[0].total_cost) || 0;
+
+  const expenses = costOfGoods;
 
   // Gross margin
   const grossMargin = revenue > 0 ? Math.round(((revenue - costOfGoods) / revenue) * 100) : 0;
@@ -252,7 +251,16 @@ exports.getRevenueVsExpenses = async (req, res) => {
         [businessId, monthStart, monthEnd]
       );
       const revenue = Number(revenueRes.rows[0].total) || 0;
-      const expenses = Math.round(revenue * 0.65); // Assume 65%
+      
+      const costRes = await pool.query(
+        `SELECT COALESCE(SUM(p.cost_price * ti.product_quantity),0) AS total_cost
+         FROM transactions t
+         JOIN transaction_items ti ON ti.transaction_id = t.transaction_id
+         JOIN products p ON p.product_id = ti.product_id
+         WHERE t.business_id = $1 AND t.created_at >= $2 AND t.created_at < $3`,
+        [businessId, monthStart, monthEnd]
+      );
+      const expenses = Number(costRes.rows[0].total_cost) || 0;
 
       data.push({
         month: monthStart.toLocaleString('default', { month: 'short' }),
@@ -287,7 +295,15 @@ exports.getProfitTrend = async (req, res) => {
         [businessId, monthStart, monthEnd]
       );
       const revenue = Number(revenueRes.rows[0].total) || 0;
-      const expenses = Math.round(revenue * 0.65);
+      const costRes = await pool.query(
+        `SELECT COALESCE(SUM(p.cost_price * ti.product_quantity),0) AS total_cost
+         FROM transactions t
+         JOIN transaction_items ti ON ti.transaction_id = t.transaction_id
+         JOIN products p ON p.product_id = ti.product_id
+         WHERE t.business_id = $1 AND t.created_at >= $2 AND t.created_at < $3`,
+        [businessId, monthStart, monthEnd]
+      );
+      const expenses = Number(costRes.rows[0].total_cost) || 0;
       const profit = revenue - expenses;
 
       data.push({
@@ -406,8 +422,7 @@ exports.getBusinessStats = async (req, res) => {
     // Cash flow: assume positive, calculate as net profit
     const cashFlow = currentMetrics.netProfit;
 
-    // Operating costs: assume 30% of revenue
-    const operatingCosts = Math.round(currentMetrics.revenue * 0.3);
+    const operatingCosts = currentMetrics.expenses;
 
     // Profit growth: compare current month to previous
     const profitGrowth = previousMetrics.netProfit > 0 ? Math.round(((currentMetrics.netProfit - previousMetrics.netProfit) / previousMetrics.netProfit) * 100 * 10) / 10 : (currentMetrics.netProfit > 0 ? 100 : 0);

@@ -211,6 +211,8 @@ export default function Dashboard() {
         setHighlight({
           sales: Number(overview.totalSales || 0),
           transactions: Number(overview.totalTransactions || 0),
+          totalItemsSold: Number(overview.totalItemsSold || 0),
+          averageTransactionValue: Number(overview.averageTransactionValue || 0),
           topProduct:
             (overview.topProducts && overview.topProducts[0]?.product_name) ||
             (piePercent[0]?.name || '-'),
