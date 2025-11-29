@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Card from "../../common/Card";
 import Button from "../../common/Button";
 
@@ -9,10 +9,35 @@ import Button from "../../common/Button";
 function CartTableCard({
   cart,
   handleRemove,
+  handleEditQuantity,
   total,
   className = "",
   ...props
 }) {
+  const [editingIdx, setEditingIdx] = useState(null);
+  const [editQty, setEditQty] = useState(1);
+
+  // Keyboard shortcuts: F1 for edit, F2 for remove
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === "F1" && cart.length > 0) {
+        event.preventDefault();
+        const firstItemIdx = 0;
+        setEditingIdx(firstItemIdx);
+        setEditQty(cart[firstItemIdx].quantity);
+      } else if (event.key === "F2" && cart.length > 0) {
+        event.preventDefault();
+        const firstItemIdx = 0;
+        handleRemove(firstItemIdx);
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [cart, handleRemove]);
+
   const EditIcon = () => (
     <svg
       width="16"
@@ -141,9 +166,36 @@ function CartTableCard({
                       </div>
                     </td>
                     <td className="py-1.5 px-2 text-center">
-                      <span className="inline-flex items-center justify-center w-7 h-7 rounded-md bg-blue-100 text-blue-700 font-bold text-xs">
-                        {item.quantity}
-                      </span>
+                      {editingIdx === idx ? (
+                        <input
+                          type="number"
+                          min="1"
+                          value={editQty}
+                          onChange={(e) =>
+                            setEditQty(
+                              Math.max(1, parseInt(e.target.value) || 1)
+                            )
+                          }
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              handleEditQuantity(idx, editQty);
+                              setEditingIdx(null);
+                            } else if (e.key === "Escape") {
+                              setEditingIdx(null);
+                            }
+                          }}
+                          onBlur={() => {
+                            handleEditQuantity(idx, editQty);
+                            setEditingIdx(null);
+                          }}
+                          className="w-12 h-7 text-center text-xs font-bold border border-blue-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          autoFocus
+                        />
+                      ) : (
+                        <span className="inline-flex items-center justify-center w-7 h-7 rounded-md bg-blue-100 text-blue-700 font-bold text-xs">
+                          {item.quantity}
+                        </span>
+                      )}
                     </td>
                     <td className="py-1.5 px-2 text-right">
                       <span className="text-xs sm:text-sm font-medium text-gray-700">
@@ -152,24 +204,29 @@ function CartTableCard({
                     </td>
                     <td className="py-1.5 px-2 text-right">
                       <span className="text-xs sm:text-sm font-bold text-blue-600">
-                        ₱{(item.price * item.quantity).toFixed(2)}
+                        ₱
+                        {(
+                          item.price *
+                          (editingIdx === idx ? editQty : item.quantity)
+                        ).toFixed(2)}
                       </span>
                     </td>
                     <td className="py-1.5 px-2">
                       <div className="flex items-center justify-center gap-1">
                         <button
                           onClick={() => {
-                            // Edit functionality can be added here
+                            setEditingIdx(idx);
+                            setEditQty(item.quantity);
                           }}
                           className="p-1.5 rounded-md bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 transition-all duration-200"
-                          title="Edit"
+                          title="Edit (F1)"
                         >
                           <EditIcon />
                         </button>
                         <button
                           onClick={() => handleRemove(idx)}
                           className="p-1.5 rounded-md bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 transition-all duration-200"
-                          title="Remove"
+                          title="Remove (F2)"
                         >
                           <DeleteIcon />
                         </button>
@@ -189,7 +246,15 @@ function CartTableCard({
               Total:
             </span>
             <span className="text-lg sm:text-xl font-extrabold text-blue-600">
-              ₱{total.toFixed(2)}
+              ₱
+              {cart
+                .reduce(
+                  (sum, item, idx) =>
+                    sum +
+                    item.price * (editingIdx === idx ? editQty : item.quantity),
+                  0
+                )
+                .toFixed(2)}
             </span>
           </div>
         </div>
