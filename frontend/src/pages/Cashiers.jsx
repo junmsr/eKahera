@@ -215,7 +215,7 @@ export default function Cashiers() {
             <div className="flex gap-2 pr-10 sm:pr-2 w-full sm:w-auto">
               <Button
                 onClick={exportToCSV}
-                size="lg"
+                size="sm"
                 variant="secondary"
                 className="w-full sm:w-auto shrink-0 !p-1.5 sm:!px-4 sm:!py-1.5"
               >
@@ -237,7 +237,7 @@ export default function Cashiers() {
                 </div>
               </Button>
               <Button
-                className="bg-blue-600 text-white font-semibold !p-1.5 sm:!px-4 sm:!py-1.5 rounded-xl shadow hover:bg-blue-700 transition"
+                className="bg-blue-600 text-white font-semibold !p-1.5 sm:!px-4 sm:!py-1.5 rounded-lg shadow hover:bg-blue-700 transition"
                 onClick={handleAddCashier}
               >
                 <div className="flex items-center sm:gap-2">

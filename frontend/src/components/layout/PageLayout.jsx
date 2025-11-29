@@ -63,7 +63,7 @@ export default function PageLayout({
       {/* Spacer to offset fixed navbar (disabled for compact top spacing) */}
       {showNavbar && <div className="h-0" aria-hidden="true" />}
       <div
-        className={`flex min-h-screen relative ${className} ${theme}`}
+        className={`flex h-screen relative ${className} ${theme}`}
         onTouchStart={(e) => {
           if (window.innerWidth >= 768) return;
           const x = e.touches?.[0]?.clientX ?? 0;
@@ -119,7 +119,7 @@ export default function PageLayout({
 
         {/* Main Content */}
         <main
-          className={`flex-1 flex flex-col transition-all duration-300 ${sidebar ? "md:ml-48" : ""} ${isSidebarOpen ? "blur-sm" : ""} overflow-y-auto`}
+          className={`flex-1 flex flex-col transition-all duration-300 ${sidebar ? "md:ml-48" : ""} ${isSidebarOpen ? "blur-sm" : ""}`}
         >
           {/* Header */}
           {showHeader && (

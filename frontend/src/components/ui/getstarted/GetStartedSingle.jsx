@@ -21,7 +21,7 @@ export default function GetStartedSingle({ onOpenTerms, onOpenPrivacy }) {
       >
         <div className="flex flex-col items-center justify-center px-4 py-12">
 
-          <Card className="rounded-3xl p-10 flex flex-col items-center max-w-2xl">
+          <Card className="rounded-lg p-10 flex flex-col items-center max-w-2xl">
             <SectionHeader className="text-3xl md:text-4xl text-gray-900 mb-4">
               📄 Application Submitted!
             </SectionHeader>
