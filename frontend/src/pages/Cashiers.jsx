@@ -167,8 +167,7 @@ export default function Cashiers() {
 
   return (
     <PageLayout
-      title="Cashiers"
-      subtitle="Manage cashier accounts and permissions"
+      title="CASHIERS"
       sidebar={<NavAdmin />}
       isSidebarOpen={isSidebarOpen}
       setSidebarOpen={setSidebarOpen}

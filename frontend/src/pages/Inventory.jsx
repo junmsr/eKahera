@@ -29,7 +29,7 @@ function getCategoriesByBusinessType(businessType) {
       "Baby Products",
       "Pet Supplies",
     ],
-    "Pharmacy": [
+    Pharmacy: [
       "Prescription Medicines",
       "OTC Medicines",
       "Vitamins & Supplements",
@@ -74,7 +74,7 @@ function getCategoriesByBusinessType(businessType) {
       "Fasteners (Nails, Screws, Bolts)",
       "Safety Gear",
     ],
-    "Bookstore": [
+    Bookstore: [
       "Fiction Books",
       "Non-Fiction Books",
       "Educational Books",
@@ -99,7 +99,7 @@ function getCategoriesByBusinessType(businessType) {
       "Ice Cream & Desserts",
       "Tobacco & Lighters",
     ],
-    "Others": ["General"],
+    Others: ["General"],
   };
 
   return categoryMap[businessType] || categoryMap["Others"];
@@ -112,26 +112,35 @@ export default function InventoryPage() {
     try {
       let storedType = null;
       try {
-        storedType = (typeof window !== 'undefined' && sessionStorage.getItem('business_type')) || null;
+        storedType =
+          (typeof window !== "undefined" &&
+            sessionStorage.getItem("business_type")) ||
+          null;
       } catch (e) {
         storedType = null;
       }
       // Fallback: try `user` object saved at login
-      if (!storedType && typeof window !== 'undefined') {
+      if (!storedType && typeof window !== "undefined") {
         try {
-          const raw = sessionStorage.getItem('user') || localStorage.getItem('user');
+          const raw =
+            sessionStorage.getItem("user") || localStorage.getItem("user");
           if (raw) {
             const parsed = JSON.parse(raw);
-            storedType = parsed?.business?.business_type || parsed?.business_type || null;
+            storedType =
+              parsed?.business?.business_type || parsed?.business_type || null;
             if (storedType) {
-              try { sessionStorage.setItem('business_type', storedType); } catch (e) { /* ignore */ }
+              try {
+                sessionStorage.setItem("business_type", storedType);
+              } catch (e) {
+                /* ignore */
+              }
             }
           }
         } catch (e) {
           storedType = null;
         }
       }
-      storedType = storedType || 'Others';
+      storedType = storedType || "Others";
       const list = getCategoriesByBusinessType(storedType) || [];
       return list.map((name, index) => ({ id: index + 1, name }));
     } catch {
@@ -174,10 +183,11 @@ export default function InventoryPage() {
         const businessType = userData?.business?.business_type || "Others";
         // persist business type so modals can use it before API completes
         try {
-          if (typeof window !== "undefined") sessionStorage.setItem("business_type", businessType);
+          if (typeof window !== "undefined")
+            sessionStorage.setItem("business_type", businessType);
         } catch (storageErr) {
           // ignore storage errors (e.g. private mode)
-           
+
           console.debug("Could not persist business_type", storageErr);
         }
 
@@ -561,7 +571,6 @@ export default function InventoryPage() {
   return (
     <PageLayout
       title="INVENTORY"
-      subtitle="Manage your products and stock"
       sidebar={<NavAdmin />}
       isSidebarOpen={isSidebarOpen}
       setSidebarOpen={setSidebarOpen}
@@ -603,23 +612,33 @@ export default function InventoryPage() {
           setPage(1); // Reset to first page on sort
         }}
       />
-                {apiError && (
-                  <div className="bg-red-50 border-l-4 border-red-500 rounded-lg p-3 flex items-start gap-2 mt-2">
-                    <svg className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                    </svg>
-                    <p className="text-sm font-medium text-red-700">
-                      {(() => {
-                        try {
-                          const parsed = JSON.parse(apiError);
-                          return parsed.error || parsed.message || apiError;
-                        } catch {
-                          return apiError;
-                        }
-                      })()}
-                    </p>
-                  </div>
-                )}
+      {apiError && (
+        <div className="bg-red-50 border-l-4 border-red-500 rounded-lg p-3 flex items-start gap-2 mt-2">
+          <svg
+            className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
+            />
+          </svg>
+          <p className="text-sm font-medium text-red-700">
+            {(() => {
+              try {
+                const parsed = JSON.parse(apiError);
+                return parsed.error || parsed.message || apiError;
+              } catch {
+                return apiError;
+              }
+            })()}
+          </p>
+        </div>
+      )}
       <Modal
         isOpen={showProductModal}
         onClose={() => setShowProductModal(false)}

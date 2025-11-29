@@ -30,7 +30,9 @@ const LogsPage = () => {
         userId: l.user_id,
         username: l.username || "",
         action: l.action || `Action by ${l.username || l.user_id}`,
-        time: l.date_time ? new Date(l.date_time).toLocaleString() : "Invalid date",
+        time: l.date_time
+          ? new Date(l.date_time).toLocaleString()
+          : "Invalid date",
         dateTime: l.date_time,
         role: (l.role === "business_owner"
           ? "admin"
@@ -202,7 +204,6 @@ const LogsPage = () => {
   return (
     <PageLayout
       title="LOGS"
-      subtitle="System activity and transaction logs"
       sidebar={<NavAdmin />}
       isSidebarOpen={isSidebarOpen}
       setSidebarOpen={setSidebarOpen}
@@ -400,7 +401,10 @@ const LogsPage = () => {
         <div className="flex-1 overflow-y-auto sm:hidden space-y-3">
           {loading ? (
             Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="bg-white/80 backdrop-blur-md rounded-xl p-4 border border-gray-200/50 animate-pulse">
+              <div
+                key={i}
+                className="bg-white/80 backdrop-blur-md rounded-xl p-4 border border-gray-200/50 animate-pulse"
+              >
                 <div className="flex justify-between items-center mb-2">
                   <div className="h-4 bg-gray-200 rounded w-1/3"></div>
                   <div className="h-3 bg-gray-200 rounded w-1/4"></div>
@@ -415,11 +419,18 @@ const LogsPage = () => {
             </div>
           ) : (
             filteredLogs.map((log) => (
-              <div key={log.id} className="bg-white/80 backdrop-blur-md rounded-xl p-4 border border-gray-200/50 shadow-sm">
+              <div
+                key={log.id}
+                className="bg-white/80 backdrop-blur-md rounded-xl p-4 border border-gray-200/50 shadow-sm"
+              >
                 <div className="flex justify-between items-start mb-2">
                   <div>
-                    <div className="text-sm font-semibold text-gray-900">{log.username}</div>
-                    <div className="text-xs text-gray-500">ID: {log.userId}</div>
+                    <div className="text-sm font-semibold text-gray-900">
+                      {log.username}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      ID: {log.userId}
+                    </div>
                   </div>
                   <span
                     className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full capitalize ${
@@ -444,8 +455,18 @@ const LogsPage = () => {
 
         {error && (
           <div className="bg-red-50 border-l-4 border-red-500 rounded-lg p-3 flex items-start gap-2 mt-4">
-            <svg className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            <svg
+              className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
+              />
             </svg>
             <p className="text-sm font-medium text-red-700">
               {(() => {
