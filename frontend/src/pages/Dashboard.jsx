@@ -354,6 +354,31 @@ export default function Dashboard() {
         <option value="year">Year</option>
       </select>
 
+      <div className="-mt-2 -mb-3 py-8 px-8 pr-12 flex justify-end">
+        <Button
+          onClick={exportToCSV}
+          size="sm"
+          variant="secondary"
+          className="flex items-center gap-2 w-full sm:w-auto shrink-0"
+        >
+          <svg
+            className="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+            />
+          </svg>
+          <span className="hidden sm:inline">Export</span>
+          <span className="sm:hidden">Export</span>
+        </Button>
+      </div>
+
       <div className="relative" ref={notificationRef}>
         <NotificationDropdown
           notifications={notifications}
@@ -391,30 +416,6 @@ export default function Dashboard() {
       setSidebarOpen={setSidebarOpen}
       className="bg-gray-50 min-h-screen"
     >
-      <div className="-mt-2 -mb-11 py-8 px-8 pr-12 flex justify-end">
-        <Button
-          onClick={exportToCSV}
-          size="lg"
-          variant="secondary"
-          className="flex items-center gap-2 w-full sm:w-auto shrink-0"
-        >
-          <svg
-            className="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-            />
-          </svg>
-          <span className="hidden sm:inline">Export</span>
-          <span className="sm:hidden">Export</span>
-        </Button>
-      </div>
       {/* Stats Cards - Mobile View */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 lg:hidden">
         {loading
@@ -520,7 +521,7 @@ export default function Dashboard() {
               <div className="h-4 bg-gray-200 rounded w-4/5"></div>
             </div>
           ) : (
-            <div className="bg-white p-6 rounded-xl shadow-md hidden lg:block">
+            <div className="bg-white p-6 rounded-lg shadow-md hidden lg:block">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-bold text-gray-800">
                   Low Stock Products
@@ -551,7 +552,7 @@ export default function Dashboard() {
           )}
         </div>
       </div>
-      <div className="max-w-10lx mx-auto w-full px-6">
+      <div className="max-w-10lx mx-auto w-full">
         <DashboardBusinessReport />
       </div>
       <ProfileModal

@@ -222,7 +222,7 @@ export default function CustomerEnter() {
             {/* Left: Instructions Card */}
             <motion.div className="flex flex-col gap-4" variants={itemVariants}>
               <motion.div
-                className="bg-white/80 backdrop-blur-xl border border-white/60 rounded-3xl shadow-2xl p-6 sm:p-8 hover:shadow-3xl transition-all duration-300 group overflow-hidden"
+                className="bg-white/80 backdrop-blur-xl border border-white/60 rounded-lg shadow-2xl p-6 sm:p-8 hover:shadow-3xl transition-all duration-300 group overflow-hidden"
                 whileHover={{ scale: 1.02, y: -4 }}
                 whileTap={{ scale: 0.98 }}
               >
@@ -295,7 +295,7 @@ export default function CustomerEnter() {
               <div className="w-full aspect-square relative max-w-sm lg:max-w-md">
                 {/* Glow effect behind scanner */}
                 <motion.div
-                  className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-indigo-600/20 rounded-2xl sm:rounded-3xl blur-2xl -z-10"
+                  className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-indigo-600/20 rounded-2xl sm:rounded-lg blur-2xl -z-10"
                   animate={{
                     scale: [1, 1.1, 1],
                     opacity: [0.4, 0.6, 0.4],
@@ -304,7 +304,7 @@ export default function CustomerEnter() {
                 />
 
                 {/* Scanner Container */}
-                <div className="relative h-full rounded-2xl sm:rounded-3xl overflow-hidden border-3 sm:border-4 border-white/60 shadow-lg sm:shadow-2xl bg-white/10 backdrop-blur-sm">
+                <div className="relative h-full rounded-2xl sm:rounded-lg overflow-hidden border-3 sm:border-4 border-white/60 shadow-lg sm:shadow-2xl bg-white/10 backdrop-blur-sm">
                   {isScanning && (
                     <motion.div
                       className="absolute inset-0 flex items-center justify-center z-30 bg-black/40 backdrop-blur-md"
