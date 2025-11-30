@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from "react";
-import Card from "../../common/Card";
 import Button from "../../common/Button";
 import { Scanner } from "@yudiel/react-qr-scanner";
 import Quagga from "@ericblade/quagga2";
@@ -115,12 +114,17 @@ function ScannerCard({
 
   // Detect mobile device
   useEffect(() => {
-    setIsMobile(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
+    setIsMobile(
+      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+        navigator.userAgent
+      )
+    );
   }, []);
 
   // Initialize audio context for beep
   useEffect(() => {
-    audioContext.current = new (window.AudioContext || window.webkitAudioContext)();
+    audioContext.current = new (window.AudioContext ||
+      window.webkitAudioContext)();
   }, []);
 
   // Play beep sound on successful scan
@@ -130,7 +134,10 @@ function ScannerCard({
       const gainNode = audioContext.current.createGain();
       oscillator.connect(gainNode);
       gainNode.connect(audioContext.current.destination);
-      oscillator.frequency.setValueAtTime(800, audioContext.current.currentTime);
+      oscillator.frequency.setValueAtTime(
+        800,
+        audioContext.current.currentTime
+      );
       gainNode.gain.setValueAtTime(0.3, audioContext.current.currentTime);
       oscillator.start();
       oscillator.stop(audioContext.current.currentTime + 0.1);
@@ -139,7 +146,7 @@ function ScannerCard({
 
   // Trigger vibration on mobile devices for successful scan
   const vibrateOnScan = () => {
-    if (isMobile && 'vibrate' in navigator) {
+    if (isMobile && "vibrate" in navigator) {
       navigator.vibrate(100); // 100ms vibration
     }
   };
@@ -148,7 +155,11 @@ function ScannerCard({
   useEffect(() => {
     const handleKeyDown = (event) => {
       // Only process if not in an input field and scanner is not paused
-      if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA' || paused) {
+      if (
+        event.target.tagName === "INPUT" ||
+        event.target.tagName === "TEXTAREA" ||
+        paused
+      ) {
         return;
       }
 
@@ -160,30 +171,33 @@ function ScannerCard({
         setUsbInputBuffer(event.key);
       } else {
         // Accumulate input
-        setUsbInputBuffer(prev => prev + event.key);
+        setUsbInputBuffer((prev) => prev + event.key);
       }
       setLastKeyTime(currentTime);
 
       // If Enter key pressed, process the barcode
-      if (event.key === 'Enter') {
+      if (event.key === "Enter") {
         event.preventDefault();
-          const barcode = usbInputBuffer.trim();
-          if (barcode) {
-            console.log("USB Scanner detected:", barcode);
-            playBeep();
-            vibrateOnScan();
-            setScanHistory(prev => {
-              const newHistory = [barcode, ...prev.filter(item => item !== barcode)].slice(0, 5);
-              return newHistory;
-            });
-            onScan([{ rawValue: barcode }]);
-          }
+        const barcode = usbInputBuffer.trim();
+        if (barcode) {
+          console.log("USB Scanner detected:", barcode);
+          playBeep();
+          vibrateOnScan();
+          setScanHistory((prev) => {
+            const newHistory = [
+              barcode,
+              ...prev.filter((item) => item !== barcode),
+            ].slice(0, 5);
+            return newHistory;
+          });
+          onScan([{ rawValue: barcode }]);
+        }
         setUsbInputBuffer("");
       }
     };
 
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
   }, [paused, lastKeyTime, usbInputBuffer, onScan, playBeep, vibrateOnScan]);
 
   // Initialize Quagga scanner
@@ -231,8 +245,11 @@ function ScannerCard({
           console.log("Quagga detected:", code);
           playBeep();
           vibrateOnScan();
-          setScanHistory(prev => {
-            const newHistory = [code, ...prev.filter(item => item !== code)].slice(0, 5);
+          setScanHistory((prev) => {
+            const newHistory = [
+              code,
+              ...prev.filter((item) => item !== code),
+            ].slice(0, 5);
             return newHistory;
           });
           onScan([{ rawValue: code }]);
@@ -246,18 +263,36 @@ function ScannerCard({
 
         if (result) {
           if (result.boxes) {
-            drawingCtx.clearRect(0, 0, parseInt(drawingCanvas.getAttribute("width")), parseInt(drawingCanvas.getAttribute("height")));
-            result.boxes.filter(box => box !== result.box).forEach(box => {
-              Quagga.ImageDebug.drawPath(box, { x: 0, y: 1 }, drawingCtx, { color: "green", lineWidth: 2 });
-            });
+            drawingCtx.clearRect(
+              0,
+              0,
+              parseInt(drawingCanvas.getAttribute("width")),
+              parseInt(drawingCanvas.getAttribute("height"))
+            );
+            result.boxes
+              .filter((box) => box !== result.box)
+              .forEach((box) => {
+                Quagga.ImageDebug.drawPath(box, { x: 0, y: 1 }, drawingCtx, {
+                  color: "green",
+                  lineWidth: 2,
+                });
+              });
           }
 
           if (result.box) {
-            Quagga.ImageDebug.drawPath(result.box, { x: 0, y: 1 }, drawingCtx, { color: "#00F", lineWidth: 2 });
+            Quagga.ImageDebug.drawPath(result.box, { x: 0, y: 1 }, drawingCtx, {
+              color: "#00F",
+              lineWidth: 2,
+            });
           }
 
           if (result.codeResult && result.codeResult.code) {
-            Quagga.ImageDebug.drawPath(result.line, { x: 'x', y: 'y' }, drawingCtx, { color: 'red', lineWidth: 3 });
+            Quagga.ImageDebug.drawPath(
+              result.line,
+              { x: "x", y: "y" },
+              drawingCtx,
+              { color: "red", lineWidth: 3 }
+            );
           }
         }
       });
@@ -267,7 +302,9 @@ function ScannerCard({
       console.log("Quagga scanner initialized");
     } catch (err) {
       console.error("Quagga initialization failed:", err);
-      setError("Advanced scanner initialization failed. Using fallback scanner.");
+      setError(
+        "Advanced scanner initialization failed. Using fallback scanner."
+      );
     }
   };
 
@@ -346,24 +383,21 @@ function ScannerCard({
     setError(errorMessage);
     // Auto-retry after 3 seconds
     setTimeout(() => {
-      setError('');
+      setError("");
       setIsInitializing(true);
       setTimeout(() => setIsInitializing(false), 1000);
     }, 3000);
   };
   return (
-    <Card
+    <div
       className={`flex-shrink-0 bg-white/80 backdrop-blur-md border border-white/60 shadow-xl hover:shadow-2xl transition-all duration-300 overflow-hidden ${className}`}
-      variant="glass"
-      microinteraction
-      {...props}
     >
-      <div className="flex flex-col h-full p-2 sm:p-3">
+      <div className="flex flex-col h-full p-1 sm:p-2">
         <div
-          className={`w-full text-center mb-2 font-bold text-xs sm:text-sm tracking-wide ${textMain} flex items-center justify-center gap-1.5`}
+          className={`w-full text-center mb-1 font-bold text-xs tracking-wide ${textMain} flex items-center justify-center gap-1`}
         >
           <svg
-            className="w-4 h-4"
+            className="w-3 h-3"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -377,7 +411,7 @@ function ScannerCard({
           </svg>
           SCAN QR & BARCODE
         </div>
-        <div className="w-full h-40 sm:h-48 md:h-56 lg:h-64 bg-gradient-to-br from-blue-50/80 via-indigo-50/60 to-blue-100/80 rounded-xl flex items-center justify-center border-2 border-blue-200/50 shadow-inner overflow-hidden relative z-0 group">
+        <div className="w-full flex-1 bg-gradient-to-br from-blue-50/80 via-indigo-50/60 to-blue-100/80 rounded-xl flex items-center justify-center border-2 border-blue-200/50 shadow-inner overflow-hidden relative z-0 group">
           {isInitializing ? (
             <div className="flex items-center justify-center h-full text-gray-500">
               <div className="text-center">
@@ -411,7 +445,10 @@ function ScannerCard({
             </div>
           ) : useQuagga ? (
             <div className="w-full h-full relative">
-              <div ref={scannerRef} className="w-full h-full rounded-xl overflow-hidden"></div>
+              <div
+                ref={scannerRef}
+                className="w-full h-full rounded-xl overflow-hidden"
+              ></div>
               {!quaggaInitialized && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black/20">
                   <Button
@@ -435,8 +472,11 @@ function ScannerCard({
                     playBeep(); // Audio feedback
                     vibrateOnScan(); // Haptic feedback on mobile
                     // Add to scan history for quick re-selection
-                    setScanHistory(prev => {
-                      const newHistory = [code, ...prev.filter(item => item !== code)].slice(0, 5);
+                    setScanHistory((prev) => {
+                      const newHistory = [
+                        code,
+                        ...prev.filter((item) => item !== code),
+                      ].slice(0, 5);
                       return newHistory;
                     });
                     onScan(result);
@@ -514,12 +554,18 @@ function ScannerCard({
                   size="sm"
                   variant="secondary"
                   onClick={() => {
-                    setFacingMode((prev) => (prev === "user" ? "environment" : "user"));
+                    setFacingMode((prev) =>
+                      prev === "user" ? "environment" : "user"
+                    );
                     setIsInitializing(true);
                     setTimeout(() => setIsInitializing(false), 1000);
                   }}
                   microinteraction
-                  title={facingMode === "user" ? "Switch to back camera" : "Switch to front camera"}
+                  title={
+                    facingMode === "user"
+                      ? "Switch to back camera"
+                      : "Switch to front camera"
+                  }
                 />
               )}
               {isMobile && (
@@ -529,7 +575,9 @@ function ScannerCard({
                   variant="secondary"
                   onClick={() => setTorchEnabled(!torchEnabled)}
                   microinteraction
-                  title={torchEnabled ? "Turn off flashlight" : "Turn on flashlight"}
+                  title={
+                    torchEnabled ? "Turn off flashlight" : "Turn on flashlight"
+                  }
                 />
               )}
               <Button
@@ -546,7 +594,11 @@ function ScannerCard({
                 variant="secondary"
                 onClick={toggleScanner}
                 microinteraction
-                title={useQuagga ? "Switch to standard scanner" : "Switch to advanced scanner"}
+                title={
+                  useQuagga
+                    ? "Switch to standard scanner"
+                    : "Switch to advanced scanner"
+                }
               />
             </div>
           )}
@@ -555,7 +607,9 @@ function ScannerCard({
           {showManualInput && (
             <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-20">
               <div className="bg-white rounded-xl p-4 w-80 max-w-[90vw]">
-                <h3 className="text-lg font-semibold mb-3 text-center">Manual SKU Input</h3>
+                <h3 className="text-lg font-semibold mb-3 text-center">
+                  Manual SKU Input
+                </h3>
                 <input
                   type="text"
                   value={manualInput}
@@ -563,7 +617,7 @@ function ScannerCard({
                   placeholder="Enter SKU or barcode"
                   className="w-full p-3 border border-gray-300 rounded-lg mb-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   onKeyPress={(e) => {
-                    if (e.key === 'Enter' && manualInput.trim()) {
+                    if (e.key === "Enter" && manualInput.trim()) {
                       onScan([{ rawValue: manualInput.trim() }]);
                       setManualInput("");
                       setShowManualInput(false);
@@ -607,7 +661,9 @@ function ScannerCard({
           {scanHistory.length > 0 && !error && !isInitializing && paused && (
             <div className="absolute top-2 left-2 z-10">
               <div className="bg-white/90 backdrop-blur-sm rounded-lg p-2 max-w-32">
-                <p className="text-xs font-medium text-gray-700 mb-1">Recent:</p>
+                <p className="text-xs font-medium text-gray-700 mb-1">
+                  Recent:
+                </p>
                 <div className="space-y-1">
                   {scanHistory.slice(0, 3).map((code, index) => (
                     <button
@@ -629,7 +685,7 @@ function ScannerCard({
           )}
         </div>
       </div>
-    </Card>
+    </div>
   );
 }
 
