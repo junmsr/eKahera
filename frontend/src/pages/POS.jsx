@@ -46,6 +46,7 @@ function POS() {
   const token = sessionStorage.getItem("auth_token");
   const user = JSON.parse(sessionStorage.getItem("user") || "{}");
   const hasFinalizedRef = React.useRef(false);
+  const [businessName, setBusinessName] = useState("");
 
   // Add keyboard shortcuts for buttons: F4-F8
   useEffect(() => {
@@ -392,6 +393,25 @@ function POS() {
     fetchNotifications();
   }, []);
 
+  // Fetch business name
+  useEffect(() => {
+    const fetchBusinessName = async () => {
+      try {
+        const resp = await api("/api/business/profile", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (resp?.business?.business_name) {
+          setBusinessName(resp.business.business_name);
+        }
+      } catch (e) {
+        console.error("Failed to fetch business name", e);
+      }
+    };
+    if (token) {
+      fetchBusinessName();
+    }
+  }, [token]);
+
   // Close dropdown when clicking outside notifications
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -435,7 +455,7 @@ function POS() {
               d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2M8 16h8a2 2 0 002-2v-6m-10 8l-2 2m2-2l2 2"
             />
           </svg>
-          <span className="font-mono text-xs sm:text-sm font-bold tracking-wider truncate max-w-[30vw] sm:max-w-[50vw]">
+          <span className="font-mono text-xs sm:text-sm font-bold tracking-wider truncate max-w-[30vw] sm:max-w-[50vw] hidden sm:inline">
             {transactionNumber}
           </span>
         </button>
@@ -471,7 +491,7 @@ function POS() {
 
   return (
     <PageLayout
-      title="POS"
+      title={businessName ? `${businessName} - POS` : "POS"}
       sidebar={<NavAdmin />}
       headerActions={headerActions}
       isSidebarOpen={isSidebarOpen}

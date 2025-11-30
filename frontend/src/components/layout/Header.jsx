@@ -54,8 +54,17 @@ const Header = ({
                 )}
               </button>
             )}
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent truncate">
-              {title}
+            <h1 className="text-2xl font-bold truncate">
+              {title.includes(" - POS") ? (
+                <>
+                  <span className="text-blue-600">
+                    {title.replace(" - POS", "")}
+                  </span>
+                  <span className="text-gray-900"> - POS</span>
+                </>
+              ) : (
+                <span className="text-blue-600">{title}</span>
+              )}
             </h1>
             {subtitle && (
               <p className="text-sm text-gray-600 font-medium truncate">
