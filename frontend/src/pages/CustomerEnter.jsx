@@ -301,7 +301,7 @@ export default function CustomerEnter() {
 
                 {/* Scanner Container */}
                 <div className="relative h-full rounded-2xl sm:rounded-3xl overflow-hidden border-3 sm:border-4 border-white/60 shadow-lg sm:shadow-2xl bg-white/10 backdrop-blur-sm">
-                  {isScanning && (
+                  {isScanning && !error && (
                     <motion.div
                       className="absolute inset-0 flex items-center justify-center z-30 bg-black/40 backdrop-blur-md"
                       initial={{ opacity: 0 }}
