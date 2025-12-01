@@ -9,20 +9,42 @@ const buildConfig = () => {
   const isProduction = process.env.NODE_ENV === 'production';
   const isRender = process.env.RENDER === 'true';
   
-  const sslConfig = isProduction
-    ? isRender
-      ? { rejectUnauthorized: false } // For Render, we'll skip certificate verification
-      : { rejectUnauthorized: true }  // For other production environments, keep verification
-    : false; // Disable SSL in development unless explicitly needed
+  // Configure SSL based on environment
+  let sslConfig;
+  if (isProduction) {
+    // For Render, we need to handle self-signed certificates
+    if (isRender) {
+      sslConfig = {
+        rejectUnauthorized: false, // Skip certificate verification for Render
+        sslmode: 'require'        // Explicitly require SSL
+      };
+    } else {
+      // For other production environments, use standard SSL with verification
+      sslConfig = {
+        rejectUnauthorized: true,
+        sslmode: 'require'
+      };
+    }
+  } else {
+    // For development, use SSL only if explicitly configured
+    sslConfig = process.env.DB_SSL === 'true' 
+      ? { rejectUnauthorized: false }
+      : false;
+  }
+
+  // Common configuration for all environments
+  const commonConfig = {
+    // Add connection timeout and keepalive settings
+    connectionTimeoutMillis: 10000, // 10 seconds
+    idleTimeoutMillis: 30000, // 30 seconds
+    max: 20, // max number of clients in the pool
+    ssl: sslConfig
+  };
 
   if (process.env.DATABASE_URL) {
     return {
       connectionString: process.env.DATABASE_URL,
-      ssl: sslConfig,
-      // Add connection timeout and keepalive settings
-      connectionTimeoutMillis: 10000, // 10 seconds
-      idleTimeoutMillis: 30000, // 30 seconds
-      max: 20, // max number of clients in the pool
+      ...commonConfig
     };
   }
 
