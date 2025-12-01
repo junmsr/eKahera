@@ -1,5 +1,17 @@
 const pool = require('../config/database');
 
+const normalizeStatus = (status) => (status === 'repass' ? 'rejected' : status);
+const mapStatuses = (rows = []) =>
+  rows.map((row) => ({
+    ...row,
+    verification_status: normalizeStatus(row.verification_status),
+  }));
+const mapDocumentStatuses = (documents = []) =>
+  documents.map((doc) => ({
+    ...doc,
+    verification_status: normalizeStatus(doc.verification_status),
+  }));
+
 class BusinessVerification {
   static async create(businessId) {
     // Since verification is tracked in the business table,
@@ -77,7 +89,7 @@ class BusinessVerification {
     `;
 
     const result = await pool.query(query);
-    return result.rows;
+    return mapStatuses(result.rows);
   }
 
   static async getAllBusinessesForVerification() {
@@ -101,15 +113,14 @@ class BusinessVerification {
       ORDER BY
         CASE
           WHEN b.verification_status = 'pending' THEN 1
-          WHEN b.verification_status = 'repass' THEN 2
-          WHEN b.verification_status = 'approved' THEN 3
-          WHEN b.verification_status = 'rejected' THEN 4
+          WHEN b.verification_status = 'approved' THEN 2
+          ELSE 3
         END,
         b.verification_submitted_at ASC
     `;
 
     const result = await pool.query(query);
-    return result.rows;
+    return mapStatuses(result.rows);
   }
 
   static async getVerificationStats() {
@@ -136,7 +147,7 @@ class BusinessVerification {
       WHERE business_id IN (
         SELECT DISTINCT business_id
         FROM business_documents
-      ) AND (verification_status IS NULL OR verification_status NOT IN ('approved', 'rejected', 'repass'))
+      ) AND (verification_status IS NULL OR verification_status NOT IN ('approved', 'rejected'))
     `;
     const result = await pool.query(query);
     return result.rowCount;
@@ -169,7 +180,8 @@ class BusinessVerification {
 
     return {
       ...businessResult.rows[0],
-      documents: documentsResult.rows
+      verification_status: normalizeStatus(businessResult.rows[0].verification_status),
+      documents: mapDocumentStatuses(documentsResult.rows)
     };
   }
 }

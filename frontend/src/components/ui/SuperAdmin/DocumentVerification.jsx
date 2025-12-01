@@ -10,7 +10,12 @@ export default function DocumentVerification() {
   const [businessDetails, setBusinessDetails] = useState(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
-  const [stats, setStats] = useState({});
+  const [stats, setStats] = useState({
+    total: 0,
+    pending: 0,
+    approved: 0,
+    rejected: 0,
+  });
 
   useEffect(() => {
     fetchPendingVerifications();
@@ -41,10 +46,10 @@ export default function DocumentVerification() {
       });
       // Keeping the filtering logic from 'new-nigga-dave' and 'main'
       const filteredStats = {
+        total: data.total || 0,
         pending: data.pending || 0,
         approved: data.approved || 0,
-        rejected: data.rejected || 0,
-        repass: data.repass || 0
+        rejected: data.rejected || 0
       };
       setStats(filteredStats);
     } catch (error) {
@@ -94,11 +99,7 @@ export default function DocumentVerification() {
     }
   };
 
-  const handleCompleteVerification = async (
-    status,
-    reason = "",
-    notes = ""
-  ) => {
+  const handleCompleteVerification = async (status, reason = "") => {
     setActionLoading(true);
     try {
       // Using sessionStorage and api utility from 'main' branch
@@ -111,7 +112,6 @@ export default function DocumentVerification() {
           body: JSON.stringify({
             status: status,
             rejection_reason: reason,
-            resubmission_notes: notes,
           }),
         }
       );
@@ -167,14 +167,11 @@ export default function DocumentVerification() {
   return (
     <div className="space-y-6">
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="p-4">
           <div className="text-center">
             <div className="text-2xl font-bold text-blue-600">
-              {(stats.pending || 0) +
-                (stats.approved || 0) +
-                (stats.rejected || 0) +
-                (stats.repass || 0)}
+              {stats.total || (stats.pending || 0) + (stats.approved || 0) + (stats.rejected || 0)}
             </div>
             <div className="text-sm text-gray-600">Total Businesses</div>
           </div>
@@ -201,14 +198,6 @@ export default function DocumentVerification() {
               {stats.rejected || 0}
             </div>
             <div className="text-sm text-gray-600">Rejected</div>
-          </div>
-        </Card>
-        <Card className="p-4">
-          <div className="text-center">
-            <div className="text-2xl font-bold text-orange-600">
-              {stats.repass || 0}
-            </div>
-            <div className="text-sm text-gray-600">Repass</div>
           </div>
         </Card>
       </div>
@@ -296,9 +285,7 @@ function BusinessVerificationDetails({
   actionLoading,
 }) {
   const [rejectionReason, setRejectionReason] = useState("");
-  const [resubmissionNotes, setResubmissionNotes] = useState("");
   const [showRejectModal, setShowRejectModal] = useState(false);
-  const [showRepassModal, setShowRepassModal] = useState(false);
 
   if (!business) {
     return (
@@ -316,8 +303,6 @@ function BusinessVerificationDetails({
         return "text-green-600 bg-green-100";
       case "rejected":
         return "text-red-600 bg-red-100";
-      case "repass":
-        return "text-orange-600 bg-orange-100";
       default:
         return "text-yellow-600 bg-yellow-100";
     }
@@ -326,10 +311,8 @@ function BusinessVerificationDetails({
   const allDocumentsApproved = business.documents?.every(
     (doc) => doc.verification_status === "approved"
   );
-  const hasRejectedOrRepass = business.documents?.some(
-    (doc) =>
-      doc.verification_status === "rejected" ||
-      doc.verification_status === "repass"
+  const hasRejected = business.documents?.some(
+    (doc) => doc.verification_status === "rejected"
   );
 
   return (
@@ -451,25 +434,6 @@ function BusinessVerificationDetails({
                       >
                         Reject
                       </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          const notes = prompt(
-                            "Enter notes for repass (document quality issues):"
-                          );
-                          if (notes !== null) {
-                            onDocumentAction(
-                              document.document_id,
-                              "repass",
-                              notes
-                            );
-                          }
-                        }}
-                        disabled={actionLoading}
-                      >
-                        Repass
-                      </Button>
                     </>
                   )}
                 </div>
@@ -498,16 +462,9 @@ function BusinessVerificationDetails({
           >
             Reject Application
           </Button>
-          <Button
-            variant="outline"
-            onClick={() => setShowRepassModal(true)}
-            disabled={actionLoading}
-          >
-            Request Resubmission
-          </Button>
         </div>
 
-        {!allDocumentsApproved && !hasRejectedOrRepass && (
+        {!allDocumentsApproved && !hasRejected && (
           <p className="text-sm text-gray-600 mt-2">
             All documents must be reviewed before completing verification.
           </p>
@@ -552,42 +509,6 @@ function BusinessVerificationDetails({
         </div>
       )}
 
-      {/* Repass Modal */}
-      {showRepassModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold mb-4">Request Resubmission</h3>
-            <textarea
-              value={resubmissionNotes}
-              onChange={(e) => setResubmissionNotes(e.target.value)}
-              placeholder="Enter notes about document quality issues..."
-              className="w-full p-3 border rounded-lg resize-none h-32"
-            />
-            <div className="flex justify-end space-x-3 mt-4">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowRepassModal(false);
-                  setResubmissionNotes("");
-                }}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={() => {
-                  onCompleteVerification("repass", "", resubmissionNotes);
-                  setShowRepassModal(false);
-                  setResubmissionNotes("");
-                }}
-                disabled={!resubmissionNotes.trim()}
-                className="bg-orange-600 hover:bg-orange-700"
-              >
-                Request Resubmission
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

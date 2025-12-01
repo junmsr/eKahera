@@ -136,29 +136,29 @@ export default function PageLayout({
         )}
 
         {/* Main Content */}
-        <main
+        <div
           className={`flex-1 flex flex-col transition-all duration-300 ${sidebar ? "md:ml-48" : ""} ${isSidebarOpen ? "blur-sm" : ""}`}
         >
-          {/* Header */}
-          {showHeader && (
-            <Header
-              title={title}
-              subtitle={subtitle}
-              headerActions={headerActions}
-              isMobileNavOpen={isSidebarOpen}
-              onMenuClick={() => setSidebarOpen(!isSidebarOpen)}
-              className="bg-white"
-            />
-          )}
+          <main className="flex-1">
+            {/* Header */}
+            {showHeader && (
+              <Header
+                title={title}
+                subtitle={subtitle}
+                headerActions={headerActions}
+                isMobileNavOpen={isSidebarOpen}
+                onMenuClick={() => setSidebarOpen(!isSidebarOpen)}
+                className="bg-white"
+              />
+            )}
 
-          {/* Page Content */}
-          <div className="flex-1 relative">
-            {children}
-          </div>
-        </main>
+            {/* Page Content */}
+            <div className="flex-1 relative">{children}</div>
+          </main>
 
-        {/* Footer */}
-        {showFooter && <Footer className="z-50" />}
+          {/* Footer */}
+          {showFooter && <Footer className="z-50" />}
+        </div>
       </div>
     </Background>
   );

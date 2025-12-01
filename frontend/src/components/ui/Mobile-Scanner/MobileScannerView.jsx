@@ -26,6 +26,8 @@ function MobileScannerView() {
   const [qrPayload, setQrPayload] = useState(null);
   const [transactionId, setTransactionId] = useState(null);
 
+  const [storeName, setStoreName] = useState("");
+
   const total = useMemo(
     () =>
       cart.reduce(
@@ -37,6 +39,19 @@ function MobileScannerView() {
       ),
     [cart]
   );
+
+  useEffect(() => {
+    const businessId = localStorage.getItem("business_id");
+    if (businessId) {
+      api(`/api/business/public/${businessId}`)
+        .then((data) => {
+          setStoreName(data.business_name);
+        })
+        .catch(() => {
+          setError("Could not fetch store name.");
+        });
+    }
+  }, []);
 
   // Handle return from online payment (GCash)
   useEffect(() => {
@@ -166,8 +181,7 @@ function MobileScannerView() {
     setCart((prev) => prev.filter((p) => p.sku !== sku));
 
   const handleCopyTn = () => {
-    const storedTxn = localStorage.getItem("provisionalTransactionNumber");
-    navigator.clipboard.writeText(storedTxn || "");
+    navigator.clipboard.writeText(storeName || "");
   };
 
   const handleTransactionComplete = (tn) => {
@@ -202,7 +216,7 @@ function MobileScannerView() {
           <div className="flex items-center justify-center p-2">
             <button
               onClick={handleCopyTn}
-              title="Copy transaction number"
+              title="Copy store name"
               className="inline-flex items-center gap-2 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg px-2.5 py-1.5 shadow-sm hover:bg-blue-100 transition-colors"
             >
               <svg
@@ -219,7 +233,7 @@ function MobileScannerView() {
                 />
               </svg>
               <span className="font-mono text-xs sm:text-sm md:text-base font-bold tracking-wider truncate max-w-[50vw]">
-                {localStorage.getItem("provisionalTransactionNumber") || 'Scan Store QR to Begin'}
+                {storeName || 'Scan Store QR to Begin'}
               </span>
             </button>
           </div>

@@ -321,7 +321,7 @@ function CashierPOS() {
   };
 
   const handleCopyTn = () => {
-    navigator.clipboard.writeText(transactionNumber);
+    navigator.clipboard.writeText(user.store_name);
   };
 
   // show confirmation modal first, perform actual logout in confirmLogout
@@ -391,7 +391,7 @@ function CashierPOS() {
           <div className="flex-1 flex items-center justify-center px-2">
             <button
               onClick={handleCopyTn}
-              title="Copy transaction number"
+              title="Copy store name"
               className="inline-flex items-center gap-2 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg px-2.5 py-1.5 shadow-sm hover:bg-blue-100 transition-colors"
             >
               <svg
@@ -408,7 +408,7 @@ function CashierPOS() {
                 />
               </svg>
               <span className="font-mono text-xs sm:text-sm md:text-base font-bold tracking-wider truncate max-w-[50vw]">
-                {transactionNumber}
+                {user.store_name}
               </span>
             </button>
           </div>

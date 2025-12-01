@@ -5,6 +5,7 @@ const { hasRequiredDocuments } = require('./businessController');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const fetch = require('node-fetch');
 const pool = require('../config/database');
 const supabaseStorage = require('../utils/supabaseStorage');
 const { logAction } = require('../utils/logger');
@@ -244,8 +245,8 @@ exports.verifyDocument = async (req, res) => {
       return res.status(400).json({ error: 'Document ID is required' });
     }
 
-    if (!status || !['approved', 'rejected', 'repass'].includes(status)) {
-      return res.status(400).json({ error: 'Valid status is required (approved, rejected, repass)' });
+    if (!status || !['approved', 'rejected'].includes(status)) {
+      return res.status(400).json({ error: 'Valid status is required (approved, rejected)' });
     }
 
     const updatedDocument = await BusinessDocument.updateVerificationStatus(
@@ -277,20 +278,20 @@ exports.verifyDocument = async (req, res) => {
 exports.completeBusinessVerification = async (req, res) => {
   try {
     const { business_id } = req.params;
-    const { status, rejection_reason, resubmission_notes } = req.body;
+    const { status, rejection_reason } = req.body;
     const reviewedBy = req.user.userId;
 
     if (!business_id) {
       return res.status(400).json({ error: 'Business ID is required' });
     }
 
-    if (!status || !['approved', 'rejected', 'repass'].includes(status)) {
-      return res.status(400).json({ error: 'Valid status is required (approved, rejected, repass)' });
+    if (!status || !['approved', 'rejected'].includes(status)) {
+      return res.status(400).json({ error: 'Valid status is required (approved, rejected)' });
     }
 
     // Update business verification status
     const updatedVerification = await BusinessVerification.updateStatus(
-      business_id, status, reviewedBy, rejection_reason, resubmission_notes
+      business_id, status, reviewedBy, rejection_reason, null
     );
 
     if (!updatedVerification) {
@@ -301,7 +302,7 @@ exports.completeBusinessVerification = async (req, res) => {
     const businessResult = await pool.query('SELECT * FROM business WHERE business_id = $1', [business_id]);
     if (businessResult.rowCount > 0) {
       const businessData = businessResult.rows[0];
-      await sendVerificationStatusNotification(businessData, status, rejection_reason, resubmission_notes);
+      await sendVerificationStatusNotification(businessData, status, rejection_reason);
     }
 
     logAction({
@@ -331,13 +332,16 @@ exports.getVerificationStats = async (req, res) => {
       pending: 0,
       approved: 0,
       rejected: 0,
-      repass: 0,
       total: 0
     };
 
     stats.forEach(stat => {
-      formattedStats[stat.verification_status] = parseInt(stat.count);
-      formattedStats.total += parseInt(stat.count);
+      const key = stat.verification_status === 'repass' ? 'rejected' : stat.verification_status;
+      const count = parseInt(stat.count, 10);
+      if (formattedStats[key] !== undefined) {
+        formattedStats[key] += count;
+        formattedStats.total += count;
+      }
     });
 
     res.json(formattedStats);
@@ -450,12 +454,48 @@ exports.downloadDocument = async (req, res) => {
       return res.status(404).json({ error: 'Document not found' });
     }
 
-    const filePath = document.file_path;
+    const filePath = document.file_path || '';
+    const storageEndpoint = (process.env.SUPABASE_STORAGE_ENDPOINT || '').replace(/\/$/, '');
+    const bucketPrefix = storageEndpoint && supabaseStorage.bucketName
+      ? `${storageEndpoint}/${supabaseStorage.bucketName}/`
+      : null;
 
     // Check if it's a URL (Supabase) or local path
-    if (filePath.startsWith('http')) {
-      // Redirect to Supabase URL
-      res.redirect(filePath);
+    if (filePath.startsWith('http') && bucketPrefix && filePath.startsWith(bucketPrefix)) {
+      const storageKey = filePath.substring(bucketPrefix.length);
+      try {
+        const downloadResult = await supabaseStorage.downloadFile(storageKey);
+
+        if (!downloadResult.success || !downloadResult.buffer) {
+          console.error('Supabase storage download failed:', downloadResult.error);
+          return res.status(502).json({ error: 'Failed to fetch document from storage' });
+        }
+
+        res.setHeader('Content-Type', downloadResult.contentType || document.mime_type || 'application/octet-stream');
+        res.setHeader('Content-Disposition', `attachment; filename="${document.document_name}"`);
+
+        const stream = downloadResult.buffer;
+        if (typeof stream.pipe === 'function') {
+          stream.on('error', (error) => {
+            console.error('Streaming download error:', error);
+            if (!res.headersSent) {
+              res.status(500).json({ error: 'Failed to stream document' });
+            } else {
+              res.end();
+            }
+          });
+          stream.pipe(res);
+        } else {
+          res.send(stream);
+        }
+        return;
+      } catch (storageError) {
+        console.error('Supabase storage fetch threw error:', storageError);
+        return res.status(502).json({ error: 'Failed to fetch document from storage' });
+      }
+    } else if (filePath.startsWith('http')) {
+      // For legacy URLs outside the configured bucket, just redirect.
+      return res.redirect(filePath);
     } else {
       // Local file
       if (!fs.existsSync(filePath)) {

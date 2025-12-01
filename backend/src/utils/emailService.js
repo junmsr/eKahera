@@ -87,7 +87,7 @@ const sendNewApplicationNotification = async (businessData, superAdminEmails) =>
 };
 
 // Send verification status notification to business
-const sendVerificationStatusNotification = async (businessData, status, rejectionReason = null, resubmissionNotes = null) => {
+const sendVerificationStatusNotification = async (businessData, status, rejectionReason = null) => {
   if (!resend) {
     console.error('Email sending is disabled. Cannot send verification status notification.');
     return false;
@@ -169,43 +169,6 @@ const sendVerificationStatusNotification = async (businessData, status, rejectio
         
         <p style="color: #6b7280; font-size: 14px;">
           If you have any questions about this feedback, please contact our support team.
-        </p>
-      </div>
-    `;
-  } else if (status === 'repass') {
-    subject = 'Business Verification - Document Resubmission Required';
-    message = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #d97706;">Document Resubmission Required</h2>
-        
-        <p>Thank you for your business application for <strong>${businessData.business_name}</strong>.</p>
-        
-        <div style="background-color: #fffbeb; border: 2px solid #f59e0b; padding: 20px; border-radius: 8px; margin: 20px 0;">
-          <p style="color: #92400e; margin: 0;">
-            <strong>Document Quality Issue Detected</strong>
-          </p>
-        </div>
-        
-        <p>Some of your submitted documents appear to be unclear or blurry, making it difficult for our verification team to review them properly.</p>
-        
-        ${resubmissionNotes ? `
-          <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <h3 style="color: #374151; margin-top: 0;">Specific Issues:</h3>
-            <p style="color: #6b7280;">${resubmissionNotes}</p>
-          </div>
-        ` : ''}
-        
-        <p>Please resubmit clear, high-quality images or scans of the requested documents to continue with the verification process.</p>
-        
-        <div style="text-align: center; margin: 30px 0;">
-          <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/login" 
-             style="background-color: #d97706; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
-            Resubmit Documents
-          </a>
-        </div>
-        
-        <p style="color: #6b7280; font-size: 14px;">
-          Please ensure documents are clear, well-lit, and all text is readable before resubmitting.
         </p>
       </div>
     `;

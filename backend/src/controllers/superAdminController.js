@@ -3,6 +3,8 @@ const { logAction } = require('../utils/logger');
 const { sendVerificationStatusNotification } = require('../utils/emailService');
 const bcrypt = require('bcryptjs');
 
+const normalizeStatus = (status) => (status === 'repass' ? 'rejected' : status);
+
 // Get all stores/businesses for SuperAdmin
 exports.getAllStores = async (req, res) => {
   try {
@@ -54,6 +56,7 @@ exports.getStoreById = async (req, res) => {
         mobile as phone,
         created_at,
         updated_at,
+        verification_status,
         EXTRACT(YEAR FROM created_at) as established
       FROM business 
       WHERE business_id = $1
@@ -103,6 +106,29 @@ exports.getStoreById = async (req, res) => {
       .filter(Boolean)
       .join(", ");
 
+    // Get documents for this business
+    const documentsResult = await pool.query(
+      `SELECT document_id, document_type, document_name, file_path, verification_status, verification_notes, uploaded_at
+       FROM business_documents
+       WHERE business_id = $1
+       ORDER BY uploaded_at DESC`,
+      [id]
+    );
+
+    const formattedDocuments = documentsResult.rows.map((doc) => ({
+      documentId: doc.document_id,
+      documentType: doc.document_type,
+      name: doc.document_name,
+      url: doc.file_path,
+      verificationStatus: normalizeStatus(doc.verification_status || 'pending'),
+      verificationNotes: doc.verification_notes,
+      uploadedAt: doc.uploaded_at,
+    }));
+
+    const approvedDocuments = formattedDocuments.filter(
+      (doc) => doc.verificationStatus === 'approved'
+    );
+
     // Format response similar to what frontend expects
     const storeDetails = {
       id: business.id,
@@ -114,14 +140,9 @@ exports.getStoreById = async (req, res) => {
       storeName: business.storeName,
       location: fullAddress,
       established: business.established?.toString(),
-      documents: [
-        { name: 'Business Registration.pdf', url: '#' },
-        { name: 'Tax Certificate.pdf', url: '#' }
-      ],
-      verifiedDocuments: [
-        { name: 'ID Verification.pdf', url: '#' },
-        { name: 'Address Proof.pdf', url: '#' }
-      ],
+      verificationStatus: normalizeStatus(business.verification_status) || 'pending',
+      documents: formattedDocuments,
+      verifiedDocuments: approvedDocuments,
       account: {
         username: owner?.username || 'N/A',
         passwordHint: '******** (Secure)',
@@ -130,7 +151,7 @@ exports.getStoreById = async (req, res) => {
         lastPasswordChange: 'N/A',
         loginAttemptsToday: 0,
         storeAddress: fullAddress,
-        status: 'Active',
+        status: normalizeStatus(business.verification_status || 'pending'),
         sessionTimeout: '30 minutes'
       },
       users: usersResult.rows,
@@ -277,60 +298,6 @@ exports.rejectStore = async (req, res) => {
   } catch (err) {
     console.error('Reject store error:', err);
     res.status(500).json({ error: 'Failed to reject store' });
-  }
-};
-
-// Repass a store for resubmission
-exports.repassStore = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { resubmission_notes } = req.body;
-
-    // Check if store exists
-    const storeResult = await pool.query(
-      'SELECT business_id, business_name FROM business WHERE business_id = $1',
-      [id]
-    );
-
-    if (storeResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Store not found' });
-    }
-
-    const store = storeResult.rows[0];
-
-    // Update verification_status to 'repass' and set review columns
-    await pool.query(
-      `UPDATE business SET
-        verification_status = $1,
-        verification_reviewed_at = NOW(),
-        verification_reviewed_by = $2,
-        verification_rejection_reason = NULL,
-        verification_resubmission_notes = $3,
-        updated_at = NOW()
-      WHERE business_id = $4`,
-      ['repass', req.user.userId, resubmission_notes, id]
-    );
-
-    // Log the repass action
-    logAction({
-      userId: req.user.userId,
-      businessId: null,
-      action: `Repassed store: ${store.business_name} (ID: ${id}) - Notes: ${resubmission_notes}`
-    });
-
-    console.log(`SuperAdmin ${req.user.email} repassed store ${store.business_name}`);
-
-    res.json({
-      message: 'Store repassed for resubmission successfully',
-      store: {
-        id: store.business_id,
-        name: store.business_name,
-        status: 'repass'
-      }
-    });
-  } catch (err) {
-    console.error('Repass store error:', err);
-    res.status(500).json({ error: 'Failed to repass store' });
   }
 };
 

@@ -9,59 +9,21 @@ export default function SuperAdminView() {
   const [store, setStore] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [actionLoading, setActionLoading] = useState(false);
-
-  // minimal sample store for the demo
-  const sampleStore = {
-    id: "sample-1",
-    name: "John Doe",
-    firstName: "John",
-    lastName: "Doe",
-    email: "john.doe@example.com",
-    phone: "+63 963 909 2810",
-    storeName: "John Doe",
-    location: "123 Main St, City",
-    established: "2020",
-    documents: [
-      { name: "Business License.pdf", url: "#" },
-      { name: "Tax Certificate.pdf", url: "#" },
-    ],
-    verifiedDocuments: [
-      { name: "ID Verification.pdf", url: "#" },
-      { name: "Address Proof.pdf", url: "#" },
-    ],
-    account: {
-      username: "admin_abc",
-      passwordHint: "******** (Last updated: 07/01/2025)",
-      lastLogin: "07/15/2025 02:51 PST",
-      createdAt: "06/15/2020",
-      lastPasswordChange: "07/01/2025 09:15 PST",
-      loginAttemptsToday: 2,
-      storeAddress: "Brgy 18, Rizal St. Cabangan Legazpi City",
-      status: "Active",
-      sessionTimeout: "30 minutes",
-    },
-  };
+  const [downloadingId, setDownloadingId] = useState(null);
 
   useEffect(() => {
     const fetchDetail = async () => {
       setLoading(true);
       setError("");
       try {
-        // Standardized to sessionStorage
         const token = sessionStorage.getItem("auth_token"); 
         const res = await api(`/api/superadmin/stores/${id}`, {
           headers: token ? { Authorization: `Bearer ${token}` } : undefined,
         });
-        // if API returns an object use it, otherwise fallback
-        if (res && typeof res === "object" && Object.keys(res).length) {
-          setStore(res);
-        } else {
-          setStore(sampleStore);
-        }
+        setStore(res);
       } catch (err) {
-        setError("Using sample data");
-        setStore(sampleStore);
+        setError(err?.message || "Failed to fetch store details");
+        setStore(null);
       } finally {
         setLoading(false);
       }
@@ -71,77 +33,60 @@ export default function SuperAdminView() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  const handleApproveBusiness = async () => {
-    if (!store || actionLoading) return;
-    setActionLoading(true);
+  const downloadDocument = async (documentId, fileName) => {
+    if (!documentId) return;
+    setDownloadingId(documentId);
     try {
-      // Standardized to sessionStorage
       const token = sessionStorage.getItem("auth_token"); 
-      await api(`/api/superadmin/stores/${id}/approve`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      // Update local state
-      setStore((prev) => ({
-        ...prev,
-        account: { ...prev.account, status: "Active" },
-        status: "approved",
-      }));
-      alert("Business approved successfully!");
-    } catch (err) {
-      setError(
-        "Failed to approve business: " + (err.message || "Unknown error")
+      const response = await api(
+        `/documents/download/${documentId}`,
+        {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        },
+        true
       );
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.style.display = "none";
+      a.href = url;
+      a.download = fileName || "document";
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Error downloading document:", error);
+      alert("Error downloading document");
     } finally {
-      setActionLoading(false);
+      setDownloadingId(null);
     }
   };
 
-  const handleRejectApplication = async () => {
-    if (!store || actionLoading) return;
-    if (!confirm("Are you sure you want to reject this application?")) return;
-    setActionLoading(true);
-    try {
-      // Standardized to sessionStorage
-      const token = sessionStorage.getItem("auth_token"); 
-      await api(`/api/superadmin/stores/${id}/reject`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      // Update local state
-      setStore((prev) => ({
-        ...prev,
-        account: { ...prev.account, status: "Rejected" },
-        status: "rejected",
-      }));
-      alert("Application rejected successfully!");
-    } catch (err) {
-      setError(
-        "Failed to reject application: " + (err.message || "Unknown error")
-      );
-    } finally {
-      setActionLoading(false);
-    }
+  const formatDate = (dateString) => {
+    if (!dateString) return "N/A";
+    return new Date(dateString).toLocaleString();
   };
 
-  const handleRequestResubmission = async () => {
-    if (!store || actionLoading) return;
-    setActionLoading(true);
-    try {
-      // Standardized to sessionStorage
-      const token = sessionStorage.getItem("auth_token"); 
-      await api(`/api/superadmin/stores/${id}/request-resubmission`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      alert("Resubmission requested successfully!");
-    } catch (err) {
-      setError(
-        "Failed to request resubmission: " + (err.message || "Unknown error")
-      );
-    } finally {
-      setActionLoading(false);
-    }
+  const renderStatusPill = (status) => {
+    const normalized = (status || "pending").toLowerCase();
+    const palettes = {
+      approved: "bg-green-100 text-green-700 border-green-200",
+      rejected: "bg-red-100 text-red-700 border-red-200",
+      pending: "bg-yellow-100 text-yellow-700 border-yellow-200",
+    };
+    const classes = palettes[normalized] || palettes.pending;
+    const label = normalized.charAt(0).toUpperCase() + normalized.slice(1);
+    return (
+      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${classes}`}>
+        {label}
+      </span>
+    );
+  };
+
+  const formatStatusLabel = (value) => {
+    if (!value) return "N/A";
+    const normalized = value.toLowerCase();
+    return normalized.charAt(0).toUpperCase() + normalized.slice(1);
   };
 
   if (loading) {
@@ -158,6 +103,40 @@ export default function SuperAdminView() {
             <p className="text-sm sm:text-base text-gray-600 font-medium text-center">
               Loading store details...
             </p>
+          </div>
+        </div>
+      </Background>
+    );
+  }
+
+  if (!store) {
+    return (
+      <Background variant="gradientBlue" pattern="dots" floatingElements overlay>
+        <div className="min-h-screen flex items-center justify-center p-6">
+          <div className="bg-white/90 border border-gray-200 rounded-xl shadow-sm p-8 text-center max-w-md">
+            <h2 className="text-2xl font-semibold text-gray-900 mb-2">Store Unavailable</h2>
+            <p className="text-gray-600 mb-4">
+              {error || "We couldn't find the store details you're looking for."}
+            </p>
+            <button
+              onClick={() => navigate("/superadmin")}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-colors"
+            >
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                />
+              </svg>
+              Back to Dashboard
+            </button>
           </div>
         </div>
       </Background>
@@ -530,14 +509,12 @@ export default function SuperAdminView() {
                   </div>
                 </div>
                 <div className="p-4 sm:p-5 md:p-6 space-y-2 sm:space-y-3">
-                  {(store.documents || []).map((d, i) => (
-                    <a
-                      key={i}
-                      href={d.url || "#"}
-                      className="flex items-center gap-2 sm:gap-3 md:gap-4 p-3 sm:p-3.5 md:p-4 bg-gradient-to-r from-blue-50/50 to-blue-50/30 hover:from-blue-100/50 hover:to-blue-100/30 text-blue-900 rounded-xl border border-blue-100/50 hover:border-blue-200 transition-all duration-300 hover:shadow-md group touch-manipulation"
-                      download
+                  {(store.documents || []).map((d) => (
+                    <div
+                      key={d.documentId || d.name}
+                      className="flex items-center gap-3 md:gap-4 p-3 sm:p-3.5 md:p-4 bg-gradient-to-r from-blue-50/50 to-blue-50/30 rounded-xl border border-blue-100/50 hover:border-blue-200 transition-all duration-300 hover:shadow-md"
                     >
-                      <div className="w-10 h-10 sm:w-11 sm:h-11 md:w-12 md:h-12 bg-white rounded-xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform flex-shrink-0">
+                      <div className="w-10 h-10 sm:w-11 sm:h-11 md:w-12 md:h-12 bg-white rounded-xl flex items-center justify-center shadow-sm flex-shrink-0">
                         <svg
                           className="w-5 h-5 sm:w-5 sm:h-5 md:w-6 md:h-6 text-blue-600"
                           fill="none"
@@ -548,32 +525,51 @@ export default function SuperAdminView() {
                             strokeLinecap="round"
                             strokeLinejoin="round"
                             strokeWidth={2}
-                            d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                           />
                         </svg>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm sm:text-base font-semibold text-gray-900 truncate">
-                          {d.name}
-                        </p>
-                        <p className="text-xs text-blue-600 font-medium">
-                          Click to download
+                      <div className="flex-1 min-w-0 space-y-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-sm sm:text-base font-semibold text-gray-900 truncate">
+                            {d.name}
+                          </p>
+                          {renderStatusPill(d.verificationStatus)}
+                        </div>
+                        <p className="text-xs text-gray-600">
+                          {d.documentType || "Document"} • Uploaded {formatDate(d.uploadedAt)}
                         </p>
                       </div>
-                      <svg
-                        className="w-4 h-4 sm:w-4 sm:h-4 md:w-5 md:h-5 text-blue-500 group-hover:text-blue-700 transition-colors flex-shrink-0"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
+                      <button
+                        onClick={() => downloadDocument(d.documentId, d.name)}
+                        disabled={downloadingId === d.documentId}
+                        className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 disabled:opacity-60"
                       >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                        />
-                      </svg>
-                    </a>
+                        {downloadingId === d.documentId ? (
+                          <>
+                            <span className="w-3.5 h-3.5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></span>
+                            Downloading
+                          </>
+                        ) : (
+                          <>
+                            <svg
+                              className="w-4 h-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4"
+                              />
+                            </svg>
+                            Download
+                          </>
+                        )}
+                      </button>
+                    </div>
                   ))}
                   {(!store.documents || store.documents.length === 0) && (
                     <div className="text-center py-8 sm:py-10 md:py-12 text-gray-500">
@@ -627,14 +623,12 @@ export default function SuperAdminView() {
                   </div>
                 </div>
                 <div className="p-4 sm:p-5 md:p-6 space-y-2 sm:space-y-3">
-                  {(store.verifiedDocuments || []).map((d, i) => (
-                    <a
-                      key={i}
-                      href={d.url || "#"}
-                      className="flex items-center gap-2 sm:gap-3 md:gap-4 p-3 sm:p-3.5 md:p-4 bg-gradient-to-r from-green-50/50 to-green-50/30 hover:from-green-100/50 hover:to-green-100/30 text-green-900 rounded-xl border border-green-100/50 hover:border-green-200 transition-all duration-300 hover:shadow-md group touch-manipulation"
-                      download
+                  {(store.verifiedDocuments || []).map((d) => (
+                    <div
+                      key={d.documentId || d.name}
+                      className="flex items-center gap-3 md:gap-4 p-3 sm:p-3.5 md:p-4 bg-gradient-to-r from-green-50/50 to-green-50/30 rounded-xl border border-green-100/50 hover:border-green-200 transition-all duration-300 hover:shadow-md"
                     >
-                      <div className="w-10 h-10 sm:w-11 sm:h-11 md:w-12 md:h-12 bg-white rounded-xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform flex-shrink-0">
+                      <div className="w-10 h-10 sm:w-11 sm:h-11 md:w-12 md:h-12 bg-white rounded-xl flex items-center justify-center shadow-sm flex-shrink-0">
                         <svg
                           className="w-5 h-5 sm:w-5 sm:h-5 md:w-6 md:h-6 text-green-600"
                           fill="none"
@@ -650,27 +644,46 @@ export default function SuperAdminView() {
                         </svg>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm sm:text-base font-semibold text-gray-900 truncate">
-                          {d.name}
-                        </p>
-                        <p className="text-xs text-green-600 font-medium">
-                          Verified & ready
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-sm sm:text-base font-semibold text-gray-900 truncate">
+                            {d.name}
+                          </p>
+                          {renderStatusPill(d.verificationStatus || "approved")}
+                        </div>
+                        <p className="text-xs text-gray-600">
+                          {d.documentType || "Document"} • Uploaded {formatDate(d.uploadedAt)}
                         </p>
                       </div>
-                      <svg
-                        className="w-4 h-4 sm:w-4 sm:h-4 md:w-5 md:h-5 text-green-500 group-hover:text-green-700 transition-colors flex-shrink-0"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
+                      <button
+                        onClick={() => downloadDocument(d.documentId, d.name)}
+                        disabled={downloadingId === d.documentId}
+                        className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-green-700 border border-green-200 rounded-lg hover:bg-green-50 disabled:opacity-60"
                       >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                        />
-                      </svg>
-                    </a>
+                        {downloadingId === d.documentId ? (
+                          <>
+                            <span className="w-3.5 h-3.5 border-2 border-green-600 border-t-transparent rounded-full animate-spin"></span>
+                            Downloading
+                          </>
+                        ) : (
+                          <>
+                            <svg
+                              className="w-4 h-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4"
+                              />
+                            </svg>
+                            Download
+                          </>
+                        )}
+                      </button>
+                    </div>
                   ))}
                   {(!store.verifiedDocuments ||
                     store.verifiedDocuments.length === 0) && (
@@ -951,7 +964,7 @@ export default function SuperAdminView() {
                         </p>
                         <span className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs font-semibold bg-green-100 text-green-700 border border-green-200">
                           <span className="w-1.5 h-1.5 rounded-full bg-green-600"></span>
-                          {store.account?.status || store.status || "N/A"}
+                          {formatStatusLabel(store.account?.status || store.verificationStatus)}
                         </span>
                       </div>
                     </div>
@@ -990,99 +1003,41 @@ export default function SuperAdminView() {
 
           {/* Complete Verification Section */}
           <section className="mb-4 sm:mb-5 md:mb-6">
-            <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-sm border border-gray-200/50 overflow-hidden">
-              <div className="p-4 sm:p-5 md:p-6">
-                <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 sm:mb-5">
-                  Complete Verification
-                </h2>
-                <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-                  <button
-                    onClick={handleApproveBusiness}
-                    disabled={actionLoading || store?.status === "approved"}
-                    className="flex-1 px-4 sm:px-6 py-3 sm:py-3.5 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 touch-manipulation"
-                  >
-                    {actionLoading ? (
-                      <>
-                        <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                        <span>Processing...</span>
-                      </>
-                    ) : (
-                      <>
-                        <svg
-                          className="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M5 13l4 4L19 7"
-                          />
-                        </svg>
-                        Approve Business
-                      </>
-                    )}
-                  </button>
-                  <button
-                    onClick={handleRejectApplication}
-                    disabled={actionLoading || store?.status === "rejected"}
-                    className="flex-1 px-4 sm:px-6 py-3 sm:py-3.5 bg-white border-2 border-blue-500 text-blue-600 font-semibold rounded-lg hover:bg-blue-50 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 touch-manipulation"
-                  >
-                    {actionLoading ? (
-                      <>
-                        <span className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></span>
-                        <span>Processing...</span>
-                      </>
-                    ) : (
-                      <>
-                        <svg
-                          className="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M6 18L18 6M6 6l12 12"
-                          />
-                        </svg>
-                        Reject Application
-                      </>
-                    )}
-                  </button>
-                  <button
-                    onClick={handleRequestResubmission}
-                    disabled={actionLoading}
-                    className="flex-1 px-4 sm:px-6 py-3 sm:py-3.5 bg-white border-2 border-blue-500 text-blue-600 font-semibold rounded-lg hover:bg-blue-50 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 touch-manipulation"
-                  >
-                    {actionLoading ? (
-                      <>
-                        <span className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></span>
-                        <span>Processing...</span>
-                      </>
-                    ) : (
-                      <>
-                        <svg
-                          className="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                          />
-                        </svg>
-                        Request Resubmission
-                      </>
-                    )}
-                  </button>
+            <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-sm border border-blue-100/60 overflow-hidden">
+              <div className="p-4 sm:p-5 md:p-6 space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center">
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                      />
+                    </svg>
+                  </div>
+                  <div>
+                    <h2 className="text-lg sm:text-xl font-bold text-gray-900">Verification Actions</h2>
+                    <p className="text-sm text-gray-600">
+                      Approvals and rejections now happen inside the Document Verification tab.
+                    </p>
+                  </div>
+                </div>
+                <p className="text-sm text-gray-600">
+                  Use the <span className="font-semibold text-gray-800">Document Verification</span> tab to review uploads,
+                  update document statuses, and complete the final decision for this business. The information on this page
+                  will automatically reflect those updates.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 border border-blue-100 text-xs font-medium">
+                    <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                    Current Status: {store.verificationStatus?.charAt(0).toUpperCase() + store.verificationStatus?.slice(1)}
+                  </span>
                 </div>
               </div>
             </div>

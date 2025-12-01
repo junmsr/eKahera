@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Background from "../components/layout/Background";
-import Button from "../components/common/Button";
 import DocumentVerification from "../components/ui/SuperAdmin/DocumentVerification";
 import { api } from "../lib/api";
 import Modal from "../components/modals/Modal";
@@ -36,7 +35,6 @@ function SuperAdmin() {
 
   const [stores, setStores] = useState(sampleStores);
   const [loading, setLoading] = useState(false);
-  const [actionLoadingId, setActionLoadingId] = useState(null);
   const [error, setError] = useState("");
   const [deleteModal, setDeleteModal] = useState({
     isOpen: false,
@@ -103,48 +101,6 @@ function SuperAdmin() {
       setError("Using sample data");
     } finally {
       setLoading(false);
-    }
-  };
-
-  const updateLocalStatus = (id, status) => {
-    setStores((prev) => prev.map((s) => (s.id === id ? { ...s, status } : s)));
-  };
-
-  const handleApprove = async (store) => {
-    if (!store || store.status === "approved") return;
-    setActionLoadingId(store.id);
-    setError("");
-    try {
-      await api(`/api/superadmin/stores/${store.id}/approve`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      updateLocalStatus(store.id, "approved");
-    } catch (err) {
-      // fallback to local update
-      updateLocalStatus(store.id, "approved");
-      setError("Approve updated locally");
-    } finally {
-      setActionLoadingId(null);
-    }
-  };
-
-  const handleReject = async (store) => {
-    if (!store || store.status === "rejected") return;
-    setActionLoadingId(store.id);
-    setError("");
-    try {
-      await api(`/api/superadmin/stores/${store.id}/reject`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      updateLocalStatus(store.id, "rejected");
-    } catch (err) {
-      // fallback to local update
-      updateLocalStatus(store.id, "rejected");
-      setError("Reject updated locally");
-    } finally {
-      setActionLoadingId(null);
     }
   };
 
@@ -631,72 +587,7 @@ function SuperAdmin() {
                                   </button>
 
                                   <button
-                                    onClick={() => handleApprove(s)}
-                                    disabled={
-                                      s.status === "approved" ||
-                                      actionLoadingId === s.id
-                                    }
-                                    className={`px-2 sm:px-2.5 md:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 whitespace-nowrap flex-shrink-0 ${
-                                      s.status === "approved"
-                                        ? "bg-gray-100 text-gray-500 cursor-not-allowed"
-                                        : "bg-green-50 text-green-700 hover:bg-green-100 border border-green-200 hover:border-green-300 shadow-sm hover:shadow"
-                                    }`}
-                                    title={
-                                      s.status === "approved"
-                                        ? "Already Approved"
-                                        : "Approve Store"
-                                    }
-                                  >
-                                    {actionLoadingId === s.id ? (
-                                      <span className="flex items-center gap-1">
-                                        <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 border-2 border-green-600 border-t-transparent rounded-full animate-spin"></span>
-                                        <span className="hidden sm:inline">
-                                          Processing...
-                                        </span>
-                                        <span className="sm:hidden">...</span>
-                                      </span>
-                                    ) : s.status === "approved" ? (
-                                      "Approved"
-                                    ) : (
-                                      "Approve"
-                                    )}
-                                  </button>
-
-                                  <button
-                                    onClick={() => handleReject(s)}
-                                    disabled={
-                                      s.status === "rejected" ||
-                                      actionLoadingId === s.id
-                                    }
-                                    className={`px-2 sm:px-2.5 md:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 whitespace-nowrap flex-shrink-0 ${
-                                      s.status === "rejected"
-                                        ? "bg-gray-100 text-gray-500 cursor-not-allowed"
-                                        : "bg-red-50 text-red-700 hover:bg-red-100 border border-red-200 hover:border-red-300 shadow-sm hover:shadow"
-                                    }`}
-                                    title={
-                                      s.status === "rejected"
-                                        ? "Already Rejected"
-                                        : "Reject Store"
-                                    }
-                                  >
-                                    {actionLoadingId === s.id ? (
-                                      <span className="flex items-center gap-1">
-                                        <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></span>
-                                        <span className="hidden sm:inline">
-                                          Processing...
-                                        </span>
-                                        <span className="sm:hidden">...</span>
-                                      </span>
-                                    ) : s.status === "rejected" ? (
-                                      "Rejected"
-                                    ) : (
-                                      "Reject"
-                                    )}
-                                  </button>
-
-                                  <button
                                     onClick={() => handleDelete(s)}
-                                    disabled={actionLoadingId === s.id}
                                     className="p-1.5 sm:p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-all duration-200 border border-transparent hover:border-red-200 flex-shrink-0"
                                     title="Delete Store"
                                   >

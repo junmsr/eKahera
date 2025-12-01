@@ -982,4 +982,26 @@ const decodePSGCAddress = async (psgcString) => {
 };
 
 // Export the hasRequiredDocuments function for use in other modules
+exports.getBusinessPublic = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!id) {
+      return res.status(400).json({ error: "Business ID is required" });
+    }
+
+    const result = await pool.query(
+      "SELECT business_name FROM business WHERE business_id = $1",
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Business not found" });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error("Get public business info error:", error);
+    res.status(500).json({ error: "Failed to get business information" });
+  }
+};
 module.exports.hasRequiredDocuments = hasRequiredDocuments;

@@ -378,8 +378,8 @@ function POS() {
 
   const handleCopyTn = async () => {
     try {
-      if (!transactionNumber) return;
-      await navigator.clipboard.writeText(transactionNumber);
+      if (!user.store_name) return;
+      await navigator.clipboard.writeText(user.store_name);
     } catch (_) {}
   };
 
@@ -389,7 +389,7 @@ function POS() {
       <div className="flex-1 flex items-center justify-center">
         <button
           onClick={handleCopyTn}
-          title="Copy transaction number"
+          title="Copy store name"
           className="inline-flex items-center gap-2 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg px-2 py-1.5 sm:px-2.5 shadow-sm"
         >
           <svg
@@ -406,7 +406,7 @@ function POS() {
             />
           </svg>
           <span className="font-mono text-xs sm:text-sm font-bold tracking-wider truncate max-w-[30vw] sm:max-w-[50vw]">
-            {transactionNumber}
+            {user.store_name}
           </span>
         </button>
       </div>

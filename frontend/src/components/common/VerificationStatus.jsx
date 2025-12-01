@@ -184,40 +184,6 @@ export default function VerificationStatus({ user, onProceed }) {
     );
   }
 
-  // If repass, show resubmission message
-  if (status === 'repass') {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="max-w-2xl w-full bg-white rounded-lg shadow-md p-8 text-center">
-          <div className="text-yellow-500 text-6xl mb-6">📄</div>
-          <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-            Document Resubmission Required
-          </h2>
-          <p className="text-gray-600 mb-6">
-            Some of your submitted documents appear to be unclear or blurry. 
-            Please resubmit clear, high-quality images for verification.
-          </p>
-
-          {verification?.resubmission_notes && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6 text-left">
-              <h3 className="font-semibold text-yellow-800 mb-2">Specific Issues:</h3>
-              <p className="text-yellow-700 text-sm">{verification.resubmission_notes}</p>
-            </div>
-          )}
-
-          <p className="text-gray-600 mb-6">
-            Please ensure documents are clear, well-lit, and all text is readable 
-            before resubmitting.
-          </p>
-
-          <Button onClick={() => window.location.href = '/get-started'}>
-            Resubmit Documents
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
   // If pending or not submitted, show waiting message
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
