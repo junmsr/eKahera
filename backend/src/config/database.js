@@ -15,8 +15,10 @@ const buildConfig = () => {
     // For Render, we need to handle self-signed certificates
     if (isRender) {
       sslConfig = {
-        rejectUnauthorized: false, // Skip certificate verification for Render
-        ssl: { rejectUnauthorized: false } // Add this line to properly configure SSL for node-postgres
+        ssl: {
+          rejectUnauthorized: false, // Skip certificate verification for Render
+          require: true
+        }
       };
     } else {
       // For other production environments, use standard SSL with verification
@@ -40,7 +42,7 @@ const buildConfig = () => {
     connectionTimeoutMillis: 10000, // 10 seconds
     idleTimeoutMillis: 30000, // 30 seconds
     max: 20, // max number of clients in the pool
-    ssl: sslConfig
+    ...(sslConfig || {}) // Spread the sslConfig if it exists
   };
 
   if (process.env.DATABASE_URL) {
