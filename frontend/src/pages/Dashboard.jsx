@@ -176,16 +176,24 @@ export default function Dashboard() {
       // Prefer the view-backed dashboard endpoints we added
       const [overview, timeseries, pie, inventoryMovement, oldLowStock] =
         await Promise.all([
-          api('/api/dashboard/overview', { headers: authHeaders(token) }),
+          api("/api/dashboard/overview", { headers: authHeaders(token) }),
           api(
             `/api/stats/customers-timeseries?days=${
-              range === 'week' ? 7 : range === 'month' ? 30 : range === 'year' ? 365 : 180
+              range === "week"
+                ? 7
+                : range === "month"
+                ? 30
+                : range === "year"
+                ? 365
+                : 180
             }`,
             { headers: authHeaders(token) }
           ),
-          api('/api/stats/sales-by-category', { headers: authHeaders(token) }),
-          api('/api/dashboard/inventory-movement', { headers: authHeaders(token) }),
-          api('/api/products/low-stock', { headers: authHeaders(token) }),
+          api("/api/stats/sales-by-category", { headers: authHeaders(token) }),
+          api("/api/dashboard/inventory-movement", {
+            headers: authHeaders(token),
+          }),
+          api("/api/products/low-stock", { headers: authHeaders(token) }),
         ]);
 
       const derived = (timeseries || []).map((d) => ({
@@ -194,7 +202,8 @@ export default function Dashboard() {
       }));
 
       // Build pie data (categories) based on existing stats endpoint or overview
-      const pieTotal = (pie || []).reduce((s, p) => s + Number(p.value || 0), 0) || 1;
+      const pieTotal =
+        (pie || []).reduce((s, p) => s + Number(p.value || 0), 0) || 1;
       const piePercent = (pie || []).map((p) => ({
         ...p,
         percent: (Number(p.value || 0) / pieTotal) * 100,
@@ -203,10 +212,22 @@ export default function Dashboard() {
       // If overview is available use it for KPIs
       if (overview && overview.totalSales !== undefined) {
         setStats([
-          { label: 'Total Revenue', value: overview.totalSales, change: 0 },
-          { label: 'Total Transactions', value: overview.totalTransactions, change: 0 },
-          { label: 'Total Items Sold', value: overview.totalItemsSold, change: 0 },
-          { label: 'Avg TX Value', value: overview.averageTransactionValue, change: 0 },
+          { label: "Total Revenue", value: overview.totalSales, change: 0 },
+          {
+            label: "Total Transactions",
+            value: overview.totalTransactions,
+            change: 0,
+          },
+          {
+            label: "Total Items Sold",
+            value: overview.totalItemsSold,
+            change: 0,
+          },
+          {
+            label: "Avg TX Value",
+            value: overview.averageTransactionValue,
+            change: 0,
+          },
         ]);
         setHighlight({
           sales: Number(overview.totalSales || 0),
@@ -215,7 +236,8 @@ export default function Dashboard() {
           averageTransactionValue: Number(overview.averageTransactionValue || 0),
           topProduct:
             (overview.topProducts && overview.topProducts[0]?.product_name) ||
-            (piePercent[0]?.name || '-'),
+            piePercent[0]?.name ||
+            "-",
         });
       }
 
@@ -333,14 +355,16 @@ export default function Dashboard() {
   }, [range]);
 
   const headerActions = (
-    <div className="flex flex-nowrap items-center justify-end -gap-1 sm:gap-2 mr-3">
+    <div className="flex flex-wrap items-center gap-1 sm:gap-2">
       <button
         onClick={fetchData}
         disabled={loading}
         title="Refresh Data"
         className="bg-white/80 backdrop-blur-sm hover:bg-white text-gray-700 p-1.5 sm:p-2 rounded-lg border border-gray-200/80 text-sm font-medium transition-all duration-200 hover:shadow-md hover:scale-[1.02]"
       >
-        <BiRefresh className={`w-4 h-4 sm:w-5 sm:h-5 ${loading ? "animate-spin" : ""}`} />
+        <BiRefresh
+          className={`w-4 h-4 sm:w-5 sm:h-5 ${loading ? "animate-spin" : ""}`}
+        />
       </button>
 
       <select
@@ -394,7 +418,7 @@ export default function Dashboard() {
 
       <button
         onClick={() => setShowProfileModal(true)}
-        className="flex items-center gap-2 bg-white/80 backdrop-blur-sm p-1 sm:p-1.5 sm:px-3 sm:py-2 rounded-lg border border-gray-200/80 hover:bg-white transition-all duration-200 hover:shadow-md hover:scale-[1.02] -mr-1"
+        className="flex items-center gap-1 sm:gap-2 bg-white/80 backdrop-blur-sm p-1 sm:p-1.5 sm:px-2 sm:py-2 rounded-lg border border-gray-200/80 hover:bg-white transition-all duration-200 hover:shadow-md hover:scale-[1.02] shrink-0"
       >
         <div className="w-7 h-7 sm:w-8 sm:h-8 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-full flex items-center justify-center text-sm font-medium shadow-lg">
           {user.username?.[0]?.toUpperCase() || "A"}

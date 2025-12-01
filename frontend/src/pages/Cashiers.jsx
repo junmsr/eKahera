@@ -167,8 +167,7 @@ export default function Cashiers() {
 
   return (
     <PageLayout
-      title="Cashiers"
-      subtitle="Manage cashier accounts and permissions"
+      title="CASHIERS"
       sidebar={<NavAdmin />}
       isSidebarOpen={isSidebarOpen}
       setSidebarOpen={setSidebarOpen}
@@ -177,7 +176,7 @@ export default function Cashiers() {
       <div className="flex-1 bg-transparent overflow-hidden p-3 sm:p-4">
         <div className="flex flex-col items-center">
           {/* Top Controls */}
-          <div className="w-full max-w-5xl mb-3 flex flex-col sm:flex-row gap-2.5 sm:items-center sm:justify-between">
+          <div className="w-full max-w-5xl mb-3 flex flex-col sm:flex-row gap-2.5 sm:items-center">
             <div className="flex items-center gap-2 w-full sm:w-auto">
               <div className="relative flex-1">
                 <div className="pointer-events-none absolute inset-y-0 left-0 pl-3 flex items-center">
@@ -212,10 +211,10 @@ export default function Cashiers() {
                 <option value="INACTIVE">Inactive</option>
               </select>
             </div>
-            <div className="flex gap-2 pr-10 sm:pr-2 w-full sm:w-auto">
+            <div className="flex gap-2 pr-10 sm:pr-2 w-full sm:w-auto  justify-end">
               <Button
                 onClick={exportToCSV}
-                size="sm"
+                size="lg"
                 variant="secondary"
                 className="w-full sm:w-auto shrink-0 !p-1.5 sm:!px-4 sm:!py-1.5"
               >
@@ -255,6 +254,29 @@ export default function Cashiers() {
                     />
                   </svg>
                   <span className="hidden sm:inline">Add Cashier</span>
+                </div>
+              </Button>
+              <Button
+                onClick={exportToCSV}
+                size="lg"
+                variant="secondary"
+                className="w-auto shrink-0 !p-1 sm:!px-4 sm:!py-1.5"
+              >
+                <div className="flex items-center sm:gap-2">
+                  <svg
+                    className="w-4 h-4 sm:w-5 sm:h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    />
+                  </svg>
+                  <span className="hidden sm:inline">Export</span>
                 </div>
               </Button>
             </div>
@@ -420,7 +442,7 @@ export default function Cashiers() {
                 Array.from({ length: 4 }).map((_, i) => (
                   <div
                     key={`card-skel-${i}`}
-                    className="animate-pulse bg-white border rounded-lg p-3 shadow-sm"
+                    className="animate-pulse bg-white rounded-lg p-3 shadow-sm"
                   >
                     <div className="h-4 w-32 bg-gray-200 rounded mb-2" />
                     <div className="h-3 w-24 bg-gray-200 rounded mb-1" />
@@ -429,7 +451,7 @@ export default function Cashiers() {
                 ))}
 
               {!loading && filteredCashiers.length === 0 && (
-                <div className="bg-white border rounded-lg p-4 text-center">
+                <div className="bg-white rounded-lg p-4 text-center">
                   <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
                     <svg
                       className="w-6 h-6 text-gray-400"
@@ -458,7 +480,7 @@ export default function Cashiers() {
                 filteredCashiers.map((c, idx) => (
                   <div
                     key={`card-${idx}`}
-                    className="bg-white border rounded-lg p-3 shadow-sm"
+                    className="bg-white rounded-lg p-3 shadow-sm"
                   >
                     <div className="flex items-start justify-between">
                       <div>

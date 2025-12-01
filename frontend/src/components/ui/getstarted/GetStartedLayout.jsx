@@ -126,10 +126,6 @@ function GetStartedLayout({
                   >
                     {loading ? <Loader size="sm" /> : "Continue"}
                   </Button>
-                ) : isOtpStep ? (
-                  <div className="text-sm text-gray-700">
-                    {loading ? "Verifying..." : "Enter the 4-character code"}
-                  </div>
                 ) : showFinish ? (
                   <Button
                     onClick={onFinish}

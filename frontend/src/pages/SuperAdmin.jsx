@@ -8,15 +8,35 @@ import PasswordInput from "../components/common/PasswordInput";
 
 // Icon for Profile Button
 const ProfileIcon = () => (
-  <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+  <svg
+    className="w-5 h-5 text-blue-600"
+    fill="none"
+    stroke="currentColor"
+    viewBox="0 0 24 24"
+  >
+    <path
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+    />
   </svg>
 );
 
 // Icon for Logout Button
 const LogoutIcon = () => (
-  <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+  <svg
+    className="w-5 h-5 text-red-600"
+    fill="none"
+    stroke="currentColor"
+    viewBox="0 0 24 24"
+  >
+    <path
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+    />
   </svg>
 );
 
@@ -45,7 +65,8 @@ function SuperAdmin() {
   const [deleteError, setDeleteError] = useState("");
   const navigate = useNavigate();
   // Get token from sessionStorage or localStorage (consistent with other parts of the app)
-  const token = sessionStorage.getItem("auth_token") || localStorage.getItem("token");
+  const token =
+    sessionStorage.getItem("auth_token") || localStorage.getItem("token");
 
   // Profile modal state (from 'new-nigga-dave' branch)
   const [profileModal, setProfileModal] = useState({ isOpen: false });
@@ -62,13 +83,34 @@ function SuperAdmin() {
     contactNumber: "",
   });
 
+  // Logout modal state
+  const [logoutModal, setLogoutModal] = useState({ isOpen: false });
+
+  // --- Logout Modal Handlers ---
+
+  const openLogoutModal = () => {
+    setLogoutModal({ isOpen: true });
+  };
+
+  const closeLogoutModal = () => {
+    setLogoutModal({ isOpen: false });
+  };
+
+  const confirmLogout = () => {
+    sessionStorage.removeItem("auth_token");
+    sessionStorage.removeItem("user");
+    localStorage.removeItem("auth_token"); // Remove local storage token just in case
+    localStorage.removeItem("user"); // Remove local storage user object just in case
+    navigate("/");
+  };
+
   // Get user information (Updated to use sessionStorage primarily)
   const user = (() => {
     try {
       // Prioritize sessionStorage, fallback to localStorage if needed
       const sessionUser = sessionStorage.getItem("user");
       if (sessionUser) return JSON.parse(sessionUser);
-      
+
       const localUser = localStorage.getItem("user");
       if (localUser) return JSON.parse(localUser);
 
@@ -259,7 +301,7 @@ function SuperAdmin() {
       };
       sessionStorage.setItem("user", JSON.stringify(updatedUser));
       // Keeping localStorage update for the existing 'user' object just in case
-      localStorage.setItem("user", JSON.stringify(updatedUser)); 
+      localStorage.setItem("user", JSON.stringify(updatedUser));
 
       // Show success message
       alert("Profile updated successfully!");
@@ -307,13 +349,7 @@ function SuperAdmin() {
 
               {/* Logout Button (Using sessionStorage) */}
               <button
-                onClick={() => {
-                  sessionStorage.removeItem("auth_token");
-                  sessionStorage.removeItem("user");
-                  localStorage.removeItem("auth_token"); // Remove local storage token just in case
-                  localStorage.removeItem("user"); // Remove local storage user object just in case
-                  navigate("/");
-                }}
+                onClick={openLogoutModal}
                 className="p-2.5 rounded-lg bg-white border border-red-200 shadow-sm hover:bg-red-50 hover:border-red-300 transition-all duration-200 group"
                 title="Logout"
               >
@@ -825,11 +861,21 @@ function SuperAdmin() {
                 {/* Error Message */}
                 {profileError && (
                   <div className="bg-red-50 border-l-4 border-red-500 rounded-lg p-3 flex items-start gap-2">
-                    <svg className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                    <svg
+                      className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
+                      />
                     </svg>
                     <p className="text-sm font-medium text-red-700">
-                      {profileError.replace(/^\{|\}$/g, '')}
+                      {profileError.replace(/^\{|\}$/g, "")}
                     </p>
                   </div>
                 )}
@@ -1146,6 +1192,82 @@ function SuperAdmin() {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      </Modal>
+
+      {/* Logout Confirmation Modal */}
+      <Modal
+        isOpen={logoutModal.isOpen}
+        onClose={closeLogoutModal}
+        title=""
+        size="sm"
+      >
+        <div className="p-0">
+          {/* Header Section */}
+          <div className="bg-gradient-to-r from-red-50 via-red-50/80 to-orange-50/50 border-b border-red-100 px-6 py-5 rounded-t-2xl">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-red-600 rounded-xl flex items-center justify-center shadow-lg">
+                <svg
+                  className="w-6 h-6 text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                  />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h2 className="text-xl font-bold text-gray-900 mb-1">
+                  Confirm Logout
+                </h2>
+                <p className="text-sm text-gray-600">
+                  Are you sure you want to log out?
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Content Section */}
+          <div className="p-6">
+            <p className="text-sm text-gray-700 mb-6">
+              You will be redirected to the login page and your session will
+              end.
+            </p>
+
+            {/* Action Buttons */}
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={closeLogoutModal}
+                className="px-5 py-2.5 rounded-lg text-sm font-semibold text-gray-700 bg-white border-2 border-gray-300 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmLogout}
+                className="px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 shadow-md hover:shadow-lg transition-all duration-200 flex items-center gap-2"
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                  />
+                </svg>
+                Logout
+              </button>
+            </div>
           </div>
         </div>
       </Modal>

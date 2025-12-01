@@ -170,49 +170,6 @@ function Footer({ className = "" }) {
                 </span>
               </motion.a>
             </div>
-
-            {/* Enhanced Social Icons */}
-            <div className="flex items-center gap-3">
-              {[
-                {
-                  name: "Facebook",
-                  icon: "M22 12a10 10 0 1 0-11.5 9.9v-7h-2v-3h2v-2.3c0-2 1.2-3.1 3-3.1.9 0 1.8.16 1.8.16v2h-1c-1 0-1.3.63-1.3 1.3V12h2.3l-.37 3h-1.93v7A10 10 0 0 0 22 12z",
-                  color: "from-blue-500 to-blue-600",
-                },
-                {
-                  name: "LinkedIn",
-                  icon: "M6.94 6.5a1.94 1.94 0 1 1 0-3.88 1.94 1.94 0 0 1 0 3.88zM3.5 8.25h6.9V21H3.5zM13.12 8.25H20V21h-3.4v-6.2c0-1.48-.53-2.5-1.86-2.5-1.02 0-1.63.69-1.9 1.35-.1.25-.12.6-.12.95V21h-3.4s.05-10.5 0-12.75h3.4v1.8c.45-.69 1.25-1.66 3.04-1.66 2.22 0 3.86 1.45 3.86 4.56V21h0z",
-                  color: "from-blue-600 to-blue-700",
-                },
-                {
-                  name: "Twitter",
-                  icon: "M22 5.92a7.57 7.57 0 0 1-2.18.6 3.79 3.79 0 0 0 1.66-2.1 7.6 7.6 0 0 1-2.4.92A3.78 3.78 0 0 0 12 8.3a10.74 10.74 0 0 1-7.8-3.96 3.78 3.78 0 0 0 1.17 5.04 3.76 3.76 0 0 1-1.71-.47v.05c0 1.82 1.3 3.34 3.02 3.68-.32.1-.66.15-1 .15-.25 0-.49-.02-.72-.07.49 1.54 1.9 2.66 3.58 2.69A7.58 7.58 0 0 1 3 18.58 10.7 10.7 0 0 0 8.8 20c6.54 0 10.12-5.42 10.12-10.12 0-.15 0-.3-.01-.45A7.23 7.23 0 0 0 22 5.92z",
-                  color: "from-sky-500 to-blue-500",
-                },
-              ].map((social) => (
-                <a
-                  key={social.name}
-                  href="#"
-                  aria-label={social.name}
-                  className="relative h-11 w-11 rounded-xl backdrop-blur-sm bg-white/90 border border-slate-200/80 text-slate-600 flex items-center justify-center overflow-hidden group transition-all duration-300 shadow-sm hover:shadow-lg"
-                  whileHover={{ scale: 1.1, y: -3, rotate: 5 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <div
-                    className={`absolute inset-0 bg-gradient-to-br ${social.color} opacity-0 group-hover:opacity-100 transition-opacity duration-300`}
-                  />
-                  <svg
-                    width="18"
-                    height="18"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                    className="relative z-10 group-hover:text-white transition-colors duration-300"
-                  >
-                    <path d={social.icon} />
-                  </svg>
-                </a>
-              ))}
-            </div>
           </div>
 
           {/* Company Column */}

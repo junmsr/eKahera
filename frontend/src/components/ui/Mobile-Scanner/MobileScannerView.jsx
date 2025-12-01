@@ -32,7 +32,9 @@ function MobileScannerView() {
     () =>
       cart.reduce(
         (sum, item) =>
-          item && typeof item.price === "number" && typeof item.quantity === "number"
+          item &&
+          typeof item.price === "number" &&
+          typeof item.quantity === "number"
             ? sum + item.price * item.quantity
             : sum,
         0
@@ -355,6 +357,7 @@ function MobileScannerView() {
             total={total}
             method={paymentMethod}
             setMethod={setPaymentMethod}
+            cart={cart}
             onPay={async (method) => {
               const businessId = localStorage.getItem("business_id");
               if (!businessId) {
@@ -375,8 +378,12 @@ function MobileScannerView() {
                     payment_type: method.toLowerCase(),
                     money_received: total,
                     business_id: Number(businessId),
-                    customer_user_id: customerUserId ? Number(customerUserId) : null,
-                    transaction_number: localStorage.getItem("provisionalTransactionNumber"),
+                    customer_user_id: customerUserId
+                      ? Number(customerUserId)
+                      : null,
+                    transaction_number: localStorage.getItem(
+                      "provisionalTransactionNumber"
+                    ),
                   };
                   const res = await api("/api/sales/public/checkout", {
                     method: "POST",
@@ -402,18 +409,21 @@ function MobileScannerView() {
                     window.location.origin + "/customer?payment=success";
                   const cancelUrl =
                     window.location.origin + "/customer?payment=cancel";
-                                      localStorage.setItem(
-                                      "pending_gcash_cart_public",
-                                      JSON.stringify({
-                                        items: cart.map((i) => ({
-                                          product_id: i.product_id,
-                                          sku: i.sku,
-                                          quantity: i.quantity,
-                                        })),
-                                        total,
-                                        transactionNumber: localStorage.getItem("provisionalTransactionNumber"),
-                                      })
-                                    );                  const { checkoutUrl } = await createGcashCheckout({
+                  localStorage.setItem(
+                    "pending_gcash_cart_public",
+                    JSON.stringify({
+                      items: cart.map((i) => ({
+                        product_id: i.product_id,
+                        sku: i.sku,
+                        quantity: i.quantity,
+                      })),
+                      total,
+                      transactionNumber: localStorage.getItem(
+                        "provisionalTransactionNumber"
+                      ),
+                    })
+                  );
+                  const { checkoutUrl } = await createGcashCheckout({
                     amount: Number(total || 0),
                     description: "Self-checkout Order",
                     referenceNumber: `SC-${Date.now()}`,
@@ -432,18 +442,22 @@ function MobileScannerView() {
               // default: fallback to immediate record (e.g., PayMaya placeholder)
               try {
                 const customerUserId = localStorage.getItem("customer_user_id");
-                  const body = {
-                    items: cart.map((i) => ({
-                      product_id: i.product_id,
-                      sku: i.sku,
-                      quantity: i.quantity,
-                    })),
-                    payment_type: method,
-                    money_received: total,
-                    business_id: Number(businessId),
-                    customer_user_id: customerUserId ? Number(customerUserId) : null,
-                    transaction_number: localStorage.getItem("provisionalTransactionNumber"),
-                  };
+                const body = {
+                  items: cart.map((i) => ({
+                    product_id: i.product_id,
+                    sku: i.sku,
+                    quantity: i.quantity,
+                  })),
+                  payment_type: method,
+                  money_received: total,
+                  business_id: Number(businessId),
+                  customer_user_id: customerUserId
+                    ? Number(customerUserId)
+                    : null,
+                  transaction_number: localStorage.getItem(
+                    "provisionalTransactionNumber"
+                  ),
+                };
                 const res = await api("/api/sales/public/checkout", {
                   method: "POST",
                   body: JSON.stringify(body),

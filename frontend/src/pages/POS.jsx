@@ -46,6 +46,7 @@ function POS() {
   const token = sessionStorage.getItem("auth_token");
   const user = JSON.parse(sessionStorage.getItem("user") || "{}");
   const hasFinalizedRef = React.useRef(false);
+  const [businessName, setBusinessName] = useState("");
 
   // Add keyboard shortcuts for buttons: F4-F8
   useEffect(() => {
@@ -223,6 +224,36 @@ function POS() {
 
   const handleRemove = (idx) => setCart(cart.filter((_, i) => i !== idx));
 
+  const handleEditQuantity = async (idx, newQty) => {
+    if (newQty < 1) {
+      setError("Quantity must be at least 1");
+      return;
+    }
+    const item = cart[idx];
+    if (!item) return;
+    setError("");
+    try {
+      const product = await api(
+        `/api/products/sku/${encodeURIComponent(item.sku)}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      const stockQty = Number(product.stock_quantity ?? 0);
+      if (newQty > stockQty) {
+        setError(
+          `Insufficient stock. Available: ${stockQty}, requested: ${newQty}.`
+        );
+        return;
+      }
+      setCart((prev) =>
+        prev.map((it, i) => (i === idx ? { ...it, quantity: newQty } : it))
+      );
+    } catch (err) {
+      setError(err.message || "Failed to update quantity");
+    }
+  };
+
   const subtotal = cart.reduce(
     (sum, item) => sum + item.price * item.quantity,
     0
@@ -362,6 +393,25 @@ function POS() {
     fetchNotifications();
   }, []);
 
+  // Fetch business name
+  useEffect(() => {
+    const fetchBusinessName = async () => {
+      try {
+        const resp = await api("/api/business/profile", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (resp?.business?.business_name) {
+          setBusinessName(resp.business.business_name);
+        }
+      } catch (e) {
+        console.error("Failed to fetch business name", e);
+      }
+    };
+    if (token) {
+      fetchBusinessName();
+    }
+  }, [token]);
+
   // Close dropdown when clicking outside notifications
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -441,7 +491,7 @@ function POS() {
 
   return (
     <PageLayout
-      title="POS"
+      title={businessName ? `${businessName} - POS` : "POS"}
       sidebar={<NavAdmin />}
       headerActions={headerActions}
       isSidebarOpen={isSidebarOpen}
@@ -471,19 +521,29 @@ function POS() {
                 />
               </div>
 
-                {/* SkuFormCard */}
-                <div className="flex-shrink-0">
-                  <SkuFormCard
-                    sku={sku}
-                    setSku={setSku}
-                    quantity={quantity}
-                    setQuantity={setQuantity}
-                    handleAddToCart={handleAddToCart}
-                  />
+              {/* SkuFormCard */}
+              <div className="flex-shrink-0">
+                <SkuFormCard
+                  sku={sku}
+                  setSku={setSku}
+                  quantity={quantity}
+                  setQuantity={setQuantity}
+                  handleAddToCart={handleAddToCart}
+                />
                 {error && (
                   <div className="bg-red-50 border-l-4 border-red-500 rounded-lg p-3 flex items-start gap-2 mt-3">
-                    <svg className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                    <svg
+                      className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
+                      />
                     </svg>
                     <p className="text-sm font-medium text-red-700">
                       {(() => {
@@ -497,7 +557,7 @@ function POS() {
                     </p>
                   </div>
                 )}
-                </div>
+              </div>
 
               {/* TransactionCard */}
               {/* Removed card display; transaction number now shown in header */}
@@ -516,6 +576,7 @@ function POS() {
                 <CartTableCard
                   cart={cart}
                   handleRemove={handleRemove}
+                  handleEditQuantity={handleEditQuantity}
                   total={total}
                   className="flex-1 h-full"
                 />
@@ -526,132 +587,132 @@ function POS() {
                 {/* Grouped Buttons */}
                 <div className="col-span-8">
                   <div className="grid grid-cols-2 sm:grid-cols-2 gap-2 sm:gap-3">
-<Button
-  label="CASH LEDGER (F4)"
-  size="md"
-  className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
-  variant="secondary"
-  microinteraction
-  onClick={() => setShowCashLedger(true)}
-  icon={
-    <svg
-      className="w-4 h-4"
-      fill="none"
-      stroke="currentColor"
-      viewBox="0 0 24 24"
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={2}
-        d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-      />
-    </svg>
-  }
-  iconPosition="left"
-/>
-<Button
-  label="DISCOUNT (F5)"
-  size="md"
-  className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
-  onClick={() => setShowDiscount(true)}
-  variant="secondary"
-  microinteraction
-  icon={
-    <svg
-      className="w-4 h-4"
-      fill="none"
-      stroke="currentColor"
-      viewBox="0 0 24 24"
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={2}
-        d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-      />
-    </svg>
-  }
-  iconPosition="left"
-/>
-<Button
-  label="PRICE CHECK (F6)"
-  size="md"
-  className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
-  onClick={() => setShowPriceCheck(true)}
-  variant="secondary"
-  microinteraction
-  icon={
-    <svg
-      className="w-4 h-4"
-      fill="none"
-      stroke="currentColor"
-      viewBox="0 0 24 24"
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={2}
-        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-      />
-    </svg>
-  }
-  iconPosition="left"
-/>
-<Button
-  label="IMPORT CART (F7)"
-  size="md"
-  className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
-  onClick={() => setShowImportCart(true)}
-  variant="secondary"
-  microinteraction
-  icon={
-    <svg
-      className="w-4 h-4"
-      fill="none"
-      stroke="currentColor"
-      viewBox="0 0 24 24"
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={2}
-        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
-      />
-    </svg>
-  }
-  iconPosition="left"
-/>
+                    <Button
+                      label="CASH LEDGER (F4)"
+                      size="md"
+                      className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
+                      variant="secondary"
+                      microinteraction
+                      onClick={() => setShowCashLedger(true)}
+                      icon={
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
+                        </svg>
+                      }
+                      iconPosition="left"
+                    />
+                    <Button
+                      label="DISCOUNT (F5)"
+                      size="md"
+                      className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
+                      onClick={() => setShowDiscount(true)}
+                      variant="secondary"
+                      microinteraction
+                      icon={
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
+                        </svg>
+                      }
+                      iconPosition="left"
+                    />
+                    <Button
+                      label="PRICE CHECK (F6)"
+                      size="md"
+                      className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
+                      onClick={() => setShowPriceCheck(true)}
+                      variant="secondary"
+                      microinteraction
+                      icon={
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
+                        </svg>
+                      }
+                      iconPosition="left"
+                    />
+                    <Button
+                      label="IMPORT CART (F7)"
+                      size="md"
+                      className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
+                      onClick={() => setShowImportCart(true)}
+                      variant="secondary"
+                      microinteraction
+                      icon={
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+                          />
+                        </svg>
+                      }
+                      iconPosition="left"
+                    />
                   </div>
                 </div>
 
                 {/* Checkout Button */}
                 <div className="col-span-4">
-<Button
-  label="CHECKOUT (F8)"
-  size="md"
-  className="w-full h-full text-sm sm:text-base font-bold"
-  variant="primary"
-  microinteraction
-  onClick={() => setShowCheckout(true)}
-  disabled={cart.length === 0}
-  icon={
-    <svg
-      className="w-5 h-5"
-      fill="none"
-      stroke="currentColor"
-      viewBox="0 0 24 24"
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={2}
-        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-      />
-    </svg>
-  }
-  iconPosition="left"
-/>
+                  <Button
+                    label="CHECKOUT (F8)"
+                    size="md"
+                    className="w-full h-full text-sm sm:text-base font-bold"
+                    variant="primary"
+                    microinteraction
+                    onClick={() => setShowCheckout(true)}
+                    disabled={cart.length === 0}
+                    icon={
+                      <svg
+                        className="w-5 h-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                    }
+                    iconPosition="left"
+                  />
                 </div>
               </div>
             </div>
