@@ -145,7 +145,7 @@ function MobileScannerView() {
       }
     } catch (err) {
       setError("Product not found");
-      console.error("Error fetching product:", err);
+
     } finally {
       setLoading(false);
       setScannerPaused(false);
@@ -190,35 +190,7 @@ function MobileScannerView() {
       />
 
       <div className="min-h-screen pb-32 pt-4 sm:pt-6">
-        {/* Header with back button */}
-        <motion.div
-          className="absolute top-4 sm:top-6 left-4 sm:left-6 z-20"
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          <Link
-            to="/"
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-white/80 backdrop-blur-md border border-white/40 hover:bg-white/90 transition-all duration-300 shadow-lg hover:shadow-xl group"
-          >
-            <svg
-              className="w-5 h-5 text-gray-700 group-hover:-translate-x-1 transition-transform"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 19l-7-7 7-7"
-              />
-            </svg>
-            <span className="font-semibold text-gray-700 hidden sm:inline">
-              Back Home
-            </span>
-          </Link>
-        </motion.div>
+
 
         <motion.div
           className="px-4 space-y-4 max-w-screen-md mx-auto"
@@ -346,9 +318,20 @@ function MobileScannerView() {
 
         <ActionBar
           total={total}
-          onCancel={() => setCart([])}
+          onCancel={async () => {
+            const customerUserId = localStorage.getItem("customer_user_id");
+            if (customerUserId) {
+              try {
+                await api(`/api/cleanup/user/${customerUserId}`, {
+                  method: "DELETE",
+                });
+              } catch (err) {
+              }
+            }
+            setCart([]);
+            navigate("/");
+          }}
           onCheckout={() => setShowCheckout(true)}
-          disabled={cart.length === 0}
         />
 
         {cart.length > 0 && (

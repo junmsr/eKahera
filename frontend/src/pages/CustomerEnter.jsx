@@ -5,77 +5,73 @@ import ScannerCard from "../components/ui/POS/ScannerCard";
 import { useNavigate, Link } from "react-router-dom";
 import Button from "../components/common/Button";
 
-function parseBusinessId(raw) {
-  try {
-    const u = new URL(raw);
-    return (
-      u.searchParams.get("business_id") ||
-      u.searchParams.get("b") ||
-      u.searchParams.get("store") ||
-      raw
-    );
-  } catch (_) {
-    try {
-      const obj = JSON.parse(raw);
-      return obj.business_id || obj.businessId || obj.storeId || raw;
-    } catch (_) {
-      return raw;
-    }
-  }
-}
+
 
 export default function CustomerEnter() {
   const [paused, setPaused] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
+  const [error, setError] = useState(null);
   const navigate = useNavigate();
 
   const handleScan = async (result) => {
     const code = result?.[0]?.rawValue;
     if (!code) return;
+
     setPaused(true);
     setIsScanning(true);
-    const bid = parseBusinessId(code);
-    if (bid) {
-      // Set business ID and generate a transaction number for this session
-      localStorage.setItem("business_id", String(bid));
-      // Clear old transaction data
-      localStorage.removeItem('provisionalTransactionNumber');
-      localStorage.removeItem('customerCart');
-      // Generate and save new transaction number
-      const timePart = new Date().toISOString().replace(/[-:T.Z]/g, '').slice(0, 14);
-      const randPart = Math.floor(1000 + Math.random() * 9000);
-      const transactionNumber = `T-${String(bid).padStart(2, '0')}-${timePart}-${randPart}`;
-      localStorage.setItem('provisionalTransactionNumber', transactionNumber);
+    setError(null);
 
-      // New: Call backend /public/enter-store to create user
-      try {
-        const response = await fetch("/api/sales/public/enter-store", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ business_id: bid }),
-        });
+    try {
+      const url = new URL(code);
+      const bid = url.searchParams.get("business_id");
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          console.error("Failed to create user after scanning store QR:", errorData.error || "Unknown error");
-        } else {
-          const data = await response.json();
-          // Store user_id and username in localStorage for use later (optional)
-          if (data.user_id) localStorage.setItem("customer_user_id", data.user_id);
-          if (data.username) localStorage.setItem("customer_username", data.username);
-          console.log("Anonymous user created after scanning store QR:", data);
+      if (url.pathname.endsWith("/enter-store") && bid) {
+        // Set business ID and generate a transaction number for this session
+        localStorage.setItem("business_id", String(bid));
+        // Clear old transaction data
+        localStorage.removeItem('provisionalTransactionNumber');
+        localStorage.removeItem('customerCart');
+        // Generate and save new transaction number
+        const timePart = new Date().toISOString().replace(/[-:T.Z]/g, '').slice(0, 14);
+        const randPart = Math.floor(1000 + Math.random() * 9000);
+        const transactionNumber = `T-${String(bid).padStart(2, '0')}-${timePart}-${randPart}`;
+        localStorage.setItem('provisionalTransactionNumber', transactionNumber);
+
+        // New: Call backend /public/enter-store to create user
+        try {
+          const response = await fetch("/api/sales/public/enter-store", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ business_id: bid }),
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+          } else {
+            const data = await response.json();
+            // Store user_id and username in localStorage for use later (optional)
+            if (data.user_id) localStorage.setItem("customer_user_id", data.user_id);
+            if (data.username) localStorage.setItem("customer_username", data.username);
+          }
+        } catch (err) {
         }
-      } catch (err) {
-        console.error("Error calling enter-store API:", err);
-      }
 
-      // Small delay for better UX feedback
-      setTimeout(() => {
-        navigate("/customer");
-      }, 300);
-    } else {
+        // Small delay for better UX feedback
+        setTimeout(() => {
+          navigate("/customer");
+        }, 300);
+      } else {
+        // Handle invalid QR code format
+        setError("Invalid QR Code. Please scan a valid store QR code.");
+        setIsScanning(false);
+        setPaused(false);
+      }
+    } catch (error) {
+      // Handle cases where the scanned code is not a valid URL
+      setError("Invalid QR Code. Please scan a valid store QR code.");
+      alert("Invalid QR Code. Please scan a valid store QR code.");
       setIsScanning(false);
       setPaused(false);
     }
@@ -304,7 +300,7 @@ export default function CustomerEnter() {
                 />
 
                 {/* Scanner Container */}
-                <div className="relative h-full rounded-2xl sm:rounded-lg overflow-hidden border-3 sm:border-4 border-white/60 shadow-lg sm:shadow-2xl bg-white/10 backdrop-blur-sm">
+                <div className="relative h-full rounded-2xl sm:rounded-3xl overflow-hidden border-3 sm:border-4 border-white/60 shadow-lg sm:shadow-2xl bg-white/10 backdrop-blur-sm">
                   {isScanning && (
                     <motion.div
                       className="absolute inset-0 flex items-center justify-center z-30 bg-black/40 backdrop-blur-md"
@@ -340,12 +336,57 @@ export default function CustomerEnter() {
                       </motion.div>
                     </motion.div>
                   )}
+
+                  {error && (
+                    <motion.div
+                      className="absolute inset-0 flex items-center justify-center z-30 bg-black/40 backdrop-blur-md"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                    >
+                      <motion.div
+                        className="bg-white/95 backdrop-blur-md rounded-xl sm:rounded-2xl p-6 sm:p-8 shadow-xl sm:shadow-2xl border border-white/20 mx-4"
+                        initial={{ scale: 0.8, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{ type: "spring", stiffness: 200 }}
+                      >
+                        <div className="flex flex-col items-center gap-4">
+                          <motion.div
+                            className="w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center bg-red-100 rounded-full"
+                          >
+                            <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </motion.div>
+                          <div className="text-center">
+                            <p className="text-gray-900 font-semibold text-sm sm:text-base">
+                              Invalid QR Code
+                            </p>
+                            <p className="text-xs sm:text-sm text-gray-600 mt-1">
+                              {error}
+                            </p>
+                          </div>
+                          <Button
+                            label="Try Again"
+                            variant="primary"
+                            onClick={() => {
+                              setError(null);
+                              setPaused(false);
+                              setIsScanning(false);
+                            }}
+                          />
+                        </div>
+                      </motion.div>
+                    </motion.div>
+                  )}
+
                   <ScannerCard
                     onScan={handleScan}
                     paused={paused}
                     onResume={() => {
                       setPaused(false);
                       setIsScanning(false);
+                      setError(null);
                     }}
                     className="w-full h-full"
                   />

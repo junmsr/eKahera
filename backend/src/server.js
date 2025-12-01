@@ -68,6 +68,7 @@ const documentRoutes = require('./routes/documentRoutes');
 const locationRoutes = require('./routes/locationRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const cleanupRoutes = require('./routes/cleanupRoutes');
+const cleanupUserRoutes = require('./routes/cleanupUserRoutes');
 const { startPendingTransactionCleanup } = require('./utils/cleanup');
 
 const app = express();
@@ -101,6 +102,7 @@ app.use('/api/documents', documentRoutes);
 app.use('/api/locations', locationRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/cleanup', cleanupRoutes);
+app.use('/api/cleanup', cleanupUserRoutes);
 
 const port = config.PORT || 5000;
 
