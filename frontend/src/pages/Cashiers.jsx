@@ -3,6 +3,7 @@ import PageLayout from "../components/layout/PageLayout";
 import NavAdmin from "../components/layout/Nav-Admin";
 import Button from "../components/common/Button";
 import CashierFormModal from "../components/modals/CashierFormModal";
+import DeleteConfirmationModal from "../components/modals/DeleteConfirmationModal";
 import { api, authHeaders } from "../lib/api";
 
 // (Assuming initialCashiers is defined elsewhere or is intended to be empty)
@@ -26,6 +27,8 @@ export default function Cashiers() {
     status: "ACTIVE",
   });
   const [isSidebarOpen, setSidebarOpen] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletingCashier, setDeletingCashier] = useState(null);
 
   // Load cashiers from API
   useEffect(() => {
@@ -138,10 +141,39 @@ export default function Cashiers() {
     }
   };
 
-  // Handle Delete Cashier
   const handleDeleteCashier = (idx) => {
-    if (window.confirm("Are you sure you want to delete this cashier?")) {
-      setCashiers(cashiers.filter((_, i) => i !== idx));
+    setDeletingCashier(cashiers[idx]);
+    setShowDeleteModal(true);
+  };
+
+  const handleConfirmDelete = async (password) => {
+    try {
+      setModalLoading(true);
+      setApiError("");
+      const token = sessionStorage.getItem("auth_token");
+
+      // Verify admin password
+      await api("/api/business/cashiers/verify-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders(token) },
+        body: JSON.stringify({ password }),
+      });
+
+      // If password is correct, delete cashier
+      await api(`/api/business/cashiers/${deletingCashier.id}`, {
+        method: "DELETE",
+        headers: authHeaders(token),
+      });
+
+      // Refresh cashier list
+      setCashiers(cashiers.filter((c) => c.id !== deletingCashier.id));
+      setShowDeleteModal(false);
+      setDeletingCashier(null);
+    } catch (err) {
+      // The error from onConfirm is passed to the modal's error state
+      throw new Error(err.message || "Failed to delete cashier");
+    } finally {
+      setModalLoading(false);
     }
   };
 
@@ -579,6 +611,16 @@ export default function Cashiers() {
         title="Edit Cashier"
         submitButtonText="Update Cashier"
         initialData={form}
+        isLoading={modalLoading}
+      />
+
+      {/* Delete Cashier Modal */}
+      <DeleteConfirmationModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleConfirmDelete}
+        title="Delete Cashier"
+        message={`Are you sure you want to delete cashier "${deletingCashier?.name}"? This action cannot be undone.`}
         isLoading={modalLoading}
       />
     </PageLayout>

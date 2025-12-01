@@ -54,8 +54,10 @@ export default function CashierFormModal({
       case "number":
         if (!value.trim()) {
           newErrors.number = "Phone number is required";
-        } else if (value.trim().length < 7) {
-          newErrors.number = "Phone number must be at least 7 digits";
+        } else if (!/^\d+$/.test(value.trim())) {
+          newErrors.number = "Phone number must contain only digits";
+        } else if (value.trim().length !== 11) {
+          newErrors.number = "Phone number must be exactly 11 digits";
         } else {
           delete newErrors.number;
         }
