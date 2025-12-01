@@ -16,19 +16,21 @@ const buildConfig = () => {
     if (isRender) {
       sslConfig = {
         rejectUnauthorized: false, // Skip certificate verification for Render
-        sslmode: 'require'        // Explicitly require SSL
+        ssl: { rejectUnauthorized: false } // Add this line to properly configure SSL for node-postgres
       };
     } else {
       // For other production environments, use standard SSL with verification
       sslConfig = {
-        rejectUnauthorized: true,
-        sslmode: 'require'
+        ssl: {
+          rejectUnauthorized: true,
+          require: true
+        }
       };
     }
   } else {
     // For development, use SSL only if explicitly configured
     sslConfig = process.env.DB_SSL === 'true' 
-      ? { rejectUnauthorized: false }
+      ? { ssl: { rejectUnauthorized: false } } 
       : false;
   }
 
