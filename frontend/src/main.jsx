@@ -27,7 +27,8 @@ import InitialSetup from "./pages/InitialSetup.jsx";
 import StoreQR from "./pages/StoreQR.jsx";
 import Receipt from "./pages/Receipt.jsx";
 import Documents from "./pages/Documents.jsx";
-import DocumentResubmission from "./pages/DocumentResubmission.jsx";
+import DocumentResubmission from "./pages/DocumentResubmission";
+import DocumentResubmitPage from "./pages/DocumentResubmitPage.jsx";
 import NotFound from "./pages/NotFound.jsx";
 import CustomerWaitingPage from "./pages/CustomerWaitingPage.jsx";
 
@@ -63,6 +64,7 @@ const router = createBrowserRouter(
         { path: "superadmin/stores/:id", element: <SuperAdminView /> },
         { path: "setup", element: <InitialSetup /> },
         { path: "resubmit-application", element: <DocumentResubmission /> },
+        { path: "resubmit-document/:documentId", element: <DocumentResubmitPage /> },
         // Catch-all route for 404
         { path: "*", element: <NotFound /> },
       ],
