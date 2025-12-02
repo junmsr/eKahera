@@ -165,10 +165,10 @@ exports.createCashier = async (req, res) => {
     // Insert cashier with retry
     const ins = await retryDbOperation(async () =>
       await client.query(
-        `INSERT INTO users (username, email, password_hash, contact_number, user_type_id, role, business_id)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)
+        `INSERT INTO users (username, email, password_hash, contact_number, user_type_id, role, business_id, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, 'cashier', $6, NOW(), NOW())
          RETURNING user_id, username, business_id`,
-        [username, email || null, passwordHash, contact_number || null, cashierTypeId, 'cashier', adminBusinessId]
+        [username, email || null, passwordHash, contact_number || null, cashierTypeId, adminBusinessId]
       )
     );
 
@@ -1005,75 +1005,3 @@ exports.getBusinessPublic = async (req, res) => {
   }
 };
 module.exports.hasRequiredDocuments = hasRequiredDocuments;
-
-exports.verifyAdminPassword = async (req, res) => {
-  try {
-    const { password } = req.body;
-    if (!password) {
-      return res.status(400).json({ error: 'Password is required' });
-    }
-
-    const adminUserId = req.user.userId;
-    const userQuery = await pool.query(
-      'SELECT password_hash FROM users WHERE user_id = $1',
-      [adminUserId]
-    );
-
-    if (userQuery.rows.length === 0) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
-    const hashedPassword = userQuery.rows[0].password_hash;
-    const isMatch = await bcrypt.compare(password, hashedPassword);
-
-    if (!isMatch) {
-      return res.status(401).json({ error: 'Invalid password' });
-    }
-
-    res.status(200).json({ message: 'Password verified' });
-  } catch (error) {
-    console.error('Verify password error:', error);
-    res.status(500).json({ error: 'Failed to verify password' });
-  }
-};
-
-exports.deleteCashier = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const adminUserId = req.user.userId;
-
-    const adminQuery = await pool.query(
-      'SELECT business_id FROM users WHERE user_id = $1',
-      [adminUserId]
-    );
-    const adminBusinessId = adminQuery.rows[0]?.business_id;
-
-    if (!adminBusinessId) {
-      return res.status(403).json({ error: 'Admin not associated with a business' });
-    }
-
-    const cashierQuery = await pool.query(
-      'SELECT business_id FROM users WHERE user_id = $1',
-      [id]
-    );
-    const cashierBusinessId = cashierQuery.rows[0]?.business_id;
-
-    if (!cashierBusinessId || cashierBusinessId !== adminBusinessId) {
-      return res.status(403).json({ error: 'You are not authorized to delete this cashier' });
-    }
-
-    await pool.query('DELETE FROM users WHERE user_id = $1', [id]);
-
-    logAction({
-      userId: adminUserId,
-      businessId: adminBusinessId,
-      action: `Deleted cashier with ID: ${id}`,
-    });
-
-    res.status(200).json({ message: 'Cashier deleted successfully' });
-  } catch (error) {
-    console.error('Delete cashier error:', error);
-    res.status(500).json({ error: 'Failed to delete cashier' });
-  }
-};
-

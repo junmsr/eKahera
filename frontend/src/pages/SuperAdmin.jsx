@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import Background from "../components/layout/Background";
 import DocumentVerification from "../components/ui/SuperAdmin/DocumentVerification";
 import { api } from "../lib/api";
@@ -41,10 +41,7 @@ const LogoutIcon = () => (
 );
 
 function SuperAdmin() {
-  const location = useLocation();
-  const [activeTab, setActiveTab] = useState(
-    location.state?.activeTab || "verification"
-  );
+  const [activeTab, setActiveTab] = useState("verification");
 
   // temporary single sample store
   const sampleStores = [
@@ -601,9 +598,28 @@ function SuperAdmin() {
                                 <div className="flex items-center justify-end gap-1 sm:gap-1.5 md:gap-2 flex-wrap">
                                   <button
                                     onClick={() => handleView(s)}
-                                    className="px-3 py-1.5 text-xs font-semibold text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50"
+                                    className="p-1.5 sm:p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200 flex-shrink-0"
+                                    title="View Details"
                                   >
-                                    View
+                                    <svg
+                                      className="w-4 h-4 sm:w-5 sm:h-5"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                                      />
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                                      />
+                                    </svg>
                                   </button>
 
                                   <button

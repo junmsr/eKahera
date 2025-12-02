@@ -61,10 +61,158 @@ function ProductForm({
   onSubmit,
   loading,
   onClose,
+  businessType,
 }) {
   const [scannerOpen, setScannerOpen] = useState(false);
   const [scannerPaused, setScannerPaused] = useState(false);
 
+  // Compute effective categories: prefer passed `categories`, otherwise
+  // derive from stored `business_type` using the hard-coded mapping.
+  const getFallbackCategories = () => {
+    const map = {
+      "Grocery Store": [
+        "Fresh Produce",
+        "Meat & Poultry",
+        "Seafood",
+        "Dairy & Eggs",
+        "Bread & Bakery",
+        "Snacks & Chips",
+        "Beverages",
+        "Canned & Packaged Goods",
+        "Frozen Food",
+        "Rice, Pasta & Grains",
+        "Condiments & Spices",
+        "Cleaning Supplies",
+        "Household Essentials",
+        "Baby Products",
+        "Pet Supplies",
+      ],
+      "Pharmacy": [
+        "Prescription Medicines",
+        "OTC Medicines",
+        "Vitamins & Supplements",
+        "First Aid Supplies",
+        "Medical Devices",
+        "Personal Care",
+        "Hygiene Products",
+        "Beauty & Cosmetics",
+        "Baby Care",
+        "Adult Care",
+        "PPE & Sanitizers",
+      ],
+      "Clothing Store": [
+        "Men’s Clothing",
+        "Women’s Clothing",
+        "Kids’ Clothing",
+        "Baby Clothing",
+        "Footwear",
+        "Bags & Accessories",
+        "Underwear & Socks",
+      ],
+      "Electronics Store": [
+        "Mobile Devices",
+        "Computers & Laptops",
+        "Computer Accessories",
+        "Phone Accessories",
+        "Audio Devices",
+        "Cameras & Photography",
+        "Home Appliances",
+        "Personal Appliances",
+        "Gaming Consoles & Accessories",
+        "Cables, Adapters & Chargers",
+      ],
+      "Hardware Store": [
+        "Hand Tools",
+        "Power Tools",
+        "Construction Materials",
+        "Electrical Supplies",
+        "Plumbing Supplies",
+        "Paint & Painting Supplies",
+        "Gardening Tools",
+        "Fasteners (Nails, Screws, Bolts)",
+        "Safety Gear",
+      ],
+      "Bookstore": [
+        "Fiction Books",
+        "Non-Fiction Books",
+        "Educational Books",
+        "Children’s Books",
+        "Comics & Manga",
+        "School Supplies",
+        "Art Materials",
+        "Office Supplies",
+        "Stationery & Gifts",
+      ],
+      "Convenience Store": [
+        "Snacks",
+        "Beverages",
+        "Ready-to-Eat Food",
+        "Instant Noodles / Cup Meals",
+        "Frozen Food",
+        "Basic Grocery Items",
+        "Toiletries",
+        "Basic OTC Medicines",
+        "Household Essentials",
+        "Phone Load",
+        "Ice Cream & Desserts",
+        "Tobacco & Lighters",
+      ],
+      Others: ["General"],
+    };
+
+    const storedFromSession = (typeof window !== "undefined" && sessionStorage.getItem("business_type")) || null;
+    let stored = businessType || storedFromSession || "Others";
+    // Try to derive from logged-in `user` object if available (login stores `user` in sessionStorage)
+    if (stored === "Others" && typeof window !== "undefined") {
+      try {
+        const raw = sessionStorage.getItem("user") || localStorage.getItem("user");
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          const b = parsed?.business?.business_type || parsed?.business_type || null;
+          if (b) {
+            stored = b;
+            try { sessionStorage.setItem("business_type", b); } catch (e) { /* ignore */ }
+          }
+        }
+      } catch (e) {
+        // ignore parse errors
+      }
+    }
+    const list = map[stored] || map["Others"];
+    return list.map((name, i) => ({ id: `fb-${i}`, name }));
+  };
+
+  const normalizeCategories = (cats) =>
+    cats.map((c, i) => ({ id: c.id || `p-${i}`, name: c.name || c }));
+
+  const effectiveCategories = (() => {
+    // Prefer businessType mapping when available — it reflects the store's
+    // predefined categories. Only fall back to passed `categories` when
+    // businessType is not known.
+    if (businessType) {
+      const fb = getFallbackCategories();
+      try { console.debug('ProductForm: using fallback categories for businessType=', businessType, fb); } catch (e) {}
+      return fb;
+    }
+
+    if (categories && categories.length > 0) {
+      const first = categories[0];
+      const firstName = first && (first.name || first);
+      // If categories only contains a generic value, fallback
+      if (categories.length === 1 && (firstName === "General" || firstName === "Others")) {
+        const fb = getFallbackCategories();
+        try { console.debug('ProductForm: categories prop is generic, using fallback=', fb); } catch (e) {}
+        return fb;
+      }
+      const norm = normalizeCategories(categories);
+      try { console.debug('ProductForm: using provided categories=', norm); } catch (e) {}
+      return norm;
+    }
+
+    const fb = getFallbackCategories();
+    try { console.debug('ProductForm: no categories provided, using fallback=', fb); } catch (e) {}
+    return fb;
+  })();
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -120,7 +268,7 @@ function ProductForm({
           required
         >
           <option value="">Select category</option>
-          {categories.map((c) => (
+          {effectiveCategories.map((c) => (
             <option key={c.id} value={c.name}>
               {c.name}
             </option>
@@ -220,6 +368,58 @@ function Modal({
 }) {
   if (!isOpen) return null;
 
+  const [businessType, setBusinessType] = useState(null);
+
+  useEffect(() => {
+    if (!isOpen || variant !== "product") return;
+
+    const loadBusinessType = async () => {
+      try {
+        let bid = (typeof window !== "undefined" && (localStorage.getItem("business_id") || sessionStorage.getItem("business_id"))) || null;
+        // If business_id key not set, try to read from stored `user` object
+        if (!bid && typeof window !== "undefined") {
+          try {
+            const raw = sessionStorage.getItem('user') || localStorage.getItem('user');
+            if (raw) {
+              const parsed = JSON.parse(raw);
+              bid = parsed?.businessId || parsed?.business_id || null;
+            }
+          } catch (e) {
+            bid = null;
+          }
+        }
+        if (!bid) {
+          console.debug('Modal: no business id available to fetch business_type');
+          return;
+        }
+        console.debug('Modal: loading business_type for business_id=', bid);
+        const { data, error } = await supabase
+          .from("business")
+          .select("business_type")
+          .eq("business_id", bid)
+          .maybeSingle();
+        if (error) {
+          console.debug("Could not fetch business_type:", error.message || error);
+          return;
+        }
+        const btype = data?.business_type || null;
+        if (btype) {
+          console.debug('Modal: got business_type=', btype);
+          setBusinessType(btype);
+          try {
+            sessionStorage.setItem("business_type", btype);
+          } catch (e) {
+            /* ignore */
+          }
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    loadBusinessType();
+  }, [isOpen, variant]);
+
   // content is rendered inline below based on `variant`
 
   return (
@@ -276,6 +476,7 @@ function Modal({
                 productForm={productForm}
                 onChange={onChange}
                 categories={categories || []}
+                businessType={businessType}
                 onSubmit={onSubmit}
                 loading={loading}
                 onClose={onClose}

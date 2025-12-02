@@ -138,7 +138,6 @@ exports.getStoreById = async (req, res) => {
       email: business.email,
       phone: business.phone,
       storeName: business.storeName,
-      storeType: business.business_type,
       location: fullAddress,
       established: business.established?.toString(),
       verificationStatus: normalizeStatus(business.verification_status) || 'pending',

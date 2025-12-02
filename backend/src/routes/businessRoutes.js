@@ -9,9 +9,7 @@ const {
   listCashiers,
   checkDocumentStatus,
   verifyBusinessAccess,
-  getBusinessPublic,
-  deleteCashier,
-  verifyAdminPassword
+  getBusinessPublic
 } = require('../controllers/businessController');
 const { authenticate, authorize, requireDocuments } = require('../middleware/authMiddleware');
 
@@ -30,8 +28,6 @@ router.put('/profile', authenticate, updateBusinessProfile);
 // Admin-only cashier management (requires documents)
 router.post('/cashiers', authenticate, requireDocuments, authorize(['admin','superadmin']), createCashier);
 router.get('/cashiers', authenticate, requireDocuments, authorize(['admin','superadmin']), listCashiers);
-router.delete('/cashiers/:id', authenticate, requireDocuments, authorize(['admin','superadmin']), deleteCashier);
-router.post('/cashiers/verify-password', authenticate, requireDocuments, authorize(['admin','superadmin']), verifyAdminPassword);
 
 // Document validation routes
 router.get('/document-status', authenticate, checkDocumentStatus);
