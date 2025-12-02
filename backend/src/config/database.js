@@ -1,75 +1,63 @@
 
+const { Sequelize } = require('sequelize');
 const path = require('path');
-const { Pool } = require('pg');
 
-// Load env vars when this module is required directly (e.g. outside server.js)
-require('dotenv').config({ path: path.join(__dirname, '..', '..', 'config.env') });
+// Only load .env file in development
+if (process.env.NODE_ENV !== 'production') {
+  require('dotenv').config({ path: path.join(__dirname, '..', '..', 'config.env') });
+}
 
-const buildConfig = () => {
-  const isProduction = process.env.NODE_ENV === 'production';
-  const isRender = process.env.RENDER === 'true';
-  
-  // Configure SSL based on environment
-  let sslConfig;
-  if (isProduction) {
-    // For Render, we need to handle self-signed certificates
-    if (isRender) {
-      sslConfig = {
-        ssl: {
-          rejectUnauthorized: false, // Skip certificate verification for Render
-          require: true
-        }
-      };
-    } else {
-      // For other production environments, use standard SSL with verification
-      sslConfig = {
-        ssl: {
-          rejectUnauthorized: true,
-          require: true
-        }
-      };
-    }
-  } else {
-    // For development, use SSL only if explicitly configured
-    sslConfig = process.env.DB_SSL === 'true' 
-      ? { ssl: { rejectUnauthorized: false } } 
-      : false;
-  }
+const isProduction = process.env.NODE_ENV === 'production';
+const isRender = process.env.RENDER === 'true';
 
-  // Common configuration for all environments
-  const commonConfig = {
-    // Add connection timeout and keepalive settings
-    connectionTimeoutMillis: 10000, // 10 seconds
-    idleTimeoutMillis: 30000, // 30 seconds
-    max: 20, // max number of clients in the pool
-    ...(sslConfig || {}) // Spread the sslConfig if it exists
-  };
+// Ensure DATABASE_URL is set
+if (!process.env.DATABASE_URL) {
+  throw new Error('DATABASE_URL environment variable is not set');
+}
 
-  if (process.env.DATABASE_URL) {
-    return {
-      connectionString: process.env.DATABASE_URL,
-      ...commonConfig
-    };
-  }
-
-  return {
-    host: process.env.DB_HOST,
-    port: process.env.DB_PORT,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
-    ssl: sslConfig,
-    // Add connection timeout and keepalive settings
-    connectionTimeoutMillis: 10000, // 10 seconds
-    idleTimeoutMillis: 30000, // 30 seconds
-    max: 20, // max number of clients in the pool
-  };
-};
-
-const pool = new Pool(buildConfig());
-
-pool.on('error', (err) => {
-  console.error('Unexpected PG pool error:', err);
+const sequelize = new Sequelize(process.env.DATABASE_URL, {
+  dialect: 'postgres',
+  protocol: 'postgres',
+  logging: process.env.NODE_ENV === 'development' ? console.log : false,
+  dialectOptions: {
+    ssl: isProduction ? {
+      require: true,
+      // Don't reject self-signed certificates in production
+      rejectUnauthorized: false
+    } : false,
+  },
+  pool: {
+    max: 10,
+    min: 1,
+    idle: 60000,
+    acquire: 20000,
+    evict: 10000,
+    handleDisconnects: true,
+  },
+  // Better error handling
+  retry: {
+    max: 3,
+    timeout: 30000, // 30 seconds
+  },
 });
 
-module.exports = pool;
+// Test the connection
+async function testConnection() {
+  try {
+    await sequelize.authenticate();
+    console.log('Database connection has been established successfully.');
+  } catch (error) {
+    console.error('Unable to connect to the database:', error);
+    // Don't crash in production, but log the error
+    if (process.env.NODE_ENV !== 'production') {
+      process.exit(1);
+    }
+  }
+}
+
+// Only run the connection test if this file is run directly
+if (require.main === module) {
+  testConnection();
+}
+
+module.exports = sequelize;

@@ -1,27 +1,18 @@
-const pool = require('../config/database');
+const { DataTypes } = require('sequelize');
+const sequelize = require('../config/database');
 
-const Category = {
-  async findAll(options = {}) {
-    const { where = {} } = options;
-    const params = [];
-    const conditions = [];
-
-    if (where.business_type) {
-      params.push(where.business_type);
-      conditions.push(`business_type = $${params.length}`);
+const Category = sequelize.define('Category', {
+    name: {
+        type: DataTypes.STRING,
+        allowNull: false
+    },
+    business_type: {
+        type: DataTypes.STRING,
+        allowNull: false
     }
-
-    const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
-    const query = `
-      SELECT category_id, name, business_type, created_at, updated_at
-      FROM categories
-      ${whereClause}
-      ORDER BY name ASC
-    `;
-
-    const result = await pool.query(query, params);
-    return result.rows;
-  },
-};
+}, {
+    timestamps: true,
+    tableName: 'categories'
+});
 
 module.exports = Category;
