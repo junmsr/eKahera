@@ -4,12 +4,13 @@ import Button from '../../common/Button';
 import Card from '../../common/Card';
 import Loader from '../../common/Loader';
 
-export default function DocumentVerification() {
+export default function DocumentVerification({ isRefreshing }) {
   const [pendingVerifications, setPendingVerifications] = useState([]);
   const [selectedBusiness, setSelectedBusiness] = useState(null);
   const [businessDetails, setBusinessDetails] = useState(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [isFetching, setIsFetching] = useState(false);
   const [stats, setStats] = useState({
     total: 0,
     pending: 0,
@@ -22,7 +23,15 @@ export default function DocumentVerification() {
     fetchStats();
   }, []);
 
+  useEffect(() => {
+    if (isRefreshing) {
+      fetchPendingVerifications();
+      fetchStats();
+    }
+  }, [isRefreshing]);
+
   const fetchPendingVerifications = async () => {
+    setIsFetching(true);
     try {
       // Using sessionStorage and api utility from 'main' branch
       const token = sessionStorage.getItem('auth_token');
@@ -31,13 +40,15 @@ export default function DocumentVerification() {
       });
       setPendingVerifications(data);
     } catch (error) {
-      console.error("Error fetching pending verifications:", error);
+      // console.error("Error fetching pending verifications:", error);
     } finally {
       setLoading(false);
+      setIsFetching(false);
     }
   };
 
   const fetchStats = async () => {
+    setIsFetching(true);
     try {
       // Using sessionStorage and api utility from 'main' branch
       const token = sessionStorage.getItem('auth_token');
@@ -53,7 +64,9 @@ export default function DocumentVerification() {
       };
       setStats(filteredStats);
     } catch (error) {
-      console.error("Error fetching stats:", error);
+      // console.error("Error fetching stats:", error);
+    } finally {
+      setIsFetching(false);
     }
   };
 
@@ -66,7 +79,7 @@ export default function DocumentVerification() {
       });
       setBusinessDetails(data);
     } catch (error) {
-      console.error("Error fetching business details:", error);
+      // console.error("Error fetching business details:", error);
     }
   };
 
@@ -92,7 +105,7 @@ export default function DocumentVerification() {
       fetchBusinessDetails(selectedBusiness.business_id);
       alert(`Document ${action} successfully`);
     } catch (error) {
-      console.error("Error updating document:", error);
+      // console.error("Error updating document:", error);
       alert("Error updating document status");
     } finally {
       setActionLoading(false);
@@ -122,7 +135,7 @@ export default function DocumentVerification() {
       fetchPendingVerifications();
       fetchStats();
     } catch (error) {
-      console.error("Error completing verification:", error);
+      // console.error("Error completing verification:", error);
       alert("Error completing verification");
     } finally {
       setActionLoading(false);
@@ -131,28 +144,49 @@ export default function DocumentVerification() {
 
   const downloadDocument = async (documentId, fileName) => {
     try {
-      // Using sessionStorage and api utility with raw response handling from 'main' branch
+      // Using sessionStorage and fetch directly to handle the blob response
       const token = sessionStorage.getItem('auth_token');
-      const response = await api(
-        `/documents/download/${documentId}`,
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+      const response = await fetch(
+        `${apiBaseUrl}/api/documents/download/${documentId}`,
         {
-          headers: { 'Authorization': `Bearer ${token}` }
-        },
-        true // returnRawResponse = true
+          headers: { 
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/octet-stream'
+          },
+          credentials: 'include'
+        }
       );
+      
+      if (!response.ok) {
+        const error = await response.text();
+        throw new Error(error || 'Failed to download document');
+      }
+      
+      // Get the content disposition to extract filename if available
+      const contentDisposition = response.headers.get('content-disposition');
+      let downloadFileName = fileName;
+      
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+        if (filenameMatch && filenameMatch[1]) {
+          downloadFileName = filenameMatch[1].replace(/['"]/g, '');
+        }
+      }
       
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.style.display = 'none';
       a.href = url;
-      a.download = fileName;
+      a.download = downloadFileName;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
     } catch (error) {
       console.error("Error downloading document:", error);
-      alert("Error downloading document");
+      alert(error.message || "Error downloading document");
     }
   };
 
@@ -166,6 +200,11 @@ export default function DocumentVerification() {
 
   return (
     <div className="space-y-6">
+      {isFetching && (
+        <div className="fixed inset-0 bg-black bg-opacity-10 flex items-center justify-center z-50">
+          <Loader size="lg" />
+        </div>
+       )}
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="p-4">

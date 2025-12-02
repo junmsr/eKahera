@@ -471,39 +471,71 @@ exports.downloadDocument = async (req, res) => {
           return res.status(502).json({ error: 'Failed to fetch document from storage' });
         }
 
+        // Set appropriate headers for file download
         res.setHeader('Content-Type', downloadResult.contentType || document.mime_type || 'application/octet-stream');
-        res.setHeader('Content-Disposition', `attachment; filename="${document.document_name}"`);
-
-        const stream = downloadResult.buffer;
-        if (typeof stream.pipe === 'function') {
-          stream.on('error', (error) => {
-            console.error('Streaming download error:', error);
-            if (!res.headersSent) {
-              res.status(500).json({ error: 'Failed to stream document' });
-            } else {
-              res.end();
-            }
-          });
-          stream.pipe(res);
+        res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(document.document_name)}"`);
+        res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition');
+        
+        // Handle different types of responses
+        if (Buffer.isBuffer(downloadResult.buffer)) {
+          // If it's a buffer, send it directly
+          return res.send(downloadResult.buffer);
+        } else if (typeof downloadResult.buffer === 'string') {
+          // If it's a string, convert to buffer and send
+          return res.send(Buffer.from(downloadResult.buffer));
+        } else if (downloadResult.buffer && typeof downloadResult.buffer.pipe === 'function') {
+          // If it's a stream, pipe it
+          return downloadResult.buffer.pipe(res);
         } else {
-          res.send(stream);
+          // Fallback to JSON response if we can't determine the type
+          return res.status(500).json({ error: 'Unsupported file type' });
         }
-        return;
       } catch (storageError) {
         console.error('Supabase storage fetch threw error:', storageError);
         return res.status(502).json({ error: 'Failed to fetch document from storage' });
       }
     } else if (filePath.startsWith('http')) {
-      // For legacy URLs outside the configured bucket, just redirect.
-      return res.redirect(filePath);
+      try {
+        // Extract the path from the full URL
+        const url = new URL(filePath);
+        const pathParts = url.pathname.split('/');
+        // The path in the bucket is everything after the bucket name
+        const bucketIndex = pathParts.indexOf('eKahera');
+        if (bucketIndex === -1) {
+          throw new Error('Invalid file path format');
+        }
+        const filePathInBucket = pathParts.slice(bucketIndex + 1).join('/');
+        
+        // Download the file using the Supabase client
+        const { data, error } = await supabaseStorage.downloadFile(filePathInBucket);
+        
+        if (error) {
+          console.error('Supabase download error:', error);
+          throw new Error('Failed to download file from storage');
+        }
+        
+        // Set appropriate headers for file download
+        res.setHeader('Content-Type', document.mime_type || 'application/octet-stream');
+        res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(document.document_name)}"`);
+        
+        // Send the file data
+        return res.send(data);
+        
+      } catch (error) {
+        console.error('Error downloading file from Supabase:', error);
+        return res.status(500).json({ error: 'Failed to download file: ' + error.message });
+      }
     } else {
       // Local file
       if (!fs.existsSync(filePath)) {
         return res.status(404).json({ error: 'File not found on server' });
       }
-      res.download(filePath, document.document_name);
+      
+      // Set headers for local file download
+      res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(document.document_name)}"`);
+      res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition');
+      return res.download(filePath, document.document_name);
     }
-
   } catch (error) {
     console.error('Download document error:', error);
     res.status(500).json({ error: 'Failed to download document' });

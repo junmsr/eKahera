@@ -176,8 +176,7 @@ export default function SuperAdminView() {
                 </div>
               </div>
               <button
-                onClick={() => navigate("/superadmin")}
-                className="inline-flex items-center justify-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-white border border-gray-300 rounded-lg text-xs sm:text-sm font-semibold text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 shadow-sm hover:shadow-md w-full sm:w-auto touch-manipulation"
+                onClick={() => navigate("/superadmin", { state: { from: "storeManagement" } })}
               >
                 <svg
                   className="w-4 h-4 flex-shrink-0"
@@ -363,8 +362,8 @@ export default function SuperAdminView() {
               <div className="p-4 sm:p-5 md:p-6">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                   <div className="group bg-gradient-to-br from-green-50/50 to-emerald-50/30 rounded-xl p-3 sm:p-4 md:p-5 border border-green-100/50 hover:border-green-200 hover:shadow-md transition-all duration-300">
-                    <div className="flex items-center gap-3 sm:gap-4">
-                      <div className="w-10 h-10 sm:w-11 sm:h-11 md:w-12 md:h-12 bg-white rounded-xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform flex-shrink-0">
+                    <div className="flex items-start gap-3 sm:gap-4">
+                      <div className="w-10 h-10 sm:w-11 sm:h-11 md:w-12 md:h-12 bg-white rounded-xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform flex-shrink-0 mt-1">
                         <svg
                           className="w-5 h-5 sm:w-5 sm:h-5 md:w-6 md:h-6 text-green-600"
                           fill="none"
@@ -380,12 +379,20 @@ export default function SuperAdminView() {
                         </svg>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-0.5 sm:mb-1">
+                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
                           Store Name
                         </p>
-                        <p className="text-base sm:text-lg font-bold text-gray-900 break-words">
+                        <p className="text-base sm:text-lg font-bold text-gray-900 break-words mb-2">
                           {store.storeName || store.name || "N/A"}
                         </p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2h-1V1h-2v2H8V1H6v2H5a2 2 0 00-2 2v16a2 2 0 002 2h14a2 2 0 002-2zM9 3h6v2H9V3zm0 4h6v2H9V7z" />
+                            </svg>
+                            {store.business_type || 'N/A'}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
