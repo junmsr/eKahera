@@ -104,21 +104,6 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/cleanup', cleanupRoutes);
 app.use('/api/cleanup', cleanupUserRoutes);
 
-// Serve frontend static files and handle SPA routing
-if (process.env.NODE_ENV === 'production') {
-  const frontendDistPath = path.join(__dirname, '..', '..', 'frontend', 'dist');
-
-  app.use(express.static(frontendDistPath));
-
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(frontendDistPath, 'index.html'), (err) => {
-      if (err) {
-        res.status(500).send(err);
-      }
-    });
-  });
-}
-
 const port = config.PORT || 5000;
 
 if (config.AUTO_INIT_DB === 'true') {
