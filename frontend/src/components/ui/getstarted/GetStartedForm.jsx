@@ -251,7 +251,7 @@ export default function GetStartedForm({ hook, isOtpVerified, onOpenTerms, onOpe
                   });
                   alert("New OTP sent successfully!");
                 } catch (err) {
-                  alert(err.message || "Failed to resend OTP");
+                  alert("Failed to resend OTP");
                 } finally {
                   hook.setLoading(false);
                 }
@@ -391,11 +391,11 @@ export default function GetStartedForm({ hook, isOtpVerified, onOpenTerms, onOpe
           </p>
 
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
-            <h4 className="font-semibold text-red-800 mb-2">⚠️ REQUIRED Documents (Must Upload All 3):</h4>
+            <h4 className="font-semibold text-red-800 mb-2">✔ REQUIRED Documents (Must Upload All 3):</h4>
             <ul className="text-sm text-red-700 space-y-1 font-medium">
-              <li>✅ Business Registration Certificate (DTI/SEC/CDA)</li>
-              <li>✅ Mayor's Permit / Business Permit</li>
-              <li>✅ BIR Certificate of Registration (Form 2303)</li>
+              <li>► Business Registration Certificate (DTI/SEC/CDA)</li>
+              <li>► Mayor's Permit / Business Permit</li>
+              <li>► BIR Certificate of Registration (Form 2303)</li>
             </ul>
           </div>
 
