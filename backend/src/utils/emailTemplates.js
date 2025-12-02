@@ -71,7 +71,7 @@ const getRejectionEmailTemplate = (businessName, documents, rejectionReason) => 
         <p>Please review the feedback and resubmit the required documents for verification.</p>
         
         <div style="text-align: center; margin: 24px 0;">
-          <a href="${process.env.FRONTEND_URL}/resubmit-application" 
+          <a href="${process.env.FRONTEND_URL.replace(/\/$/, '')}/resubmit-application" 
              style="display: inline-block; background-color: #ef4444; color: white; 
                     padding: 12px 24px; text-decoration: none; border-radius: 6px; 
                     font-weight: 600; font-size: 16px;">
