@@ -1,6 +1,12 @@
 const BusinessDocument = require('../models/BusinessDocument');
 const BusinessVerification = require('../models/BusinessVerification');
-const { sendNewApplicationNotification, sendVerificationStatusNotification, sendApplicationSubmittedNotification } = require('../utils/emailService');
+const { 
+  sendNewApplicationNotification, 
+  sendVerificationStatusNotification, 
+  sendApplicationSubmittedNotification,
+  sendVerificationApprovalEmail,
+  sendVerificationRejectionEmail 
+} = require('../utils/emailService');
 const { hasRequiredDocuments } = require('./businessController');
 const multer = require('multer');
 const path = require('path');
@@ -276,49 +282,134 @@ exports.verifyDocument = async (req, res) => {
 
 // Complete business verification (SuperAdmin only)
 exports.completeBusinessVerification = async (req, res) => {
+  const session = await pool.query('BEGIN');
+  
   try {
     const { business_id } = req.params;
     const { status, rejection_reason } = req.body;
     const reviewedBy = req.user.userId;
 
     if (!business_id) {
+      await pool.query('ROLLBACK');
       return res.status(400).json({ error: 'Business ID is required' });
     }
 
     if (!status || !['approved', 'rejected'].includes(status)) {
+      await pool.query('ROLLBACK');
       return res.status(400).json({ error: 'Valid status is required (approved, rejected)' });
     }
 
+    // Get business data and documents first
+    const businessResult = await pool.query(
+      `SELECT b.*, u.user_id 
+       FROM business b 
+       JOIN users u ON LOWER(b.email) = LOWER(u.email) 
+       WHERE b.business_id = $1`, 
+      [business_id]
+    );
+    
+    if (businessResult.rowCount === 0) {
+      await pool.query('ROLLBACK');
+      return res.status(404).json({ error: 'Business not found' });
+    }
+
+    const businessData = businessResult.rows[0];
+    
+    // Get all documents for this business with their current status
+    const documentsResult = await pool.query(`
+      SELECT 
+        document_id,
+        document_type,
+        verification_status,
+        verification_notes,
+        file_path,
+        file_size,
+        mime_type,
+        verified_at,
+        verified_by
+      FROM business_documents 
+      WHERE business_id = $1
+    `, [business_id]);
+    
+    const documents = documentsResult.rows;
+
     // Update business verification status
     const updatedVerification = await BusinessVerification.updateStatus(
-      business_id, status, reviewedBy, rejection_reason, null
+      business_id, 
+      status, 
+      reviewedBy, 
+      rejection_reason,
+      null
     );
 
     if (!updatedVerification) {
+      await pool.query('ROLLBACK');
       return res.status(404).json({ error: 'Business verification not found' });
     }
 
-    // Get business data for email notification
-    const businessResult = await pool.query('SELECT * FROM business WHERE business_id = $1', [business_id]);
-    if (businessResult.rowCount > 0) {
-      const businessData = businessResult.rows[0];
-      await sendVerificationStatusNotification(businessData, status, rejection_reason);
+    // Update business status in the database
+    await pool.query(
+      'UPDATE business SET verification_status = $1 WHERE business_id = $2',
+      [status === 'approved' ? 'verified' : 'rejected', business_id]
+    );
+
+    console.log('Sending email to:', businessData.email);
+    console.log('Email status:', status);
+    
+    // Prepare documents data for email with only necessary fields
+    const emailDocuments = documents.map(doc => ({
+      document_type: doc.document_type,
+      verification_status: doc.verification_status,
+      verification_notes: doc.verification_notes
+    }));
+
+    console.log('Documents to include in email:', JSON.stringify(emailDocuments, null, 2));
+    
+    // Send appropriate email notification
+    let emailSent = false;
+    try {
+      if (status === 'approved') {
+        console.log('Sending approval email...');
+        emailSent = await sendVerificationApprovalEmail({
+          ...businessData,
+          user_id: businessData.user_id
+        }, emailDocuments);
+      } else {
+        console.log('Sending rejection email with reason:', rejection_reason);
+        emailSent = await sendVerificationRejectionEmail({
+          ...businessData,
+          user_id: businessData.user_id
+        }, emailDocuments, rejection_reason || 'No specific reason provided.');
+      }
+      console.log('Email sent successfully:', emailSent);
+    } catch (emailError) {
+      console.error('Error sending email:', emailError);
+      // Don't fail the whole operation if email fails
+      emailSent = false;
     }
 
     logAction({
       userId: req.user.userId,
       businessId: business_id,
-      action: `Completed business verification for business ID ${business_id} with status: ${status}`,
+      action: `Completed business verification for ${businessData.business_name} with status: ${status}`,
     });
 
+    await pool.query('COMMIT');
+    
     res.json({
-      message: 'Business verification completed successfully',
+      success: true,
+      message: `Business verification ${status} successfully`,
       verification: updatedVerification
     });
 
   } catch (error) {
+    await pool.query('ROLLBACK');
     console.error('Complete business verification error:', error);
-    res.status(500).json({ error: 'Failed to complete business verification' });
+    res.status(500).json({ 
+      success: false,
+      error: 'Failed to complete business verification',
+      details: error.message 
+    });
   }
 };
 

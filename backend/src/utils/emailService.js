@@ -1,5 +1,6 @@
 const { Resend } = require('resend');
 const pool = require('../config/database');
+const { getApprovalEmailTemplate, getRejectionEmailTemplate } = require('./emailTemplates');
 
 let resend;
 if (process.env.RESEND_API_KEY) {
@@ -87,6 +88,90 @@ const sendNewApplicationNotification = async (businessData, superAdminEmails) =>
 };
 
 // Send verification status notification to business
+// Send verification status notification to business
+const sendVerificationApprovalEmail = async (businessData, documents) => {
+  if (!resend) {
+    console.error('Email sending is disabled. Cannot send approval notification.');
+    return false;
+  }
+
+  try {
+    const subject = '🎉 Your eKahera Application Has Been Approved!';
+    const htmlContent = getApprovalEmailTemplate(businessData.business_name, documents);
+    
+    const { data, error } = await resend.emails.send({
+      from: 'eKahera <noreply@ekahera.online>', // Update with your verified sender
+      to: businessData.email,
+      subject,
+      html: htmlContent,
+    });
+
+    if (error) {
+      console.error('Error sending approval email:', error);
+      return false;
+    }
+
+    // Log the email notification
+    await logEmailNotification(
+      businessData.email,
+      subject,
+      `Approval notification sent to ${businessData.business_name}`,
+      'verification_approval',
+      businessData.business_id,
+      businessData.user_id
+    );
+
+    return true;
+  } catch (error) {
+    console.error('Error in sendVerificationApprovalEmail:', error);
+    return false;
+  }
+};
+
+// Send rejection email with resubmission instructions
+const sendVerificationRejectionEmail = async (businessData, documents, rejectionReason) => {
+  if (!resend) {
+    console.error('Email sending is disabled. Cannot send rejection notification.');
+    return false;
+  }
+
+  try {
+    const subject = '🔄 Action Required: Update Your eKahera Application';
+    const htmlContent = getRejectionEmailTemplate(
+      businessData.business_name, 
+      documents,
+      rejectionReason
+    );
+    
+    const { data, error } = await resend.emails.send({
+      from: 'eKahera <noreply@ekahera.online>', // Update with your verified sender
+      to: businessData.email,
+      subject,
+      html: htmlContent,
+    });
+
+    if (error) {
+      console.error('Error sending rejection email:', error);
+      return false;
+    }
+
+    // Log the email notification
+    await logEmailNotification(
+      businessData.email,
+      subject,
+      `Rejection notification sent to ${businessData.business_name} with reason: ${rejectionReason}`,
+      'verification_rejection',
+      businessData.business_id,
+      businessData.user_id
+    );
+
+    return true;
+  } catch (error) {
+    console.error('Error in sendVerificationRejectionEmail:', error);
+    return false;
+  }
+};
+
 const sendVerificationStatusNotification = async (businessData, status, rejectionReason = null) => {
   if (!resend) {
     console.error('Email sending is disabled. Cannot send verification status notification.');
@@ -339,6 +424,8 @@ module.exports = {
   sendNewApplicationNotification,
   sendVerificationStatusNotification,
   sendApplicationSubmittedNotification,
+  sendVerificationApprovalEmail,
+  sendVerificationRejectionEmail,
   sendLowStockEmail,
   logEmailNotification,
   sendOTPNotification
