@@ -45,9 +45,9 @@ export default function GetStartedSingle({ onOpenTerms, onOpenPrivacy }) {
             </div>
             
             <Button
-              label="Go to Login"
-              onClick={() => (window.location.href = "/login")}
-              className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-2 rounded-full font-semibold shadow"
+              label="Return to Home"
+              onClick={() => (window.location.href = "/")}
+              className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-2 rounded-full font-semibold shadow hover:from-blue-700 hover:to-blue-800 transition-colors"
             />
           </Card>
         </div>

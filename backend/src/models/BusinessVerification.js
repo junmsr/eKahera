@@ -46,7 +46,7 @@ class BusinessVerification {
     return result.rows[0];
   }
 
-  static async updateStatus(businessId, status, reviewedBy, rejectionReason = null, resubmissionNotes = null) {
+  static async updateStatus(businessId, status, reviewedBy, rejectionReason = null, resubmissionNotes = null, client = null) {
     const query = `
       UPDATE business
       SET verification_status = $1,
@@ -61,9 +61,19 @@ class BusinessVerification {
               verification_rejection_reason, verification_resubmission_notes
     `;
 
-    const result = await pool.query(query, [
-      status, reviewedBy, rejectionReason, resubmissionNotes, businessId
-    ]);
+    const queryParams = [
+      status, 
+      reviewedBy, 
+      rejectionReason, 
+      resubmissionNotes, 
+      businessId
+    ];
+
+    // Use the provided client or create a new connection
+    const result = client 
+      ? await client.query(query, queryParams)
+      : await pool.query(query, queryParams);
+      
     return result.rows[0];
   }
 

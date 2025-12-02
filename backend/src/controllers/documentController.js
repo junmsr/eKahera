@@ -282,9 +282,10 @@ exports.verifyDocument = async (req, res) => {
 
 // Complete business verification (SuperAdmin only)
 exports.completeBusinessVerification = async (req, res) => {
-  const session = await pool.query('BEGIN');
+  const client = await pool.connect();
   
   try {
+    await client.query('BEGIN');
     const { business_id } = req.params;
     const { status, rejection_reason } = req.body;
     const reviewedBy = req.user.userId;
@@ -300,7 +301,7 @@ exports.completeBusinessVerification = async (req, res) => {
     }
 
     // Get business data and documents first
-    const businessResult = await pool.query(
+    const businessResult = await client.query(
       `SELECT b.*, u.user_id 
        FROM business b 
        JOIN users u ON LOWER(b.email) = LOWER(u.email) 
@@ -316,7 +317,7 @@ exports.completeBusinessVerification = async (req, res) => {
     const businessData = businessResult.rows[0];
     
     // Get all documents for this business with their current status
-    const documentsResult = await pool.query(`
+    const documentsResult = await client.query(`
       SELECT 
         document_id,
         document_type,
@@ -339,19 +340,14 @@ exports.completeBusinessVerification = async (req, res) => {
       status, 
       reviewedBy, 
       rejection_reason,
-      null
+      null,
+      client  // Pass the client to use the same connection
     );
 
     if (!updatedVerification) {
-      await pool.query('ROLLBACK');
+      await client.query('ROLLBACK');
       return res.status(404).json({ error: 'Business verification not found' });
     }
-
-    // Update business status in the database
-    await pool.query(
-      'UPDATE business SET verification_status = $1 WHERE business_id = $2',
-      [status === 'approved' ? 'verified' : 'rejected', business_id]
-    );
 
     console.log('Sending email to:', businessData.email);
     console.log('Email status:', status);
@@ -394,7 +390,7 @@ exports.completeBusinessVerification = async (req, res) => {
       action: `Completed business verification for ${businessData.business_name} with status: ${status}`,
     });
 
-    await pool.query('COMMIT');
+    await client.query('COMMIT');
     
     res.json({
       success: true,
@@ -403,13 +399,15 @@ exports.completeBusinessVerification = async (req, res) => {
     });
 
   } catch (error) {
-    await pool.query('ROLLBACK');
+    await client.query('ROLLBACK');
     console.error('Complete business verification error:', error);
     res.status(500).json({ 
       success: false,
       error: 'Failed to complete business verification',
       details: error.message 
     });
+  } finally {
+    client.release();
   }
 };
 

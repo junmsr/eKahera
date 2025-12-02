@@ -108,36 +108,18 @@ function GetStartedLayout({
                 <div className="max-w-lg">{children}</div>
               </div>
 
-              <div className="mt-8 md:mt-6 flex items-center justify-between">
-                {showBack ? (
-                  <Button onClick={onBack} variant="secondary" className="w-28">
-                    Back
-                  </Button>
-                ) : (
-                  <div />
-                )}
-
-                {showNext ? (
+              {showNext && (
+                <div className="mt-8 md:mt-6 flex items-center justify-center">
                   <Button
                     onClick={onNext}
                     disabled={loading}
                     variant="primary"
-                    className="w-32"
+                    className="w-48"
                   >
                     {loading ? <Loader size="sm" /> : "Continue"}
                   </Button>
-                ) : showFinish ? (
-                  <Button
-                    onClick={onFinish}
-                    disabled={loading}
-                    variant="primary"
-                    className="w-32"
-                  >
-                    {loading ? <Loader className="mr-2" size="sm" /> : null}
-                    {loading ? "Finishing..." : "Create account"}
-                  </Button>
-                ) : null}
-              </div>
+                </div>
+              )}
 
               <div className="mt-4 text-[11px] text-gray-500 text-center">
                 Your data is encrypted in transit and at rest.

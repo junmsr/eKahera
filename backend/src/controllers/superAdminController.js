@@ -235,13 +235,19 @@ exports.approveStore = async (req, res) => {
 
 // Reject a store
 exports.rejectStore = async (req, res) => {
+  const client = await pool.connect();
+  
   try {
+    await client.query('BEGIN');
+    
     const { id } = req.params;
     const { rejection_reason } = req.body;
 
+    console.log(`Rejecting store ${id} with reason:`, rejection_reason);
+
     // Check if store exists
-    const storeResult = await pool.query(
-      'SELECT business_id, business_name FROM business WHERE business_id = $1',
+    const storeResult = await client.query(
+      'SELECT business_id, business_name, verification_status FROM business WHERE business_id = $1 FOR UPDATE',
       [id]
     );
 
@@ -250,26 +256,39 @@ exports.rejectStore = async (req, res) => {
     }
 
     const store = storeResult.rows[0];
+    console.log(`Current store status before update: ${store.verification_status}`);
 
     // Update verification_status to 'rejected' and set review columns
-    await pool.query(
+    const updateResult = await client.query(
       `UPDATE business SET
-        verification_status = $1,
+        verification_status = 'rejected',
         verification_reviewed_at = NOW(),
-        verification_reviewed_by = $2,
-        verification_rejection_reason = $3,
+        verification_reviewed_by = $1,
+        verification_rejection_reason = $2,
         verification_resubmission_notes = NULL,
         updated_at = NOW()
-      WHERE business_id = $4`,
-      ['rejected', req.user.userId, rejection_reason, id]
+      WHERE business_id = $3
+      RETURNING *`,
+      [req.user.userId, rejection_reason, id]
     );
 
-    // Fetch updated business data to send email
-    const updatedBusinessResult = await pool.query(
-      `SELECT business_id, business_name, email FROM business WHERE business_id = $1`,
+    if (updateResult.rows.length === 0) {
+      throw new Error('Failed to update business status');
+    }
+
+    const updatedBusiness = updateResult.rows[0];
+    console.log('Successfully updated business status to:', updatedBusiness.verification_status);
+
+    // Verify the update
+    const verifyResult = await client.query(
+      'SELECT verification_status FROM business WHERE business_id = $1',
       [id]
     );
-    const updatedBusiness = updatedBusinessResult.rows[0];
+    
+    console.log('Database verification - current status:', verifyResult.rows[0]?.verification_status);
+    
+    // Commit the transaction
+    await client.query('COMMIT');
 
     // Send rejection email notification
     try {
@@ -277,28 +296,38 @@ exports.rejectStore = async (req, res) => {
       console.log(`Rejection email sent to ${updatedBusiness.email}`);
     } catch (emailError) {
       console.error('Error sending rejection email:', emailError);
+      // Don't fail the request if email fails
     }
 
     // Log the rejection action
     logAction({
       userId: req.user.userId,
-      businessId: null,
+      businessId: id,
       action: `Rejected store: ${store.business_name} (ID: ${id}) - Reason: ${rejection_reason}`
     });
 
     console.log(`SuperAdmin ${req.user.email} rejected store ${store.business_name}`);
 
     res.json({
+      success: true,
       message: 'Store rejected successfully',
       store: {
         id: store.business_id,
         name: store.business_name,
-        status: 'rejected'
+        status: 'rejected',
+        verification_status: 'rejected'
       }
     });
   } catch (err) {
-    console.error('Reject store error:', err);
-    res.status(500).json({ error: 'Failed to reject store' });
+    await client.query('ROLLBACK');
+    console.error('Error in rejectStore:', err);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to reject store',
+      details: err.message 
+    });
+  } finally {
+    client.release();
   }
 };
 
