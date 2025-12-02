@@ -142,7 +142,7 @@ export default function CustomerEnter() {
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-white/80 backdrop-blur-md border border-white/40 hover:bg-white/90 transition-all duration-300 shadow-lg hover:shadow-xl group"
           >
             <svg
-              className="w-5 h-5 text-gray-700 group-hover:-translate-x-1 transition-transform"
+              className="w-5 h-5 text-gray-700"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -215,73 +215,6 @@ export default function CustomerEnter() {
 
           {/* Main Content Grid */}
           <div className="grid gap-6 lg:grid-cols-2 items-center">
-            {/* Left: Instructions Card */}
-            <motion.div className="flex flex-col gap-4" variants={itemVariants}>
-              <motion.div
-                className="bg-white/80 backdrop-blur-xl border border-white/60 rounded-lg shadow-2xl p-6 sm:p-8 hover:shadow-3xl transition-all duration-300 group overflow-hidden"
-                whileHover={{ scale: 1.02, y: -4 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                {/* Shimmer effect */}
-                <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/30 to-transparent" />
-
-                <div className="relative z-10 space-y-5">
-                  {/* Step indicator */}
-                  <div className="flex items-start gap-4">
-                    <div className="flex-shrink-0">
-                      <div className="flex items-center justify-center h-12 w-12 rounded-2xl bg-blue-600 text-white font-bold shadow-lg">
-                        1
-                      </div>
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="text-lg font-bold text-gray-900 mb-1">
-                        Point Your Camera
-                      </h3>
-                      <p className="text-sm text-gray-600">
-                        Position your device to scan the QR code displayed in
-                        the store
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent" />
-
-                  <div className="flex items-start gap-4">
-                    <div className="flex-shrink-0">
-                      <div className="flex items-center justify-center h-12 w-12 rounded-2xl bg-blue-600 text-white font-bold shadow-lg">
-                        2
-                      </div>
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="text-lg font-bold text-gray-900 mb-1">
-                        Scan the Code
-                      </h3>
-                      <p className="text-sm text-gray-600">
-                        Allow camera access and keep the QR code in frame
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent" />
-
-                  <div className="flex items-start gap-4">
-                    <div className="flex-shrink-0">
-                      <div className="flex items-center justify-center h-12 w-12 rounded-2xl bg-blue-600 to-pink-600 text-white font-bold shadow-lg">
-                        3
-                      </div>
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="text-lg font-bold text-gray-900 mb-1">
-                        Start Shopping
-                      </h3>
-                      <p className="text-sm text-gray-600">
-                        You'll be connected to the store's self-checkout system
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            </motion.div>
 
             {/* Right: Scanner Card */}
             <motion.div
@@ -404,6 +337,73 @@ export default function CustomerEnter() {
                 <div className="absolute -bottom-2 -left-2 w-8 h-8 border-2 border-white/40 rounded-bl-2xl" />
                 <div className="absolute -bottom-2 -right-2 w-8 h-8 border-2 border-white/40 rounded-br-2xl" />
               </div>
+            </motion.div>
+
+            {/* Left: Instructions Card */}
+            <motion.div className="flex flex-col gap-4" variants={itemVariants}>
+              <motion.div
+                className="bg-white/80 backdrop-blur-xl border border-white/60 rounded-lg shadow-2xl p-6 sm:p-8 hover:shadow-3xl transition-all duration-300 group overflow-hidden"
+                whileTap={{ scale: 0.98 }}
+              >
+                {/* Shimmer effect */}
+                <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/30 to-transparent" />
+
+                <div className="relative z-10 space-y-5">
+                  {/* Step indicator */}
+                  <div className="flex items-start gap-4">
+                    <div className="flex-shrink-0">
+                      <div className="flex items-center justify-center h-12 w-12 rounded-2xl bg-blue-600 text-white font-bold shadow-lg">
+                        1
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-lg font-bold text-gray-900 mb-1">
+                        Point Your Camera
+                      </h3>
+                      <p className="text-sm text-gray-600">
+                        Position your device to scan the QR code displayed in
+                        the store
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent" />
+
+                  <div className="flex items-start gap-4">
+                    <div className="flex-shrink-0">
+                      <div className="flex items-center justify-center h-12 w-12 rounded-2xl bg-blue-600 text-white font-bold shadow-lg">
+                        2
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-lg font-bold text-gray-900 mb-1">
+                        Scan the Code
+                      </h3>
+                      <p className="text-sm text-gray-600">
+                        Allow camera access and keep the QR code in frame
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent" />
+
+                  <div className="flex items-start gap-4">
+                    <div className="flex-shrink-0">
+                      <div className="flex items-center justify-center h-12 w-12 rounded-2xl bg-blue-600 to-pink-600 text-white font-bold shadow-lg">
+                        3
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-lg font-bold text-gray-900 mb-1">
+                        Start Shopping
+                      </h3>
+                      <p className="text-sm text-gray-600">
+                        You'll be connected to the store's self-checkout system
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
             </motion.div>
           </div>
 
