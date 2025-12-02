@@ -25,10 +25,12 @@ try {
     host: dbUrl.hostname,
     port: dbUrl.port,
     database: dbUrl.pathname.split('/')[1],
-    ssl: isProduction ? {
-      // For production, use SSL but don't reject self-signed certs
+    ssl: {
+      // Required for SSL connections
+      require: true,
+      // Don't reject self-signed certificates
       rejectUnauthorized: false
-    } : false,
+    },
     // Connection pool settings
     max: 10, // max number of clients in the pool
     idleTimeoutMillis: 30000, // how long a client is allowed to remain idle before being closed

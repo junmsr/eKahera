@@ -20,11 +20,10 @@ const sequelize = new Sequelize(process.env.DATABASE_URL, {
   protocol: 'postgres',
   logging: process.env.NODE_ENV === 'development' ? console.log : false,
   dialectOptions: {
-    ssl: isProduction ? {
+    ssl: {
       require: true,
-      // Don't reject self-signed certificates in production
-      rejectUnauthorized: false
-    } : false,
+      rejectUnauthorized: false // This is needed for self-signed certificates
+    },
   },
   pool: {
     max: 10,
