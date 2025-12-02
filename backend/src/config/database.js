@@ -19,11 +19,12 @@ const sequelize = new Sequelize(process.env.DATABASE_URL, {
   dialect: 'postgres',
   protocol: 'postgres',
   logging: process.env.NODE_ENV === 'development' ? console.log : false,
+  ssl: isRender,
   dialectOptions: {
     ssl: {
       require: true,
       rejectUnauthorized: false // This is needed for self-signed certificates
-    },
+    }
   },
   pool: {
     max: 10,
