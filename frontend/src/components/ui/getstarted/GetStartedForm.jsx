@@ -104,13 +104,13 @@ export default function GetStartedForm({
 
             <div>
               <label className="block mb-1 text-sm text-gray-700 font-medium">
-                Full Name
+                Last Name
               </label>
               <Input
                 name="fullName"
                 value={form.fullName}
                 onChange={handleChange}
-                placeholder="Enter your full name"
+                placeholder="Enter your last name"
                 type="text"
                 error={errors.fullName}
               />

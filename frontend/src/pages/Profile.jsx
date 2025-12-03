@@ -442,8 +442,9 @@ const Profile = () => {
                 <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
                   <div className="relative">
                     <div className="w-24 h-24 md:w-32 md:h-32 bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-2xl flex items-center justify-center text-3xl md:text-4xl font-bold shadow-lg ring-4 ring-white/50">
-                      {profileData?.user?.username?.charAt(0)?.toUpperCase() ||
-                        "A"}
+                      {profileData?.user?.first_name
+                        ?.charAt(0)
+                        ?.toUpperCase() || "A"}
                     </div>
                     <div className="absolute -bottom-1 -right-1 w-8 h-8 bg-green-500 rounded-full border-4 border-white flex items-center justify-center">
                       <div className="w-3 h-3 bg-white rounded-full"></div>
@@ -451,7 +452,9 @@ const Profile = () => {
                   </div>
                   <div className="flex-1 min-w-0">
                     <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
-                      {profileData?.user?.username || "Admin User"}
+                      {`${profileData?.user?.first_name || ""} ${
+                        profileData?.user?.last_name || ""
+                      }`.trim() || "Admin User"}
                     </h1>
                     <p className="text-gray-600 mb-4 flex items-center gap-2">
                       <EmailIcon />
@@ -500,14 +503,28 @@ const Profile = () => {
                   <div className="space-y-5">
                     <div className="group">
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-                        Username
+                        First Name
                       </label>
                       <div className="flex items-center gap-3 bg-gradient-to-r from-gray-50 to-gray-100/50 px-4 py-3 rounded-xl border border-gray-200/50 group-hover:border-blue-300 transition-colors">
                         <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
                           <UserIcon className="text-blue-600" />
                         </div>
                         <span className="text-gray-900 font-medium flex-1">
-                          {profileData?.user?.username || "N/A"}
+                          {profileData?.user?.first_name || "N/A"}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="group">
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                        Last Name
+                      </label>
+                      <div className="flex items-center gap-3 bg-gradient-to-r from-gray-50 to-gray-100/50 px-4 py-3 rounded-xl border border-gray-200/50 group-hover:border-blue-300 transition-colors">
+                        <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <UserIcon className="text-blue-600" />
+                        </div>
+                        <span className="text-gray-900 font-medium flex-1">
+                          {profileData?.user?.last_name || "N/A"}
                         </span>
                       </div>
                     </div>
@@ -805,14 +822,15 @@ const Profile = () => {
               profileData.business.users.length > 0 && (
                 <>
                   {(() => {
-                    const filteredBusinessUsers = profileData.business.users.filter(
-                      (user) =>
-                        user.user_type_name === "admin" ||
-                        user.user_type_name === "cashier" ||
-                        user.role === "admin" ||
-                        user.role === "cashier" ||
-                        user.role === "business_owner"
-                    );
+                    const filteredBusinessUsers =
+                      profileData.business.users.filter(
+                        (user) =>
+                          user.user_type_name === "admin" ||
+                          user.user_type_name === "cashier" ||
+                          user.role === "admin" ||
+                          user.role === "cashier" ||
+                          user.role === "business_owner"
+                      );
                     return (
                       <Card className="bg-white shadow-sm">
                         <div className="p-6 md:p-8">
@@ -852,8 +870,9 @@ const Profile = () => {
                                 <div className="flex items-center mb-4">
                                   <div className="relative">
                                     <div className="w-12 h-12 bg-gradient-to-br bg-blue-500 text-white rounded-xl flex items-center justify-center text-lg font-bold shadow-md ring-2 ring-white">
-                                      {user.username?.charAt(0)?.toUpperCase() ||
-                                        "U"}
+                                      {user.username
+                                        ?.charAt(0)
+                                        ?.toUpperCase() || "U"}
                                     </div>
                                     <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
                                   </div>

@@ -8,14 +8,21 @@ import { api } from "../../lib/api";
  * ProfileModal Component
  * Modern, trending UI/UX design with glassmorphism and animations
  */
-const ProfileModal = ({ isOpen, onClose, userData }) => {
+const ProfileModal = ({ isOpen, onClose, userData, businessData }) => {
   const [profileData, setProfileData] = useState({
-    username: userData?.username || "",
+    first_name: userData?.first_name || "",
+    last_name: userData?.last_name || "",
     email: userData?.email || "",
     contact_number: userData?.contact_number || "",
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",
+    // Business fields
+    country: businessData?.country || "",
+    business_email: businessData?.email || "",
+    business_address: businessData?.business_address || "",
+    house_number: businessData?.house_number || "",
+    mobile: businessData?.mobile || "",
   });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
@@ -25,14 +32,21 @@ const ProfileModal = ({ isOpen, onClose, userData }) => {
   const [activeTab, setActiveTab] = useState("account");
 
   useEffect(() => {
-    if (userData) {
+    if (userData || businessData) {
       setProfileData({
-        username: userData?.username || "",
+        first_name: userData?.first_name || "",
+        last_name: userData?.last_name || "",
         email: userData?.email || "",
         contact_number: userData?.contact_number || "",
         currentPassword: "",
         newPassword: "",
         confirmPassword: "",
+        // Business fields
+        country: businessData?.country || "",
+        business_email: businessData?.email || "",
+        business_address: businessData?.business_address || "",
+        house_number: businessData?.house_number || "",
+        mobile: businessData?.mobile || "",
       });
       setMessage("");
       setError("");
@@ -40,26 +54,39 @@ const ProfileModal = ({ isOpen, onClose, userData }) => {
       setTouched({});
       setActiveTab("account");
     }
-  }, [userData, isOpen]);
+  }, [userData, businessData, isOpen]);
 
   const validateField = (name, value) => {
     const newErrors = { ...errors };
 
     switch (name) {
-      case "username":
-        if (!value.trim()) {
-          newErrors.username = "Username is required";
+      case "first_name":
+        if (activeTab === "account" && !value.trim()) {
+          newErrors.first_name = "First name is required";
         } else if (value.trim().length < 2) {
-          newErrors.username = "Username must be at least 2 characters";
+          newErrors.first_name = "First name must be at least 2 characters";
         } else {
-          delete newErrors.username;
+          delete newErrors.first_name;
+        }
+        break;
+
+      case "last_name":
+        if (activeTab === "account" && !value.trim()) {
+          newErrors.last_name = "Last name is required";
+        } else if (value.trim().length < 2) {
+          newErrors.last_name = "Last name must be at least 2 characters";
+        } else {
+          delete newErrors.last_name;
         }
         break;
 
       case "email":
-        if (!value.trim()) {
+        if (activeTab === "account" && !value.trim()) {
           newErrors.email = "Email is required";
-        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())) {
+        } else if (
+          value.trim() &&
+          !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())
+        ) {
           newErrors.email = "Please enter a valid email";
         } else {
           delete newErrors.email;
@@ -71,6 +98,22 @@ const ProfileModal = ({ isOpen, onClose, userData }) => {
           newErrors.contact_number = "Phone number must be at least 7 digits";
         } else {
           delete newErrors.contact_number;
+        }
+        break;
+
+      case "business_email":
+        if (value.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())) {
+          newErrors.business_email = "Please enter a valid email";
+        } else {
+          delete newErrors.business_email;
+        }
+        break;
+
+      case "mobile":
+        if (value && value.trim().length < 7) {
+          newErrors.mobile = "Mobile number must be at least 7 digits";
+        } else {
+          delete newErrors.mobile;
         }
         break;
 
@@ -143,26 +186,47 @@ const ProfileModal = ({ isOpen, onClose, userData }) => {
 
     try {
       const token = sessionStorage.getItem("auth_token");
-      const updateData = {
-        username: profileData.username,
-        email: profileData.email,
-        contact_number: profileData.contact_number,
-      };
 
-      // Add password fields if user is changing password
-      if (profileData.newPassword) {
-        updateData.currentPassword = profileData.currentPassword;
-        updateData.newPassword = profileData.newPassword;
+      if (activeTab === "account" || activeTab === "security") {
+        const updateData = {
+          first_name: profileData.first_name,
+          last_name: profileData.last_name,
+          email: profileData.email,
+          contact_number: profileData.contact_number,
+        };
+
+        // Add password fields if user is changing password
+        if (profileData.newPassword) {
+          updateData.currentPassword = profileData.currentPassword;
+          updateData.newPassword = profileData.newPassword;
+        }
+
+        await api("/api/auth/update-profile", {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(updateData),
+        });
+      } else if (activeTab === "business") {
+        const businessUpdateData = {
+          country: profileData.country,
+          business_email: profileData.business_email,
+          business_address: profileData.business_address,
+          house_number: profileData.house_number,
+          mobile: profileData.mobile,
+        };
+
+        await api("/api/business/update-business", {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(businessUpdateData),
+        });
       }
-
-      await api("/api/auth/update-profile", {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(updateData),
-      });
 
       setMessage("Profile updated successfully!");
       setTimeout(() => {
@@ -179,12 +243,19 @@ const ProfileModal = ({ isOpen, onClose, userData }) => {
 
   const handleClose = () => {
     setProfileData({
-      username: userData?.username || "",
+      first_name: userData?.first_name || "",
+      last_name: userData?.last_name || "",
       email: userData?.email || "",
       contact_number: userData?.contact_number || "",
       currentPassword: "",
       newPassword: "",
       confirmPassword: "",
+      // Business fields
+      country: businessData?.country || "",
+      business_email: businessData?.email || "",
+      business_address: businessData?.business_address || "",
+      house_number: businessData?.house_number || "",
+      mobile: businessData?.mobile || "",
     });
     setErrors({});
     setTouched({});
@@ -196,10 +267,21 @@ const ProfileModal = ({ isOpen, onClose, userData }) => {
 
   if (!isOpen) return null;
 
-  const isFormValid =
-    Object.keys(errors).length === 0 &&
-    profileData.username.trim() &&
-    profileData.email.trim();
+  const isFormValid = () => {
+    if (activeTab === "account") {
+      return (
+        Object.keys(errors).length === 0 &&
+        profileData.first_name.trim() &&
+        profileData.last_name.trim() &&
+        profileData.email.trim()
+      );
+    } else if (activeTab === "business") {
+      return Object.keys(errors).length === 0;
+    } else if (activeTab === "security") {
+      return Object.keys(errors).length === 0;
+    }
+    return false;
+  };
 
   const footerContent = (
     <>
@@ -216,7 +298,7 @@ const ProfileModal = ({ isOpen, onClose, userData }) => {
         variant="primary"
         type="submit"
         onClick={handleSubmit}
-        disabled={!isFormValid || loading}
+        disabled={!isFormValid() || loading}
         className="px-6 py-2.5 rounded-xl font-medium transition-all duration-200 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg hover:shadow-xl"
       />
     </>
@@ -332,6 +414,34 @@ const ProfileModal = ({ isOpen, onClose, userData }) => {
           )}
         </button>
         <button
+          onClick={() => setActiveTab("business")}
+          className={`px-4 py-2 rounded-t-xl font-medium transition-all duration-200 relative ${
+            activeTab === "business"
+              ? "text-blue-600 bg-blue-50/30"
+              : "text-slate-500 hover:text-slate-700"
+          }`}
+        >
+          <span className="flex items-center gap-2">
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+              />
+            </svg>
+            Business
+          </span>
+          {activeTab === "business" && (
+            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full"></div>
+          )}
+        </button>
+        <button
           onClick={() => setActiveTab("security")}
           className={`px-4 py-2 rounded-t-xl font-medium transition-all duration-200 relative ${
             activeTab === "security"
@@ -373,16 +483,32 @@ const ProfileModal = ({ isOpen, onClose, userData }) => {
               <div className="flex-1 h-px bg-gradient-to-r from-slate-200 to-transparent"></div>
             </div>
 
-            {/* Username Field */}
+            {/* First Name Field */}
             <FormField
-              label="Username"
-              name="username"
-              value={profileData.username}
+              label="First Name"
+              name="first_name"
+              value={profileData.first_name}
               onChange={handleInputChange}
               onBlur={handleBlur}
-              placeholder="Enter username"
+              placeholder="Enter first name"
               error={
-                touched.username && errors.username ? errors.username : null
+                touched.first_name && errors.first_name
+                  ? errors.first_name
+                  : null
+              }
+              required
+            />
+
+            {/* Last Name Field */}
+            <FormField
+              label="Last Name"
+              name="last_name"
+              value={profileData.last_name}
+              onChange={handleInputChange}
+              onBlur={handleBlur}
+              placeholder="Enter last name"
+              error={
+                touched.last_name && errors.last_name ? errors.last_name : null
               }
               required
             />
@@ -414,6 +540,87 @@ const ProfileModal = ({ isOpen, onClose, userData }) => {
                   ? errors.contact_number
                   : null
               }
+            />
+          </div>
+        )}
+
+        {/* Business Tab */}
+        {activeTab === "business" && (
+          <div className="space-y-4 animate-in fade-in duration-300">
+            <div className="flex items-center gap-2 mb-2">
+              <h3 className="text-sm font-bold text-slate-900">
+                Business Information
+              </h3>
+              <div className="flex-1 h-px bg-gradient-to-r from-slate-200 to-transparent"></div>
+            </div>
+
+            {/* Country Field */}
+            <FormField
+              label="Country"
+              name="country"
+              value={profileData.country}
+              onChange={handleInputChange}
+              onBlur={handleBlur}
+              placeholder="Enter country"
+              error={touched.country && errors.country ? errors.country : null}
+            />
+
+            {/* Business Email Field */}
+            <FormField
+              label="Business Email"
+              name="business_email"
+              type="email"
+              value={profileData.business_email}
+              onChange={handleInputChange}
+              onBlur={handleBlur}
+              placeholder="Enter business email"
+              error={
+                touched.business_email && errors.business_email
+                  ? errors.business_email
+                  : null
+              }
+            />
+
+            {/* Business Address Field */}
+            <FormField
+              label="Business Address"
+              name="business_address"
+              value={profileData.business_address}
+              onChange={handleInputChange}
+              onBlur={handleBlur}
+              placeholder="Enter business address"
+              error={
+                touched.business_address && errors.business_address
+                  ? errors.business_address
+                  : null
+              }
+            />
+
+            {/* House Number Field */}
+            <FormField
+              label="House Number"
+              name="house_number"
+              value={profileData.house_number}
+              onChange={handleInputChange}
+              onBlur={handleBlur}
+              placeholder="Enter house number"
+              error={
+                touched.house_number && errors.house_number
+                  ? errors.house_number
+                  : null
+              }
+            />
+
+            {/* Mobile Field */}
+            <FormField
+              label="Mobile Number"
+              name="mobile"
+              type="tel"
+              value={profileData.mobile}
+              onChange={handleInputChange}
+              onBlur={handleBlur}
+              placeholder="Enter mobile number"
+              error={touched.mobile && errors.mobile ? errors.mobile : null}
             />
           </div>
         )}

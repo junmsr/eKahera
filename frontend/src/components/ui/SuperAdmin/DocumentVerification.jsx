@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { api } from '../../../lib/api'; // Keeping the import from the 'main' branch
-import Button from '../../common/Button';
-import Card from '../../common/Card';
-import Loader from '../../common/Loader';
+import React, { useState, useEffect } from "react";
+import { api } from "../../../lib/api"; // Keeping the import from the 'main' branch
+import Button from "../../common/Button";
+import Card from "../../common/Card";
+import Loader from "../../common/Loader";
+import DocumentViewerModal from "../../modals/DocumentViewerModal";
 
 export default function DocumentVerification() {
   const [pendingVerifications, setPendingVerifications] = useState([]);
@@ -20,9 +21,9 @@ export default function DocumentVerification() {
   const fetchPendingVerifications = async () => {
     try {
       // Using sessionStorage and api utility from 'main' branch
-      const token = sessionStorage.getItem('auth_token');
-      const data = await api('/documents/pending', {
-        headers: { 'Authorization': `Bearer ${token}` }
+      const token = sessionStorage.getItem("auth_token");
+      const data = await api("/documents/pending", {
+        headers: { Authorization: `Bearer ${token}` },
       });
       setPendingVerifications(data);
     } catch (error) {
@@ -35,16 +36,16 @@ export default function DocumentVerification() {
   const fetchStats = async () => {
     try {
       // Using sessionStorage and api utility from 'main' branch
-      const token = sessionStorage.getItem('auth_token');
-      const data = await api('/documents/stats', {
-        headers: { 'Authorization': `Bearer ${token}` }
+      const token = sessionStorage.getItem("auth_token");
+      const data = await api("/documents/stats", {
+        headers: { Authorization: `Bearer ${token}` },
       });
       // Keeping the filtering logic from 'new-nigga-dave' and 'main'
       const filteredStats = {
         pending: data.pending || 0,
         approved: data.approved || 0,
         rejected: data.rejected || 0,
-        repass: data.repass || 0
+        repass: data.repass || 0,
       };
       setStats(filteredStats);
     } catch (error) {
@@ -55,9 +56,9 @@ export default function DocumentVerification() {
   const fetchBusinessDetails = async (businessId) => {
     try {
       // Using sessionStorage and api utility from 'main' branch
-      const token = sessionStorage.getItem('auth_token');
+      const token = sessionStorage.getItem("auth_token");
       const data = await api(`/documents/business/${businessId}/verification`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
       setBusinessDetails(data);
     } catch (error) {
@@ -74,15 +75,12 @@ export default function DocumentVerification() {
     setActionLoading(true);
     try {
       // Using sessionStorage and api utility from 'main' branch
-      const token = sessionStorage.getItem('auth_token');
-      await api(
-        `/documents/document/${documentId}/verify`,
-        {
-          method: 'PUT',
-          headers: { 'Authorization': `Bearer ${token}` },
-          body: JSON.stringify({ status: action, notes: notes })
-        }
-      );
+      const token = sessionStorage.getItem("auth_token");
+      await api(`/documents/document/${documentId}/verify`, {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ status: action, notes: notes }),
+      });
       // Refresh business details and show alert (from both branches)
       fetchBusinessDetails(selectedBusiness.business_id);
       alert(`Document ${action} successfully`);
@@ -102,12 +100,12 @@ export default function DocumentVerification() {
     setActionLoading(true);
     try {
       // Using sessionStorage and api utility from 'main' branch
-      const token = sessionStorage.getItem('auth_token');
+      const token = sessionStorage.getItem("auth_token");
       await api(
         `/documents/business/${selectedBusiness.business_id}/complete`,
         {
-          method: 'PUT',
-          headers: { 'Authorization': `Bearer ${token}` },
+          method: "PUT",
+          headers: { Authorization: `Bearer ${token}` },
           body: JSON.stringify({
             status: status,
             rejection_reason: reason,
@@ -132,19 +130,19 @@ export default function DocumentVerification() {
   const downloadDocument = async (documentId, fileName) => {
     try {
       // Using sessionStorage and api utility with raw response handling from 'main' branch
-      const token = sessionStorage.getItem('auth_token');
+      const token = sessionStorage.getItem("auth_token");
       const response = await api(
         `/documents/download/${documentId}`,
         {
-          headers: { 'Authorization': `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${token}` },
         },
         true // returnRawResponse = true
       );
-      
+
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.style.display = 'none';
+      const a = document.createElement("a");
+      a.style.display = "none";
       a.href = url;
       a.download = fileName;
       document.body.appendChild(a);
@@ -153,6 +151,29 @@ export default function DocumentVerification() {
     } catch (error) {
       console.error("Error downloading document:", error);
       alert("Error downloading document");
+    }
+  };
+
+  const viewDocument = async (documentId, fileName) => {
+    try {
+      // Using sessionStorage and api utility with raw response handling from 'main' branch
+      const token = sessionStorage.getItem("auth_token");
+      const response = await api(
+        `/documents/download/${documentId}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+        true // returnRawResponse = true
+      );
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      setSelectedDocumentUrl(url);
+      setSelectedDocumentName(fileName);
+      setIsViewerOpen(true);
+    } catch (error) {
+      console.error("Error viewing document:", error);
+      alert("Error viewing document");
     }
   };
 
@@ -299,6 +320,9 @@ function BusinessVerificationDetails({
   const [resubmissionNotes, setResubmissionNotes] = useState("");
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [showRepassModal, setShowRepassModal] = useState(false);
+  const [isViewerOpen, setIsViewerOpen] = useState(false);
+  const [selectedDocumentUrl, setSelectedDocumentUrl] = useState("");
+  const [selectedDocumentName, setSelectedDocumentName] = useState("");
 
   if (!business) {
     return (
@@ -415,12 +439,53 @@ function BusinessVerificationDetails({
                     size="sm"
                     variant="outline"
                     onClick={() =>
+                      viewDocument(document.document_id, document.document_name)
+                    }
+                  >
+                    <svg
+                      className="w-4 h-4 mr-1"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                      />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                      />
+                    </svg>
+                    View
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() =>
                       onDownloadDocument(
                         document.document_id,
                         document.document_name
                       )
                     }
                   >
+                    <svg
+                      className="w-4 h-4 mr-1"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                      />
+                    </svg>
                     Download
                   </Button>
                   {document.verification_status === "pending" && (
@@ -432,6 +497,19 @@ function BusinessVerificationDetails({
                         }
                         disabled={actionLoading}
                       >
+                        <svg
+                          className="w-4 h-4 mr-1"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M5 13l4 4L19 7"
+                          />
+                        </svg>
                         Approve
                       </Button>
                       <Button
@@ -449,6 +527,19 @@ function BusinessVerificationDetails({
                         }}
                         disabled={actionLoading}
                       >
+                        <svg
+                          className="w-4 h-4 mr-1"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M6 18L18 6M6 6l12 12"
+                          />
+                        </svg>
                         Reject
                       </Button>
                       <Button
@@ -468,6 +559,19 @@ function BusinessVerificationDetails({
                         }}
                         disabled={actionLoading}
                       >
+                        <svg
+                          className="w-4 h-4 mr-1"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                          />
+                        </svg>
                         Repass
                       </Button>
                     </>
@@ -586,6 +690,14 @@ function BusinessVerificationDetails({
           </div>
         </div>
       )}
+
+      {/* Document Viewer Modal */}
+      <DocumentViewerModal
+        isOpen={isViewerOpen}
+        onClose={() => setIsViewerOpen(false)}
+        documentUrl={selectedDocumentUrl}
+        documentName={selectedDocumentName}
+      />
     </div>
   );
 }
