@@ -193,16 +193,17 @@ const NavAdmin = ({ isMobile, onLogoutClick }) => {
 
   const LogoutIcon = () => (
     <svg
-      width="20"
-      height="20"
+      className="w-5 h-5 text-white"
       fill="none"
       stroke="currentColor"
-      strokeWidth="2.2"
       viewBox="0 0 24 24"
     >
-      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-      <polyline points="16 17 21 12 16 7" />
-      <line x1="21" y1="12" x2="9" y2="12" />
+      <path
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+      />
     </svg>
   );
 
@@ -220,29 +221,29 @@ const NavAdmin = ({ isMobile, onLogoutClick }) => {
           </div>
         </div>
 
-      <nav
-        className={`${STYLES.nav} h-full flex flex-col overflow-y-auto overflow-x-hidden`}
-        aria-label="Main navigation"
-      >
-        <div className={STYLES.sectionHeader}>MENU</div>
-        {NAV_ITEMS.map((item) => (
-          <NavigationItem
-            key={item.id}
-            item={item}
-            isActive={window.location.pathname === item.path}
-          />
-        ))}
+        <nav
+          className={`${STYLES.nav} h-full flex flex-col overflow-y-auto overflow-x-hidden`}
+          aria-label="Main navigation"
+        >
+          <div className={STYLES.sectionHeader}>MENU</div>
+          {NAV_ITEMS.map((item) => (
+            <NavigationItem
+              key={item.id}
+              item={item}
+              isActive={window.location.pathname === item.path}
+            />
+          ))}
 
           {/* Logout Button */}
           <div className={`${isMobile ? "block" : "mt-auto"}`}>
             <button
-            onClick={() => setShowLogoutConfirm(true)}
-            className={STYLES.logoutButton}
-            aria-label="Logout"
-          >
+              onClick={() => setShowLogoutConfirm(true)}
+              className={STYLES.logoutButton}
+              aria-label="Logout"
+            >
               <span className={STYLES.logoutIcon}>
-              <LogoutIcon />
-            </span>
+                <LogoutIcon />
+              </span>
               <span className={STYLES.label}>Logout</span>
             </button>
           </div>
@@ -255,26 +256,59 @@ const NavAdmin = ({ isMobile, onLogoutClick }) => {
             className="absolute inset-0 bg-black/80 z-90"
             onClick={() => setShowLogoutConfirm(false)}
           />
-          <div className="relative bg-white rounded-xl shadow-xl w-[92%] max-w-md p-6 z-100">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              Confirm Logout
-            </h3>
-            <p className="text-sm text-gray-600 mb-4">
-              Are you sure you want to log out?
-            </p>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setShowLogoutConfirm(false)}
-                className="px-3 py-2 rounded-lg bg-gray-100 text-sm font-medium hover:bg-gray-200 transition"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmLogout}
-                className="px-3 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition"
-              >
-                Logout
-              </button>
+          <div className="relative bg-white rounded-xl shadow-xl w-[92%] max-w-md z-100 p-0">
+            {/* Header Section */}
+            <div className="bg-gradient-to-r from-red-50 via-red-50/80 to-orange-50/50 border-b border-red-100 px-6 py-5 rounded-t-2xl">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-red-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <svg
+                    className="w-6 h-6"
+                    fill="none"
+                    stroke="white"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                    />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <h2 className="text-xl font-bold text-gray-900 mb-1">
+                    Confirm Logout
+                  </h2>
+                  <p className="text-sm text-gray-600">
+                    Are you sure you want to log out?
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Content Section */}
+            <div className="p-6">
+              <p className="text-sm text-gray-700 mb-6">
+                You will be redirected to the login page and your session will
+                end.
+              </p>
+
+              {/* Action Buttons */}
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => setShowLogoutConfirm(false)}
+                  className="px-5 py-2.5 rounded-lg text-sm font-semibold text-gray-700 bg-white border-2 border-gray-300 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmLogout}
+                  className="px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 shadow-md hover:shadow-lg transition-all duration-200 flex items-center gap-2"
+                >
+                  <LogoutIcon />
+                  Logout
+                </button>
+              </div>
             </div>
           </div>
         </div>
