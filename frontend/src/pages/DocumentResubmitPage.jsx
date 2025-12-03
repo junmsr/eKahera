@@ -16,11 +16,27 @@ const DocumentResubmitPage = () => {
   const [file, setFile] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [userEmail, setUserEmail] = useState("");
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    const email = searchParams.get('email');
-    if (email) {
-      setUserEmail(email);
+    // Check if user is already logged in
+    const token = sessionStorage.getItem('auth_token');
+    const storedUser = sessionStorage.getItem('user');
+    
+    if (token && storedUser) {
+      setIsAuthenticated(true);
+      const user = JSON.parse(storedUser);
+      setUserEmail(user.email || '');
+    } else {
+      // If not logged in, use email from URL if provided
+      const email = searchParams.get('email');
+      if (email) {
+        setUserEmail(email);
+      } else {
+        // If no email in URL and not logged in, redirect to login
+        navigate('/login', { state: { from: window.location.pathname } });
+        return;
+      }
     }
 
     const fetchDocument = async () => {
@@ -65,15 +81,12 @@ const DocumentResubmitPage = () => {
       return;
     }
 
-    if (userEmail && !userEmail.includes('@')) {
-      setError("Please provide a valid email address");
-      return;
-    }
-
     const formData = new FormData();
     formData.append('document', file);
     formData.append('document_id', documentId);
-    if (userEmail) {
+    
+    // Only add user_email if user is not authenticated
+    if (!isAuthenticated && userEmail) {
       formData.append('user_email', userEmail);
     }
 
@@ -81,12 +94,20 @@ const DocumentResubmitPage = () => {
       setIsSubmitting(true);
       setError("");
       
+      const token = sessionStorage.getItem('auth_token');
+      const headers = {
+        'Accept': 'application/json',
+      };
+      
+      // Add authorization header if user is authenticated
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       const response = await fetch(`${process.env.REACT_APP_API_URL || ''}/api/documents/resubmit`, {
         method: 'POST',
         body: formData,
-        headers: {
-          'Accept': 'application/json',
-        },
+        headers: headers,
       });
 
       const data = await response.json();

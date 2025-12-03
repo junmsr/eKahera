@@ -317,7 +317,8 @@ const sendVerificationRejectionEmail = async (businessData, documents, rejection
     const htmlContent = getRejectionEmailTemplate(
       businessData.business_name, 
       documents,
-      rejectionReason
+      rejectionReason,
+      businessData.email
     );
     
     const { data, error } = await resend.emails.send({
