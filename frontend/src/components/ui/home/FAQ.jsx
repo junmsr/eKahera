@@ -12,8 +12,8 @@ const faqs = [
     a: "Yes! You can manage multiple stores and users from a single account.",
   },
   {
-    q: "Is my data secure?",
-    a: "Absolutely. We use industry-standard encryption and best practices to keep your data safe.",
+    q: "What are the documents needed to get started?",
+    a: "Business Registration Certificate (DTI/SEC/CDA), Mayor's Permit / Business Permit, and BIR Certificate of Registration (Form 2303).",
   },
   {
     q: "How do I get support?",
