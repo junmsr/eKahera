@@ -42,17 +42,22 @@ function POS() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const notificationRef = useRef(null);
+  const skuInputRef = useRef(null);
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const token = sessionStorage.getItem("auth_token");
   const user = JSON.parse(sessionStorage.getItem("user") || "{}");
   const hasFinalizedRef = React.useRef(false);
   const [businessName, setBusinessName] = useState("");
 
-  // Add keyboard shortcuts for buttons: F4-F8
+  // Add keyboard shortcuts for buttons: F3-F8
   useEffect(() => {
     const keyDownHandler = (e) => {
       if (e.repeat) return;
       switch (e.key) {
+        case "F3":
+          e.preventDefault();
+          skuInputRef.current?.focus();
+          break;
         case "F4":
           e.preventDefault();
           setShowCashLedger(true);
@@ -524,6 +529,7 @@ function POS() {
               {/* SkuFormCard */}
               <div className="flex-shrink-0">
                 <SkuFormCard
+                  ref={skuInputRef}
                   sku={sku}
                   setSku={setSku}
                   quantity={quantity}
