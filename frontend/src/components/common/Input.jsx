@@ -1,6 +1,6 @@
-import React from "react";
+import React, { forwardRef } from "react";
 
-function Input({
+const Input = forwardRef(({
   type = "text",
   name,
   value,
@@ -13,7 +13,7 @@ function Input({
   size = "md",
   microinteraction = true,
   ...props
-}) {
+}, ref) => {
   // Base styles — use dark gray for normal text and gray for placeholder
   const baseStyles =
     "w-full rounded-xl text-base text-gray-900 transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-blue-400 placeholder:text-gray-400 bg-white/60 backdrop-blur-md border border-white/30 shadow-sm";
@@ -47,6 +47,7 @@ function Input({
   return (
     <div className={`relative ${error ? "buzz" : ""}`}>
       <input
+        ref={ref}
         type={type}
         name={name}
         value={value}
@@ -75,6 +76,8 @@ function Input({
       )}
     </div>
   );
-}
+});
+
+Input.displayName = 'Input';
 
 export default Input;

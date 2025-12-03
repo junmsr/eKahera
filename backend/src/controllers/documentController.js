@@ -140,16 +140,16 @@ exports.handleDocumentUpload = async (req, res) => {
 
     // Only send notifications and update status if all required documents are uploaded
     if (documentStatus.hasAllRequired) {
-      // Get SuperAdmin email for notification
+      // Get all SuperAdmin emails for notification
       const superAdminResult = await pool.query(
-        'SELECT email FROM users WHERE role = $1 LIMIT 1',
+        'SELECT email FROM users WHERE role = $1',
         ['superadmin']
       );
 
       if (superAdminResult.rowCount > 0) {
-        const superAdminEmail = superAdminResult.rows[0].email;
-        // Send notification to super admin about new application
-        await sendNewApplicationNotification(businessData, superAdminEmail);
+        const superAdminEmails = superAdminResult.rows.map(row => row.email);
+        // Send notification to all super admins about new application
+        await sendNewApplicationNotification(businessData, superAdminEmails);
       }
 
       // Send application submitted confirmation to the business
@@ -488,16 +488,16 @@ exports.uploadDocumentsViaUrls = async (req, res) => {
 
     // Only send notifications and update status if all required documents are uploaded
     if (documentStatus.hasAllRequired) {
-      // Get SuperAdmin email for notification
+      // Get all SuperAdmin emails for notification
       const superAdminResult = await pool.query(
-        'SELECT email FROM users WHERE role = $1 LIMIT 1',
+        'SELECT email FROM users WHERE role = $1',
         ['superadmin']
       );
 
       if (superAdminResult.rowCount > 0) {
-        const superAdminEmail = superAdminResult.rows[0].email;
-        // Send notification to super admin about new application
-        await sendNewApplicationNotification(businessData, superAdminEmail);
+        const superAdminEmails = superAdminResult.rows.map(row => row.email);
+        // Send notification to all super admins about new application
+        await sendNewApplicationNotification(businessData, superAdminEmails);
       }
 
       // Send application submitted confirmation to the business

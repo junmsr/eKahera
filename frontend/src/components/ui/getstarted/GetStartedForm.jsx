@@ -423,8 +423,6 @@ export default function GetStartedForm({ hook, isOtpVerified, onOpenTerms, onOpe
             <ExistingDocumentsNotice />
           </div>
 
-
-
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-4">
             <p className="text-sm text-yellow-800">
               <strong>Important:</strong> After submitting your documents, please allow 1-3 business days for verification. 
@@ -432,6 +430,65 @@ export default function GetStartedForm({ hook, isOtpVerified, onOpenTerms, onOpe
             </p>
           </div>
 
+          <div className="mt-6 space-y-4">
+            {/* Terms and Conditions Checkbox */}
+            <div className="flex items-start">
+              <div className="flex items-center h-5">
+                <input
+                  id="acceptTerms"
+                  name="acceptTerms"
+                  type="checkbox"
+                  checked={form.acceptTerms}
+                  onChange={handleChange}
+                  className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                />
+              </div>
+              <div className="ml-3 text-sm">
+                <label htmlFor="acceptTerms" className="text-gray-700">
+                  I agree to the{' '}
+                  <button
+                    type="button"
+                    onClick={onOpenTerms}
+                    className="text-blue-600 hover:text-blue-800 underline"
+                  >
+                    Terms and Conditions
+                  </button>
+                </label>
+              </div>
+            </div>
+
+            {/* Privacy Policy Checkbox */}
+            <div className="flex items-start">
+              <div className="flex items-center h-5">
+                <input
+                  id="acceptPrivacy"
+                  name="acceptPrivacy"
+                  type="checkbox"
+                  checked={form.acceptPrivacy}
+                  onChange={handleChange}
+                  className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                />
+              </div>
+              <div className="ml-3 text-sm">
+                <label htmlFor="acceptPrivacy" className="text-gray-700">
+                  I have read the{' '}
+                  <button
+                    type="button"
+                    onClick={onOpenPrivacy}
+                    className="text-blue-600 hover:text-blue-800 underline"
+                  >
+                    Privacy Policy
+                  </button>
+                </label>
+              </div>
+            </div>
+
+            {errors.accept && (
+              <p className="mt-2 text-sm text-red-600">{errors.accept}</p>
+            )}
+          </div>
+
+          {/* Action Buttons */}
           <div className="mt-8 flex justify-between items-center pt-4 border-t border-gray-200">
             <button
               type="button"
@@ -445,8 +502,8 @@ export default function GetStartedForm({ hook, isOtpVerified, onOpenTerms, onOpe
             </button>
             <button
               type="button"
-              onClick={hook.handleSubmit}
-              disabled={loading || !form.documents || form.documents.length === 0}
+              onClick={hook.handleFinish}
+              disabled={loading || !form.documents || form.documents.length === 0 || !form.acceptTerms || !form.acceptPrivacy}
               className="inline-flex items-center px-6 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
@@ -462,6 +519,7 @@ export default function GetStartedForm({ hook, isOtpVerified, onOpenTerms, onOpe
               )}
             </button>
           </div>
+
         </div>
       );
 

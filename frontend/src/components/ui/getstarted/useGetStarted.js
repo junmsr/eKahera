@@ -85,17 +85,56 @@ export default function useGetStarted() {
     }));
   };
 
+  const validateEmail = (email) => {
+    if (!email) return 'Required';
+    if (!/^\S+@\S+\.\S+$/.test(email)) return 'Invalid email address';
+    return null;
+  };
+
+  const validateUsername = (username) => {
+    if (!username) return 'Required';
+    if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
+      return 'Username must be 3-20 characters (letters, numbers, underscores)';
+    }
+    return null;
+  };
+
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     
+    // Clear any existing error for this field when user starts typing
+    if (errors[name]) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
+    }
+    
+    // Handle special cases
     if (name === 'useAdminEmail') {
       setForm((f) => ({ 
         ...f, 
         [name]: checked,
         businessEmail: checked ? f.email : ""
       }));
-    } else {
-      setForm((f) => ({ ...f, [name]: type === 'checkbox' ? checked : value }));
+      return;
+    }
+    
+    // Update form state
+    setForm((f) => ({ ...f, [name]: type === 'checkbox' ? checked : value }));
+    
+    // Real-time validation for email and username
+    if (name === 'email') {
+      const emailError = validateEmail(value);
+      if (emailError) {
+        setErrors(prev => ({ ...prev, email: emailError }));
+      }
+    } else if (name === 'username') {
+      const usernameError = validateUsername(value);
+      if (usernameError) {
+        setErrors(prev => ({ ...prev, username: usernameError }));
+      }
     }
   };
 
@@ -180,19 +219,74 @@ export default function useGetStarted() {
     return Object.keys(err).length === 0;
   };
 
+  const checkExistingUser = async (email, username) => {
+    try {
+      const response = await api("/auth/check-existing", {
+        method: "POST",
+        body: JSON.stringify({ email, username }),
+      });
+      return response; // Returns { exists: boolean, field: 'email'|'username'|null, message: string }
+    } catch (error) {
+      console.error('Error checking existing user:', error);
+      // If there's a structured error response, throw it as is
+      if (error.data) {
+        throw error;
+      }
+      // Otherwise create a generic error
+      throw new Error('Failed to check user availability. Please try again.');
+    }
+  };
+
   const handleNext = async () => {
     if (!validateStep()) return;
 
     if (step === 0) {
       setLoading(true);
       try {
+        // First check if username or email already exists
+        const existingUser = await checkExistingUser(form.email, form.username);
+        
+        if (existingUser.exists) {
+          // If user exists, show appropriate error message
+          const errorObj = {};
+          if (existingUser.field === 'email') {
+            errorObj.email = existingUser.message || 'This email is already registered. Please use a different email or log in.';
+          } else if (existingUser.field === 'username') {
+            errorObj.username = existingUser.message || 'This username is already taken. Please choose another one.';
+          } else {
+            errorObj.email = existingUser.message || 'This email or username is already registered.';
+          }
+          setErrors(errorObj);
+          return;
+        }
+
+        // If no existing user, proceed with OTP
         await api("/otp/send", {
           method: "POST",
           body: JSON.stringify({ email: form.email }),
         });
         setStep((s) => s + 1);
       } catch (err) {
-        setErrors({ email: err.message || "Failed to send OTP" });
+        console.error('Error in handleNext:', err);
+        // Handle different types of errors
+        if (err.status === 409) { // Conflict - user exists
+          const errorData = err.data || {};
+          const errorObj = {};
+          
+          if (errorData.field === 'email') {
+            errorObj.email = errorData.message || 'This email is already registered.';
+          } else if (errorData.field === 'username') {
+            errorObj.username = errorData.message || 'This username is already taken.';
+          } else {
+            errorObj.email = errorData.message || 'This email or username is already registered.';
+          }
+          setErrors(errorObj);
+        } else {
+          // For other errors, show a generic message
+          setErrors({ 
+            email: err.message || 'Failed to verify account. Please try again.' 
+          });
+        }
       } finally {
         setLoading(false);
       }

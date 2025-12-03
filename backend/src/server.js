@@ -69,6 +69,7 @@ const locationRoutes = require('./routes/locationRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const cleanupRoutes = require('./routes/cleanupRoutes');
 const cleanupUserRoutes = require('./routes/cleanupUserRoutes');
+const { sendApplicationSubmittedNotification } = require('./utils/emailService');
 const { startPendingTransactionCleanup } = require('./utils/cleanup');
 
 const app = express();
@@ -107,6 +108,27 @@ app.use('/api/locations', locationRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/cleanup', cleanupRoutes);
 app.use('/api/cleanup', cleanupUserRoutes);
+
+// Test email endpoint - for debugging only
+app.get('/api/test-email', async (req, res) => {
+  try {
+    console.log('Testing email service...');
+    const testBusiness = {
+      email: process.env.EMAIL_USER, // Send to the configured email
+      business_name: 'Test Business',
+      business_id: 'test-123'
+    };
+    
+    console.log('Sending test email to:', testBusiness.email);
+    const result = await sendApplicationSubmittedNotification(testBusiness);
+    console.log('Email test result:', result);
+    
+    res.json({ success: true, message: 'Test email sent successfully' });
+  } catch (error) {
+    console.error('Email test failed:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
 
 const port = config.PORT || 5000;
 

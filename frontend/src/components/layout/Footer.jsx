@@ -28,16 +28,28 @@ function Footer({ className = "" }) {
   };
 
   return (
-    <footer
+    <motion.footer
       className={`relative w-full pt-0 overflow-hidden ${className}`}
       style={{ fontFamily: "Inter, sans-serif" }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5 }}
     >
       {/* Enhanced gradient background */}
-      <div className="absolute inset-0 bg-gradient-to-b from-white via-slate-50/80 to-blue-50/40" />
+      <motion.div 
+        className="absolute inset-0 bg-gradient-to-b from-white via-slate-50/80 to-blue-50/40"
+        layoutId="footer-bg"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5 }}
+      />
 
       {/* Animated background orbs with better positioning */}
       <motion.div
-        className="absolute -bottom-40 -left-40 w-[500px] h-[500px] bg-gradient-to-br from-blue-400/15 to-cyan-400/10 rounded-full blur-3xl"
+        className="absolute -bottom-40 -left-40 w-[500px] h-[500px] rounded-full blur-3xl"
+        style={{
+          background: 'radial-gradient(circle, rgba(96, 165, 250, 0.15) 0%, rgba(34, 211, 238, 0.1) 100%)'
+        }}
         animate={{
           scale: [1, 1.1, 1],
           opacity: [0.3, 0.4, 0.3],
@@ -49,7 +61,10 @@ function Footer({ className = "" }) {
         }}
       />
       <motion.div
-        className="absolute -bottom-40 -right-40 w-[500px] h-[500px] bg-gradient-to-bl from-purple-400/15 to-pink-400/10 rounded-full blur-3xl"
+        className="absolute -bottom-40 -right-40 w-[500px] h-[500px] rounded-full blur-3xl"
+        style={{
+          background: 'radial-gradient(circle, rgba(192, 132, 252, 0.15) 0%, rgba(236, 72, 153, 0.1) 100%)'
+        }}
         animate={{
           scale: [1, 1.15, 1],
           opacity: [0.3, 0.4, 0.3],
@@ -62,9 +77,26 @@ function Footer({ className = "" }) {
       />
 
       {/* Subtle grid pattern */}
-      <div className="absolute inset-0 bg-[linear-gradient(rgba(59,130,246,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(59,130,246,0.02)_1px,transparent_1px)] bg-[size:3rem_3rem] opacity-40" />
+      <motion.div 
+        className="absolute inset-0 opacity-40"
+        style={{
+          backgroundImage: [
+            'linear-gradient(rgba(59, 130, 246, 0.02) 1px, transparent 1px)',
+            'linear-gradient(90deg, rgba(59, 130, 246, 0.02) 1px, transparent 1px)'
+          ].join(','),
+          backgroundSize: '3rem 3rem'
+        }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 0.4 }}
+        transition={{ duration: 1, delay: 0.3 }}
+      />
 
-      <div className="relative z-10 max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 pt-24 pb-16">
+      <motion.div 
+        className="relative z-10 max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 pt-24 pb-16"
+        initial={{ y: 20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.5, delay: 0.1 }}
+      >
         <motion.div
           variants={footerVariants}
           initial="hidden"
@@ -73,29 +105,36 @@ function Footer({ className = "" }) {
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12 lg:gap-16 mb-16"
         >
           {/* Brand Column */}
-          <div variants={itemVariants} className="lg:col-span-1">
-            <div
+          <motion.div variants={itemVariants} className="lg:col-span-1">
+            <motion.div
               className="mb-8"
               whileHover={{ scale: 1.03 }}
               transition={{ type: "spring", stiffness: 300, damping: 20 }}
             >
               <Logo size={45} className="text-2xl" />
-            </div>
-            <p className="text-slate-600 text-sm leading-relaxed mb-8 max-w-xs font-medium">
+            </motion.div>
+            <motion.p className="text-slate-600 text-sm leading-relaxed mb-8 max-w-xs font-medium">
               Smart POS platform for fast checkout, unified inventory, and
               real-time analytics.
-            </p>
+            </motion.p>
 
             {/* Contact Info with enhanced styling */}
-            <div className="space-y-4 mb-8">
+            <motion.div className="space-y-4 mb-8">
               <motion.a
                 href="mailto:support@ekahera.com"
                 className="flex items-center gap-3 text-sm text-slate-700 hover:text-blue-600 transition-all duration-300 group"
                 whileHover={{ x: 6, scale: 1.02 }}
               >
                 <motion.div
-                  whileHover={{ rotate: 5 }}
-                  className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-50 to-blue-100 group-hover:from-blue-100 group-hover:to-blue-200 flex items-center justify-center transition-all duration-300 shadow-sm group-hover:shadow-md"
+                  className="h-10 w-10 rounded-xl flex items-center justify-center transition-all duration-300 shadow-sm group-hover:shadow-md"
+                  style={{
+                    background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)'
+                  }}
+                  whileHover={{
+                    rotate: 5,
+                    background: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)',
+                    scale: 1.05
+                  }}
                 >
                   <svg
                     width="18"
@@ -110,7 +149,7 @@ function Footer({ className = "" }) {
                     <path d="M22 6l-10 7L2 6" />
                   </svg>
                 </motion.div>
-                <span className="font-medium">support@ekahera.com</span>
+                <motion.span className="font-medium">support@ekahera.com</motion.span>
               </motion.a>
 
               <motion.a
@@ -119,8 +158,15 @@ function Footer({ className = "" }) {
                 whileHover={{ x: 6, scale: 1.02 }}
               >
                 <motion.div
-                  whileHover={{ rotate: 5 }}
-                  className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-50 to-blue-100 group-hover:from-blue-100 group-hover:to-blue-200 flex items-center justify-center transition-all duration-300 shadow-sm group-hover:shadow-md"
+                  className="h-10 w-10 rounded-xl flex items-center justify-center transition-all duration-300 shadow-sm group-hover:shadow-md"
+                  style={{
+                    background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)'
+                  }}
+                  whileHover={{
+                    rotate: 5,
+                    background: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)',
+                    scale: 1.05
+                  }}
                 >
                   <svg
                     width="18"
@@ -138,7 +184,7 @@ function Footer({ className = "" }) {
                     />
                   </svg>
                 </motion.div>
-                <span className="font-medium">+63 970 846 8324</span>
+                <motion.span className="font-medium">+63 970 846 8324</motion.span>
               </motion.a>
 
               <motion.a
@@ -165,23 +211,29 @@ function Footer({ className = "" }) {
                     <circle cx="12" cy="9" r="2.5" />
                   </svg>
                 </motion.div>
-                <span className="font-medium text-left">
-                  200, T. De Castro Street, Zone-8 Bulan, Sorsogon
-                </span>
+                <motion.span className="font-medium">
+                  200 T. De Castro Street, Zone-8
+                  <br />
+                  Bulan, Sorsogon, Philippines
+                </motion.span>
               </motion.a>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
 
           {/* Company Column */}
-          <div variants={itemVariants}>
-            <h3 className="font-bold text-slate-900 mb-7 text-base tracking-tight relative inline-block">
-              Company
-              <span
-                className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-blue-600 to-blue-500"
-                whileHover={{ width: "100%" }}
+          <motion.div variants={itemVariants}>
+            <motion.h3 className="text-lg font-bold text-slate-800 mb-6 relative inline-block">
+              Quick Links
+              <motion.span
+                className="absolute bottom-0 left-0 w-12 h-0.5 rounded-full"
+                style={{
+                  background: 'linear-gradient(90deg, #60a5fa 0%, #22d3ee 100%)'
+                }}
+                initial={{ width: 0 }}
+                animate={{ width: "100%" }}
                 transition={{ duration: 0.3 }}
               />
-            </h3>
+            </motion.h3>
             <ul className="space-y-3.5">
               {[
                 {
@@ -200,8 +252,8 @@ function Footer({ className = "" }) {
                   icon: "M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z",
                 },
               ].map((link) => (
-                <li key={link.name}>
-                  <a
+                <motion.li key={link.name}>
+                  <motion.a
                     href={link.href}
                     className="group flex items-center gap-2.5 text-sm text-slate-600 hover:text-blue-600 transition-all duration-300"
                     whileHover={{ x: 6 }}
@@ -221,26 +273,30 @@ function Footer({ className = "" }) {
                         d={link.icon}
                       />
                     </svg>
-                    <span className="font-medium">{link.name}</span>
-                  </a>
-                </li>
+                    <motion.span className="font-medium">{link.name}</motion.span>
+                  </motion.a>
+                </motion.li>
               ))}
             </ul>
-          </div>
+          </motion.div>
 
           {/* Support Column */}
-          <div variants={itemVariants}>
-            <h3 className="font-bold text-slate-900 mb-7 text-base tracking-tight relative inline-block">
+          <motion.div variants={itemVariants}>
+            <motion.h3 className="text-lg font-bold text-slate-800 mb-6 relative inline-block">
               Support
-              <span
-                className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-blue-600 to-blue-500"
-                whileHover={{ width: "100%" }}
+              <motion.span
+                className="absolute bottom-0 left-0 w-12 h-0.5 rounded-full"
+                style={{
+                  background: 'linear-gradient(90deg, #60a5fa 0%, #22d3ee 100%)'
+                }}
+                initial={{ width: 0 }}
+                animate={{ width: "100%" }}
                 transition={{ duration: 0.3 }}
               />
-            </h3>
+            </motion.h3>
             <ul className="space-y-3.5">
-              <li>
-                <a
+              <motion.li>
+                <motion.a
                   href="#"
                   className="group flex items-center gap-2.5 text-sm text-slate-600 hover:text-blue-600 transition-all duration-300"
                   whileHover={{ x: 6 }}
@@ -260,11 +316,11 @@ function Footer({ className = "" }) {
                       d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
                     />
                   </svg>
-                  <span className="font-medium">Documentation</span>
-                </a>
-              </li>
-              <li>
-                <button
+                  <motion.span className="font-medium">Documentation</motion.span>
+                </motion.a>
+              </motion.li>
+              <motion.li>
+                <motion.button
                   onClick={() => setOpenPrivacy(true)}
                   className="group flex items-center gap-2.5 text-left text-sm text-slate-600 hover:text-blue-600 transition-all duration-300 w-full"
                   whileHover={{ x: 6 }}
@@ -284,11 +340,11 @@ function Footer({ className = "" }) {
                       d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
                     />
                   </svg>
-                  <span className="font-medium">Privacy Policy</span>
-                </button>
-              </li>
-              <li>
-                <button
+                  <motion.span className="font-medium">Privacy Policy</motion.span>
+                </motion.button>
+              </motion.li>
+              <motion.li>
+                <motion.button
                   onClick={() => setOpenTerms(true)}
                   className="group flex items-center gap-2.5 text-left text-sm text-slate-600 hover:text-blue-600 transition-all duration-300 w-full"
                   whileHover={{ x: 6 }}
@@ -308,11 +364,11 @@ function Footer({ className = "" }) {
                       d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                     />
                   </svg>
-                  <span className="font-medium">Terms and Conditions</span>
-                </button>
-              </li>
-              <li>
-                <a
+                  <motion.span className="font-medium">Terms and Conditions</motion.span>
+                </motion.button>
+              </motion.li>
+              <motion.li>
+                <motion.a
                   href="#faq"
                   className="group flex items-center gap-2.5 text-sm text-slate-600 hover:text-blue-600 transition-all duration-300"
                   whileHover={{ x: 6 }}
@@ -332,55 +388,70 @@ function Footer({ className = "" }) {
                       d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                     />
                   </svg>
-                  <span className="font-medium">FAQ</span>
-                </a>
-              </li>
+                  <motion.span className="font-medium">FAQ</motion.span>
+                </motion.a>
+              </motion.li>
             </ul>
-          </div>
+          </motion.div>
         </motion.div>
 
         {/* Enhanced Divider */}
         <div
           className="relative w-full mb-10"
           initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
+          animate={{ opacity: 1 }}
           transition={{ duration: 0.6 }}
         >
           <div className="w-full h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
-          <div
+          <motion.div
             className="absolute top-0 left-0 h-px w-full bg-gradient-to-r from-transparent via-blue-400/50 to-transparent"
             initial={{ scaleX: 0 }}
-            whileInView={{ scaleX: 1 }}
-            viewport={{ once: true }}
+            animate={{ scaleX: 1 }}
             transition={{ duration: 0.8, delay: 0.2 }}
           />
         </div>
 
         {/* Enhanced Bottom Bar */}
         <motion.div
-          className="flex flex-col md:flex-row items-center justify-center gap-3 md:gap-6 text-sm"
+          className="flex flex-col md:flex-row justify-between items-center gap-3 md:gap-6 text-sm"
           variants={itemVariants}
           initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
+          animate="visible"
         >
-          <span className="text-slate-600 font-medium">
+          <motion.p className="text-slate-500 text-sm mb-4 md:mb-0">
             &copy; {new Date().getFullYear()} eKahera. All rights reserved.
-          </span>
+          </motion.p>
           <span className="hidden md:block text-slate-300 text-lg">•</span>
-          <span className="text-slate-500 font-medium">
-            Professional POS solutions for modern retail.
-          </span>
+          <motion.p className="text-slate-600 text-sm mb-6">
+            Follow us on social media for the latest updates and news.
+          </motion.p>
+          <motion.div className="flex items-center gap-3">
+            <motion.a
+              href="#"
+              className="h-10 w-10 rounded-xl bg-white/80 backdrop-blur-md flex items-center justify-center text-slate-700 hover:text-white hover:bg-blue-500 transition-all duration-300 shadow-sm hover:shadow-md"
+              aria-label="Facebook"
+              whileHover={{ y: -3, scale: 1.1 }}
+            >
+              <svg
+                width="16"
+                height="16"
+                fill="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" />
+                <circle cx="12" cy="9" r="2.5" />
+              </svg>
+            </motion.a>
+          </motion.div>
         </motion.div>
-      </div>
+      </motion.div>
       <TermsModal open={openTerms} onClose={() => setOpenTerms(false)} />
       <PrivacyPolicyModal
         open={openPrivacy}
         onClose={() => setOpenPrivacy(false)}
       />
-    </footer>
-  );
+    </motion.footer>
+  )
 }
 
 export default Footer;

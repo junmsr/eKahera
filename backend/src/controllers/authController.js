@@ -6,6 +6,7 @@ const path = require('path');
 const { logAction } = require('../utils/logger');
 const { hasRequiredDocuments } = require('./businessController');
 const { sendOTP } = require('./otpController');
+const { sendApplicationSubmittedNotification } = require('../utils/emailService');
 
 const config = {
   JWT_SECRET: process.env.JWT_SECRET
@@ -76,6 +77,56 @@ exports.register = async (req, res) => {
     res.status(201).json({ user: newUser });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+};
+
+// Check if username or email already exists
+exports.checkExistingUser = async (req, res) => {
+  try {
+    const { email, username } = req.body;
+    
+    if (!email && !username) {
+      return res.status(400).json({ error: 'Email or username is required' });
+    }
+
+    let exists = false;
+    let field = null;
+    let message = '';
+
+    // Check if email exists in users or business tables
+    if (email) {
+      const existingUser = await pool.query('SELECT 1 FROM users WHERE lower(email) = lower($1)', [email]);
+      const existingBusiness = await pool.query('SELECT 1 FROM business WHERE lower(email) = lower($1)', [email]);
+      
+      if (existingUser.rowCount > 0 || existingBusiness.rowCount > 0) {
+        exists = true;
+        field = 'email';
+        message = 'This email is already registered';
+      }
+    }
+
+    // Check if username exists (only if email wasn't found)
+    if (!exists && username) {
+      const existingUsername = await pool.query('SELECT 1 FROM users WHERE lower(username) = lower($1)', [username]);
+      
+      if (existingUsername.rowCount > 0) {
+        exists = true;
+        field = 'username';
+        message = 'This username is already taken';
+      }
+    }
+
+    res.status(200).json({ 
+      exists,
+      field,
+      message: exists ? message : 'No existing user found'
+    });
+  } catch (err) {
+    console.error('Check existing user error:', err);
+    res.status(500).json({ 
+      error: 'Failed to check user availability',
+      details: err.message 
+    });
   }
 };
 

@@ -13,18 +13,27 @@ if (process.env.RESEND_API_KEY) {
 // Log email notification to database
 const logEmailNotification = async (recipientEmail, subject, message, type, businessId = null, userId = null) => {
   try {
+    // Only include business_id in the query if it's provided and not null
+    const includeBusinessId = businessId !== null && businessId !== undefined;
     const query = `
       INSERT INTO email_notifications 
-      (recipient_email, subject, message, notification_type, business_id, user_id)
-      VALUES ($1, $2, $3, $4, $5, $6)
+      (recipient_email, subject, message, notification_type, ${includeBusinessId ? 'business_id, ' : ''} user_id)
+      VALUES ($1, $2, $3, $4, ${includeBusinessId ? '$5, ' : ''} ${includeBusinessId ? '$6' : '$5'})
       RETURNING notification_id
     `;
     
-    const result = await pool.query(query, [
-      recipientEmail, subject, message, type, businessId, userId
-    ]);
+    const params = [recipientEmail, subject, message, type];
+    if (includeBusinessId) {
+      params.push(businessId);
+    }
+    if (userId) {
+      params.push(userId);
+    } else {
+      params.push(null);
+    }
     
-    return result.rows[0].notification_id;
+    const result = await pool.query(query, params);
+    return result.rows[0]?.notification_id || null;
   } catch (error) {
     console.error('Error logging email notification:', error);
     return null;
@@ -33,56 +42,104 @@ const logEmailNotification = async (recipientEmail, subject, message, type, busi
 
 // Send email notification for new business application
 const sendNewApplicationNotification = async (businessData, superAdminEmails) => {
+  console.log('sendNewApplicationNotification called with:', { businessData, superAdminEmails });
+  
   if (!resend) {
-    console.error('Email sending is disabled. Cannot send new application notification.');
+    const errorMsg = 'Email sending is disabled. Cannot send new application notification.';
+    console.error(errorMsg);
     return false;
   }
+
+  // Ensure superAdminEmails is an array
+  if (!Array.isArray(superAdminEmails)) {
+    superAdminEmails = [superAdminEmails];
+  }
+  
+  console.log('Preparing to send notifications to superadmins:', superAdminEmails);
+
   const subject = 'New Business Application - eKahera Verification Required';
   const message = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <h2 style="color: #2563eb;">New Business Application Received</h2>
-      
-      <p>A new business has submitted their application for verification on eKahera.</p>
-      
-      <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
-        <h3 style="color: #374151; margin-top: 0;">Business Details:</h3>
-        <p><strong>Business Name:</strong> ${businessData.business_name}</p>
-        <p><strong>Business Type:</strong> ${businessData.business_type}</p>
-        <p><strong>Email:</strong> ${businessData.email}</p>
-        <p><strong>Address:</strong> ${businessData.business_address}, ${businessData.country}</p>
-        <p><strong>Mobile:</strong> ${businessData.mobile}</p>
-        <p><strong>Application Date:</strong> ${new Date(businessData.created_at).toLocaleDateString()}</p>
+      <div style="text-align: center; margin-bottom: 20px;">
+        <h1 style="color: #2563eb; margin-bottom: 5px;">eKahera</h1>
+        <div style="height: 3px; background: linear-gradient(90deg, #2563eb, #7c3aed); margin: 10px 0;"></div>
       </div>
       
-      <p>Please log in to the SuperAdmin panel to review the submitted documents and verify the business.</p>
+      <h2 style="color: #1e40af; margin-top: 30px;">New Business Application Received</h2>
+      
+      <p>Hello eKahera Admin,</p>
+      
+      <p>A new business has submitted their application for verification on eKahera. Here are the details:</p>
+      
+      <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #2563eb;">
+        <h3 style="color: #1e40af; margin-top: 0; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px;">Business Details</h3>
+        <p><strong>Business Name:</strong> ${businessData.business_name || 'N/A'}</p>
+        <p><strong>Business Type:</strong> ${businessData.business_type || 'N/A'}</p>
+        <p><strong>Email:</strong> ${businessData.email || 'N/A'}</p>
+        ${businessData.contact_number ? `<p><strong>Contact Number:</strong> ${businessData.contact_number}</p>` : ''}
+        ${businessData.mobile ? `<p><strong>Mobile:</strong> ${businessData.mobile}</p>` : ''}
+        ${businessData.business_address ? `<p><strong>Address:</strong> ${businessData.business_address}${businessData.country ? `, ${businessData.country}` : ''}</p>` : ''}
+        <p><strong>Application Date:</strong> ${new Date(businessData.created_at || new Date()).toLocaleString('en-PH', { timeZone: 'Asia/Manila' })}</p>
+      </div>
+      
+      <p>Please log in to the SuperAdmin panel to review the submitted documents and verify the business at your earliest convenience.</p>
       
       <div style="text-align: center; margin: 30px 0;">
-        <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/superadmin" 
-           style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+        <a href="${process.env.FRONTEND_URL || 'https://www.ekahera.online'}/superadmin/dashboard" 
+           style="background: linear-gradient(90deg, #2563eb, #4f46e5); color: white; padding: 12px 28px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 500; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);">
           Review Application
         </a>
       </div>
       
-      <p style="color: #6b7280; font-size: 14px;">
-        This is an automated notification from eKahera. Please do not reply to this email.
-      </p>
+      <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e2e8f0; color: #6b7280; font-size: 14px;">
+        <p>This is an automated notification from eKahera. Please do not reply to this email.</p>
+        <p>If you believe you received this email in error, please contact our support team.</p>
+      </div>
+      
+      <div style="margin-top: 30px; text-align: center; color: #9ca3af; font-size: 12px;">
+        <p>© ${new Date().getFullYear()} eKahera. All rights reserved.</p>
+      </div>
     </div>
   `;
 
   try {
-    for (const email of superAdminEmails) {
-      await resend.emails.send({
-        from: process.env.EMAIL_USER,
-        to: email,
-        subject: subject,
-        html: message,
-      });
-      await logEmailNotification(email, subject, message, 'new_application', businessData.business_id);
-      console.log('New application notification sent to SuperAdmin:', email);
+    console.log('Starting to send email notifications to superadmins');
+    const emailPromises = superAdminEmails.map(async (email) => {
+      try {
+        await resend.emails.send({
+          from: 'eKahera <noreply@ekahera.online>',
+          to: email,
+          subject: subject,
+          html: message,
+        });
+        await logEmailNotification(
+          email, 
+          subject, 
+          `New business application notification sent for ${businessData.business_name}`,
+          'new_application',
+          businessData.business_id
+        );
+        console.log('New application notification sent to SuperAdmin:', email);
+        return { success: true, email };
+      } catch (error) {
+        console.error(`Failed to send notification to ${email}:`, error);
+        return { success: false, email, error: error.message };
+      }
+    });
+
+    const results = await Promise.all(emailPromises);
+    const failed = results.filter(r => !r.success);
+    
+    console.log('Email sending results:', { total: results.length, succeeded: results.length - failed.length, failed: failed.length });
+    
+    if (failed.length > 0) {
+      console.error(`Failed to send notifications to ${failed.length} superadmins:`, failed);
+      return false;
     }
+    
     return true;
   } catch (error) {
-    console.error('Error sending new application notification:', error);
+    console.error('Error in sendNewApplicationNotification:', error);
     return false;
   }
 };
@@ -261,7 +318,7 @@ const sendVerificationStatusNotification = async (businessData, status, rejectio
 
   try {
     await resend.emails.send({
-      from: process.env.EMAIL_USER,
+      from: 'eKahera <noreply@ekahera.online>',
       to: businessData.email,
       subject: subject,
       html: message,
@@ -278,9 +335,18 @@ const sendVerificationStatusNotification = async (businessData, status, rejectio
 // Send application submitted confirmation to business
 const sendApplicationSubmittedNotification = async (businessData) => {
   if (!resend) {
-    console.error('Email sending is disabled. Cannot send application submitted notification.');
-    return false;
+    const errorMsg = 'Email sending is disabled. RESEND_API_KEY is missing or invalid.';
+    console.error(errorMsg);
+    throw new Error(errorMsg);
   }
+  
+  if (!businessData || !businessData.email) {
+    const errorMsg = 'Cannot send application submitted notification: Missing business email';
+    console.error(errorMsg, { businessData });
+    throw new Error(errorMsg);
+  }
+  
+  console.log('Attempting to send application submitted notification to:', businessData.email);
   const subject = 'Application Submitted Successfully - eKahera Verification in Progress';
   const message = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -322,17 +388,28 @@ const sendApplicationSubmittedNotification = async (businessData) => {
 
   try {
     await resend.emails.send({
-      from: process.env.EMAIL_USER,
+      from: 'eKahera <noreply@ekahera.online>',
       to: businessData.email,
       subject: subject,
       html: message,
     });
-    await logEmailNotification(businessData.email, subject, message, 'application_submitted', businessData.business_id);
-    console.log('Application submitted notification sent to:', businessData.email);
+    const logId = await logEmailNotification(businessData.email, subject, message, 'application_submitted', businessData.business_id);
+    console.log('Application submitted notification sent successfully', {
+      email: businessData.email,
+      businessId: businessData.business_id,
+      logId: logId
+    });
     return true;
   } catch (error) {
-    console.error('Error sending application submitted notification:', error);
-    return false;
+    const errorDetails = {
+      error: error.message,
+      stack: error.stack,
+      businessEmail: businessData?.email,
+      businessId: businessData?.business_id,
+      timestamp: new Date().toISOString()
+    };
+    console.error('Error sending application submitted notification:', errorDetails);
+    throw error; // Re-throw to allow calling code to handle the error
   }
 };
 
@@ -356,7 +433,7 @@ const sendLowStockEmail = async (recipientEmail, lowStockProducts) => {
 
   try {
     await resend.emails.send({
-      from: process.env.EMAIL_USER,
+      from: 'eKahera <noreply@ekahera.online>',
       to: recipientEmail,
       subject: subject,
       html: message,
@@ -406,7 +483,7 @@ const sendOTPNotification = async (recipientEmail, otp) => {
 
   try {
     await resend.emails.send({
-      from: process.env.EMAIL_USER,
+      from: 'eKahera <noreply@ekahera.online>',
       to: recipientEmail,
       subject: subject,
       html: message,
