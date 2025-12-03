@@ -31,7 +31,7 @@ import DocumentResubmission from "./pages/DocumentResubmission";
 import DocumentResubmitPage from "./pages/DocumentResubmitPage.jsx";
 import NotFound from "./pages/NotFound.jsx";
 import CustomerWaitingPage from "./pages/CustomerWaitingPage.jsx";
-
+import 'react-toastify/dist/ReactToastify.css';
 // Router Configuration
 const router = createBrowserRouter(
   [

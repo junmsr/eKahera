@@ -1,15 +1,13 @@
 import React, { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
 import Button from "../components/common/Button";
 import Loader from "../components/common/Loader";
+import { toast } from "react-toastify";
 
-/**
- * Document Resubmission Page
- * Allows users to resubmit a single rejected document without authentication
- */
 const DocumentResubmitPage = () => {
   const { documentId } = useParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [document, setDocument] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -17,8 +15,14 @@ const DocumentResubmitPage = () => {
   const [success, setSuccess] = useState("");
   const [file, setFile] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [userEmail, setUserEmail] = useState("");
 
   useEffect(() => {
+    const email = searchParams.get('email');
+    if (email) {
+      setUserEmail(email);
+    }
+
     const fetchDocument = async () => {
       try {
         setLoading(true);
@@ -43,7 +47,7 @@ const DocumentResubmitPage = () => {
       setError("No document ID provided");
       setLoading(false);
     }
-  }, [documentId]);
+  }, [documentId, searchParams]);
 
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
@@ -61,9 +65,17 @@ const DocumentResubmitPage = () => {
       return;
     }
 
+    if (userEmail && !userEmail.includes('@')) {
+      setError("Please provide a valid email address");
+      return;
+    }
+
     const formData = new FormData();
     formData.append('document', file);
     formData.append('document_id', documentId);
+    if (userEmail) {
+      formData.append('user_email', userEmail);
+    }
 
     try {
       setIsSubmitting(true);
@@ -72,7 +84,6 @@ const DocumentResubmitPage = () => {
       const response = await fetch(`${process.env.REACT_APP_API_URL || ''}/api/documents/resubmit`, {
         method: 'POST',
         body: formData,
-        // Don't set Content-Type header, let the browser set it with the correct boundary
         headers: {
           'Accept': 'application/json',
         },
@@ -84,11 +95,15 @@ const DocumentResubmitPage = () => {
         throw new Error(data.error || 'Failed to resubmit document');
       }
 
+      toast.success("Document resubmitted successfully!");
       setSuccess("Document resubmitted successfully!");
       setFile(null);
       document.verification_status = 'pending';
       document.verification_notes = null;
       
+      setTimeout(() => {
+        navigate('/login');
+      }, 2000);
     } catch (error) {
       console.error("Resubmission error:", error);
       setError(error.message || "Failed to resubmit document. Please try again.");
@@ -109,122 +124,106 @@ const DocumentResubmitPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white rounded-lg shadow-md p-6">
+    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md mx-auto bg-white rounded-xl shadow-md overflow-hidden p-6">
         <div className="text-center mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Resubmit Document</h1>
-          <p className="text-gray-600 mt-2">
+          <h1 className="text-2xl font-bold text-gray-900">Document Resubmission</h1>
+          <p className="mt-2 text-sm text-gray-600">
             {document ? `Please upload a new version of your ${document.document_type}` : "Document Resubmission"}
           </p>
         </div>
 
         {error && (
-          <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-6">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <div className="ml-3">
-                <p className="text-sm text-red-700">{error}</p>
-              </div>
-            </div>
+          <div className="mb-4 p-4 bg-red-50 border-l-4 border-red-500 text-red-700">
+            <p>{error}</p>
           </div>
         )}
 
-        {success && (
-          <div className="bg-green-50 border-l-4 border-green-400 p-4 mb-6">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <div className="ml-3">
-                <p className="text-sm text-green-700">{success}</p>
-              </div>
-            </div>
+        {success ? (
+          <div className="mb-4 p-4 bg-green-50 border-l-4 border-green-500 text-green-700">
+            <p>{success}</p>
+            <p className="mt-2">You will be redirected to the login page shortly...</p>
           </div>
-        )}
-
-        {document && (
-          <div className="mb-6">
-            <div className="mb-4">
-              <h3 className="text-lg font-medium text-gray-900">{document.document_type}</h3>
-              <p className="text-sm text-gray-500">{document.document_name}</p>
-            </div>
-
-            {document.verification_notes && (
-              <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
-                <div className="flex">
-                  <div className="flex-shrink-0">
-                    <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                  <div className="ml-3">
-                    <p className="text-sm text-yellow-700">
-                      <strong>Rejection Reason:</strong> {document.verification_notes}
-                    </p>
-                  </div>
-                </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {!userEmail && (
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                  Your Email Address
+                </label>
+                <input
+                  type="email"
+                  id="email"
+                  value={userEmail}
+                  onChange={(e) => setUserEmail(e.target.value)}
+                  required
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  placeholder="your.email@example.com"
+                />
               </div>
             )}
 
-            <form onSubmit={handleSubmit}>
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Upload new version
-                </label>
-                <div className="mt-1 flex items-center">
-                  <input
-                    type="file"
-                    onChange={handleFileChange}
-                    className="block w-full text-sm text-gray-500
-                      file:mr-4 file:py-2 file:px-4
-                      file:rounded-md file:border-0
-                      file:text-sm file:font-semibold
-                      file:bg-blue-50 file:text-blue-700
-                      hover:file:bg-blue-100"
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    disabled={isSubmitting || success}
-                  />
-                </div>
-                {file && (
-                  <p className="mt-2 text-sm text-gray-600">
-                    Selected: {file.name} ({(file.size / 1024).toFixed(2)} KB)
-                  </p>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Document: {document?.document_type}
+              </label>
+              <p className="text-sm text-gray-500 mb-4">
+                Status: <span className="font-medium text-red-600">Rejected</span>
+                {document?.verification_notes && (
+                  <span className="block mt-1 text-sm text-gray-600">
+                    <span className="font-medium">Note:</span> {document.verification_notes}
+                  </span>
                 )}
-              </div>
+              </p>
+            </div>
 
-              <div className="flex items-center justify-between mt-6">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => window.history.back()}
-                  disabled={isSubmitting}
-                >
-                  Back
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={!file || isSubmitting || success}
-                  loading={isSubmitting}
-                >
-                  {isSubmitting ? 'Uploading...' : 'Resubmit Document'}
-                </Button>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Upload New Version
+              </label>
+              <div className="mt-1 flex items-center">
+                <input
+                  type="file"
+                  onChange={handleFileChange}
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  className="block w-full text-sm text-gray-500
+                    file:mr-4 file:py-2 file:px-4
+                    file:rounded-md file:border-0
+                    file:text-sm file:font-semibold
+                    file:bg-blue-50 file:text-blue-700
+                    hover:file:bg-blue-100"
+                  required
+                />
               </div>
-            </form>
-          </div>
-        )}
+              {file && (
+                <p className="mt-2 text-sm text-green-600">
+                  Selected: {file.name} ({(file.size / 1024).toFixed(2)} KB)
+                </p>
+              )}
+              <p className="mt-1 text-xs text-gray-500">
+                Accepted formats: .pdf, .jpg, .jpeg, .png (Max: 5MB)
+              </p>
+            </div>
 
-        {success && (
-          <div className="mt-6 pt-6 border-t border-gray-200">
-            <p className="text-sm text-gray-600 text-center">
-              Your document has been resubmitted for review. You can close this page.
-            </p>
-          </div>
+            <div className="pt-4 space-y-3">
+              <Button
+                type="submit"
+                disabled={!file || isSubmitting || !userEmail}
+                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSubmitting ? 'Uploading...' : 'Resubmit Document'}
+              </Button>
+              
+              <Button
+                type="button"
+                onClick={() => navigate('/login')}
+                variant="outline"
+                className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                Back to Login
+              </Button>
+            </div>
+          </form>
         )}
       </div>
     </div>

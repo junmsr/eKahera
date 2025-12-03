@@ -9,6 +9,72 @@ if (process.env.RESEND_API_KEY) {
   console.warn('WARNING: RESEND_API_KEY not found in environment variables. Email sending will be disabled.');
 }
 
+// Rate limiting configuration
+const RATE_LIMIT = {
+  MAX_REQUESTS: 2,      // Max requests per interval
+  INTERVAL_MS: 1000     // 1 second interval
+};
+
+// Queue for managing email sends
+let emailQueue = [];
+let isProcessing = false;
+let lastRequestTime = 0;
+
+// Process the email queue
+const processQueue = async () => {
+  if (isProcessing || emailQueue.length === 0) return;
+  
+  isProcessing = true;
+  
+  try {
+    // Process emails one at a time
+    while (emailQueue.length > 0) {
+      const now = Date.now();
+      const timeSinceLastRequest = now - lastRequestTime;
+      
+      // Wait if we've hit the rate limit
+      if (timeSinceLastRequest < RATE_LIMIT.INTERVAL_MS / RATE_LIMIT.MAX_REQUESTS) {
+        const waitTime = (RATE_LIMIT.INTERVAL_MS / RATE_LIMIT.MAX_REQUESTS) - timeSinceLastRequest;
+        await delay(Math.max(waitTime, 100)); // Ensure minimum 100ms delay
+      }
+      
+      const { emailData, resolve, reject } = emailQueue.shift();
+      
+      try {
+        lastRequestTime = Date.now();
+        const response = await resend.emails.send(emailData);
+        resolve(response);
+      } catch (error) {
+        if (error.statusCode === 429) {
+          // If rate limited, wait and retry
+          console.log('Rate limited, waiting before retry...');
+          emailQueue.unshift({ emailData, resolve, reject });
+          await delay(1000); // Wait 1 second before retrying
+          continue;
+        }
+        reject(error);
+      }
+    }
+  } finally {
+    isProcessing = false;
+  }
+};
+
+// Add email to queue and process
+const sendEmailWithRateLimit = (emailData) => {
+  return new Promise((resolve, reject) => {
+    emailQueue.push({
+      emailData,
+      resolve,
+      reject
+    });
+    processQueue();
+  });
+};
+
+// Helper function to add delay between operations
+const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+
 
 // Log email notification to database
 const logEmailNotification = async (recipientEmail, subject, message, type, businessId = null, userId = null) => {
@@ -41,21 +107,63 @@ const logEmailNotification = async (recipientEmail, subject, message, type, busi
 };
 
 // Send email notification for new business application
+// Helper function to send a single email with retry logic
+const sendSingleEmail = async (email, subject, html, businessData, retryCount = 0) => {
+  const maxRetries = 2;
+  const baseDelay = 1000; // 1 second base delay
+  
+  try {
+    await resend.emails.send({
+      from: 'eKahera <noreply@ekahera.online>',
+      to: email,
+      subject: subject,
+      html: html,
+    });
+    
+    await logEmailNotification(
+      email, 
+      subject, 
+      `New business application notification sent for ${businessData.business_name}`,
+      'new_application',
+      businessData.business_id
+    );
+    
+    console.log('Email sent successfully to:', email);
+    return { success: true, email };
+  } catch (error) {
+    if (error.statusCode === 429 && retryCount < maxRetries) {
+      // Calculate exponential backoff with jitter
+      const delayMs = Math.min(
+        baseDelay * Math.pow(2, retryCount) + Math.random() * 1000,
+        10000 // Max 10 seconds
+      );
+      
+      console.warn(`Rate limited. Retrying ${email} in ${Math.round(delayMs)}ms (attempt ${retryCount + 1}/${maxRetries})`);
+      await delay(delayMs);
+      return sendSingleEmail(email, subject, html, businessData, retryCount + 1);
+    }
+    
+    console.error(`Failed to send email to ${email} after ${retryCount} retries:`, error.message);
+    return { success: false, email, error: error.message };
+  }
+};
+
 const sendNewApplicationNotification = async (businessData, superAdminEmails) => {
   console.log('sendNewApplicationNotification called with:', { businessData, superAdminEmails });
   
   if (!resend) {
     const errorMsg = 'Email sending is disabled. Cannot send new application notification.';
     console.error(errorMsg);
-    return false;
+    return { success: false, error: errorMsg };
   }
 
-  // Ensure superAdminEmails is an array
+  // Ensure superAdminEmails is an array and remove duplicates
   if (!Array.isArray(superAdminEmails)) {
     superAdminEmails = [superAdminEmails];
   }
+  superAdminEmails = [...new Set(superAdminEmails)]; // Remove duplicates
   
-  console.log('Preparing to send notifications to superadmins:', superAdminEmails);
+  console.log(`Preparing to send notifications to ${superAdminEmails.length} superadmins`);
 
   const subject = 'New Business Application - eKahera Verification Required';
   const message = `
@@ -103,44 +211,56 @@ const sendNewApplicationNotification = async (businessData, superAdminEmails) =>
   `;
 
   try {
-    console.log('Starting to send email notifications to superadmins');
-    const emailPromises = superAdminEmails.map(async (email) => {
-      try {
-        await resend.emails.send({
-          from: 'eKahera <noreply@ekahera.online>',
-          to: email,
-          subject: subject,
-          html: message,
-        });
-        await logEmailNotification(
-          email, 
-          subject, 
-          `New business application notification sent for ${businessData.business_name}`,
-          'new_application',
-          businessData.business_id
-        );
-        console.log('New application notification sent to SuperAdmin:', email);
-        return { success: true, email };
-      } catch (error) {
-        console.error(`Failed to send notification to ${email}:`, error);
-        return { success: false, email, error: error.message };
+    console.log(`Starting to send email notifications to ${superAdminEmails.length} superadmins`);
+    const results = [];
+    
+    // Process emails sequentially with delay
+    for (let i = 0; i < superAdminEmails.length; i++) {
+      const email = superAdminEmails[i];
+      console.log(`Processing email ${i + 1} of ${superAdminEmails.length}: ${email}`);
+      
+      // Add delay between emails (minimum 1 second)
+      if (i > 0) {
+        const delayMs = 1000 + Math.random() * 500; // 1-1.5 seconds between emails
+        await delay(delayMs);
       }
-    });
-
-    const results = await Promise.all(emailPromises);
-    const failed = results.filter(r => !r.success);
-    
-    console.log('Email sending results:', { total: results.length, succeeded: results.length - failed.length, failed: failed.length });
-    
-    if (failed.length > 0) {
-      console.error(`Failed to send notifications to ${failed.length} superadmins:`, failed);
-      return false;
+      
+      try {
+        const result = await sendSingleEmail(email, subject, message, businessData);
+        results.push(result);
+      } catch (error) {
+        console.error(`Error processing email ${email}:`, error);
+        results.push({ success: false, email, error: error.message });
+      }
     }
     
-    return true;
+    const succeeded = results.filter(r => r.success);
+    const failed = results.filter(r => !r.success);
+    
+    console.log('Email sending completed:', {
+      total: results.length,
+      succeeded: succeeded.length,
+      failed: failed.length,
+      failedEmails: failed.map(f => f.email)
+    });
+    
+    return {
+      success: failed.length === 0,
+      total: results.length,
+      succeeded: succeeded.length,
+      failed: failed.length,
+      failedEmails: failed.map(f => f.email)
+    };
   } catch (error) {
-    console.error('Error in sendNewApplicationNotification:', error);
-    return false;
+    console.error('Unexpected error in sendNewApplicationNotification:', error);
+    return {
+      success: false,
+      error: error.message,
+      total: superAdminEmails.length,
+      succeeded: 0,
+      failed: superAdminEmails.length,
+      failedEmails: superAdminEmails
+    };
   }
 };
 
@@ -234,6 +354,7 @@ const sendVerificationStatusNotification = async (businessData, status, rejectio
     console.error('Email sending is disabled. Cannot send verification status notification.');
     return false;
   }
+
   let subject, message;
   
   if (status === 'approved') {
@@ -317,17 +438,75 @@ const sendVerificationStatusNotification = async (businessData, status, rejectio
   }
 
   try {
+    // Send to business owner first
     await resend.emails.send({
       from: 'eKahera <noreply@ekahera.online>',
       to: businessData.email,
       subject: subject,
       html: message,
     });
-    await logEmailNotification(businessData.email, subject, message, `verification_${status}`, businessData.business_id);
-    console.log(`Verification ${status} notification sent to:`, businessData.email);
+
+    await logEmailNotification(
+      businessData.email,
+      subject,
+      `Verification ${status} notification sent to business owner`,
+      `verification_${status}`,
+      businessData.business_id
+    );
+
+    console.log(`Verification ${status} notification sent to business:`, businessData.email);
+
+    // Add delay before sending to admins
+    await delay(1000);
+
+    // Get all super admin emails
+    const superAdmins = await pool.query(
+      `SELECT email FROM users WHERE role = 'super_admin' AND email_verified = true`
+    );
+
+    // Send to each super admin with delay
+    for (const admin of superAdmins.rows) {
+      try {
+        const adminSubject = `[Admin] Business ${status.charAt(0).toUpperCase() + status.slice(1)}: ${businessData.business_name}`;
+        const adminMessage = `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2>Business ${status === 'approved' ? 'Approval' : 'Rejection'} Notification</h2>
+            <p>The following business has been ${status}:</p>
+            <p><strong>Business Name:</strong> ${businessData.business_name}</p>
+            <p><strong>Status:</strong> ${status.toUpperCase()}</p>
+            ${status === 'rejected' ? `<p><strong>Reason:</strong> ${rejectionReason || 'No reason provided'}</p>` : ''}
+            <p><strong>Date:</strong> ${new Date().toLocaleString()}</p>
+          </div>
+        `;
+
+        await resend.emails.send({
+          from: 'eKahera <noreply@ekahera.online>',
+          to: admin.email,
+          subject: adminSubject,
+          html: adminMessage,
+        });
+
+        await logEmailNotification(
+          admin.email,
+          adminSubject,
+          `Notification sent to admin about ${businessData.business_name} ${status}`,
+          `admin_notification_${status}`,
+          businessData.business_id
+        );
+
+        console.log(`Notification sent to admin:`, admin.email);
+        
+        // Add delay between admin emails
+        await delay(1000);
+      } catch (adminError) {
+        console.error(`Error sending email to admin ${admin.email}:`, adminError);
+        // Continue with next admin even if one fails
+      }
+    }
+
     return true;
   } catch (error) {
-    console.error('Error sending verification status notification:', error);
+    console.error('Error in sendVerificationStatusNotification:', error);
     return false;
   }
 };
@@ -452,6 +631,7 @@ const sendOTPNotification = async (recipientEmail, otp) => {
     console.error('Email sending is disabled. Cannot send OTP.');
     return false;
   }
+  
   const subject = 'eKahera - Email Verification OTP';
   const message = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -478,8 +658,7 @@ const sendOTPNotification = async (recipientEmail, otp) => {
           © 2024 eKahera. All rights reserved.
         </p>
       </div>
-    </div>
-  `;
+    </div>`;
 
   try {
     await resend.emails.send({
@@ -488,14 +667,21 @@ const sendOTPNotification = async (recipientEmail, otp) => {
       subject: subject,
       html: message,
     });
-    await logEmailNotification(recipientEmail, subject, message, 'otp');
-    console.log('OTP sent to:', recipientEmail);
+    
+    console.log(`OTP sent to ${recipientEmail}`);
     return true;
   } catch (error) {
-    console.error('Error sending OTP:', error);
+    console.error('Error sending OTP email:', error);
+    if (error.statusCode === 429) {
+      console.log('Rate limited, retrying after delay...');
+      await delay(1000);
+      return sendOTPNotification(recipientEmail, otp);
+    }
     return false;
   }
 };
+
+// ... (rest of the code remains the same)
 
 module.exports = {
   sendNewApplicationNotification,

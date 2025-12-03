@@ -40,11 +40,12 @@ const getApprovalEmailTemplate = (businessName, documents) => {
   `;
 };
 
-const getRejectionEmailTemplate = (businessName, documents, rejectionReason) => {
+const getRejectionEmailTemplate = (businessName, documents, rejectionReason, userEmail) => {
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
   const documentList = documents.map(doc => {
     const status = doc.verification_status === 'approved' 
       ? '✅ Approved' 
-      : `❌ Rejected - <a href="${process.env.FRONTEND_URL.replace(/\/$/, '')}/resubmit-document/${doc.document_id}" style="color: #ef4444; text-decoration: underline;">Resubmit</a>`;
+      : `❌ Rejected - <a href="${frontendUrl}/resubmit-document/${doc.document_id}?email=${encodeURIComponent(userEmail)}" style="color: #ef4444; text-decoration: underline;">Resubmit</a>`;
     return `<li>${doc.document_type}: <strong>${status}</strong></li>`;
   }).join('\n');
 
@@ -71,15 +72,15 @@ const getRejectionEmailTemplate = (businessName, documents, rejectionReason) => 
           </p>
         </div>
         
-        <p>Please review the feedback and resubmit the required documents for verification. You can click the "Resubmit" link next to each rejected document to upload a new version.</p>
+        <p>Please review the feedback and resubmit the required documents to upload a new version.</p>
         
-        <p>Or you can also visit your dashboard to resubmit all documents at once:</p>
+        <p>Or you can also resubmit all documents at once:</p>
         <div style="text-align: center; margin: 24px 0;">
-          <a href="${process.env.FRONTEND_URL.replace(/\/$/, '')}/documents" 
+          <a href="${frontendUrl}/resubmit-application?email=${encodeURIComponent(userEmail)}" 
              style="display: inline-block; background-color: #ef4444; color: white; 
                     padding: 12px 24px; text-decoration: none; border-radius: 6px; 
                     font-weight: 600; font-size: 16px;">
-            Go to Documents Dashboard
+            Resubmit All Documents
           </a>
         </div>
         
