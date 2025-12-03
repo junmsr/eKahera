@@ -12,7 +12,8 @@ export default function useGetStarted() {
   const [step, setStep] = useState(0);
   const [form, setForm] = useState({
     email: "",
-    username: "",
+    firstName: "",
+    fullName: "",
     businessName: "",
     businessEmail: "",
     useAdminEmail: false,
@@ -61,19 +62,19 @@ export default function useGetStarted() {
 
   const handleLocationChange = (name, code, locationName) => {
     const reset = {};
-    if (name === 'region') {
+    if (name === "region") {
       reset.province = "";
       reset.city = "";
       reset.barangay = "";
       reset.provinceName = "";
       reset.cityName = "";
       reset.barangayName = "";
-    } else if (name === 'province') {
+    } else if (name === "province") {
       reset.city = "";
       reset.barangay = "";
       reset.cityName = "";
       reset.barangayName = "";
-    } else if (name === 'city') {
+    } else if (name === "city") {
       reset.barangay = "";
       reset.barangayName = "";
     }
@@ -81,21 +82,21 @@ export default function useGetStarted() {
       ...f,
       [name]: code,
       [`${name}Name`]: locationName,
-      ...reset
+      ...reset,
     }));
   };
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    
-    if (name === 'useAdminEmail') {
-      setForm((f) => ({ 
-        ...f, 
+
+    if (name === "useAdminEmail") {
+      setForm((f) => ({
+        ...f,
         [name]: checked,
-        businessEmail: checked ? f.email : ""
+        businessEmail: checked ? f.email : "",
       }));
     } else {
-      setForm((f) => ({ ...f, [name]: type === 'checkbox' ? checked : value }));
+      setForm((f) => ({ ...f, [name]: type === "checkbox" ? checked : value }));
     }
   };
 
@@ -105,18 +106,28 @@ export default function useGetStarted() {
       if (!form.email) err.email = "Required";
       else if (!/^\S+@\S+\.\S+$/.test(form.email))
         err.email = "Invalid email address";
-      if (!form.username) err.username = "Required";
-      else if (!/^[a-zA-Z0-9_]{3,20}$/.test(form.username))
-        err.username = "Username must be 3-20 characters";
+      if (!form.firstName) err.firstName = "Required";
+      else if (!/^[a-zA-Z\s]{1,50}$/.test(form.firstName))
+        err.firstName =
+          "First name must be 1-50 characters and contain only letters";
+      if (!form.fullName) err.fullName = "Required";
+      else if (!/^[a-zA-Z\s]{1,100}$/.test(form.fullName))
+        err.fullName =
+          "Full name must be 1-100 characters and contain only letters";
       if (!form.mobile) err.mobile = "Required";
       else if (!/^\d{10,15}$/.test(form.mobile))
         err.mobile = "Invalid mobile number";
       if (!form.password) err.password = "Required";
-      else if (form.password.length < 12) err.password = "Password must be at least 12 characters long";
-      else if (!/[A-Z]/.test(form.password)) err.password = "Password must contain at least one uppercase letter";
-      else if (!/[a-z]/.test(form.password)) err.password = "Password must contain at least one lowercase letter";
-      else if (!/\d/.test(form.password)) err.password = "Password must contain at least one number";
-      else if (!/[!@#$%^&*(),.?":{}|<>]/.test(form.password)) err.password = "Password must contain at least one special character";
+      else if (form.password.length < 12)
+        err.password = "Password must be at least 12 characters long";
+      else if (!/[A-Z]/.test(form.password))
+        err.password = "Password must contain at least one uppercase letter";
+      else if (!/[a-z]/.test(form.password))
+        err.password = "Password must contain at least one lowercase letter";
+      else if (!/\d/.test(form.password))
+        err.password = "Password must contain at least one number";
+      else if (!/[!@#$%^&*(),.?":{}|<>]/.test(form.password))
+        err.password = "Password must contain at least one special character";
       if (form.password !== form.confirmPassword)
         err.confirmPassword = "Passwords do not match";
     }
@@ -127,11 +138,16 @@ export default function useGetStarted() {
     }
     if (step === 2) {
       if (!form.businessName) err.businessName = "Required";
-      if (!form.useAdminEmail && !form.businessEmail) err.businessEmail = "Required";
-      else if (!form.useAdminEmail && form.businessEmail && !/^\S+@\S+\.\S+$/.test(form.businessEmail))
+      if (!form.useAdminEmail && !form.businessEmail)
+        err.businessEmail = "Required";
+      else if (
+        !form.useAdminEmail &&
+        form.businessEmail &&
+        !/^\S+@\S+\.\S+$/.test(form.businessEmail)
+      )
         err.businessEmail = "Invalid email address";
       if (!form.businessType) err.businessType = "Required";
-      if (form.businessType === "Others" && !form.customBusinessType) 
+      if (form.businessType === "Others" && !form.customBusinessType)
         err.customBusinessType = "Please specify business type";
       if (!form.region) err.region = "Required";
       if (!form.province) err.province = "Required";
@@ -140,9 +156,9 @@ export default function useGetStarted() {
     }
     if (step === 3) {
       const requiredDocuments = [
-        'Business Registration Certificate (DTI/SEC/CDA)',
+        "Business Registration Certificate (DTI/SEC/CDA)",
         "Mayor's Permit / Business Permit",
-        'BIR Certificate of Registration (Form 2303)'
+        "BIR Certificate of Registration (Form 2303)",
       ];
 
       if (!form.documents || form.documents.length === 0) {
@@ -150,24 +166,33 @@ export default function useGetStarted() {
       }
 
       if (form.documents.length !== form.documentTypes.length) {
-        err.documentTypes = "Please specify document type for each uploaded file";
+        err.documentTypes =
+          "Please specify document type for each uploaded file";
       }
 
       // Check if all required documents are uploaded
-      const uploadedTypes = form.documentTypes.filter(type => type);
-      const missingRequired = requiredDocuments.filter(req => !uploadedTypes.includes(req));
+      const uploadedTypes = form.documentTypes.filter((type) => type);
+      const missingRequired = requiredDocuments.filter(
+        (req) => !uploadedTypes.includes(req)
+      );
       if (missingRequired.length > 0) {
-        err.documents = `Missing required documents: ${missingRequired.join(', ')}`;
+        err.documents = `Missing required documents: ${missingRequired.join(
+          ", "
+        )}`;
       }
 
       // Ensure no duplicate document types
       const typeCounts = {};
-      form.documentTypes.forEach(type => {
+      form.documentTypes.forEach((type) => {
         if (type) typeCounts[type] = (typeCounts[type] || 0) + 1;
       });
-      const duplicates = Object.keys(typeCounts).filter(type => typeCounts[type] > 1);
+      const duplicates = Object.keys(typeCounts).filter(
+        (type) => typeCounts[type] > 1
+      );
       if (duplicates.length > 0) {
-        err.documentTypes = `Duplicate document types not allowed: ${duplicates.join(', ')}`;
+        err.documentTypes = `Duplicate document types not allowed: ${duplicates.join(
+          ", "
+        )}`;
       }
 
       if (!form.acceptTerms) {
@@ -212,7 +237,7 @@ export default function useGetStarted() {
         setIsOtpVerified(true);
         setStep((s) => s + 1);
       } catch (err) {
-        console.error('OTP verification error:', err);
+        console.error("OTP verification error:", err);
         setErrors({ otp: err.message || "Failed to verify OTP" });
         setForm((f) => ({ ...f, otp: "" }));
       } finally {
@@ -233,29 +258,35 @@ export default function useGetStarted() {
       const formData = new FormData();
 
       // Add business registration fields
-      formData.append('email', form.email);
-      formData.append('username', form.username);
-      formData.append('businessName', form.businessName);
-      formData.append('businessType', form.businessType === "Others" ? form.customBusinessType : form.businessType);
-      formData.append('country', 'Philippines');
-      formData.append('countryName', 'Philippines');
-      formData.append('province', form.province);
-      formData.append('city', form.city);
-      formData.append('barangay', form.barangay);
-      formData.append('regionName', form.regionName);
-      formData.append('provinceName', form.provinceName);
-      formData.append('cityName', form.cityName);
-      formData.append('barangayName', form.barangayName);
-      formData.append('houseNumber', form.houseNumber);
-      formData.append('mobile', form.mobile);
-      formData.append('password', form.password);
+      formData.append("email", form.email);
+      formData.append("firstName", form.firstName);
+      formData.append("fullName", form.fullName);
+      formData.append("businessName", form.businessName);
+      formData.append(
+        "businessType",
+        form.businessType === "Others"
+          ? form.customBusinessType
+          : form.businessType
+      );
+      formData.append("country", "Philippines");
+      formData.append("countryName", "Philippines");
+      formData.append("province", form.province);
+      formData.append("city", form.city);
+      formData.append("barangay", form.barangay);
+      formData.append("regionName", form.regionName);
+      formData.append("provinceName", form.provinceName);
+      formData.append("cityName", form.cityName);
+      formData.append("barangayName", form.barangayName);
+      formData.append("houseNumber", form.houseNumber);
+      formData.append("mobile", form.mobile);
+      formData.append("password", form.password);
 
       // Add document types
-      formData.append('document_types', JSON.stringify(form.documentTypes));
+      formData.append("document_types", JSON.stringify(form.documentTypes));
 
       // Add documents
       form.documents.forEach((file) => {
-        formData.append('documents', file);
+        formData.append("documents", file);
       });
 
       const result = await api("/business/register-with-documents", {
@@ -266,7 +297,6 @@ export default function useGetStarted() {
       localStorage.setItem("token", result.token);
       localStorage.setItem("user", JSON.stringify(result.user));
       setSuccess(true);
-
     } catch (err) {
       setErrors({ general: err.message || "An error occurred." });
     } finally {

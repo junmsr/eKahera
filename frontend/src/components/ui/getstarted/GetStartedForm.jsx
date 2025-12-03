@@ -7,32 +7,30 @@ import PasswordInput from "../../../components/common/PasswordInput";
 import LocationSelector from "./LocationSelector";
 import DocumentUploadSection from "./DocumentUploadSection";
 
-export default function GetStartedForm({ hook, isOtpVerified, onOpenTerms, onOpenPrivacy }) {
-  const {
-    step,
-    form,
-    errors,
-    loading,
-    inputRef,
-    handleChange,
-  } = hook;
+export default function GetStartedForm({
+  hook,
+  isOtpVerified,
+  onOpenTerms,
+  onOpenPrivacy,
+}) {
+  const { step, form, errors, loading, inputRef, handleChange } = hook;
 
   // Renders existing uploaded docs if user has a business and token
   function ExistingDocumentsNotice() {
     const [existing, setExisting] = React.useState([]);
     const [verification, setVerification] = React.useState(null);
     React.useEffect(() => {
-      const token = sessionStorage.getItem('auth_token');
+      const token = sessionStorage.getItem("auth_token");
       let businessId = null;
       try {
-        const storedUser = JSON.parse(sessionStorage.getItem('user') || 'null');
+        const storedUser = JSON.parse(sessionStorage.getItem("user") || "null");
         businessId = storedUser?.businessId || storedUser?.business_id || null;
       } catch {}
       if (!token || !businessId) return;
       (async () => {
         try {
           const data = await api(`/documents/business/${businessId}`, {
-            headers: { Authorization: `Bearer ${token}` }
+            headers: { Authorization: `Bearer ${token}` },
           });
           setExisting(Array.isArray(data.documents) ? data.documents : []);
           setVerification(data.verification || null);
@@ -43,17 +41,25 @@ export default function GetStartedForm({ hook, isOtpVerified, onOpenTerms, onOpe
     if (!existing || existing.length === 0) return null;
     return (
       <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-        <h4 className="font-semibold text-gray-800 mb-2">Previously Uploaded</h4>
+        <h4 className="font-semibold text-gray-800 mb-2">
+          Previously Uploaded
+        </h4>
         <ul className="space-y-2 text-sm">
           {existing.map((d) => (
             <li key={d.document_id} className="flex justify-between">
-              <span className="text-gray-700">{d.document_type} — {d.document_name}</span>
-              <span className="text-gray-500">{(d.mime_type || '').split('/').pop()}</span>
+              <span className="text-gray-700">
+                {d.document_type} — {d.document_name}
+              </span>
+              <span className="text-gray-500">
+                {(d.mime_type || "").split("/").pop()}
+              </span>
             </li>
           ))}
         </ul>
         {verification?.verification_status && (
-          <p className="text-xs text-gray-600 mt-2">Verification status: {verification.verification_status}</p>
+          <p className="text-xs text-gray-600 mt-2">
+            Verification status: {verification.verification_status}
+          </p>
         )}
       </div>
     );
@@ -84,15 +90,29 @@ export default function GetStartedForm({ hook, isOtpVerified, onOpenTerms, onOpe
 
             <div>
               <label className="block mb-1 text-sm text-gray-700 font-medium">
-                Username
+                First Name
               </label>
               <Input
-                name="username"
-                value={form.username}
+                name="firstName"
+                value={form.firstName}
                 onChange={handleChange}
-                placeholder="Choose a username (3-20 characters)"
+                placeholder="Enter your first name"
                 type="text"
-                error={errors.username}
+                error={errors.firstName}
+              />
+            </div>
+
+            <div>
+              <label className="block mb-1 text-sm text-gray-700 font-medium">
+                Full Name
+              </label>
+              <Input
+                name="fullName"
+                value={form.fullName}
+                onChange={handleChange}
+                placeholder="Enter your full name"
+                type="text"
+                error={errors.fullName}
               />
             </div>
 
@@ -125,27 +145,78 @@ export default function GetStartedForm({ hook, isOtpVerified, onOpenTerms, onOpe
 
               {/* Password Requirements Checklist */}
               <div className="mt-2 space-y-1">
-                <div className="text-xs text-gray-600 mb-2">Password must contain:</div>
+                <div className="text-xs text-gray-600 mb-2">
+                  Password must contain:
+                </div>
                 <div className="grid grid-cols-1 gap-1 text-xs">
-                  <div className={`flex items-center ${form.password.length >= 12 ? 'text-green-600' : 'text-gray-500'}`}>
-                    <span className={`mr-2 ${form.password.length >= 12 ? '✓' : '○'}`}></span>
+                  <div
+                    className={`flex items-center ${
+                      form.password.length >= 12
+                        ? "text-green-600"
+                        : "text-gray-500"
+                    }`}
+                  >
+                    <span
+                      className={`mr-2 ${
+                        form.password.length >= 12 ? "✓" : "○"
+                      }`}
+                    ></span>
                     At least 12 characters
                   </div>
-                  <div className={`flex items-center ${/[A-Z]/.test(form.password) ? 'text-green-600' : 'text-gray-500'}`}>
-                    <span className={`mr-2 ${/[A-Z]/.test(form.password) ? '✓' : '○'}`}></span>
+                  <div
+                    className={`flex items-center ${
+                      /[A-Z]/.test(form.password)
+                        ? "text-green-600"
+                        : "text-gray-500"
+                    }`}
+                  >
+                    <span
+                      className={`mr-2 ${
+                        /[A-Z]/.test(form.password) ? "✓" : "○"
+                      }`}
+                    ></span>
                     One uppercase letter (A-Z)
                   </div>
-                  <div className={`flex items-center ${/[a-z]/.test(form.password) ? 'text-green-600' : 'text-gray-500'}`}>
-                    <span className={`mr-2 ${/[a-z]/.test(form.password) ? '✓' : '○'}`}></span>
+                  <div
+                    className={`flex items-center ${
+                      /[a-z]/.test(form.password)
+                        ? "text-green-600"
+                        : "text-gray-500"
+                    }`}
+                  >
+                    <span
+                      className={`mr-2 ${
+                        /[a-z]/.test(form.password) ? "✓" : "○"
+                      }`}
+                    ></span>
                     One lowercase letter (a-z)
                   </div>
-                  <div className={`flex items-center ${/\d/.test(form.password) ? 'text-green-600' : 'text-gray-500'}`}>
-                    <span className={`mr-2 ${/\d/.test(form.password) ? '✓' : '○'}`}></span>
+                  <div
+                    className={`flex items-center ${
+                      /\d/.test(form.password)
+                        ? "text-green-600"
+                        : "text-gray-500"
+                    }`}
+                  >
+                    <span
+                      className={`mr-2 ${/\d/.test(form.password) ? "✓" : "○"}`}
+                    ></span>
                     One number (0-9)
                   </div>
-                  <div className={`flex items-center ${/[!@#$%^&*(),.?":{}|<>]/.test(form.password) ? 'text-green-600' : 'text-gray-500'}`}>
-                    <span className={`mr-2 ${/[!@#$%^&*(),.?":{}|<>]/.test(form.password) ? '✓' : '○'}`}></span>
-                    One special character (!@#$%^&*(),.?":{}|{'<'}{'>'})
+                  <div
+                    className={`flex items-center ${
+                      /[!@#$%^&*(),.?":{}|<>]/.test(form.password)
+                        ? "text-green-600"
+                        : "text-gray-500"
+                    }`}
+                  >
+                    <span
+                      className={`mr-2 ${
+                        /[!@#$%^&*(),.?":{}|<>]/.test(form.password) ? "✓" : "○"
+                      }`}
+                    ></span>
+                    One special character (!@#$%^&*(),.?":{}|{"<"}
+                    {">"})
                   </div>
                 </div>
               </div>
@@ -166,11 +237,19 @@ export default function GetStartedForm({ hook, isOtpVerified, onOpenTerms, onOpe
           </div>
           <div className="text-xs text-gray-600 text-center">
             By continuing, you agree to our{" "}
-            <button type="button" onClick={onOpenTerms} className="text-blue-700 underline hover:text-blue-800">
+            <button
+              type="button"
+              onClick={onOpenTerms}
+              className="text-blue-700 underline hover:text-blue-800"
+            >
               Terms & Conditions
             </button>{" "}
             and{" "}
-            <button type="button" onClick={onOpenPrivacy} className="text-blue-700 underline hover:text-blue-800">
+            <button
+              type="button"
+              onClick={onOpenPrivacy}
+              className="text-blue-700 underline hover:text-blue-800"
+            >
               Privacy Policy
             </button>
             .
@@ -225,7 +304,7 @@ export default function GetStartedForm({ hook, isOtpVerified, onOpenTerms, onOpe
                 <svg
                   className="w-4 h-4 mr-2"
                   fill="currentColor"
-                  viewBox="0 0 20 20"
+                  viewBox="0 20 20"
                   aria-hidden
                 >
                   <path
@@ -300,7 +379,10 @@ export default function GetStartedForm({ hook, isOtpVerified, onOpenTerms, onOpe
                     onChange={handleChange}
                     className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
                   />
-                  <label htmlFor="useAdminEmail" className="text-sm text-gray-700">
+                  <label
+                    htmlFor="useAdminEmail"
+                    className="text-sm text-gray-700"
+                  >
                     Use admin email ({form.email})
                   </label>
                 </div>
@@ -326,7 +408,7 @@ export default function GetStartedForm({ hook, isOtpVerified, onOpenTerms, onOpe
                 value={form.businessType}
                 onChange={handleChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                style={{ borderColor: errors.businessType ? '#ef4444' : '' }}
+                style={{ borderColor: errors.businessType ? "#ef4444" : "" }}
               >
                 <option value="">Select business type</option>
                 <option value="Grocery Store">Grocery Store</option>
@@ -339,7 +421,9 @@ export default function GetStartedForm({ hook, isOtpVerified, onOpenTerms, onOpe
                 <option value="Others">Others</option>
               </select>
               {errors.businessType && (
-                <p className="text-red-500 text-sm mt-1">{errors.businessType}</p>
+                <p className="text-red-500 text-sm mt-1">
+                  {errors.businessType}
+                </p>
               )}
               {form.businessType === "Others" && (
                 <div className="mt-2">
@@ -387,11 +471,15 @@ export default function GetStartedForm({ hook, isOtpVerified, onOpenTerms, onOpe
             Business Documents
           </SectionHeader>
           <p className="text-gray-700 mb-4 text-sm">
-            Please upload your business documents for verification. These documents help us verify that your business is legitimate and complies with Philippine regulations.
+            Please upload your business documents for verification. These
+            documents help us verify that your business is legitimate and
+            complies with Philippine regulations.
           </p>
 
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
-            <h4 className="font-semibold text-red-800 mb-2">⚠️ REQUIRED Documents (Must Upload All 3):</h4>
+            <h4 className="font-semibold text-red-800 mb-2">
+              ⚠️ REQUIRED Documents (Must Upload All 3):
+            </h4>
             <ul className="text-sm text-red-700 space-y-1 font-medium">
               <li>✅ Business Registration Certificate (DTI/SEC/CDA)</li>
               <li>✅ Mayor's Permit / Business Permit</li>
@@ -400,7 +488,9 @@ export default function GetStartedForm({ hook, isOtpVerified, onOpenTerms, onOpe
           </div>
 
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-            <h4 className="font-semibold text-blue-800 mb-2">Additional Documents (Optional):</h4>
+            <h4 className="font-semibold text-blue-800 mb-2">
+              Additional Documents (Optional):
+            </h4>
             <ul className="text-sm text-blue-700 space-y-1">
               <li>• Barangay Business Clearance</li>
               <li>• Fire Safety Inspection Certificate (if applicable)</li>
@@ -413,8 +503,12 @@ export default function GetStartedForm({ hook, isOtpVerified, onOpenTerms, onOpe
               documents={form.documents}
               documentTypes={form.documentTypes}
               onDocumentsChange={(documents, types) => {
-                handleChange({ target: { name: 'documents', value: documents } });
-                handleChange({ target: { name: 'documentTypes', value: types } });
+                handleChange({
+                  target: { name: "documents", value: documents },
+                });
+                handleChange({
+                  target: { name: "documentTypes", value: types },
+                });
               }}
               error={errors.documents || errors.documentTypes}
             />
@@ -423,12 +517,11 @@ export default function GetStartedForm({ hook, isOtpVerified, onOpenTerms, onOpe
             <ExistingDocumentsNotice />
           </div>
 
-
-
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-4">
             <p className="text-sm text-yellow-800">
-              <strong>Important:</strong> After submitting your documents, please allow 1-3 business days for verification. 
-              You will receive an email notification once the review is complete.
+              <strong>Important:</strong> After submitting your documents,
+              please allow 1-3 business days for verification. You will receive
+              an email notification once the review is complete.
             </p>
           </div>
         </div>
