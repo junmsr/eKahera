@@ -197,7 +197,7 @@ const NavAdmin = ({ isMobile, onLogoutClick }) => {
 
   const LogoutIcon = () => (
     <svg
-      className="w-5 h-5 text-white"
+      className="w-5 h-5 text-red-500"
       fill="none"
       stroke="currentColor"
       viewBox="0 0 24 24"
