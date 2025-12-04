@@ -108,16 +108,38 @@ function GetStartedLayout({
                 <div className="max-w-lg">{children}</div>
               </div>
 
-              {showNext && (
-                <div className="mt-8 md:mt-6 flex items-center justify-center">
-                  <Button
-                    onClick={onNext}
-                    disabled={loading}
-                    variant="primary"
-                    className="w-48"
-                  >
-                    {loading ? <Loader size="sm" /> : "Continue"}
-                  </Button>
+              {(showBack || showNext || showFinish) && (
+                <div className="mt-8 md:mt-6 flex items-center justify-center gap-4">
+                  {showBack && (
+                    <Button
+                      onClick={onBack}
+                      disabled={loading}
+                      variant="secondary"
+                      className="w-32"
+                    >
+                      Back
+                    </Button>
+                  )}
+                  {showNext && (
+                    <Button
+                      onClick={onNext}
+                      disabled={loading}
+                      variant="primary"
+                      className="w-48"
+                    >
+                      {loading ? <Loader size="sm" /> : "Continue"}
+                    </Button>
+                  )}
+                  {showFinish && (
+                    <Button
+                      onClick={onFinish}
+                      disabled={loading}
+                      variant="primary"
+                      className="w-48"
+                    >
+                      {loading ? <Loader size="sm" /> : "Finish"}
+                    </Button>
+                  )}
                 </div>
               )}
 
