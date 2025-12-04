@@ -5,32 +5,34 @@ import { motion } from "framer-motion";
 const AboutUs = () => (
   <section
     id="about"
-    className="relative w-full py-24 bg-white flex justify-center items-center"
+    className="relative w-full py-28 bg-gradient-to-b from-white to-blue-50/30 flex justify-center items-center"
   >
     <motion.div
-      className="max-w-5xl w-full mx-auto grid grid-cols-1 md:grid-cols-2 gap-10 px-4"
-      initial={{ opacity: 0, y: 28 }}
+      className="max-w-6xl w-full mx-auto grid grid-cols-1 md:grid-cols-2 gap-16 px-6"
+      initial={{ opacity: 0, y: 40 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, amount: 0.2 }}
-      transition={{ duration: 0.6, ease: "easeOut" }}
+      transition={{ duration: 0.7, ease: "easeOut" }}
     >
+      {/* LEFT SIDE CONTENT */}
       <div className="flex flex-col items-start">
-        <SectionHeader size="xl" align="left" className="mb-5 text-slate-900">
+        <SectionHeader size="2xl" align="left" className="mb-6 text-slate-900">
           About eKahera
         </SectionHeader>
-        <p
-          className="text-black text-lg md:text-xl font-medium mb-5 max-w-prose"
-          style={{ fontFamily: "Inter, sans-serif", lineHeight: 1.75 }}
-        >
-          We build smart, reliable POS software that helps small and midsize
-          businesses move faster.
+
+        <p className="text-black text-lg md:text-xl font-medium mb-6 max-w-prose leading-relaxed">
+          We build smart, reliable POS software designed to help small and
+          midsize businesses sell faster, operate smarter, and scale with
+          confidence.
         </p>
-        <div className="grid grid-cols-1 gap-6 w-full">
-          <div className="flex items-start gap-3">
-            <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-white text-blue-600 shadow-sm">
+
+        <div className="grid grid-cols-1 gap-8 w-full">
+          {/* MISSION */}
+          <div className="flex items-start gap-4">
+            <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 shadow-md">
               <svg
-                width="18"
-                height="18"
+                width="20"
+                height="20"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="#2563EB"
@@ -40,23 +42,23 @@ const AboutUs = () => (
               </svg>
             </span>
             <div>
-              <h3 className="text-slate-900 font-semibold text-lg">
+              <h3 className="text-slate-900 font-semibold text-xl">
                 Our Mission
               </h3>
-              <p
-                className="text-black text-base md:text-lg mt-1"
-                style={{ lineHeight: 1.75 }}
-              >
-                Empower entrepreneurs with tools that simplify checkout, unlock
-                insights, and scale with their growth.
+              <p className="text-black text-base md:text-lg mt-2 leading-relaxed">
+                Empower entrepreneurs through simple, fast, and intelligent POS
+                tools that improve checkout, enhance insights, and support
+                business growth.
               </p>
             </div>
           </div>
-          <div className="flex items-start gap-3">
-            <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-white text-blue-600 shadow-sm">
+
+          {/* VISION */}
+          <div className="flex items-start gap-4">
+            <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 shadow-md">
               <svg
-                width="18"
-                height="18"
+                width="20"
+                height="20"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="#2563EB"
@@ -66,53 +68,60 @@ const AboutUs = () => (
               </svg>
             </span>
             <div>
-              <h3 className="text-slate-900 font-semibold text-lg">
+              <h3 className="text-slate-900 font-semibold text-xl">
                 Our Vision
               </h3>
-              <p
-                className="text-black text-base md:text-lg mt-1"
-                style={{ lineHeight: 1.75 }}
-              >
-                A future where every store—kiosk to chain—runs on simple,
-                secure, and delightful POS technology.
+              <p className="text-black text-base md:text-lg mt-2 leading-relaxed">
+                A future where every store—from micro-kiosks to national
+                chains—runs on simple, secure, and delightful POS technology.
               </p>
             </div>
           </div>
         </div>
       </div>
+
+      {/* RIGHT SIDE CARD */}
       <div className="flex md:justify-end">
-        <div className="relative w-full max-w-lg p-7 rounded-2xl bg-white/70 backdrop-blur border border-blue-100 shadow-[0_10px_40px_rgba(37,99,235,0.08)]">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          whileInView={{ opacity: 1, scale: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
+          className="relative w-full max-w-lg p-8 rounded-3xl bg-white/80 backdrop-blur-xl border border-blue-100 shadow-[0_12px_45px_rgba(37,99,235,0.12)]"
+        >
           <div
-            className="absolute inset-0 rounded-2xl pointer-events-none"
-            style={{ boxShadow: "inset 0 0 0 1px rgba(37,99,235,0.08)" }}
+            className="absolute inset-0 rounded-3xl pointer-events-none"
+            style={{ boxShadow: "inset 0 0 0 1.5px rgba(37,99,235,0.06)" }}
           />
-          <div className="flex flex-col gap-3">
-            <div className="flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-blue-500" />
-              <span className="text-xs uppercase tracking-wide text-black">
+
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center gap-3">
+              <span className="h-2.5 w-2.5 rounded-full bg-blue-600" />
+              <span className="text-xs uppercase tracking-wider text-slate-700 font-semibold">
                 Why eKahera
               </span>
             </div>
-            <ul className="space-y-3 text-slate-800 text-base md:text-lg">
-              <li className="flex items-start gap-2">
-                <span className="mt-1 h-1.5 w-1.5 rounded-full bg-blue-600" />
-                Real-time sales and stock tracking
+
+            <ul className="space-y-4 text-slate-800 text-base md:text-lg leading-relaxed">
+              <li className="flex items-start gap-3">
+                <span className="mt-1 h-2 w-2 rounded-full bg-blue-600" />
+                Real-time sales and inventory monitoring
               </li>
-              <li className="flex items-start gap-2">
-                <span className="mt-1 h-1.5 w-1.5 rounded-full bg-blue-600" />
-                Multi-store and multi-user support
+              <li className="flex items-start gap-3">
+                <span className="mt-1 h-2 w-2 rounded-full bg-blue-600" />
+                Multi-branch and multi-user capabilities
               </li>
-              <li className="flex items-start gap-2">
-                <span className="mt-1 h-1.5 w-1.5 rounded-full bg-blue-600" />
-                Secure, cloud-first architecture
+              <li className="flex items-start gap-3">
+                <span className="mt-1 h-2 w-2 rounded-full bg-blue-600" />
+                Cloud-first security and performance
               </li>
-              <li className="flex items-start gap-2">
-                <span className="mt-1 h-1.5 w-1.5 rounded-full bg-blue-600" />
-                Fast setup, intuitive UI
+              <li className="flex items-start gap-3">
+                <span className="mt-1 h-2 w-2 rounded-full bg-blue-600" />
+                Lightning-fast setup and intuitive UI
               </li>
             </ul>
           </div>
-        </div>
+        </motion.div>
       </div>
     </motion.div>
   </section>
