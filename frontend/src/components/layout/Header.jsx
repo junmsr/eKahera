@@ -12,7 +12,7 @@ const Header = ({
     <header
       className={`sticky top-0 z-40 bg-white/90 backdrop-blur-md shadow-sm border-b border-gray-200/50 ${className}`}
     >
-      <div className="px-4 lg:px-6">
+      <div className="px-6 lg:px-6 py-2">
         <div className="grid grid-cols-[1fr_auto] items-center h-16 gap-4">
           <div className="flex items-center gap-3 min-w-0">
             {onMenuClick && (

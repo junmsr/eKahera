@@ -146,7 +146,7 @@ export default function useGetStarted() {
         err.email = "Invalid email address";
       if (!form.username) err.username = "Required";
       else if (!/^[a-zA-Z0-9_]{3,20}$/.test(form.username))
-        err.username = "Username must be 3-20 characters";
+        err.username = "Username must not contain a white space and requires a 3-20 characters";
       if (!form.mobile) err.mobile = "Required";
       else if (!/^\d{10,15}$/.test(form.mobile))
         err.mobile = "Invalid mobile number";

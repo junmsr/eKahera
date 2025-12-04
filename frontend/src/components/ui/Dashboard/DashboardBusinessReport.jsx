@@ -25,17 +25,12 @@ const TrendIcon = ({ trend }) => {
 };
 
 export default function DashboardBusinessReport() {
-  const [keyMetrics, setKeyMetrics] = useState({
-    revenue: { value: 0, change: 0 },
-    expenses: { value: 0, change: 0 },
-    netProfit: { value: 0, change: 0 },
-    grossMargin: { value: 0, change: 0 },
-  });
   const [salesByLocation, setSalesByLocation] = useState([]);
   const [revenueVsExpenses, setRevenueVsExpenses] = useState([]);
   const [profitTrend, setProfitTrend] = useState([]);
   const [paymentMethods, setPaymentMethods] = useState([]);
   const [productPerformance, setProductPerformance] = useState([]);
+  const [keyMetrics, setKeyMetrics] = useState({});
   const [businessStats, setBusinessStats] = useState({
     cashFlow: 0,
     operatingCosts: 0,
@@ -91,53 +86,6 @@ export default function DashboardBusinessReport() {
   return (
     <section className="w-full px-5 md:px-8 py-6 bg-gray-50">
       {/* Key Metrics */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 w-full">
-        <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
-          <p className="text-xs font-medium text-gray-500 uppercase mb-1">
-            Total Revenue
-          </p>
-          <p className="text-2xl font-bold text-gray-900">
-            ₱{keyMetrics.revenue.value.toLocaleString()}
-          </p>
-          <p className={`text-xs mt-2 ${keyMetrics.revenue.change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-            {keyMetrics.revenue.change >= 0 ? '↗' : '↘'} {keyMetrics.revenue.change}%
-          </p>
-        </div>
-        <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
-          <p className="text-xs font-medium text-gray-500 uppercase mb-1">
-            Operating Expenses
-          </p>
-          <p className="text-2xl font-bold text-gray-900">
-            ₱{keyMetrics.expenses.value.toLocaleString()}
-          </p>
-          <p className={`text-xs mt-2 ${keyMetrics.expenses.change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-            {keyMetrics.expenses.change >= 0 ? '↗' : '↘'} {keyMetrics.expenses.change}%
-          </p>
-        </div>
-        <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
-          <p className="text-xs font-medium text-gray-500 uppercase mb-1">
-            Net Profit
-          </p>
-          <p className="text-2xl font-bold text-gray-900">
-            ₱{keyMetrics.netProfit.value.toLocaleString()}
-          </p>
-          <p className={`text-xs mt-2 ${keyMetrics.netProfit.change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-            {keyMetrics.netProfit.change >= 0 ? '↗' : '↘'} {keyMetrics.netProfit.change}%
-          </p>
-        </div>
-        <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
-          <p className="text-xs font-medium text-gray-500 uppercase mb-1">
-            Gross Margin
-          </p>
-          <p className="text-2xl font-bold text-gray-900">
-            {keyMetrics.grossMargin.value}%
-          </p>
-          <p className={`text-xs mt-2 ${keyMetrics.grossMargin.change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-            {keyMetrics.grossMargin.change >= 0 ? '↗' : '↘'} {keyMetrics.grossMargin.change}%
-          </p>
-        </div>
-      </div>
-
       {/* Charts Row 1: Sales by Location and Revenue vs Expenses */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8 w-full min-h-[350px]">
         {/* Sales by Location */}

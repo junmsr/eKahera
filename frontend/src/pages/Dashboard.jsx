@@ -35,11 +35,17 @@ const SOFT_BLUE = "#93c5fd";
 const SOFT_GREEN = "#1e2cecff";
 const SOFT_PURPLE = "#3e209bff";
 
-function VisitorsChart({ data, className = "" }) {
+function VisitorsChart({ data, className = "", range = "month" }) {
+  const rangeLabels = {
+    week: "last 7 days",
+    month: "last 30 days",
+    year: "last 365 days",
+  };
+
   return (
     <ChartCard
       title={
-        <span className="text-blue-700">Visitors for the last 6 months</span>
+        <span className="text-blue-700">Visitors for the {rangeLabels[range] || "last 6 months"}</span>
       }
       className={`bg-white/80 backdrop-blur-md border border-white/60 shadow-xl ${className}`}
     >
@@ -125,6 +131,14 @@ function SalesPieChart({ data, className = "" }) {
 
 // Main Dashboard Component
 export default function Dashboard() {
+
+  const [keyMetrics, setKeyMetrics] = useState({
+    revenue: { value: 0, change: 0 },
+    expenses: { value: 0, change: 0 },
+    netProfit: { value: 0, change: 0 },
+    grossMargin: { value: 0, change: 0 },
+  });
+
   // State
   const [stats, setStats] = useState([]);
   const [range, setRange] = useState("month");
@@ -238,6 +252,21 @@ export default function Dashboard() {
             (overview.topProducts && overview.topProducts[0]?.product_name) ||
             piePercent[0]?.name ||
             "-",
+        });
+        
+        const revenue = Number(overview.totalSales || 0);
+        const expenses = Number(overview.totalExpenses ?? 0); // add this to overview if available
+        const netProfit = revenue - expenses;
+        const grossMargin = revenue ? Math.round((netProfit / revenue) * 10000) / 100 : 0;
+        const revenueChange = typeof overview.prevTotalSales !== "undefined"
+          ? Math.round(((revenue - Number(overview.prevTotalSales || 0)) / (Number(overview.prevTotalSales || 1))) * 10000) / 100
+          : 0;
+
+        setKeyMetrics({
+          revenue: { value: revenue, change: revenueChange },
+          expenses: { value: expenses, change: 0 },
+          netProfit: { value: netProfit, change: 0 },
+          grossMargin: { value: grossMargin, change: 0 },
         });
       }
 
@@ -441,7 +470,7 @@ export default function Dashboard() {
       className="bg-gray-50 min-h-screen"
     >
       {/* Stats Cards - Mobile View */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 lg:hidden">
+      {/* <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 lg:hidden">
         {loading
           ? Array.from({ length: 4 }).map((_, i) => (
               <div
@@ -477,7 +506,7 @@ export default function Dashboard() {
                 ) : null}
               </div>
             ))}
-      </div>
+      </div> */}
 
       {/* Low Stock Products - Mobile View */}
       <div className="p-4 lg:hidden">
@@ -501,7 +530,53 @@ export default function Dashboard() {
       </div>
 
       {/* Main Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 p-6 pb-10 lg:pb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full p-3">
+        <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
+          <p className="text-xs font-medium text-gray-500 uppercase mb-1">
+            Total Revenue
+          </p>
+          <p className="text-2xl font-bold text-gray-900">
+            ₱{keyMetrics.revenue.value.toLocaleString()}
+          </p>
+          <p className={`text-xs mt-2 ${keyMetrics.revenue.change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            {keyMetrics.revenue.change >= 0 ? '↗' : '↘'} {keyMetrics.revenue.change}%
+          </p>
+        </div>
+        <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
+          <p className="text-xs font-medium text-gray-500 uppercase mb-1">
+            Operating Expenses
+          </p>
+          <p className="text-2xl font-bold text-gray-900">
+            ₱{keyMetrics.expenses.value.toLocaleString()}
+          </p>
+          <p className={`text-xs mt-2 ${keyMetrics.expenses.change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            {keyMetrics.expenses.change >= 0 ? '↗' : '↘'} {keyMetrics.expenses.change}%
+          </p>
+        </div>
+        <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
+          <p className="text-xs font-medium text-gray-500 uppercase mb-1">
+            Net Profit
+          </p>
+          <p className="text-2xl font-bold text-gray-900">
+            ₱{keyMetrics.netProfit.value.toLocaleString()}
+          </p>
+          <p className={`text-xs mt-2 ${keyMetrics.netProfit.change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            {keyMetrics.netProfit.change >= 0 ? '↗' : '↘'} {keyMetrics.netProfit.change}%
+          </p>
+        </div>
+        <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
+          <p className="text-xs font-medium text-gray-500 uppercase mb-1">
+            Gross Margin
+          </p>
+          <p className="text-2xl font-bold text-gray-900">
+            {keyMetrics.grossMargin.value}%
+          </p>
+          <p className={`text-xs mt-2 ${keyMetrics.grossMargin.change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            {keyMetrics.grossMargin.change >= 0 ? '↗' : '↘'} {keyMetrics.grossMargin.change}%
+          </p>
+        </div>
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 p-6 pb-10 lg:pb-6 pt-0">
         {/* Main Chart Area */}
         <div className="lg:col-span-8 flex flex-col gap-6">
           {loading ? (
@@ -515,7 +590,7 @@ export default function Dashboard() {
             </>
           ) : (
             <>
-              <VisitorsChart data={chartData} />
+              <VisitorsChart data={chartData} range={range} />
               <SalesPieChart data={pieData} />
             </>
           )}
