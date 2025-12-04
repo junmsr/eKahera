@@ -31,7 +31,7 @@ function HomeHero({ onCustomerClick, onStaffClick }) {
 
   return (
     <section
-      className="relative w-full min-h-[calc(100vh-56px)] md:min-h-[calc(100vh-72px)] flex flex-col items-center justify-center px-4 md:px-6 lg:px-8 pt-24 md:pt-32 pb-16 md:pb-50 overflow-x-hidden"
+      className="relative w-full min-h-[calc(100vh-56px)] md:min-h-[calc(100vh-72px)] flex flex-col items-center justify-center px-4 md:px-6 lg:px-8 pt-24 md:pt-32 pb-16 md:pb-24 overflow-x-hidden"
       style={{ fontFamily: "Inter, sans-serif" }}
     >
       {/* Animated gradient mesh background */}
