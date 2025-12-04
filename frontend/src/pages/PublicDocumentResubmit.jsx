@@ -3,7 +3,6 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../lib/api";
 import Button from "../components/common/Button";
 import Loader from "../components/common/Loader";
-import { toast } from "react-toastify";
 
 const PublicDocumentResubmit = () => {
   const [searchParams] = useSearchParams();
