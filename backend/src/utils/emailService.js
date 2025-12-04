@@ -9,71 +9,132 @@ if (process.env.RESEND_API_KEY) {
   console.warn('WARNING: RESEND_API_KEY not found in environment variables. Email sending will be disabled.');
 }
 
-// Rate limiting configuration
+// Rate limiting configuration for Resend API
 const RATE_LIMIT = {
-  MAX_REQUESTS: 2,      // Max requests per interval
-  INTERVAL_MS: 1000     // 1 second interval
+  MAX_REQUESTS: 2,      // Resend's rate limit: 2 requests per second
+  INTERVAL_MS: 1000,    // 1 second interval
+  MAX_RETRIES: 3,       // Maximum number of retry attempts
+  INITIAL_RETRY_DELAY: 1000, // Initial retry delay in ms
+  MAX_RETRY_DELAY: 30000,    // Maximum retry delay in ms
+  JITTER_FACTOR: 0.2,   // Add randomness to retry delays
+  CONCURRENT_REQUESTS: 2 // Maximum concurrent requests (matches rate limit)
 };
 
-// Queue for managing email sends
-let emailQueue = [];
-let isProcessing = false;
-let lastRequestTime = 0;
-
-// Process the email queue
-const processQueue = async () => {
-  if (isProcessing || emailQueue.length === 0) return;
-  
-  isProcessing = true;
-  
-  try {
-    // Process emails one at a time
-    while (emailQueue.length > 0) {
-      const now = Date.now();
-      const timeSinceLastRequest = now - lastRequestTime;
-      
-      // Wait if we've hit the rate limit
-      if (timeSinceLastRequest < RATE_LIMIT.INTERVAL_MS / RATE_LIMIT.MAX_REQUESTS) {
-        const waitTime = (RATE_LIMIT.INTERVAL_MS / RATE_LIMIT.MAX_REQUESTS) - timeSinceLastRequest;
-        await delay(Math.max(waitTime, 100)); // Ensure minimum 100ms delay
-      }
-      
-      const { emailData, resolve, reject } = emailQueue.shift();
-      
-      try {
-        lastRequestTime = Date.now();
-        const response = await resend.emails.send(emailData);
-        resolve(response);
-      } catch (error) {
-        if (error.statusCode === 429) {
-          // If rate limited, wait and retry
-          console.log('Rate limited, waiting before retry...');
-          emailQueue.unshift({ emailData, resolve, reject });
-          await delay(1000); // Wait 1 second before retrying
-          continue;
-        }
-        reject(error);
-      }
-    }
-  } finally {
-    isProcessing = false;
+// Queue for managing email sends with concurrency control
+class EmailQueue {
+  constructor() {
+    this.queue = [];
+    this.processing = false;
+    this.lastRequestTime = 0;
+    this.activeRequests = 0;
+    this.maxConcurrent = RATE_LIMIT.CONCURRENT_REQUESTS; // Match concurrency with rate limit
   }
-};
+
+  async add(emailData) {
+    return new Promise((resolve, reject) => {
+      this.queue.push({ emailData, resolve, reject, retryCount: 0 });
+      this.process();
+    });
+  }
+
+  calculateBackoff(retryCount) {
+    // Exponential backoff with jitter
+    const baseDelay = Math.min(
+      RATE_LIMIT.INITIAL_RETRY_DELAY * Math.pow(2, retryCount),
+      RATE_LIMIT.MAX_RETRY_DELAY
+    );
+    const jitter = baseDelay * RATE_LIMIT.JITTER_FACTOR * (Math.random() * 2 - 1);
+    return Math.max(100, baseDelay + jitter);
+  }
+
+  async process() {
+    if (this.processing || this.queue.length === 0 || this.activeRequests >= this.maxConcurrent) {
+      return;
+    }
+
+    this.processing = true;
+    
+    try {
+      while (this.queue.length > 0 && this.activeRequests < this.maxConcurrent) {
+        const now = Date.now();
+        const timeSinceLastRequest = now - this.lastRequestTime;
+        const minRequestInterval = RATE_LIMIT.INTERVAL_MS / RATE_LIMIT.MAX_REQUESTS;
+        
+        // Rate limiting
+        if (timeSinceLastRequest < minRequestInterval) {
+          const waitTime = minRequestInterval - timeSinceLastRequest;
+          await delay(waitTime);
+        }
+        
+        const item = this.queue.shift();
+        if (!item) continue;
+        
+        this.activeRequests++;
+        this.lastRequestTime = Date.now();
+        
+        // Process the email in the background
+        this.processEmail(item).finally(() => {
+          this.activeRequests--;
+          // Continue processing the queue after a short delay
+          setTimeout(() => this.process(), 10);
+        });
+      }
+    } finally {
+      this.processing = false;
+    }
+  }
+
+  async processEmail({ emailData, resolve, reject, retryCount }) {
+    try {
+      const response = await resend.emails.send(emailData);
+      resolve(response);
+    } catch (error) {
+      if (error.statusCode === 429 || (error.statusCode >= 500 && error.statusCode < 600)) {
+        // Retry on rate limits or server errors
+        if (retryCount < RATE_LIMIT.MAX_RETRIES) {
+          const backoff = this.calculateBackoff(retryCount);
+          console.warn(`Email send failed (attempt ${retryCount + 1}/${RATE_LIMIT.MAX_RETRIES}), retrying in ${backoff}ms`);
+          
+          // Re-add to queue with incremented retry count
+          setTimeout(() => {
+            this.queue.unshift({
+              emailData,
+              resolve,
+              reject,
+              retryCount: retryCount + 1
+            });
+            this.process();
+          }, backoff);
+          return;
+        }
+      }
+      
+      // If we get here, all retries failed or it's a non-retryable error
+      console.error('Email send failed after retries:', error);
+      reject(error);
+    }
+  }
+}
+
+// Initialize the queue
+const emailQueue = new EmailQueue();
 
 // Add email to queue and process
 const sendEmailWithRateLimit = (emailData) => {
-  return new Promise((resolve, reject) => {
-    emailQueue.push({
-      emailData,
-      resolve,
-      reject
-    });
-    processQueue();
-  });
+  if (!resend) {
+    return Promise.reject(new Error('Email service not configured - missing RESEND_API_KEY'));
+  }
+  return emailQueue.add(emailData);
 };
 
 // Helper function to add delay between operations
-const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+const delay = ms => new Promise(resolve => {
+  if (ms <= 0) {
+    resolve();
+    return;
+  }
+  setTimeout(resolve, ms);
+});
 
 
 // Log email notification to database

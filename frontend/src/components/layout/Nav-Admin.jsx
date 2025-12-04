@@ -183,9 +183,28 @@ const NavigationItem = ({ item, isActive }) => {
 /**
  * Admin Navigation Sidebar Component
  *
+ * @param {Object} props - Component props
+ * @param {boolean} props.isMobile - Whether the view is in mobile mode
+ * @param {Function} props.onLogoutClick - Function to call when logout is confirmed
  * @returns {JSX.Element} The admin navigation sidebar
  */
 const NavAdmin = ({ isMobile, onLogoutClick }) => {
+  const [showLogoutConfirm, setShowLogoutConfirm] = React.useState(false);
+  
+  const handleLogoutClick = () => {
+    setShowLogoutConfirm(true);
+  };
+
+  const handleConfirmLogout = () => {
+    setShowLogoutConfirm(false);
+    if (onLogoutClick) {
+      onLogoutClick();
+    }
+  };
+
+  const handleCloseModal = () => {
+    setShowLogoutConfirm(false);
+  };
   const LogoutIcon = () => (
     <svg
       className="w-5 h-5 text-white"
@@ -232,7 +251,7 @@ const NavAdmin = ({ isMobile, onLogoutClick }) => {
           {/* Logout Button */}
           <div className={`${isMobile ? "block" : "mt-auto"}`}>
             <button
-              onClick={() => setShowLogoutConfirm(true)}
+              onClick={handleLogoutClick}
               className={STYLES.logoutButton}
               aria-label="Logout"
             >
@@ -249,7 +268,7 @@ const NavAdmin = ({ isMobile, onLogoutClick }) => {
         <div className="fixed inset-0 z-90 flex items-center justify-center">
           <div
             className="absolute inset-0 bg-black/80 z-90"
-            onClick={() => setShowLogoutConfirm(false)}
+            onClick={handleCloseModal}
           />
           <div className="relative bg-white rounded-xl shadow-xl w-[92%] max-w-md z-100 p-0">
             {/* Header Section */}
@@ -284,23 +303,34 @@ const NavAdmin = ({ isMobile, onLogoutClick }) => {
             {/* Content Section */}
             <div className="p-6">
               <p className="text-sm text-gray-700 mb-6">
-                You will be redirected to the login page and your session will
-                end.
+                You will be redirected to the login page and your session will be ended.
               </p>
-
+              
               {/* Action Buttons */}
-              <div className="flex justify-end gap-3">
+              <div className="flex justify-end gap-3 mt-6">
                 <button
-                  onClick={() => setShowLogoutConfirm(false)}
+                  onClick={handleCloseModal}
                   className="px-5 py-2.5 rounded-lg text-sm font-semibold text-gray-700 bg-white border-2 border-gray-300 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200"
                 >
                   Cancel
                 </button>
                 <button
-                  onClick={confirmLogout}
+                  onClick={handleConfirmLogout}
                   className="px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 shadow-md hover:shadow-lg transition-all duration-200 flex items-center gap-2"
                 >
-                  <LogoutIcon />
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                    />
+                  </svg>
                   Logout
                 </button>
               </div>

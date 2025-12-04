@@ -24,37 +24,49 @@ try {
 }
 
 const { Pool } = require('pg');
+const fs = require('fs');
 
 // Prefer process.env (dotenv) which correctly handles quoted values and
 // values containing '='. This avoids truncation seen with naive splitting.
 const env = process.env;
 
+// Configure SSL based on environment
+const sslConfig = process.env.NODE_ENV === 'production' 
+  ? { 
+      rejectUnauthorized: true,
+      // Add your production CA certificate if needed
+      // ca: fs.readFileSync('/path/to/ca-certificate.crt').toString()
+    }
+  : { 
+      // For development, you might want to keep this off for local development
+      rejectUnauthorized: false 
+    };
+
+// Common pool configuration
+const commonPoolConfig = {
+  max: process.env.DB_POOL_MAX ? parseInt(process.env.DB_POOL_MAX, 10) : 20,
+  min: 2,
+  idleTimeoutMillis: 300000,  // 5 minutes
+  connectionTimeoutMillis: 10000,
+  keepAlive: true,
+  keepAliveInitialDelayMillis: 30000,
+  allowExitOnIdle: true,
+  maxUses: 7500,  // Close and reopen connections periodically
+  ssl: sslConfig
+};
+
 const poolConfig = env.DATABASE_URL
   ? {
-      connectionString: env.DATABASE_URL,
-      ssl: { rejectUnauthorized: false },
-      max: 10,
-      min: 1,
-      idleTimeoutMillis: 60000,
-      connectionTimeoutMillis: 20000,
-      keepAlive: true,
-      keepAliveInitialDelayMillis: 10000,
-      allowExitOnIdle: true,
+      ...commonPoolConfig,
+      connectionString: env.DATABASE_URL
     }
   : {
+      ...commonPoolConfig,
       host: env.DB_HOST || 'localhost',
       port: env.DB_PORT ? parseInt(env.DB_PORT, 10) : 5432,
       database: env.DB_NAME || 'ekahera_db',
       user: env.DB_USER || 'postgres',
-      password: env.DB_PASSWORD,
-      ssl: { rejectUnauthorized: false },
-      max: 10,
-      min: 1,
-      idleTimeoutMillis: 60000,
-      connectionTimeoutMillis: 20000,
-      keepAlive: true,
-      keepAliveInitialDelayMillis: 10000,
-      allowExitOnIdle: true,
+      password: env.DB_PASSWORD
     };
 
 const pool = new Pool(poolConfig);

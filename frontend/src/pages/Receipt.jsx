@@ -116,10 +116,10 @@ export default function Receipt() {
 					{error && <Card className="p-6 text-red-500">{error}</Card>}
 
 					{details && (
-						<Card ref={receiptRef} className="p-6 space-y-4 font-mono bg-white">
+						<Card ref={receiptRef} className="p-3 space-y-3 font-mono bg-white max-w-[57mm] mx-auto">
 							{/* Store Info */}
 							<div className="text-center border-b pb-4">
-								<h2 className="text-xl font-bold">{details.business.name}</h2>
+								<h2 className="text-sm font-bold">{details.business.name}</h2>
 								<p className="text-sm">{details.business.address}</p>
 								<p className="text-sm">{details.business.contact}</p>
 								{details.business.tin && <p className="text-sm">TIN: {details.business.tin}</p>}
@@ -173,7 +173,7 @@ export default function Receipt() {
 
 							{/* QR Code */}
 							<div className="pt-2 flex flex-col items-center">
-								<img src={qrSrc} alt="Receipt QR" className="w-[200px] h-[200px] border rounded-xl bg-white" />
+								<img src={qrSrc} alt="Receipt QR" className="w-[120px] h-[120px] border rounded bg-white" />
 								<div className="text-blue-700 text-xs mt-2 text-center">QR contains a summary of this transaction.</div>
 							</div>
 
@@ -232,9 +232,21 @@ export default function Receipt() {
             padding: 0;
             margin: 0;
           }
-					body {
-						background-color: #fff;
-					}
+          body {
+            margin: 0;
+            padding: 0;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+            width: 57mm !important;
+          }
+          @page {
+            size: 57mm auto;
+            margin: 0;
+            padding: 0;
+          }
+          * {
+            max-width: 57mm !important;
+          }
         }
       `}</style>
 		</Background>

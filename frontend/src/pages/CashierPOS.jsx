@@ -337,6 +337,10 @@ function CashierPOS() {
     navigate("/");
   };
 
+  const handleCloseLogoutModal = () => {
+    setShowLogoutConfirm(false);
+  };
+
   const headerActions = (
     <div className="flex items-center gap-2">
       <button
@@ -726,7 +730,7 @@ function CashierPOS() {
           <div className="fixed inset-0 z-90 flex items-center justify-center">
             <div
               className="absolute inset-0 bg-black/80 z-90"
-              onClick={() => setShowLogoutConfirm(false)}
+              onClick={handleCloseLogoutModal}
             />
             <div className="relative bg-white rounded-xl shadow-xl w-[92%] max-w-md z-100 p-0">
               {/* Header Section */}
@@ -768,7 +772,7 @@ function CashierPOS() {
                 {/* Action Buttons */}
                 <div className="flex justify-end gap-3">
                   <button
-                    onClick={() => setShowLogoutConfirm(false)}
+                    onClick={handleCloseLogoutModal}
                     className="px-5 py-2.5 rounded-lg text-sm font-semibold text-gray-700 bg-white border-2 border-gray-300 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200"
                   >
                     Cancel
