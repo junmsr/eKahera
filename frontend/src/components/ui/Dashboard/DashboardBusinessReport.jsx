@@ -85,6 +85,95 @@ export default function DashboardBusinessReport() {
 
   return (
     <section className="w-full px-5 md:px-8 py-6 bg-gray-50">
+      {/* Key Metrics */}
+      {/* Charts Row 1: Sales by Location and Revenue vs Expenses */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8 w-full min-h-[350px]">
+        {/* Sales by Location */}
+        <div className="bg-white rounded-lg p-6 border border-blue-300 shadow-lg">
+          <h3 className="text-xl font-extrabold text-blue-700 mb-5 select-none">
+            Sales by Location
+          </h3>
+          <ResponsiveContainer width="100%" height={280}>
+            <BarChart
+              data={salesByLocation}
+              margin={{ top: 10, right: 10, left: 0, bottom: 10 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" stroke="#cbd5e1" />
+              <XAxis
+                dataKey="location"
+                tick={{ fontSize: 13, fill: "#1e40af" }}
+                padding={{ left: 10, right: 10 }}
+              />
+              <YAxis tick={{ fontSize: 13, fill: "#1e40af" }} />
+              <Tooltip
+                contentStyle={{
+                  background: "#f0f9ff",
+                  borderColor: "#3b82f6",
+                  borderRadius: 10,
+                  fontWeight: "600",
+                }}
+                labelStyle={{ fontWeight: "700", color: "#1e3a8a" }}
+              />
+              <Bar
+                dataKey="sales"
+                fill="#3b82f6"
+                radius={[10, 10, 0, 0]}
+                barSize={40}
+                background={{ fill: "#c7d2fe" }}
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Revenue vs Expenses */}
+        <div className="bg-white rounded-lg p-6 border border-blue-300 shadow-lg">
+          <h3 className="text-xl font-extrabold text-blue-700 mb-5 select-none">
+            Revenue vs Expenses
+          </h3>
+          <ResponsiveContainer width="100%" height={280}>
+            <BarChart
+              data={revenueVsExpenses}
+              margin={{ top: 10, right: 10, left: 0, bottom: 10 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" stroke="#cbd5e1" />
+              <XAxis
+                dataKey="month"
+                tick={{ fontSize: 13, fill: "#1e40af" }}
+                padding={{ left: 10, right: 10 }}
+              />
+              <YAxis tick={{ fontSize: 13, fill: "#1e40af" }} />
+              <Tooltip
+                contentStyle={{
+                  background: "#f0f9ff",
+                  borderColor: "#3b82f6",
+                  borderRadius: 10,
+                  fontWeight: "600",
+                }}
+                labelStyle={{ fontWeight: "700", color: "#1e3a8a" }}
+              />
+              <Legend
+                verticalAlign="top"
+                wrapperStyle={{ paddingBottom: 10 }}
+              />
+              <Bar
+                dataKey="revenue"
+                fill="#2563eb"
+                radius={[10, 10, 0, 0]}
+                barSize={32}
+                background={{ fill: "#bfdbfe" }}
+              />
+              <Bar
+                dataKey="expenses"
+                fill="#93c5fd"
+                radius={[10, 10, 0, 0]}
+                barSize={32}
+                background={{ fill: "#dbeafe" }}
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
       {/* Charts Row 2: Profit Trend and Payment Methods */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8 w-full min-h-[350px]">
         {/* Profit Trends */}

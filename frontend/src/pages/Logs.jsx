@@ -201,17 +201,17 @@ const LogsPage = () => {
     </div>
   );
 
-return (
+  return (
     <PageLayout
       title="LOGS"
       sidebar={<NavAdmin />}
       isSidebarOpen={isSidebarOpen}
       setSidebarOpen={setSidebarOpen}
-      className="overflow-hidden"
+      className="h-screen overflow-hidden"
     >
-      <div className="h-[calc(100vh-80px)] bg-transparent p-4 flex flex-col overflow-hidden">
-        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between mb-4">
-          <div className="relative flex-1 max-w-xl w-full flex-shrink-0">
+      <div className="flex-1 bg-transparent overflow-hidden p-4 flex flex-col">
+        <div className="mb-6 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+          <div className="relative flex-1 max-w-xl w-full">
             <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
               <svg
                 className="h-5 w-5 text-gray-400"
@@ -330,79 +330,75 @@ return (
           </div>
         </div>
 
-        {/* Desktop Table View */}
-        <div className="hidden sm:block overflow-hidden rounded-xl border border-gray-200/50 h-[calc(100%-150px)] flex-1 min-h-0">
-          <div className="h-full overflow-y-auto">
-            <table className="w-full bg-white/80 backdrop-blur-md">
-              <thead className="bg-gray-100/90 backdrop-blur-md sticky top-0 z-10">
+        <div className="flex-1 overflow-y-auto">
+          <table className="min-w-full bg-white/80 backdrop-blur-md rounded-xl overflow-hidden hidden sm:table">
+            <thead className="bg-gray-100/50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  User
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Role
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Action
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Timestamp
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200/50">
+              {loading ? (
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    User
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Role
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Action
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Timestamp
-                  </th>
+                  <td colSpan="4" className="text-center py-8 text-gray-500">
+                    Loading logs...
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200/50">
-                {loading ? (
-                  <tr>
-                    <td colSpan="4" className="text-center py-8 text-gray-500">
-                      Loading logs...
+              ) : filteredLogs.length === 0 ? (
+                <tr>
+                  <td colSpan="4" className="text-center py-8 text-gray-500">
+                    No logs found.
+                  </td>
+                </tr>
+              ) : (
+                filteredLogs.map((log) => (
+                  <tr key={log.id}>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">
+                        {log.username}
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        ID: {log.userId}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span
+                        className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                          log.role === "admin" || log.role === "business_owner"
+                            ? "bg-purple-100 text-purple-800"
+                            : log.role === "cashier"
+                            ? "bg-blue-100 text-blue-800"
+                            : "bg-green-100 text-green-800"
+                        }`}
+                      >
+                        {log.role}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
+                      {log.action}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {log.time}
                     </td>
                   </tr>
-                ) : filteredLogs.length === 0 ? (
-                  <tr>
-                    <td colSpan="4" className="text-center py-8 text-gray-500">
-                      No logs found.
-                    </td>
-                  </tr>
-                ) : (
-                  filteredLogs.map((log) => (
-                    <tr key={log.id} className="hover:bg-gray-50/50 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">
-                          {log.username}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          ID: {log.userId}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span
-                          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            log.role === "admin" || log.role === "business_owner"
-                              ? "bg-purple-100 text-purple-800"
-                              : log.role === "cashier"
-                              ? "bg-blue-100 text-blue-800"
-                              : "bg-green-100 text-green-800"
-                          }`}
-                        >
-                          {log.role}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
-                        {log.action}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {log.time}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
-
         {/* Mobile Card View */}
-        <div className="sm:hidden overflow-y-auto space-y-3 h-[calc(100%-150px)]">
+        <div className="flex-1 overflow-y-auto sm:hidden space-y-3">
           {loading ? (
             Array.from({ length: 5 }).map((_, i) => (
               <div
