@@ -33,8 +33,33 @@ export default defineConfig(({ mode }) => {
     build: {
       rollupOptions: {
         output: {
-          manualChunks: undefined,
+          manualChunks: {
+            vendor: ['react', 'react-dom', 'react-router-dom'],
+            utils: ['axios', 'framer-motion'],
+            charts: ['recharts'],
+            qr: ['@yudiel/react-qr-scanner', '@ericblade/quagga2']
+          },
+          chunkFileNames: 'assets/js/[name]-[hash].js',
+          entryFileNames: 'assets/js/[name]-[hash].js',
+          assetFileNames: 'assets/[ext]/[name]-[hash][extname]',
         },
+      },
+      chunkSizeWarningLimit: 1000, // in KB
+      minify: 'terser',
+      sourcemap: true,
+      target: 'esnext',
+      cssCodeSplit: true,
+      reportCompressedSize: true,
+      commonjsOptions: {
+        include: [/node_modules/],
+        extensions: ['.js', '.cjs'],
+        strictRequires: true,
+      },
+    },
+    optimizeDeps: {
+      include: ['react', 'react-dom', 'react-router-dom'],
+      esbuildOptions: {
+        target: 'esnext',
       },
     },
   };

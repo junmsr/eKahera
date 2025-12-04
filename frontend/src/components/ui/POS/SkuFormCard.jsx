@@ -25,7 +25,6 @@ export default React.forwardRef(
       <Card
         className={`flex-shrink-0 bg-white/80 backdrop-blur-md border border-white/60 shadow-xl hover:shadow-2xl transition-all duration-300 ${className}`}
         variant="glass"
-        microinteraction
         {...props}
       >
         <div className="flex flex-col gap-1 p-1 sm:p-2">

@@ -95,10 +95,10 @@ function Contact() {
         <div className="mt-6 text-center text-gray-500 text-sm">
           Or email us at{" "}
           <a
-            href="mailto:business.ekahera@gmail.com"
+            href="mailto:support@ekahera.com"
             className="text-blue-600 underline"
           >
-            business.ekahera@gmail.com
+            support@ekahera.com
           </a>
         </div>
       </div>

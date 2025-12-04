@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import PageLayout from "../components/layout/PageLayout";
 import NavAdmin from "../components/layout/Nav-Admin";
 import Card from "../components/common/Card";
@@ -228,9 +228,13 @@ const Profile = () => {
   const [error, setError] = useState("");
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const hasFetched = useRef(false);
 
   useEffect(() => {
-    fetchProfileData();
+    if (!hasFetched.current) {
+      hasFetched.current = true;
+      fetchProfileData();
+    }
   }, []);
 
   const fetchProfileData = async () => {
@@ -238,28 +242,41 @@ const Profile = () => {
       setLoading(true);
       setError("");
 
-      const token = sessionStorage.getItem("auth_token");
-      console.log("Auth token:", token ? "Present" : "Missing");
-
+      // Try both sessionStorage and localStorage for token
+      const token = sessionStorage.getItem("auth_token") || localStorage.getItem("auth_token");
+      
       if (!token) {
-        // Fallback to localStorage if sessionStorage is empty, but warn
-        const fallbackToken = localStorage.getItem("auth_token");
-        if (!fallbackToken) {
-          throw new Error("No authentication token found");
-        }
+        throw new Error("No authentication token found");
       }
 
-      console.log("Fetching profile data from /api/auth/profile");
+      console.log("Fetching profile data from /auth/profile");
 
-      // Fetch user profile data
-      const response = await api("/api/auth/profile", {
+      // Fetch user profile data from the correct endpoint
+      // The api utility automatically prepends /api, so we don't need it here
+      const response = await api("/auth/profile", {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
 
       console.log("Profile data received:", response);
-      setProfileData(response);
+      
+      // Ensure the response has the expected structure
+      if (response && (response.user || response.business)) {
+        setProfileData(response);
+      } else {
+        // If the response doesn't have the expected structure, try to handle it
+        setProfileData({
+          user: {
+            first_name: response?.first_name || "",
+            last_name: response?.last_name || "",
+            email: response?.email || "",
+            role: response?.role || "",
+            ...response
+          },
+          business: response?.business || {}
+        });
+      }
     } catch (err) {
       console.error("Failed to fetch profile data:", err);
       setError(
@@ -440,9 +457,7 @@ const Profile = () => {
                   </div>
                   <div className="flex-1 min-w-0">
                     <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
-                      {`${profileData?.user?.first_name || ""} ${
-                        profileData?.user?.last_name || ""
-                      }`.trim() || "Admin User"}
+                      {profileData?.business?.business_name || "Admin User"}
                     </h1>
                     <p className="text-gray-600 mb-4 flex items-center gap-2">
                       <EmailIcon />
@@ -451,19 +466,15 @@ const Profile = () => {
                       </span>
                     </p>
                     <div className="flex flex-wrap gap-3">
-                      <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold bg-blue-100 text-blue-800 border border-blue-200">
-                        {profileData?.user?.role
-                          ?.replace("_", " ")
-                          .toUpperCase() || "ADMIN"}
-                      </span>
-                      {profileData?.business?.business_name && (
-                        <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-indigo-100 text-indigo-800 border border-indigo-200">
-                          <StoreIcon />
-                          <span className="ml-1.5">
-                            {profileData.business.business_name}
-                          </span>
+                      <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-semibold bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-800 border border-blue-200">
+                        <div className="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center">
+                          <StoreIcon className="w-3 h-3 text-blue-600" />
+                        </div>
+                        <span>
+                          {profileData?.user?.role?.replace("_", " ").toUpperCase() || "ADMIN"}
+                          {profileData?.business?.business_type && ` • ${profileData.business.business_type}`}
                         </span>
-                      )}
+                      </span>
                     </div>
                   </div>
                 </div>

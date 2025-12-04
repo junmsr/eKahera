@@ -1,19 +1,21 @@
 const express = require('express');
 const router = express.Router();
-const { getAllProducts, getProductById, createProduct, getProductBySku, addStockBySku, getCategories, getProductBySkuPublic, getLowStockProducts, sendLowStockAlert, updateProduct, deleteProduct } = require('../controllers/productController');
+const productController = require('../controllers/productController');
 const { authenticate, requireDocuments } = require('../middleware/authMiddleware');
 
-router.get('/low-stock', authenticate, requireDocuments, getLowStockProducts);
-router.post('/send-low-stock-alert', authenticate, requireDocuments, sendLowStockAlert);
+// Low stock routes
+router.get('/low-stock', authenticate, requireDocuments, productController.getLowStockProducts);
+router.post('/send-low-stock-alert', authenticate, requireDocuments, productController.sendLowStockAlert);
 
-router.get('/', authenticate, requireDocuments, getAllProducts);
-router.get('/sku/:sku', authenticate, requireDocuments, getProductBySku);
-router.get('/public/sku/:sku', getProductBySkuPublic); // Public route, no document requirement
-router.get('/:id', authenticate, requireDocuments, getProductById);
-router.post('/', authenticate, requireDocuments, createProduct);
-router.put('/:id', authenticate, requireDocuments, updateProduct);
-router.delete('/:id', authenticate, requireDocuments, deleteProduct);
-router.post('/add-stock-by-sku', authenticate, requireDocuments, addStockBySku);
-router.get('/categories/all', authenticate, requireDocuments, getCategories);
+// Product CRUD routes
+router.get('/', authenticate, requireDocuments, productController.getAllProducts);
+router.get('/sku/:sku', authenticate, requireDocuments, productController.getProductBySku);
+router.get('/public/sku/:sku', productController.getProductBySkuPublic); // Public route, no document requirement
+router.get('/:id', authenticate, requireDocuments, productController.getProductById);
+router.post('/', authenticate, requireDocuments, productController.createProduct);
+router.put('/:id', authenticate, requireDocuments, productController.updateProduct);
+router.delete('/:id', authenticate, requireDocuments, productController.deleteProduct);
+router.post('/add-stock-by-sku', authenticate, requireDocuments, productController.addStockBySku);
+router.get('/categories/all', authenticate, requireDocuments, productController.getCategories);
 
 module.exports = router;

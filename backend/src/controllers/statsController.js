@@ -81,6 +81,16 @@ exports.getSalesByCategory = async (req, res) => {
     const businessId = role === 'superadmin' ? (req.query?.business_id ? Number(req.query.business_id) : null) : (req.user?.businessId || null);
     if (!businessId) return res.json([]);
 
+    const { startDate, endDate } = req.query;
+    const queryParams = [businessId];
+    let dateFilter = '';
+
+    if (startDate && endDate) {
+      queryParams.push(startDate);
+      queryParams.push(endDate);
+      dateFilter = `AND DATE(t.created_at) BETWEEN $2 AND $3`;
+    }
+
     const pieRes = await pool.query(
       `SELECT COALESCE(pc.product_category_name, 'Uncategorized') AS name,
               COALESCE(SUM(ti.subtotal),0) AS value
@@ -88,11 +98,11 @@ exports.getSalesByCategory = async (req, res) => {
        JOIN transaction_items ti ON ti.transaction_id = t.transaction_id
        JOIN products p ON p.product_id = ti.product_id
        LEFT JOIN product_categories pc ON pc.product_category_id = p.product_category_id
-       WHERE t.business_id = $1
+       WHERE t.business_id = $1 ${dateFilter}
        GROUP BY pc.product_category_name
        ORDER BY value DESC
        LIMIT 10`,
-      [businessId]
+      queryParams
     );
     res.json(pieRes.rows.map(r => ({ name: r.name, value: Number(r.value) })));
   } catch (err) {
@@ -105,13 +115,23 @@ exports.getCustomersTimeseries = async (req, res) => {
   try {
     const role = (req.user?.role || '').toLowerCase();
     const businessId = role === 'superadmin' ? (req.query?.business_id ? Number(req.query.business_id) : null) : (req.user?.businessId || null);
-    const days = Math.max(1, Math.min(180, Number(req.query?.days) || 30));
     if (!businessId) return res.json([]);
+
+    let { startDate, endDate } = req.query;
+
+    // Default to last 30 days if no date range is provided
+    if (!startDate || !endDate) {
+      const now = new Date();
+      endDate = now.toISOString().split('T')[0];
+      const start = new Date();
+      start.setDate(now.getDate() - 29);
+      startDate = start.toISOString().split('T')[0];
+    }
 
     const tsRes = await pool.query(
       `SELECT to_char(d::date, 'YYYY-MM-DD') AS day,
               COALESCE(cnt, 0) AS customers
-       FROM generate_series(NOW()::date - ($2::int - 1) * INTERVAL '1 day', NOW()::date, INTERVAL '1 day') AS d
+       FROM generate_series($2::date, $3::date, INTERVAL '1 day') AS d
        LEFT JOIN (
          SELECT date_trunc('day', created_at) AS day_key,
                 COUNT(DISTINCT customer_user_id) AS cnt
@@ -120,7 +140,7 @@ exports.getCustomersTimeseries = async (req, res) => {
          GROUP BY day_key
        ) t ON t.day_key = d
        ORDER BY d`,
-      [businessId, days]
+      [businessId, startDate, endDate]
     );
     res.json(tsRes.rows.map(r => ({ name: r.day, customers: Number(r.customers) })));
   } catch (err) {

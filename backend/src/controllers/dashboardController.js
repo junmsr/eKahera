@@ -8,49 +8,160 @@ function resolveBusinessId(req) {
 
 exports.getOverview = async (req, res) => {
   try {
+    console.log('=== getOverview called ===');
+    console.log('Request query params:', req.query);
+    
     const businessId = resolveBusinessId(req);
-    if (!businessId) return res.status(200).json({ message: 'no business selected', metrics: {} });
+    console.log('Resolved businessId:', businessId);
+    
+    if (!businessId) {
+      console.log('No businessId found, returning empty response');
+      return res.status(200).json({ message: 'no business selected', metrics: {} });
+    }
 
-    // Use sales_summary_view to compute today's aggregates
-    const kpiRes = await pool.query(
-      `SELECT COALESCE(SUM(total_sales_amount),0) AS total_sales,
-              COALESCE(SUM(total_transactions),0) AS total_transactions,
-              COALESCE(SUM(total_items_sold),0) AS total_items
-       FROM sales_summary_view
-       WHERE business_id = $1 AND sale_date = CURRENT_DATE`,
-      [businessId]
-    );
+    // Get date range from query params
+    let { startDate, endDate } = req.query;
+    
+    // Parse dates if they exist, otherwise use defaults
+    const now = new Date();
+    let start, end;
+    
+    if (startDate && endDate) {
+      // Use provided dates, but ensure they're in the correct format
+      start = new Date(startDate);
+      end = new Date(endDate);
+    } else {
+      // Default to current month if no dates provided
+      start = new Date(now.getFullYear(), now.getMonth(), 1);
+      end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    }
+    
+    // Format dates to YYYY-MM-DD for the query
+    const formatDate = (date) => {
+      const d = new Date(date);
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+    
+    const startFormatted = formatDate(start);
+    const endFormatted = formatDate(end);
+    
+    console.log('Using date range:', { 
+      start: startFormatted, 
+      end: endFormatted,
+      rawStart: startDate,
+      rawEnd: endDate
+    });
+    
+    // Use the formatted dates in the query
+    const startDateForQuery = startFormatted;
+    const endDateForQuery = endFormatted;
 
-    // Average transaction value over the period
-    const avgTx = kpiRes.rows[0].total_transactions > 0 ? Number(kpiRes.rows[0].total_sales) / Number(kpiRes.rows[0].total_transactions) : 0;
+    // Get sales data for the period
+    console.log('Executing sales query...');
+    const salesQuery = `
+      SELECT 
+        COALESCE(SUM(ssv.total_sales_amount), 0) AS total_sales,
+        COALESCE(SUM(ssv.total_transactions), 0) AS total_transactions,
+        COALESCE(SUM(ssv.total_items_sold), 0) AS total_items_sold,
+        COALESCE(SUM(ssv.total_sales_amount) / NULLIF(SUM(ssv.total_transactions), 0), 0) AS avg_transaction_value
+       FROM sales_summary_view ssv
+       WHERE ssv.business_id = $1 
+         AND ssv.sale_date BETWEEN $2::date AND $3::date`;
+    
+    console.log('Sales query:', salesQuery);
+    console.log('Query params:', [businessId, startDateForQuery, endDateForQuery]);
+    
+    const salesRes = await pool.query(salesQuery, [businessId, startDateForQuery, endDateForQuery]);
+    console.log('Sales query result:', JSON.stringify(salesRes.rows[0], null, 2));
 
-    // Top products and categories
-    const topProductsRes = await pool.query(
-      `SELECT product_id, product_name, total_sold, total_revenue
-       FROM top_selling_products
-       WHERE business_id = $1
+    // Calculate expenses (using transaction_items and products cost_price)
+    console.log('Executing expenses query...');
+    const expensesQuery = `
+      SELECT 
+        COALESCE(SUM(ti.product_quantity * p.cost_price), 0) AS total_expenses
+       FROM transactions t
+       JOIN transaction_items ti ON t.transaction_id = ti.transaction_id
+       JOIN products p ON ti.product_id = p.product_id
+       WHERE t.business_id = $1
+         AND t.status = 'completed'
+         AND DATE(t.created_at) BETWEEN $2::date AND $3::date`;
+    
+    console.log('Expenses query:', expensesQuery);
+    console.log('Query params:', [businessId, startDateForQuery, endDateForQuery]);
+    
+    const expensesRes = await pool.query(expensesQuery, [businessId, startDateForQuery, endDateForQuery]);
+    console.log('Expenses query result:', JSON.stringify(expensesRes.rows[0], null, 2));
+
+    const totalSales = Number(salesRes.rows[0].total_sales) || 0;
+    const totalExpenses = Number(expensesRes.rows[0]?.total_expenses) || 0;
+    const netProfit = totalSales - totalExpenses;
+    const grossMargin = totalSales > 0 ? (netProfit / totalSales) * 100 : 0;
+    
+    console.log('Calculated values:', {
+      totalSales,
+      totalExpenses,
+      netProfit,
+      grossMargin
+    });
+
+    // Top products and categories for the period
+    console.log('Fetching top products...');
+    const topProductsQuery = `
+      SELECT 
+        p.product_id, 
+        p.product_name, 
+        SUM(ti.product_quantity) AS total_sold, 
+        SUM(ti.subtotal) AS total_revenue
+       FROM transaction_items ti
+       JOIN transactions t ON ti.transaction_id = t.transaction_id
+       JOIN products p ON ti.product_id = p.product_id
+       WHERE t.business_id = $1
+         AND t.status = 'completed'
+         AND DATE(t.created_at) BETWEEN $2::date AND $3::date
+       GROUP BY p.product_id, p.product_name
        ORDER BY total_sold DESC
-       LIMIT 5`,
-      [businessId]
-    );
+       LIMIT 5`;
+    
+    const topProductsRes = await pool.query(topProductsQuery, [businessId, startDateForQuery, endDateForQuery]);
+    console.log('Top products result count:', topProductsRes.rows.length);
 
-    const categoriesRes = await pool.query(
-      `SELECT product_category_name, total_items_sold, total_revenue
-       FROM category_sales_view
-       WHERE business_id = $1
+    console.log('Fetching top categories...');
+    const categoriesQuery = `
+      SELECT 
+        pc.product_category_name, 
+        SUM(ti.product_quantity) AS total_items_sold, 
+        SUM(ti.subtotal) AS total_revenue
+       FROM transaction_items ti
+       JOIN transactions t ON ti.transaction_id = t.transaction_id
+       JOIN products p ON ti.product_id = p.product_id
+       JOIN product_categories pc ON p.product_category_id = pc.product_category_id
+       WHERE t.business_id = $1
+         AND t.status = 'completed'
+         AND DATE(t.created_at) BETWEEN $2::date AND $3::date
+       GROUP BY pc.product_category_name
        ORDER BY total_revenue DESC
-       LIMIT 5`,
-      [businessId]
-    );
+       LIMIT 5`;
+    
+    const categoriesRes = await pool.query(categoriesQuery, [businessId, startDateForQuery, endDateForQuery]);
+    console.log('Top categories result count:', categoriesRes.rows.length);
 
-    res.json({
-      totalSales: Number(kpiRes.rows[0].total_sales) || 0,
-      totalTransactions: Number(kpiRes.rows[0].total_transactions) || 0,
-      totalItemsSold: Number(kpiRes.rows[0].total_items) || 0,
-      averageTransactionValue: Math.round(avgTx * 100) / 100,
+    const response = {
+      totalSales,
+      totalExpenses,
+      netProfit,
+      grossMargin: Math.round(grossMargin * 100) / 100, // Round to 2 decimal places
+      totalTransactions: Number(salesRes.rows[0].total_transactions) || 0,
+      totalItemsSold: Number(salesRes.rows[0].total_items_sold) || 0,
+      averageTransactionValue: Number(salesRes.rows[0].avg_transaction_value) || 0,
       topProducts: topProductsRes.rows || [],
       topCategories: categoriesRes.rows || []
-    });
+    };
+    
+    console.log('Sending response:', JSON.stringify(response, null, 2));
+    res.json(response);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

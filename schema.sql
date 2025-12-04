@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict 8odg9lSfiEmE3u70xo54Q2EKJIqSLmeops6UUPZHeJngfexE8Az0hVCu8WkPNob
+\restrict 2bWPnr8SsoYX1aDKPCsgQhr6zLxDSx37R39lbnVwljni7MuKxNIYMhKoeJ9hOoG
 
 -- Dumped from database version 17.6
 -- Dumped by pg_dump version 17.6
@@ -31,6 +31,27 @@ CREATE SCHEMA public;
 --
 
 COMMENT ON SCHEMA public IS 'standard public schema';
+
+
+--
+-- Name: _add_fk_if_missing(text, text, text, text, text, text, text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public._add_fk_if_missing(src_table text, src_col text, dst_table text, dst_col text, constraint_name text, on_update text DEFAULT 'NO ACTION'::text, on_delete text DEFAULT 'NO ACTION'::text) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.table_constraints tc
+    JOIN information_schema.key_column_usage kcu USING (constraint_name, constraint_schema)
+    WHERE tc.table_schema = 'public' AND tc.table_name = src_table AND tc.constraint_type = 'FOREIGN KEY'
+      AND kcu.column_name = src_col
+  ) THEN
+    EXECUTE format('ALTER TABLE public.%I ADD CONSTRAINT %I FOREIGN KEY (%I) REFERENCES public.%I(%I) ON UPDATE %s ON DELETE %s',
+                   src_table, constraint_name, src_col, dst_table, dst_col, on_update, on_delete);
+  END IF;
+END;
+$$;
 
 
 --
@@ -128,7 +149,7 @@ CREATE TABLE public.transactions (
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     business_id integer,
-    transaction_number text
+    transaction_number text NOT NULL
 );
 
 
@@ -204,7 +225,7 @@ CREATE TABLE public.users (
     user_type_id integer,
     username character varying(50) NOT NULL,
     contact_number character varying(11),
-    email character varying(255),
+    email character varying(255) NOT NULL,
     password_hash character varying(255),
     role character varying(50) DEFAULT 'user'::character varying,
     created_at timestamp with time zone DEFAULT now(),
@@ -241,7 +262,7 @@ CREATE VIEW public.business_verification_summary AS
         CASE
             WHEN ((bd.verification_status)::text = 'pending'::text) THEN 1
             ELSE NULL::integer
-        END) AS pending_documents,
+        END) AS pending_documents
    FROM ((public.business b
      LEFT JOIN public.business_documents bd ON ((b.business_id = bd.business_id)))
      LEFT JOIN public.users u ON ((b.verification_reviewed_by = u.user_id)))
@@ -287,7 +308,8 @@ CREATE SEQUENCE public.product_categories_product_category_id_seq
 
 CREATE TABLE public.product_categories (
     product_category_id integer DEFAULT nextval('public.product_categories_product_category_id_seq'::regclass) NOT NULL,
-    product_category_name character varying(50)
+    product_category_name character varying(50),
+    business_id integer
 );
 
 
@@ -311,9 +333,9 @@ CREATE SEQUENCE public.products_product_id_seq
 CREATE TABLE public.products (
     product_id integer DEFAULT nextval('public.products_product_id_seq'::regclass) NOT NULL,
     product_category_id integer,
-    product_name character varying(50),
-    cost_price numeric(10,2),
-    selling_price numeric(10,2),
+    product_name character varying(50) NOT NULL,
+    cost_price numeric(10,2) NOT NULL,
+    selling_price numeric(10,2) NOT NULL,
     sku character varying(20),
     created_at timestamp with time zone DEFAULT now(),
     updated_at timestamp with time zone DEFAULT now(),
@@ -344,7 +366,7 @@ CREATE TABLE public.transaction_items (
     transaction_item_id integer DEFAULT nextval('public.transaction_items_transaction_item_id_seq'::regclass) NOT NULL,
     transaction_id integer,
     product_id integer,
-    product_quantity integer,
+    product_quantity integer NOT NULL,
     price_at_sale numeric(12,2),
     subtotal numeric(12,2) GENERATED ALWAYS AS (((COALESCE(product_quantity, 0))::numeric * COALESCE(price_at_sale, (0)::numeric))) STORED
 );
@@ -580,14 +602,14 @@ CREATE SEQUENCE public.returns_return_id_seq
 --
 
 CREATE VIEW public.sales_summary_view AS
- SELECT t.business_id,
+ SELECT COALESCE(t.business_id, 0) AS business_id,
     date(t.created_at) AS sale_date,
     count(DISTINCT t.transaction_id) AS total_transactions,
-    sum(t.total_amount) AS total_sales_amount,
-    sum(COALESCE(ti.product_quantity, 0)) AS total_items_sold,
+    COALESCE(sum(t.total_amount), (0)::numeric) AS total_sales_amount,
+    COALESCE(sum(ti.product_quantity), (0)::bigint) AS total_items_sold,
         CASE
             WHEN (count(DISTINCT t.transaction_id) = 0) THEN (0)::numeric
-            ELSE (sum(t.total_amount) / (count(DISTINCT t.transaction_id))::numeric)
+            ELSE (COALESCE(sum(t.total_amount), (0)::numeric) / (count(DISTINCT t.transaction_id))::numeric)
         END AS average_transaction_value
    FROM (public.transactions t
      LEFT JOIN public.transaction_items ti ON ((t.transaction_id = ti.transaction_id)))
@@ -663,6 +685,14 @@ CREATE TABLE public.user_type (
 
 
 --
+-- Name: business_documents business_documents_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.business_documents
+    ADD CONSTRAINT business_documents_pkey PRIMARY KEY (document_id);
+
+
+--
 -- Name: business business_email_unique; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -708,6 +738,14 @@ ALTER TABLE ONLY public.inventory
 
 ALTER TABLE ONLY public.logs
     ADD CONSTRAINT logs_pkey PRIMARY KEY (log_id);
+
+
+--
+-- Name: product_categories product_categories_business_name_unique; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.product_categories
+    ADD CONSTRAINT product_categories_business_name_unique UNIQUE (business_id, product_category_name);
 
 
 --
@@ -876,6 +914,13 @@ CREATE INDEX idx_payment_user ON public.transaction_payment USING btree (user_id
 
 
 --
+-- Name: idx_products_business; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_products_business ON public.products USING btree (business_id);
+
+
+--
 -- Name: idx_products_created_by; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -894,6 +939,13 @@ CREATE INDEX idx_transaction_items_product ON public.transaction_items USING btr
 --
 
 CREATE INDEX idx_transaction_items_tx ON public.transaction_items USING btree (transaction_id);
+
+
+--
+-- Name: idx_transactions_business_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_transactions_business_id ON public.transactions USING btree (business_id);
 
 
 --
@@ -1078,7 +1130,7 @@ ALTER TABLE ONLY public.logs
 --
 
 ALTER TABLE ONLY public.logs
-    ADD CONSTRAINT fk_logs_user FOREIGN KEY (user_id) REFERENCES public.users(user_id);
+    ADD CONSTRAINT fk_logs_user FOREIGN KEY (user_id) REFERENCES public.users(user_id) ON DELETE CASCADE;
 
 
 --
@@ -1146,6 +1198,22 @@ ALTER TABLE ONLY public.transactions
 
 
 --
+-- Name: product_categories product_categories_business_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.product_categories
+    ADD CONSTRAINT product_categories_business_fk FOREIGN KEY (business_id) REFERENCES public.business(business_id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: users users_business_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.users
+    ADD CONSTRAINT users_business_fk FOREIGN KEY (business_id) REFERENCES public.business(business_id) ON UPDATE SET NULL ON DELETE SET NULL;
+
+
+--
 -- Name: SCHEMA public; Type: ACL; Schema: -; Owner: -
 --
 
@@ -1153,6 +1221,15 @@ GRANT USAGE ON SCHEMA public TO postgres;
 GRANT USAGE ON SCHEMA public TO anon;
 GRANT USAGE ON SCHEMA public TO authenticated;
 GRANT USAGE ON SCHEMA public TO service_role;
+
+
+--
+-- Name: FUNCTION _add_fk_if_missing(src_table text, src_col text, dst_table text, dst_col text, constraint_name text, on_update text, on_delete text); Type: ACL; Schema: public; Owner: -
+--
+
+GRANT ALL ON FUNCTION public._add_fk_if_missing(src_table text, src_col text, dst_table text, dst_col text, constraint_name text, on_update text, on_delete text) TO anon;
+GRANT ALL ON FUNCTION public._add_fk_if_missing(src_table text, src_col text, dst_table text, dst_col text, constraint_name text, on_update text, on_delete text) TO authenticated;
+GRANT ALL ON FUNCTION public._add_fk_if_missing(src_table text, src_col text, dst_table text, dst_col text, constraint_name text, on_update text, on_delete text) TO service_role;
 
 
 --
@@ -1570,5 +1647,5 @@ ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin IN SCHEMA public GRANT ALL ON T
 -- PostgreSQL database dump complete
 --
 
-\unrestrict 8odg9lSfiEmE3u70xo54Q2EKJIqSLmeops6UUPZHeJngfexE8Az0hVCu8WkPNob
+\unrestrict 2bWPnr8SsoYX1aDKPCsgQhr6zLxDSx37R39lbnVwljni7MuKxNIYMhKoeJ9hOoG
 

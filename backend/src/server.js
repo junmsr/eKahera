@@ -1,5 +1,8 @@
 const path = require('path');
 const fs = require('fs');
+const compression = require('compression');
+const helmet = require('helmet');
+const express = require('express');
 
 if (process.env.NODE_ENV !== 'production') {
   // Load environment variables from .env file for local development
@@ -51,9 +54,9 @@ const config = {
   SUPABASE_SECRET_ACCESS_KEY: process.env.SUPABASE_SECRET_ACCESS_KEY,
 };
 
-const express = require('express');
-const cors = require('cors');
+const { corsOptions, apiLimiter, securityHeaders, compressionOptions } = require('./config/serverConfig');
 
+// Import routes
 const productRoutes = require('./routes/productRoutes');
 const authRoutes = require('./routes/authRoutes');
 const inventoryRoutes = require('./routes/inventoryRoutes');
@@ -74,17 +77,59 @@ const { startPendingTransactionCleanup } = require('./utils/cleanup');
 
 const app = express();
 
+// Enable compression for all responses
+app.use(compression());
+
+// Security headers
+app.use(helmet({
+  contentSecurityPolicy: false, // Disable CSP for now as it needs specific configuration
+  crossOriginEmbedderPolicy: false, // Required for some features like hot-reloading
+}));
+
+// Set cache headers for static assets
+const staticOptions = {
+  maxAge: '1y',
+  etag: true,
+  lastModified: true,
+  setHeaders: (res, path) => {
+    if (path.endsWith('.html')) {
+      // No cache for HTML files
+      res.setHeader('Cache-Control', 'no-cache');
+    } else if (path.match(/\.(js|css|json)$/)) {
+      // Cache JavaScript, CSS, and JSON files for 1 year
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    }
+  }
+};
+
+// Serve static files with cache headers
+app.use(express.static(path.join(__dirname, '../frontend/dist'), staticOptions));
+
+// Apply security headers
+app.use(securityHeaders);
+
+// Enable CORS with preflight caching
+app.use(require('cors')(corsOptions));
+
+// Apply rate limiting to all API routes
+app.use('/api/', apiLimiter);
+
 // Webhook must receive raw body. Register BEFORE json parser
 const { paymongoWebhook } = require('./controllers/paymentsController');
 app.post('/api/payments/paymongo/webhook', express.raw({ type: '*/*' }), paymongoWebhook);
 
-app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:5174', 'https://www.ekahera.online', 'https://ekahera.onrender.com'],
-  credentials: true,
-  exposedHeaders: ['Content-Disposition']
-}));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Compression is already applied with default options at the top level
+// We'll use the configured compression options for specific routes if needed
+
+// Parse JSON and URL-encoded bodies
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Add request time to all requests
+app.use((req, res, next) => {
+  req.requestTime = new Date().toISOString();
+  next();
+});
 
 const { initializeDatabase } = require('./config/initDb');
 const db = require('./config/database');
@@ -128,6 +173,45 @@ app.get('/api/test-email', async (req, res) => {
     console.error('Email test failed:', error);
     res.status(500).json({ success: false, error: error.message });
   }
+});
+
+// Error handling middleware (should be after all other middleware and routes)
+app.use((err, req, res, next) => {
+  console.error(`[${new Date().toISOString()}] Unhandled error:`, {
+    error: err.message,
+    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined,
+    path: req.path,
+    method: req.method,
+    params: req.params,
+    query: req.query,
+    ip: req.ip,
+    userAgent: req.get('user-agent')
+  });
+  
+  // Handle JWT errors
+  if (err.name === 'JsonWebTokenError' || err.name === 'TokenExpiredError') {
+    return res.status(401).json({ 
+      status: 'error', 
+      message: 'Authentication token is invalid or has expired' 
+    });
+  }
+  
+  // Handle rate limit errors
+  if (err.status === 429) {
+    return res.status(429).json({
+      status: 'error',
+      message: 'Too many requests, please try again later.'
+    });
+  }
+  
+  // Default error response
+  res.status(err.statusCode || 500).json({
+    status: 'error',
+    message: process.env.NODE_ENV === 'development' 
+      ? err.message 
+      : 'An unexpected error occurred',
+    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+  });
 });
 
 const port = config.PORT || 5000;
