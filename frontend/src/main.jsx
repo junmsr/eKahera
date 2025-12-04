@@ -1,278 +1,73 @@
-import { StrictMode, Suspense, lazy } from "react";
+import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 
-// App (keep it non-lazy as it's the root)
+// App and Pages
 import App from "./App.jsx";
-
-// Lazy load all page components
-const Home = lazy(() => import("./pages/Home.jsx"));
-const Services = lazy(() => import("./pages/Services.jsx"));
-const GetStarted = lazy(() => import("./pages/GetStarted.jsx"));
-const Contact = lazy(() => import("./pages/Contact.jsx"));
-const Login = lazy(() => import("./pages/Login.jsx"));
-const Dashboard = lazy(() => import("./pages/Dashboard.jsx"));
-const POS = lazy(() => import("./pages/POS.jsx"));
-const CashierPOS = lazy(() => import("./pages/CashierPOS.jsx"));
-const Inventory = lazy(() => import("./pages/Inventory.jsx"));
-const MobileScanner = lazy(() => import("./pages/MobileScanner.jsx"));
-const SelectRole = lazy(() => import("./pages/SelectRole"));
-const Customer = lazy(() => import("./pages/Customer"));
-const CustomerEnter = lazy(() => import("./pages/CustomerEnter.jsx"));
-const EnterStore = lazy(() => import("./pages/EnterStore.jsx"));
-const Cashiers = lazy(() => import("./pages/Cashiers"));
-const Logs = lazy(() => import("./pages/Logs.jsx"));
-const Profile = lazy(() => import("./pages/Profile.jsx"));
-const SuperAdmin = lazy(() => import("./pages/SuperAdmin.jsx"));
-const SuperAdminView = lazy(() => import("./pages/SuperAdminView.jsx"));
-const InitialSetup = lazy(() => import("./pages/InitialSetup.jsx"));
-const StoreQR = lazy(() => import("./pages/StoreQR.jsx"));
-const Receipt = lazy(() => import("./pages/Receipt.jsx"));
-const Documents = lazy(() => import("./pages/Documents.jsx"));
-const DocumentResubmission = lazy(() => import("./pages/DocumentResubmission"));
-const DocumentResubmitPage = lazy(() => import("./pages/DocumentResubmitPage.jsx"));
-const PublicDocumentResubmit = lazy(() => import("./pages/PublicDocumentResubmit.jsx"));
-const NotFound = lazy(() => import("./pages/NotFound.jsx"));
-const CustomerWaitingPage = lazy(() => import("./pages/CustomerWaitingPage.jsx"));
-
-// Loading component for Suspense fallback
-const LoadingFallback = () => (
-  <div className="flex items-center justify-center min-h-screen">
-    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-  </div>
-);
-// Router Configuration with Suspense
+import Home from "./pages/Home.jsx";
+import Services from "./pages/Services.jsx";
+import GetStarted from "./pages/GetStarted.jsx";
+import Contact from "./pages/Contact.jsx";
+import Login from "./pages/Login.jsx";
+import Dashboard from "./pages/Dashboard.jsx";
+import POS from "./pages/POS.jsx";
+import CashierPOS from "./pages/CashierPOS.jsx";
+import Inventory from "./pages/Inventory.jsx";
+import MobileScanner from "./pages/MobileScanner.jsx";
+import SelectRole from "./pages/SelectRole";
+import Customer from "./pages/Customer";
+import CustomerEnter from "./pages/CustomerEnter.jsx";
+import EnterStore from "./pages/EnterStore.jsx";
+import Cashiers from "./pages/Cashiers";
+import Logs from "./pages/Logs.jsx";
+import Profile from "./pages/Profile.jsx";
+import SuperAdmin from "./pages/SuperAdmin.jsx";
+import SuperAdminView from "./pages/SuperAdminView.jsx";
+import InitialSetup from "./pages/InitialSetup.jsx";
+import StoreQR from "./pages/StoreQR.jsx";
+import Receipt from "./pages/Receipt.jsx";
+import Documents from "./pages/Documents.jsx";
+import DocumentResubmission from "./pages/DocumentResubmission";
+import DocumentResubmitPage from "./pages/DocumentResubmitPage.jsx";
+import PublicDocumentResubmit from "./pages/PublicDocumentResubmit.jsx";
+import NotFound from "./pages/NotFound.jsx";
+import CustomerWaitingPage from "./pages/CustomerWaitingPage.jsx";
+// Router Configuration
 const router = createBrowserRouter(
   [
     {
       path: "/",
       element: <App />,
       children: [
-        { 
-          index: true, 
-          element: (
-            <Suspense fallback={<LoadingFallback />}>
-              <Home />
-            </Suspense>
-          ) 
-        },
-        { 
-          path: "services", 
-          element: (
-            <Suspense fallback={<LoadingFallback />}>
-              <Services />
-            </Suspense>
-          ) 
-        },
-        { 
-          path: "get-started", 
-          element: (
-            <Suspense fallback={<LoadingFallback />}>
-              <GetStarted />
-            </Suspense>
-          ) 
-        },
-        { 
-          path: "contact", 
-          element: (
-            <Suspense fallback={<LoadingFallback />}>
-              <Contact />
-            </Suspense>
-          ) 
-        },
-        { 
-          path: "login", 
-          element: (
-            <Suspense fallback={<LoadingFallback />}>
-              <Login />
-            </Suspense>
-          ) 
-        },
-        { 
-          path: "dashboard", 
-          element: (
-            <Suspense fallback={<LoadingFallback />}>
-              <Dashboard />
-            </Suspense>
-          ) 
-        },
-        { 
-          path: "dashboard/store-qr", 
-          element: (
-            <Suspense fallback={<LoadingFallback />}>
-              <StoreQR />
-            </Suspense>
-          ) 
-        },
-        { 
-          path: "pos", 
-          element: (
-            <Suspense fallback={<LoadingFallback />}>
-              <POS />
-            </Suspense>
-          ) 
-        },
-        { 
-          path: "cashier-pos", 
-          element: (
-            <Suspense fallback={<LoadingFallback />}>
-              <CashierPOS />
-            </Suspense>
-          ) 
-        },
-        { 
-          path: "inventory", 
-          element: (
-            <Suspense fallback={<LoadingFallback />}>
-              <Inventory />
-            </Suspense>
-          ) 
-        },
-        { 
-          path: "mobile-scanner", 
-          element: (
-            <Suspense fallback={<LoadingFallback />}>
-              <MobileScanner />
-            </Suspense>
-          ) 
-        },
-        { 
-          path: "select-role", 
-          element: (
-            <Suspense fallback={<LoadingFallback />}>
-              <SelectRole />
-            </Suspense>
-          ) 
-        },
-        { 
-          path: "customer", 
-          element: (
-            <Suspense fallback={<LoadingFallback />}>
-              <Customer />
-            </Suspense>
-          ) 
-        },
-        { 
-          path: "customer-enter", 
-          element: (
-            <Suspense fallback={<LoadingFallback />}>
-              <CustomerEnter />
-            </Suspense>
-          ) 
-        },
-        { 
-          path: "receipt", 
-          element: (
-            <Suspense fallback={<LoadingFallback />}>
-              <Receipt />
-            </Suspense>
-          ) 
-        },
-        { 
-          path: "customer-waiting", 
-          element: (
-            <Suspense fallback={<LoadingFallback />}>
-              <CustomerWaitingPage />
-            </Suspense>
-          ) 
-        },
-        { 
-          path: "enter-store", 
-          element: (
-            <Suspense fallback={<LoadingFallback />}>
-              <EnterStore />
-            </Suspense>
-          ) 
-        },
-        { 
-          path: "cashiers", 
-          element: (
-            <Suspense fallback={<LoadingFallback />}>
-              <Cashiers />
-            </Suspense>
-          ) 
-        },
-        { 
-          path: "logs", 
-          element: (
-            <Suspense fallback={<LoadingFallback />}>
-              <Logs />
-            </Suspense>
-          ) 
-        },
-        { 
-          path: "profile", 
-          element: (
-            <Suspense fallback={<LoadingFallback />}>
-              <Profile />
-            </Suspense>
-          ) 
-        },
-        { 
-          path: "documents", 
-          element: (
-            <Suspense fallback={<LoadingFallback />}>
-              <Documents />
-            </Suspense>
-          ) 
-        },
-        { 
-          path: "superadmin", 
-          element: (
-            <Suspense fallback={<LoadingFallback />}>
-              <SuperAdmin />
-            </Suspense>
-          ) 
-        },
-        { 
-          path: "superadmin/stores/:id", 
-          element: (
-            <Suspense fallback={<LoadingFallback />}>
-              <SuperAdminView />
-            </Suspense>
-          ) 
-        },
-        { 
-          path: "setup", 
-          element: (
-            <Suspense fallback={<LoadingFallback />}>
-              <InitialSetup />
-            </Suspense>
-          ) 
-        },
-        { 
-          path: "resubmit-application", 
-          element: (
-            <Suspense fallback={<LoadingFallback />}>
-              <DocumentResubmission />
-            </Suspense>
-          ) 
-        },
-        { 
-          path: "resubmit-documents", 
-          element: (
-            <Suspense fallback={<LoadingFallback />}>
-              <PublicDocumentResubmit />
-            </Suspense>
-          ) 
-        },
-        { 
-          path: "resubmit-document/:documentId", 
-          element: (
-            <Suspense fallback={<LoadingFallback />}>
-              <DocumentResubmitPage />
-            </Suspense>
-          ) 
-        },
+        { index: true, element: <Home /> },
+        { path: "services", element: <Services /> },
+        { path: "get-started", element: <GetStarted /> },
+        { path: "contact", element: <Contact /> },
+        { path: "login", element: <Login /> },
+        { path: "dashboard", element: <Dashboard /> },
+        { path: "dashboard/store-qr", element: <StoreQR /> },
+        { path: "pos", element: <POS /> },
+        { path: "cashier-pos", element: <CashierPOS /> },
+        { path: "inventory", element: <Inventory /> },
+        { path: "mobile-scanner", element: <MobileScanner /> },
+        { path: "select-role", element: <SelectRole /> },
+        { path: "customer", element: <Customer /> },
+        { path: "customer-enter", element: <CustomerEnter /> },
+        { path: "receipt", element: <Receipt /> },
+        { path: "customer-waiting", element: <CustomerWaitingPage /> },
+        { path: "enter-store", element: <EnterStore /> },
+        { path: "cashiers", element: <Cashiers /> },
+        { path: "logs", element: <Logs /> },
+        { path: "profile", element: <Profile /> },
+        { path: "documents", element: <Documents /> },
+        { path: "superadmin", element: <SuperAdmin /> },
+        { path: "superadmin/stores/:id", element: <SuperAdminView /> },
+        { path: "setup", element: <InitialSetup /> },
+        { path: "resubmit-application", element: <DocumentResubmission /> },
+        { path: "resubmit-documents", element: <PublicDocumentResubmit /> },
+        { path: "resubmit-document/:documentId", element: <DocumentResubmitPage /> },
         // Catch-all route for 404
-        { 
-          path: "*", 
-          element: (
-            <Suspense fallback={<LoadingFallback />}>
-              <NotFound />
-            </Suspense>
-          ) 
-        },
+        { path: "*", element: <NotFound /> },
       ],
     },
   ],
