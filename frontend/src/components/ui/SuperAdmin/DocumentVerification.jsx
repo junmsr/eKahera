@@ -12,6 +12,11 @@ export default function DocumentVerification({ isRefreshing }) {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
+  const [selectedDocument, setSelectedDocument] = useState({
+    url: "",
+    name: "",
+    isOpen: false
+  });
   const [stats, setStats] = useState({
     total: 0,
     pending: 0,
@@ -158,7 +163,7 @@ export default function DocumentVerification({ isRefreshing }) {
       const a = document.createElement("a");
       a.style.display = "none";
       a.href = url;
-      a.download = downloadFileName;
+      a.download = fileName;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -171,7 +176,6 @@ export default function DocumentVerification({ isRefreshing }) {
 
   const viewDocument = async (documentId, fileName) => {
     try {
-      // Using sessionStorage and api utility with raw response handling from 'main' branch
       const token = sessionStorage.getItem("auth_token");
       const response = await api(
         `/documents/download/${documentId}`,
@@ -183,9 +187,11 @@ export default function DocumentVerification({ isRefreshing }) {
 
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
-      setSelectedDocumentUrl(url);
-      setSelectedDocumentName(fileName);
-      setIsViewerOpen(true);
+      setSelectedDocument({
+        url,
+        name: fileName,
+        isOpen: true
+      });
     } catch (error) {
       console.error("Error viewing document:", error);
       alert("Error viewing document");
@@ -297,6 +303,7 @@ export default function DocumentVerification({ isRefreshing }) {
               onDocumentAction={handleDocumentAction}
               onCompleteVerification={handleCompleteVerification}
               onDownloadDocument={downloadDocument}
+              onViewDocument={viewDocument}
               actionLoading={actionLoading}
             />
           ) : (
@@ -313,6 +320,14 @@ export default function DocumentVerification({ isRefreshing }) {
           )}
         </div>
       </div>
+      
+      {/* Document Viewer Modal */}
+      <DocumentViewerModal
+        isOpen={selectedDocument.isOpen}
+        onClose={() => setSelectedDocument(prev => ({ ...prev, isOpen: false }))}
+        documentUrl={selectedDocument.url}
+        documentName={selectedDocument.name}
+      />
     </div>
   );
 }
@@ -323,14 +338,13 @@ function BusinessVerificationDetails({
   onDocumentAction,
   onCompleteVerification,
   onDownloadDocument,
+  onViewDocument,
   actionLoading,
 }) {
   const [rejectionReason, setRejectionReason] = useState("");
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [showRepassModal, setShowRepassModal] = useState(false);
   const [isViewerOpen, setIsViewerOpen] = useState(false);
-  const [selectedDocumentUrl, setSelectedDocumentUrl] = useState("");
-  const [selectedDocumentName, setSelectedDocumentName] = useState("");
 
   if (!business) {
     return (
@@ -443,7 +457,7 @@ function BusinessVerificationDetails({
                     size="sm"
                     variant="outline"
                     onClick={() =>
-                      viewDocument(document.document_id, document.document_name)
+                      onViewDocument(document.document_id, document.document_name || document.document_type)
                     }
                   >
                     <svg
@@ -545,38 +559,6 @@ function BusinessVerificationDetails({
                           />
                         </svg>
                         Reject
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          const notes = prompt(
-                            "Enter notes for repass (document quality issues):"
-                          );
-                          if (notes !== null) {
-                            onDocumentAction(
-                              document.document_id,
-                              "repass",
-                              notes
-                            );
-                          }
-                        }}
-                        disabled={actionLoading}
-                      >
-                        <svg
-                          className="w-4 h-4 mr-1"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                          />
-                        </svg>
-                        Repass
                       </Button>
                     </>
                   )}
@@ -690,13 +672,6 @@ function BusinessVerificationDetails({
         </div>
       )}
 
-      {/* Document Viewer Modal */}
-      <DocumentViewerModal
-        isOpen={isViewerOpen}
-        onClose={() => setIsViewerOpen(false)}
-        documentUrl={selectedDocumentUrl}
-        documentName={selectedDocumentName}
-      />
     </div>
   );
 }

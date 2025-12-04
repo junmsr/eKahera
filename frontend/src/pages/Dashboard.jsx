@@ -37,9 +37,9 @@ const SOFT_PURPLE = "#3e209bff";
 
 function VisitorsChart({ data, className = "", range = "month" }) {
   const rangeLabels = {
-    week: "last 7 days",
-    month: "last 30 days",
-    year: "last 365 days",
+    week: "this week",
+    month: "this month",
+    year: "this year",
   };
 
   return (
@@ -133,10 +133,13 @@ function SalesPieChart({ data, className = "" }) {
 export default function Dashboard() {
 
   const [keyMetrics, setKeyMetrics] = useState({
-    revenue: { value: 0, change: 0 },
-    expenses: { value: 0, change: 0 },
-    netProfit: { value: 0, change: 0 },
-    grossMargin: { value: 0, change: 0 },
+    revenue: 0,
+    expenses: 0,
+    netProfit: 0,
+    grossMargin: 0,
+    totalTransactions: 0,
+    totalItemsSold: 0,
+    averageTransactionValue: 0
   });
 
   // State
@@ -145,11 +148,6 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(false);
   const [chartData, setChartData] = useState([]);
   const [pieData, setPieData] = useState([]);
-  const [highlight, setHighlight] = useState({
-    sales: 0,
-    transactions: 0,
-    topProduct: "-",
-  });
   const [lowStockProducts, setLowStockProducts] = useState([]);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [notifications, setNotifications] = useState([]);
@@ -158,6 +156,41 @@ export default function Dashboard() {
   const notificationRef = React.useRef(null);
   const { logout } = useAuth();
   const [isSidebarOpen, setSidebarOpen] = useState(false);
+  const [todayHighlight, setTodayHighlight] = useState({
+    sales: 0,
+    transactions: 0,
+    topProduct: "-",
+    totalItemsSold: 0,
+    averageTransactionValue: 0,
+  });
+
+  useEffect(() => {
+    const fetchTodayData = async () => {
+      try {
+        const token = sessionStorage.getItem("auth_token");
+        const today = new Date();
+        const startDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+        const overview = await api("/api/dashboard/overview", { 
+          headers: authHeaders(token),
+          params: { startDate, endDate: startDate }
+        });
+
+        if (overview) {
+          setTodayHighlight({
+            sales: overview.totalSales,
+            transactions: overview.totalTransactions,
+            totalItemsSold: overview.totalItemsSold,
+            averageTransactionValue: overview.averageTransactionValue,
+            topProduct: (overview.topProducts?.[0]?.product_name) || "-",
+          });
+        }
+      } catch (err) {
+        console.error("Failed to fetch today's data", err);
+      }
+    };
+    fetchTodayData();
+  }, []);
 
   const user = useMemo(() => {
     try {
@@ -187,97 +220,146 @@ export default function Dashboard() {
     try {
       setLoading(true);
       const token = sessionStorage.getItem("auth_token");
-      // Prefer the view-backed dashboard endpoints we added
-      const [overview, timeseries, pie, inventoryMovement, oldLowStock] =
-        await Promise.all([
-          api("/api/dashboard/overview", { headers: authHeaders(token) }),
-          api(
-            `/api/stats/customers-timeseries?days=${
-              range === "week"
-                ? 7
-                : range === "month"
-                ? 30
-                : range === "year"
-                ? 365
-                : 180
-            }`,
-            { headers: authHeaders(token) }
-          ),
-          api("/api/stats/sales-by-category", { headers: authHeaders(token) }),
-          api("/api/dashboard/inventory-movement", {
-            headers: authHeaders(token),
-          }),
-          api("/api/products/low-stock", { headers: authHeaders(token) }),
-        ]);
+      
+      // Calculate date range based on selected period
+      const now = new Date();
+      let startDate, endDate;
 
+      switch (range) {
+        case 'week':
+          startDate = new Date(now);
+          startDate.setDate(now.getDate() - now.getDay());
+          startDate.setHours(0, 0, 0, 0);
+          break;
+        case 'month':
+          startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+          break;
+        case 'year':
+          startDate = new Date(now.getFullYear(), 0, 1);
+          break;
+        default:
+          startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+          break;
+      }
+
+
+      // Set end date to end of current day
+      endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+
+      // Format dates for API - use consistent format (YYYY-MM-DD) for all endpoints
+      const formatDate = (date) => {
+        const d = new Date(date);
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      };
+      
+      const startDateStr = formatDate(startDate);
+      const endDateStr = formatDate(endDate);
+      
+      console.log('Fetching data for date range:', { 
+        range,
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+        formattedStart: startDateStr,
+        formattedEnd: endDateStr
+      });
+
+      // Fetch data for the selected period
+      const [overview, timeseries, pie, inventoryMovement, oldLowStock] = await Promise.all([
+        api("/api/dashboard/overview", { 
+          headers: authHeaders(token),
+          params: { 
+            startDate: startDateStr,
+            endDate: endDateStr
+          }
+        }),
+        api(`/api/stats/customers-timeseries`, { 
+          headers: authHeaders(token),
+          params: {
+            startDate: startDateStr,
+            endDate: endDateStr
+          }
+        }),
+        api("/api/stats/sales-by-category", { 
+          headers: authHeaders(token),
+          params: {
+            startDate: startDateStr,
+            endDate: endDateStr
+          }
+        }),
+        api("/api/dashboard/inventory-movement", {
+          headers: authHeaders(token),
+        }),
+        api("/api/products/low-stock", { headers: authHeaders(token) }),
+      ]);
+
+      // Process the response data
       const derived = (timeseries || []).map((d) => ({
         ...d,
         value: Number(d.customers || d.total || d.value || 0),
       }));
 
-      // Build pie data (categories) based on existing stats endpoint or overview
-      const pieTotal =
-        (pie || []).reduce((s, p) => s + Number(p.value || 0), 0) || 1;
+      // Process pie chart data
+      const pieTotal = (pie || []).reduce((s, p) => s + Number(p.value || 0), 0) || 1;
       const piePercent = (pie || []).map((p) => ({
         ...p,
         percent: (Number(p.value || 0) / pieTotal) * 100,
       }));
 
       // If overview is available use it for KPIs
-      if (overview && overview.totalSales !== undefined) {
-        setStats([
-          { label: "Total Revenue", value: overview.totalSales, change: 0 },
-          {
-            label: "Total Transactions",
-            value: overview.totalTransactions,
-            change: 0,
-          },
-          {
-            label: "Total Items Sold",
-            value: overview.totalItemsSold,
-            change: 0,
-          },
-          {
-            label: "Avg TX Value",
-            value: overview.averageTransactionValue,
-            change: 0,
-          },
-        ]);
-        setHighlight({
-          sales: Number(overview.totalSales || 0),
-          transactions: Number(overview.totalTransactions || 0),
-          totalItemsSold: Number(overview.totalItemsSold || 0),
-          averageTransactionValue: Number(overview.averageTransactionValue || 0),
-          topProduct:
-            (overview.topProducts && overview.topProducts[0]?.product_name) ||
-            piePercent[0]?.name ||
-            "-",
-        });
+      if (overview) {
+        console.log('Overview data received:', overview);
         
+        // Get values from overview, defaulting to 0 if undefined
         const revenue = Number(overview.totalSales || 0);
-        const expenses = Number(overview.totalExpenses ?? 0); // add this to overview if available
-        const netProfit = revenue - expenses;
-        const grossMargin = revenue ? Math.round((netProfit / revenue) * 10000) / 100 : 0;
-        const revenueChange = typeof overview.prevTotalSales !== "undefined"
-          ? Math.round(((revenue - Number(overview.prevTotalSales || 0)) / (Number(overview.prevTotalSales || 1))) * 10000) / 100
-          : 0;
+        const expenses = Number(overview.totalExpenses || 0);
+        const netProfit = revenue - expenses; // Calculate net profit if not provided
+        const grossMargin = revenue > 0 ? ((revenue - expenses) / revenue) * 100 : 0;
+        const totalTransactions = Number(overview.totalTransactions || 0);
+        const totalItemsSold = Number(overview.totalItemsSold || 0);
+        const avgTxValue = Number(overview.averageTransactionValue || (revenue / (totalTransactions || 1)));
 
-        setKeyMetrics({
-          revenue: { value: revenue, change: revenueChange },
-          expenses: { value: expenses, change: 0 },
-          netProfit: { value: netProfit, change: 0 },
-          grossMargin: { value: grossMargin, change: 0 },
+        console.log('Processed metrics:', {
+          revenue,
+          expenses,
+          netProfit,
+          grossMargin,
+          totalTransactions,
+          totalItemsSold,
+          avgTxValue
         });
+
+        // Update key metrics with all values
+        setKeyMetrics({
+          revenue,
+          expenses,
+          netProfit,
+          grossMargin,
+          totalTransactions,
+          totalItemsSold,
+          averageTransactionValue: avgTxValue
+        });
+
+        // Update stats for the stats cards
+        setStats([
+          { label: "Total Revenue", value: revenue },
+          { label: "Total Transactions", value: totalTransactions },
+          { label: "Total Items Sold", value: totalItemsSold },
+          { label: "Avg TX Value", value: avgTxValue },
+        ]);
       }
 
+      // Update chart data
       setChartData(derived);
       setPieData(piePercent);
-
-      // Prefer inventoryMovement for low stock list (fallback to old endpoint)
-      const low = (inventoryMovement || []).filter(
+      
+      // Update low stock products
+      const lowStock = (inventoryMovement || []).filter(
         (p) => Number(p.quantity_in_stock || 0) <= 10
       );
-      setLowStockProducts(low.length ? low : oldLowStock || []);
+      setLowStockProducts(lowStock.length ? lowStock : oldLowStock || []);
     } catch (err) {
       console.error("Failed to fetch dashboard data", err);
     } finally {
@@ -383,8 +465,19 @@ export default function Dashboard() {
     fetchNotifications();
   }, [range]);
 
+  // Helper function to format currency values
+  const formatCurrency = (value) => {
+    return new Intl.NumberFormat('en-PH', {
+      style: 'currency',
+      currency: 'PHP',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(value);
+  };
+
+  // Header actions
   const headerActions = (
-    <div className="flex flex-wrap items-center gap-1 sm:gap-2">
+    <div className="flex items-center gap-2">
       <button
         onClick={fetchData}
         disabled={loading}
@@ -531,48 +624,49 @@ export default function Dashboard() {
 
       {/* Main Content */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full p-3">
-        <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
+        <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200">
           <p className="text-xs font-medium text-gray-500 uppercase mb-1">
             Total Revenue
           </p>
           <p className="text-2xl font-bold text-gray-900">
-            ₱{keyMetrics.revenue.value.toLocaleString()}
+            {formatCurrency(keyMetrics.revenue)}
           </p>
-          <p className={`text-xs mt-2 ${keyMetrics.revenue.change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-            {keyMetrics.revenue.change >= 0 ? '↗' : '↘'} {keyMetrics.revenue.change}%
+          <p className="text-xs text-gray-500 mt-1">
+            {range === 'week' ? 'This Week' : range === 'month' ? 'This Month' : 'This Year'}
           </p>
         </div>
-        <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
+        <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200">
           <p className="text-xs font-medium text-gray-500 uppercase mb-1">
             Operating Expenses
           </p>
           <p className="text-2xl font-bold text-gray-900">
-            ₱{keyMetrics.expenses.value.toLocaleString()}
+            {formatCurrency(keyMetrics.expenses)}
           </p>
-          <p className={`text-xs mt-2 ${keyMetrics.expenses.change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-            {keyMetrics.expenses.change >= 0 ? '↗' : '↘'} {keyMetrics.expenses.change}%
+          <p className="text-xs text-gray-500 mt-1">
+            {range === 'week' ? 'This Week' : range === 'month' ? 'This Month' : 'This Year'}
           </p>
         </div>
-        <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
+        <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200">
           <p className="text-xs font-medium text-gray-500 uppercase mb-1">
             Net Profit
           </p>
-          <p className="text-2xl font-bold text-gray-900">
-            ₱{keyMetrics.netProfit.value.toLocaleString()}
+          <p className={`text-2xl font-bold ${keyMetrics.netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            {formatCurrency(Math.abs(keyMetrics.netProfit))}
+            {keyMetrics.netProfit < 0 && <span className="text-sm text-red-500 ml-1">(Loss)</span>}
           </p>
-          <p className={`text-xs mt-2 ${keyMetrics.netProfit.change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-            {keyMetrics.netProfit.change >= 0 ? '↗' : '↘'} {keyMetrics.netProfit.change}%
+          <p className="text-xs text-gray-500 mt-1">
+            {range === 'week' ? 'This Week' : range === 'month' ? 'This Month' : 'This Year'}
           </p>
         </div>
-        <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
+        <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200">
           <p className="text-xs font-medium text-gray-500 uppercase mb-1">
             Gross Margin
           </p>
-          <p className="text-2xl font-bold text-gray-900">
-            {keyMetrics.grossMargin.value}%
+          <p className={`text-2xl font-bold ${keyMetrics.grossMargin >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            {keyMetrics.grossMargin.toFixed(1)}%
           </p>
-          <p className={`text-xs mt-2 ${keyMetrics.grossMargin.change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-            {keyMetrics.grossMargin.change >= 0 ? '↗' : '↘'} {keyMetrics.grossMargin.change}%
+          <p className="text-xs text-gray-500 mt-1">
+            {range === 'week' ? 'This Week' : range === 'month' ? 'This Month' : 'This Year'}
           </p>
         </div>
       </div>
@@ -609,7 +703,7 @@ export default function Dashboard() {
             </div>
           ) : (
             <div className="hidden lg:block">
-              <DashboardStatsCard stats={highlight} />
+              <DashboardStatsCard stats={todayHighlight} />
             </div>
           )}
           {loading ? (

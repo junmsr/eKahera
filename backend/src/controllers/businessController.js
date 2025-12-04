@@ -914,11 +914,14 @@ exports.registerBusinessWithDocuments = [
       }
 
       // Create user account with user_type_id
+      const firstName = req.body.firstName || 'N/A';
+      const lastName = req.body.lastName || 'N/A';
+      
       const userResult = await client.query(`
-        INSERT INTO users (username, email, password_hash, role, contact_number, user_type_id, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
-        RETURNING user_id, username, email, role
-      `, [username, email, passwordHash, 'business_owner', mobile, adminTypeId]);
+        INSERT INTO users (username, email, password_hash, role, contact_number, user_type_id, first_name, last_name, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
+        RETURNING user_id, username, email, role, first_name, last_name
+      `, [username, email, passwordHash, 'business_owner', mobile, adminTypeId, firstName, lastName]);
 
       const userId = userResult.rows[0].user_id;
 

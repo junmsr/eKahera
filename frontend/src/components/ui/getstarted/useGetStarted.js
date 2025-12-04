@@ -14,6 +14,7 @@ export default function useGetStarted() {
     email: "",
     firstName: "",
     fullName: "",
+    username: "",
     businessName: "",
     businessEmail: "",
     useAdminEmail: false,
@@ -114,20 +115,19 @@ export default function useGetStarted() {
     }
   };
 
-  const validateStep = () => {
+  const validateStep = (step) => {
     const err = {};
+
     if (step === 0) {
-      if (!form.email) err.email = "Required";
-      else if (!/^\S+@\S+\.\S+$/.test(form.email))
-        err.email = "Invalid email address";
-      if (!form.firstName) err.firstName = "Required";
-      else if (!/^[a-zA-Z\s]{1,50}$/.test(form.firstName))
-        err.firstName =
-          "First name must be 1-50 characters and contain only letters";
-      if (!form.fullName) err.fullName = "Required";
-      else if (!/^[a-zA-Z\s]{1,100}$/.test(form.fullName))
-        err.fullName =
-          "Full name must be 1-100 characters and contain only letters";
+      const emailError = validateEmail(form.email);
+      if (emailError) err.email = emailError;
+
+      if (!form.firstName) err.firstName = 'Required';
+      if (!form.fullName) err.fullName = 'Required';
+
+      const usernameError = validateUsername(form.username);
+      if (usernameError) err.username = usernameError;
+
       if (!form.mobile) err.mobile = "Required";
       else if (!/^\d{10,15}$/.test(form.mobile))
         err.mobile = "Invalid mobile number";
@@ -330,6 +330,7 @@ export default function useGetStarted() {
       formData.append("email", form.email);
       formData.append("firstName", form.firstName);
       formData.append("fullName", form.fullName);
+      formData.append("username", form.username);
       formData.append("businessName", form.businessName);
       formData.append(
         "businessType",

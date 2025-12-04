@@ -118,6 +118,21 @@ export default function GetStartedForm({
 
             <div>
               <label className="block mb-1 text-sm text-gray-700 font-medium">
+                Username
+              </label>
+              <Input
+                name="username"
+                value={form.username}
+                onChange={handleChange}
+                placeholder="Choose a username"
+                type="text"
+                error={errors.username}
+                helpText="3-20 characters, letters, numbers, and underscores only"
+              />
+            </div>
+
+            <div>
+              <label className="block mb-1 text-sm text-gray-700 font-medium">
                 Mobile Number
               </label>
               <Input

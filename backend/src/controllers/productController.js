@@ -1,7 +1,9 @@
 const pool = require('../config/database');
 const { logAction } = require('../utils/logger');
+const { sendLowStockEmail } = require('../utils/emailService');
 
-exports.getCategories = async (req, res) => {
+// Controller functions
+const getCategories = async (req, res) => {
   try {
     const rows = await pool.query('SELECT product_category_id, product_category_name FROM product_categories ORDER BY product_category_name ASC');
     res.json(rows.rows);
@@ -10,7 +12,7 @@ exports.getCategories = async (req, res) => {
   }
 };
 
-exports.getAllProducts = async (req, res) => {
+const getAllProducts = async (req, res) => {
   try {
     const params = [];
     let where = '';
@@ -37,7 +39,7 @@ exports.getAllProducts = async (req, res) => {
   }
 };
 
-exports.getProductById = async (req, res) => {
+const getProductById = async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM products WHERE product_id = $1', [req.params.id]);
     if (result.rows.length === 0) return res.status(404).json({ error: 'Not found' });
@@ -47,7 +49,7 @@ exports.getProductById = async (req, res) => {
   }
 };
 
-exports.createProduct = async (req, res) => {
+const createProduct = async (req, res) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -124,7 +126,7 @@ exports.createProduct = async (req, res) => {
   }
 };
 
-exports.getProductBySku = async (req, res) => {
+const getProductBySku = async (req, res) => {
   try {
     const params = [req.params.sku];
     let where = 'p.sku = $1';
@@ -155,7 +157,7 @@ exports.getProductBySku = async (req, res) => {
 };
 
 // Public endpoint for customers to get product by SKU (no authentication required)
-exports.getProductBySkuPublic = async (req, res) => {
+const getProductBySkuPublic = async (req, res) => {
   try {
     const { sku } = req.params;
     const { business_id } = req.query;
@@ -195,7 +197,7 @@ exports.getProductBySkuPublic = async (req, res) => {
 };
 
 // Add or adjust stock by SKU
-exports.addStockBySku = async (req, res) => {
+const addStockBySku = async (req, res) => {
   const { sku, quantity } = req.body || {};
   const qty = Number(quantity);
   const parsedSku = typeof sku === 'string' ? sku.trim() : '';
@@ -253,7 +255,6 @@ exports.addStockBySku = async (req, res) => {
   }
 };
 
-const { sendLowStockEmail } = require('../utils/emailService');
 
 async function _getLowStockProducts(businessId, threshold = 10) {
   const result = await pool.query(
@@ -267,7 +268,7 @@ async function _getLowStockProducts(businessId, threshold = 10) {
   return result.rows;
 }
 
-exports.getLowStockProducts = async (req, res) => {
+const getLowStockProducts = async (req, res) => {
   try {
     const threshold = req.query.threshold || 10;
     const businessId = req.user?.businessId || null;
@@ -283,7 +284,7 @@ exports.getLowStockProducts = async (req, res) => {
   }
 };
 
-exports.sendLowStockAlert = async (req, res) => {
+const sendLowStockAlert = async (req, res) => {
   try {
     const businessId = req.user?.businessId || null;
     if (!businessId) {
@@ -311,7 +312,7 @@ exports.sendLowStockAlert = async (req, res) => {
   }
 };
 
-exports.updateProduct = async (req, res) => {
+const updateProduct = async (req, res) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -449,7 +450,7 @@ exports.updateProduct = async (req, res) => {
   }
 };
 
-exports.deleteProduct = async (req, res) => {
+const deleteProduct = async (req, res) => {
     const client = await pool.connect();
     try {
         await client.query('BEGIN');
@@ -500,4 +501,20 @@ exports.deleteProduct = async (req, res) => {
     } finally {
         client.release();
     }
+};
+
+// Export all functions
+module.exports = {
+    getCategories,
+    getAllProducts,
+    getProductById,
+    createProduct,
+    getProductBySku,
+    getProductBySkuPublic,
+    addStockBySku,
+    _getLowStockProducts,
+    getLowStockProducts,
+    sendLowStockAlert,
+    updateProduct,
+    deleteProduct
 };

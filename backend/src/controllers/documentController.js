@@ -4,7 +4,8 @@ const {
   sendNewApplicationNotification, 
   sendVerificationStatusNotification, 
   sendApplicationSubmittedNotification,
-  sendVerificationApprovalEmail
+  sendVerificationApprovalEmail,
+  sendVerificationRejectionEmail
 } = require('../utils/emailService');
 const { hasRequiredDocuments } = require('./businessController');
 const multer = require('multer');

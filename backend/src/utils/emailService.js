@@ -168,8 +168,8 @@ const logEmailNotification = async (recipientEmail, subject, message, type, busi
 };
 
 // Send email notification for new business application
-// Helper function to send a single email with retry logic
-const sendSingleEmail = async (email, subject, html, businessData, retryCount = 0) => {
+// Helper function to send a single email with retry logic (private)
+const _sendSingleEmail = async (email, subject, html, businessData, retryCount = 0) => {
   const maxRetries = 2;
   const baseDelay = 1000; // 1 second base delay
   
@@ -201,7 +201,7 @@ const sendSingleEmail = async (email, subject, html, businessData, retryCount = 
       
       console.warn(`Rate limited. Retrying ${email} in ${Math.round(delayMs)}ms (attempt ${retryCount + 1}/${maxRetries})`);
       await delay(delayMs);
-      return sendSingleEmail(email, subject, html, businessData, retryCount + 1);
+      return _sendSingleEmail(email, subject, html, businessData, retryCount + 1);
     }
     
     console.error(`Failed to send email to ${email} after ${retryCount} retries:`, error.message);
@@ -287,7 +287,7 @@ const sendNewApplicationNotification = async (businessData, superAdminEmails) =>
       }
       
       try {
-        const result = await sendSingleEmail(email, subject, message, businessData);
+        const result = await _sendSingleEmail(email, subject, message, businessData);
         results.push(result);
       } catch (error) {
         console.error(`Error processing email ${email}:`, error);

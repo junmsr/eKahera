@@ -13,9 +13,9 @@ const config = {
 };
 
 exports.register = async (req, res) => {
-  const { name, email, password, role, business_id } = req.body;
-  if (!name || !email || !password) {
-    return res.status(400).json({ error: 'Name, email and password are required' });
+  const { first_name, last_name, email, password, role, business_id } = req.body;
+  if (!first_name || !last_name || !email || !password) {
+    return res.status(400).json({ error: 'First name, last name, email and password are required' });
   }
 
   // Strong password validation
@@ -48,14 +48,16 @@ exports.register = async (req, res) => {
     const userTypeId = roleRes.rowCount ? roleRes.rows[0].user_type_id : null;
 
     const result = await pool.query(
-      'INSERT INTO users (name, email, password_hash, role, user_type_id, business_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING user_id, name, email, role, user_type_id, business_id',
-      [name, email, hashedPassword, desiredRole, userTypeId, business_id || null]
+      `INSERT INTO users (first_name, last_name, email, password_hash, role, user_type_id, business_id) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7) 
+       RETURNING user_id, first_name, last_name, email, role, user_type_id, business_id`,
+      [first_name, last_name, email, hashedPassword, desiredRole, userTypeId, business_id || null]
     );
     const newUser = result.rows[0];
     logAction({
       userId: newUser.user_id,
       businessId: newUser.business_id,
-      action: `User registered: ${newUser.name} (${newUser.email})`,
+      action: `User registered: ${newUser.first_name} ${newUser.last_name} (${newUser.email})`,
     });
 
     // Send OTP email
@@ -188,7 +190,7 @@ exports.login = async (req, res) => {
     // Try to find user by email, username, or business name
     // When matching by business name, prioritize admin users
     const result = await pool.query(
-      `SELECT u.user_id, u.username, u.email, u.password_hash, u.role, u.contact_number,
+      `SELECT u.user_id, u.username, u.first_name, u.last_name, u.email, u.password_hash, u.role, u.contact_number,
               u.user_type_id,
               u.business_id AS business_id,
               ut.user_type_name,
@@ -216,6 +218,8 @@ exports.login = async (req, res) => {
     }
 
     const user = result.rows[0];
+    const firstName = user.first_name || '';
+    const lastName = user.last_name || '';
 
     // Check business verification status if user belongs to a business
     if (user.business_id) {
@@ -269,6 +273,8 @@ exports.login = async (req, res) => {
       user: {
         user_id: user.user_id,
         username: user.username,
+        first_name: firstName,
+        last_name: lastName,
         email: user.email,
         role: roleName,
         contact_number: user.contact_number,
@@ -276,26 +282,6 @@ exports.login = async (req, res) => {
         store_name: user.store_name || null
       }
     };
-
-    // For business owners, check if required documents are uploaded
-    if ((roleName === 'admin' || roleName === 'business_owner') && user.business_id) {
-      try {
-        const documentStatus = await hasRequiredDocuments(user.business_id);
-        response.requiresDocuments = !documentStatus.hasAllRequired;
-        response.documentStatus = documentStatus;
-        
-        if (!documentStatus.hasAllRequired) {
-          response.message = `Document verification required. Please upload: ${documentStatus.missingTypes.join(', ')}`;
-        }
-      } catch (error) {
-        console.error('Error checking document status during login:', error);
-        // Don't block login, but flag for document check
-        response.requiresDocuments = true;
-        response.message = 'Please verify your document upload status.';
-      }
-    }
-
-
 
     // Log login action (best effort)
     logAction({ userId: user.user_id, businessId: user.business_id || null, action: 'Login' });
@@ -333,7 +319,7 @@ exports.createInitialSuperAdmin = async (req, res) => {
   if (!name || !email || !password || !confirmPassword) {
     return res.status(400).json({ 
       error: 'Name, email, password, and password confirmation are required' 
-    });nt
+    });
   }
   
   if (password !== confirmPassword) {
@@ -400,9 +386,9 @@ exports.createInitialSuperAdmin = async (req, res) => {
     
     // Create superadmin user
     const result = await pool.query(
-      `INSERT INTO users (username, email, password_hash, role, user_type_id, created_at, updated_at)
-       VALUES ($1, $2, $3, 'superadmin', $4, NOW(), NOW())
-       RETURNING user_id, username, email, role, created_at`,
+      `INSERT INTO users (username, name, email, password_hash, role, user_type_id, created_at, updated_at)
+       VALUES ($1, $1, $2, $3, 'superadmin', $4, NOW(), NOW())
+       RETURNING user_id, username, name, email, role, created_at`,
       [name, email, hashedPassword, superAdminTypeId]
     );
     
@@ -418,7 +404,8 @@ exports.createInitialSuperAdmin = async (req, res) => {
     console.log('Initial SuperAdmin created:', {
       user_id: newSuperAdmin.user_id,
       email: newSuperAdmin.email,
-      username: newSuperAdmin.username
+      username: newSuperAdmin.username,
+      name: newSuperAdmin.name
     });
     
     res.status(201).json({
@@ -426,6 +413,7 @@ exports.createInitialSuperAdmin = async (req, res) => {
       user: {
         user_id: newSuperAdmin.user_id,
         username: newSuperAdmin.username,
+        name: newSuperAdmin.name,
         email: newSuperAdmin.email,
         role: newSuperAdmin.role,
         created_at: newSuperAdmin.created_at
@@ -530,7 +518,7 @@ exports.getProfile = async (req, res) => {
 
     // Get user information with business details
     const userResult = await pool.query(
-      `SELECT u.user_id, u.username, u.email, u.role, u.contact_number,
+      `SELECT u.user_id, u.username, u.first_name, u.last_name, u.email, u.role, u.contact_number,
               u.created_at, u.updated_at, u.business_id,
               ut.user_type_name
        FROM users u
@@ -547,6 +535,9 @@ exports.getProfile = async (req, res) => {
     }
 
     const userData = userResult.rows[0];
+    const firstName = userData.first_name || '';
+    const lastName = userData.last_name || '';
+
     console.log('User data found:', userData);
     let businessData = null;
     let businessUsers = [];
@@ -589,6 +580,8 @@ exports.getProfile = async (req, res) => {
       user: {
         user_id: userData.user_id,
         username: userData.username,
+        first_name: firstName,
+        last_name: lastName,
         email: userData.email,
         role: userData.user_type_name || userData.role,
         contact_number: userData.contact_number,
