@@ -442,27 +442,6 @@ function Footer({ className = "" }) {
             &copy; {new Date().getFullYear()} eKahera. All rights reserved.
           </motion.p>
           <span className="hidden md:block text-slate-300 text-lg">•</span>
-          <motion.p className="text-slate-600 text-sm mb-6">
-            Follow us on social media for the latest updates and news.
-          </motion.p>
-          <motion.div className="flex items-center gap-3">
-            <motion.a
-              href="#"
-              className="h-10 w-10 rounded-xl bg-white/80 backdrop-blur-md flex items-center justify-center text-slate-700 hover:text-white hover:bg-blue-500 transition-all duration-300 shadow-sm hover:shadow-md"
-              aria-label="Facebook"
-              whileHover={{ y: -3, scale: 1.1 }}
-            >
-              <svg
-                width="16"
-                height="16"
-                fill="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" />
-                <circle cx="12" cy="9" r="2.5" />
-              </svg>
-            </motion.a>
-          </motion.div>
         </motion.div>
       </motion.div>
       <TermsModal open={openTerms} onClose={() => setOpenTerms(false)} />
