@@ -3,6 +3,8 @@ import PageLayout from "../components/layout/PageLayout";
 import NavAdmin from "../components/layout/Nav-Admin";
 import Inventory from "../components/inventory/Inventory";
 import Modal from "../components/modals/Modal";
+import Button from "../components/common/Button";
+
 import ProductFormModal from "../components/modals/ProductFormModal";
 import { api, authHeaders } from "../lib/api";
 
@@ -568,11 +570,69 @@ export default function InventoryPage() {
     setPage(1);
   };
 
+  const handleExport = () => {
+    const csv = convertToCSV(allProducts);
+    const timestamp = new Date().toISOString().split("T")[0];
+    const filename = `inventory_export_${timestamp}.csv`;
+    downloadCSV(csv, filename);
+  };
+
+  const headerActions = (
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 sm:gap-4 mb-4 sm:mb-6 w-full">
+      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full sm:w-auto !py-3">
+        <Button
+          onClick={handleExport}
+          variant="secondary"
+          className="text-sm flex items-center gap-2 w-full sm:w-auto shrink-0 !py-1.5 !px-4"
+        >
+          <svg
+            className="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+            />
+          </svg>
+          <span className="hidden sm:inline">Export</span>
+          <span className="sm:hidden">Export</span>
+        </Button>
+        <Button
+          onClick={openAddProduct}
+          variant="primary"
+          microinteraction={true}
+          className="bg-blue-600 text-md text-white font-semibold rounded-lg shadow hover:bg-blue-700 transition gap-2"
+        >
+          <svg
+            className="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 4v16m8-8H4"
+            />
+          </svg>
+          <span className="hidden sm:block">Add Product</span>
+          <span className="sm:hidden">Add</span>
+        </Button>
+      </div>
+    </div>
+  );
+
   return (
     <PageLayout
       title="INVENTORY"
       sidebar={<NavAdmin />}
       isSidebarOpen={isSidebarOpen}
+      headerActions={headerActions}
       setSidebarOpen={setSidebarOpen}
       showHeader={true}
       showNavbar={false}

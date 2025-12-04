@@ -384,7 +384,7 @@ export default function Dashboard() {
   }, [range]);
 
   const headerActions = (
-    <div className="flex flex-wrap items-center gap-1 sm:gap-2">
+    <div className="flex flex-wrap items-center gap-1 sm:gap-2 -my-2">
       <button
         onClick={fetchData}
         disabled={loading}
