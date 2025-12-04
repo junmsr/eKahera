@@ -1,5 +1,5 @@
-import React from "react";
-import { NavLink } from "react-router-dom";
+import React, { useState } from "react";
+import { NavLink, useNavigate } from "react-router-dom";
 import Logo from "../common/Logo";
 
 // Navigation configuration
@@ -131,9 +131,9 @@ const STYLES = {
   // navItemActive: "bg-blue-600/80 backdrop-blur-sm text-white shadow-lg",
   // navItemInactive: "bg-transparent text-gray-700 hover:bg-blue/30 hover:text-gray-900 hover:backdrop-blur-sm",
   // navItemActive: "bg-blue-600/80 backdrop-blur-sm text-white shadow-lg",
-// improved hover highlight for inactive items
- navItemInactive:
-   "bg-transparent text-gray-700 hover:bg-blue-100 hover:text-gray-900 hover:backdrop-blur-sm",
+  // improved hover highlight for inactive items
+  navItemInactive:
+    "bg-transparent text-gray-700 hover:bg-blue-100 hover:text-gray-900 hover:backdrop-blur-sm",
   iconContainer: "mr-3 relative flex-shrink-0",
   label: "leading-tight",
   tooltip:
@@ -189,25 +189,18 @@ const NavigationItem = ({ item, isActive }) => {
  * @returns {JSX.Element} The admin navigation sidebar
  */
 const NavAdmin = ({ isMobile, onLogoutClick }) => {
-  const [showLogoutConfirm, setShowLogoutConfirm] = React.useState(false);
-  
-  const handleLogoutClick = () => {
-    setShowLogoutConfirm(true);
-  };
+  const navigate = useNavigate();
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
-  const handleConfirmLogout = () => {
-    setShowLogoutConfirm(false);
-    if (onLogoutClick) {
-      onLogoutClick();
-    }
-  };
-
-  const handleCloseModal = () => {
+  const confirmLogout = () => {
+    // Perform logout logic here
+    onLogoutClick();
     setShowLogoutConfirm(false);
   };
+
   const LogoutIcon = () => (
     <svg
-      className="w-5 h-5 text-white"
+      className="w-5 h-5 text-red-500"
       fill="none"
       stroke="currentColor"
       viewBox="0 0 24 24"

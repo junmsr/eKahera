@@ -422,9 +422,6 @@ function Footer({ className = "" }) {
             &copy; {new Date().getFullYear()} eKahera. All rights reserved.
           </motion.p>
           <span className="hidden md:block text-slate-300 text-lg">•</span>
-          <motion.p className="text-slate-600 text-sm mb-6">
-            Follow us on social media for the latest updates and news.
-          </motion.p>
         </motion.div>
       </motion.div>
       <TermsModal open={openTerms} onClose={() => setOpenTerms(false)} />
