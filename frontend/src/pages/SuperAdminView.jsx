@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Background from "../components/layout/Background";
 import { api } from "../lib/api";
+import DocumentViewerModal from "../components/modals/DocumentViewerModal";
 
 export default function SuperAdminView() {
   const { id } = useParams();
@@ -9,7 +10,41 @@ export default function SuperAdminView() {
   const [store, setStore] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [downloadingId, setDownloadingId] = useState(null);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [isDocumentViewerOpen, setIsDocumentViewerOpen] = useState(false);
+  const [selectedDocument, setSelectedDocument] = useState(null);
+
+  // minimal sample store for the demo
+  const sampleStore = {
+    id: "sample-1",
+    name: "John Doe",
+    firstName: "John",
+    lastName: "Doe",
+    email: "john.doe@example.com",
+    phone: "+63 963 909 2810",
+    storeName: "John Doe",
+    location: "123 Main St, City",
+    established: "2020",
+    documents: [
+      { name: "Business License.pdf", url: "#" },
+      { name: "Tax Certificate.pdf", url: "#" },
+    ],
+    verifiedDocuments: [
+      { name: "ID Verification.pdf", url: "#" },
+      { name: "Address Proof.pdf", url: "#" },
+    ],
+    account: {
+      username: "admin_abc",
+      passwordHint: "******** (Last updated: 07/01/2025)",
+      lastLogin: "07/15/2025 02:51 PST",
+      createdAt: "06/15/2020",
+      lastPasswordChange: "07/01/2025 09:15 PST",
+      loginAttemptsToday: 2,
+      storeAddress: "Brgy 18, Rizal St. Cabangan Legazpi City",
+      status: "Active",
+      sessionTimeout: "30 minutes",
+    },
+  };
 
   useEffect(() => {
     const fetchDetail = async () => {
@@ -267,10 +302,37 @@ export default function SuperAdminView() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-0.5 sm:mb-1">
-                          Username
+                          First Name
                         </p>
                         <p className="text-base sm:text-lg font-bold text-gray-900 break-words">
-                          {store.account?.username || "N/A"}
+                          {store.firstName || "N/A"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="group bg-gradient-to-br from-blue-50/50 to-indigo-50/30 rounded-xl p-3 sm:p-4 md:p-5 border border-blue-100/50 hover:border-blue-200 hover:shadow-md transition-all duration-300">
+                    <div className="flex items-center gap-3 sm:gap-4">
+                      <div className="w-10 h-10 sm:w-11 sm:h-11 md:w-12 md:h-12 bg-white rounded-xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform flex-shrink-0">
+                        <svg
+                          className="w-5 h-5 sm:w-5 sm:h-5 md:w-6 md:h-6 text-blue-600"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                          />
+                        </svg>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-0.5 sm:mb-1">
+                          Last Name
+                        </p>
+                        <p className="text-base sm:text-lg font-bold text-gray-900 break-words">
+                          {store.lastName || "N/A"}
                         </p>
                       </div>
                     </div>
@@ -507,12 +569,6 @@ export default function SuperAdminView() {
                             strokeWidth={2}
                             d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                           />
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                          />
                         </svg>
                       </div>
                       <div className="flex-1 min-w-0 space-y-1">
@@ -526,35 +582,56 @@ export default function SuperAdminView() {
                           {d.documentType || "Document"} • Uploaded {formatDate(d.uploadedAt)}
                         </p>
                       </div>
-                      <button
-                        onClick={() => downloadDocument(d.documentId, d.name)}
-                        disabled={downloadingId === d.documentId}
-                        className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 disabled:opacity-60"
-                      >
-                        {downloadingId === d.documentId ? (
-                          <>
-                            <span className="w-3.5 h-3.5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></span>
-                            Downloading
-                          </>
-                        ) : (
-                          <>
-                            <svg
-                              className="w-4 h-4"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4"
-                              />
-                            </svg>
-                            Download
-                          </>
-                        )}
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => {
+                            setSelectedDocument(d);
+                            setIsDocumentViewerOpen(true);
+                          }}
+                          className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors"
+                          title="View Document"
+                        >
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                            />
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                            />
+                          </svg>
+                        </button>
+                        <a
+                          href={d.url || "#"}
+                          download
+                          className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors"
+                          title="Download Document"
+                        >
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                            />
+                          </svg>
+                        </a>
+                      </div>
                     </div>
                   ))}
                   {(!store.documents || store.documents.length === 0) && (
@@ -625,13 +702,7 @@ export default function SuperAdminView() {
                             strokeLinecap="round"
                             strokeLinejoin="round"
                             strokeWidth={2}
-                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                          />
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                           />
                         </svg>
                       </div>
@@ -646,35 +717,60 @@ export default function SuperAdminView() {
                           {d.documentType || "Document"} • Uploaded {formatDate(d.uploadedAt)}
                         </p>
                       </div>
-                      <button
-                        onClick={() => downloadDocument(d.documentId, d.name)}
-                        disabled={downloadingId === d.documentId}
-                        className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-green-700 border border-green-200 rounded-lg hover:bg-green-50 disabled:opacity-60"
-                      >
-                        {downloadingId === d.documentId ? (
-                          <>
-                            <span className="w-3.5 h-3.5 border-2 border-green-600 border-t-transparent rounded-full animate-spin"></span>
-                            Downloading
-                          </>
-                        ) : (
-                          <>
-                            <svg
-                              className="w-4 h-4"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4"
-                              />
-                            </svg>
-                            Download
-                          </>
-                        )}
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => {
+                            if (d.url && d.url !== "#") {
+                              setSelectedDocument(d);
+                              setIsDocumentViewerOpen(true);
+                            } else {
+                              window.open("#", "_blank");
+                            }
+                          }}
+                          className="p-1 text-green-600 hover:text-green-800 hover:bg-green-50 rounded transition-colors"
+                          title="View Document"
+                        >
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                            />
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                            />
+                          </svg>
+                        </button>
+                        <a
+                          href={d.url || "#"}
+                          download
+                          className="p-1 text-green-600 hover:text-green-800 hover:bg-green-50 rounded transition-colors"
+                          title="Download Document"
+                        >
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                            />
+                          </svg>
+                        </a>
+                      </div>
                     </div>
                   ))}
                   {(!store.verifiedDocuments ||
@@ -738,33 +834,6 @@ export default function SuperAdminView() {
               </div>
               <div className="p-4 sm:p-5 md:p-6">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-                  <div className="group bg-gradient-to-br from-blue-50/50 to-blue-50/30 rounded-xl p-3 sm:p-4 md:p-5 border border-blue-100/50 hover:border-blue-200 hover:shadow-md transition-all duration-300">
-                    <div className="flex items-center gap-3 sm:gap-4">
-                      <div className="w-10 h-10 sm:w-11 sm:h-11 md:w-12 md:h-12 bg-white rounded-xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform flex-shrink-0">
-                        <svg
-                          className="w-5 h-5 sm:w-5 sm:h-5 md:w-6 md:h-6 text-blue-600"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                          />
-                        </svg>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-0.5 sm:mb-1">
-                          Username
-                        </p>
-                        <p className="text-base sm:text-lg font-bold text-gray-900 break-words">
-                          {store.account?.username || "N/A"}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
                   <div className="group bg-gradient-to-br from-green-50/50 to-green-50/30 rounded-xl p-3 sm:p-4 md:p-5 border border-green-100/50 hover:border-green-200 hover:shadow-md transition-all duration-300">
                     <div className="flex items-center gap-3 sm:gap-4">
                       <div className="w-10 h-10 sm:w-11 sm:h-11 md:w-12 md:h-12 bg-white rounded-xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform flex-shrink-0">

@@ -88,7 +88,7 @@ const features = [
       </svg>
     ),
     title: "Inventory Management",
-    desc: "Customers can browse products, scan barcodes, add items to cart, and complete purchases via their smartphone.",
+    desc: "Keeps stock levels updated automatically, tracks product quantities, and prevents overselling with real-time synchronization.",
   },
   {
     icon: (

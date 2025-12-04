@@ -41,6 +41,7 @@ const LogoutIcon = () => (
 );
 
 function SuperAdmin() {
+  const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
   const [activeTab, setActiveTab] = useState("verification");
 
   // temporary single sample store
@@ -71,20 +72,22 @@ function SuperAdmin() {
   const token =
     sessionStorage.getItem("auth_token") || localStorage.getItem("token");
 
-  // Profile modal state (from 'new-nigga-dave' branch)
-  const [profileModal, setProfileModal] = useState({ isOpen: false });
-  const [profileData, setProfileData] = useState(null);
+  // Profile modal state
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [profileError, setProfileError] = useState("");
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);
-  const [profileError, setProfileError] = useState("");
+  const [profileData, setProfileData] = useState(null);
   const [profileForm, setProfileForm] = useState({
-    username: "",
+    firstName: "",
+    lastName: "",
     email: "",
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",
     contactNumber: "",
   });
+  const [profileActiveTab, setProfileActiveTab] = useState("account");
 
   // Logout modal state
   const [logoutModal, setLogoutModal] = useState({ isOpen: false });
@@ -139,6 +142,15 @@ function SuperAdmin() {
     fetchStores();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.state]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsDesktop(window.innerWidth >= 1024);
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   // --- Store Management Handlers ---
 
@@ -200,10 +212,10 @@ function SuperAdmin() {
     setDeleteError("");
   };
 
-  // --- Profile Modal Handlers (from 'new-nigga-dave' branch) ---
+  // --- Profile Modal Handlers ---
 
   const openProfileModal = async () => {
-    setProfileModal({ isOpen: true });
+    setIsProfileModalOpen(true);
     setProfileError("");
     setProfileLoading(true);
     try {
@@ -212,7 +224,8 @@ function SuperAdmin() {
       });
       setProfileData(res);
       setProfileForm({
-        username: res?.user?.username || "",
+        firstName: res?.user?.firstName || "",
+        lastName: res?.user?.lastName || "",
         email: res?.user?.email || "",
         currentPassword: "",
         newPassword: "",
@@ -227,10 +240,11 @@ function SuperAdmin() {
   };
 
   const closeProfileModal = () => {
-    setProfileModal({ isOpen: false });
+    setIsProfileModalOpen(false);
     setProfileError("");
     setProfileForm({
-      username: "",
+      firstName: "",
+      lastName: "",
       email: "",
       currentPassword: "",
       newPassword: "",
@@ -249,8 +263,13 @@ function SuperAdmin() {
     setProfileError("");
 
     // Validation
-    if (!profileForm.username.trim()) {
-      setProfileError("Username is required");
+    if (!profileForm.firstName.trim()) {
+      setProfileError("First name is required");
+      return;
+    }
+
+    if (!profileForm.lastName.trim()) {
+      setProfileError("Last name is required");
       return;
     }
 
@@ -286,8 +305,10 @@ function SuperAdmin() {
 
     setProfileSaving(true);
     try {
+      const fullName = `${profileForm.firstName.trim()} ${profileForm.lastName.trim()}`;
       const updateData = {
-        username: profileForm.username,
+        firstname: profileForm.firstName.trim(),
+        lastname: profileForm.lastName.trim(),
         email: profileForm.email,
         contact_number: profileForm.contactNumber || null,
       };
@@ -307,10 +328,10 @@ function SuperAdmin() {
         body: JSON.stringify(updateData),
       });
 
-      // Update local/session storage if email or username changed
+      // Update local/session storage if email or name changed
       const updatedUser = {
         ...user,
-        name: profileForm.username,
+        name: fullName,
         email: profileForm.email,
       };
       sessionStorage.setItem("user", JSON.stringify(updatedUser));
@@ -324,13 +345,105 @@ function SuperAdmin() {
       // Refresh the page to update user info in header
       window.location.reload();
     } catch (err) {
-      setProfileError(
-        "Failed to update profile. Please try again."
-      );
+      setProfileError("Failed to update profile. Please try again.");
     } finally {
       setProfileSaving(false);
     }
   };
+
+  // Mobile Device Block - Full Screen Notice
+  if (!isDesktop) {
+    return (
+      <div className="fixed inset-0 bg-gradient-to-br from-blue-50 via-blue-100 to-indigo-100 flex items-center justify-center p-4 z-50">
+        <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl border border-gray-200/50 overflow-hidden">
+          {/* Header */}
+          <div className="bg-gradient-to-r from-red-500 to-red-600 p-6 text-center">
+            <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg
+                className="w-8 h-8 text-white"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                />
+              </svg>
+            </div>
+            <h1 className="text-xl font-bold text-white mb-2">
+              Access Restricted
+            </h1>
+            <p className="text-red-100 text-sm">Mobile Device Detected</p>
+          </div>
+
+          {/* Content */}
+          <div className="p-6 text-center">
+            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg
+                className="w-6 h-6 text-red-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                />
+              </svg>
+            </div>
+
+            <h2 className="text-lg font-semibold text-gray-900 mb-3">
+              Desktop Access Required
+            </h2>
+
+            <p className="text-sm text-gray-600 mb-6 leading-relaxed">
+              The Super Admin dashboard is designed exclusively for desktop
+              computers. For security and functionality reasons, mobile access
+              is not permitted.
+            </p>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+              <div className="flex items-center gap-3">
+                <svg
+                  className="w-5 h-5 text-blue-600 flex-shrink-0"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                  />
+                </svg>
+                <div className="text-left">
+                  <p className="text-sm font-medium text-blue-900">
+                    Minimum Requirements
+                  </p>
+                  <p className="text-xs text-blue-700">
+                    Screen width: 1024px or larger
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={() => window.history.back()}
+              className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg"
+            >
+              Go Back
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <Background variant="gradientBlue" pattern="dots" floatingElements overlay>
@@ -394,6 +507,39 @@ function SuperAdmin() {
               </button>
             </div>
           </header>
+
+          {/* Mobile Device Notice */}
+          {!isDesktop && (
+            <div className="bg-gradient-to-r from-amber-50 via-orange-50 to-yellow-50 border-b border-amber-200/50 px-3 sm:px-4 md:px-6 py-3 sm:py-4 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-gradient-to-br from-amber-500 to-orange-600 rounded-lg flex items-center justify-center shadow-md flex-shrink-0">
+                  <svg
+                    className="w-4 h-4 text-white"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                    />
+                  </svg>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-sm font-semibold text-amber-800 mb-1">
+                    Mobile Device Detected
+                  </h3>
+                  <p className="text-xs text-amber-700">
+                    This Super Admin dashboard is optimized for desktop use. For
+                    the best experience, please access from a desktop device
+                    with a screen width of at least 1024px.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           <main className="flex-1 p-3 sm:p-4 md:p-6 lg:p-8 overflow-auto bg-gradient-to-br from-gray-50 via-blue-50/30 to-green-50/20">
             {/* Tab Navigation - Modern Design */}
@@ -594,7 +740,7 @@ function SuperAdmin() {
                               </td>
                               <td className="py-3 sm:py-4 px-2 sm:px-3 md:px-4">
                                 <p className="text-xs sm:text-sm text-gray-600 truncate max-w-[150px] sm:max-w-none">
-                                  {s.business_type || 'N/A'}
+                                  {s.business_type || "N/A"}
                                 </p>
                               </td>
                               <td className="py-3 sm:py-4 px-2 sm:px-3 md:px-4">
@@ -820,7 +966,7 @@ function SuperAdmin() {
 
       {/* Profile Edit Modal */}
       <Modal
-        isOpen={profileModal.isOpen}
+        isOpen={isProfileModalOpen}
         onClose={closeProfileModal}
         title=""
         size="md"
@@ -888,12 +1034,19 @@ function SuperAdmin() {
                   </div>
                 )}
 
-                {/* Personal Information Section */}
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2 pb-2 border-b border-gray-200">
-                    <div className="w-5 h-5 bg-white border-2 border-blue-500 rounded flex items-center justify-center">
+                {/* Tab Navigation */}
+                <div className="flex gap-1 border-b border-slate-200/10 -mx-6 px-6">
+                  <button
+                    onClick={() => setProfileActiveTab("account")}
+                    className={`px-4 py-2 rounded-t-xl font-medium transition-all duration-200 relative ${
+                      profileActiveTab === "account"
+                        ? "text-blue-600 bg-blue-50/30"
+                        : "text-slate-500 hover:text-slate-700"
+                    }`}
+                  >
+                    <span className="flex items-center gap-2">
                       <svg
-                        className="w-3 h-3 text-blue-600"
+                        className="w-4 h-4"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -905,45 +1058,134 @@ function SuperAdmin() {
                           d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
                         />
                       </svg>
-                    </div>
-                    <h3 className="text-sm font-semibold text-gray-900">
-                      Personal Information
-                    </h3>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label
-                        htmlFor="username"
-                        className="flex items-center gap-1.5 text-xs font-semibold text-gray-700 mb-1.5"
+                      Account
+                    </span>
+                    {profileActiveTab === "account" && (
+                      <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full"></div>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => setProfileActiveTab("security")}
+                    className={`px-4 py-2 rounded-t-xl font-medium transition-all duration-200 relative ${
+                      profileActiveTab === "security"
+                        ? "text-blue-600 bg-blue-50/30"
+                        : "text-slate-500 hover:text-slate-700"
+                    }`}
+                  >
+                    <span className="flex items-center gap-2">
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
                       >
-                        <div className="w-4 h-4 bg-white border-2 border-blue-500 rounded flex items-center justify-center">
-                          <svg
-                            className="w-2.5 h-2.5 text-blue-600"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                            />
-                          </svg>
-                        </div>
-                        Username <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        id="username"
-                        name="username"
-                        value={profileForm.username}
-                        onChange={handleProfileFormChange}
-                        className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
-                        placeholder="Enter username"
-                        required
-                      />
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                        />
+                      </svg>
+                      Security
+                    </span>
+                    {profileActiveTab === "security" && (
+                      <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full"></div>
+                    )}
+                  </button>
+                </div>
+
+                {/* Personal Information Section */}
+                {profileActiveTab === "account" && (
+                  <div className="space-y-4 animate-in fade-in duration-300">
+                    <div className="flex items-center gap-2 pb-2 border-b border-gray-200">
+                      <div className="w-5 h-5 bg-white border-2 border-blue-500 rounded flex items-center justify-center">
+                        <svg
+                          className="w-3 h-3 text-blue-600"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                          />
+                        </svg>
+                      </div>
+                      <h3 className="text-sm font-semibold text-gray-900">
+                        Personal Information
+                      </h3>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label
+                          htmlFor="firstName"
+                          className="flex items-center gap-1.5 text-xs font-semibold text-gray-700 mb-1.5"
+                        >
+                          <div className="w-4 h-4 bg-white border-2 border-blue-500 rounded flex items-center justify-center">
+                            <svg
+                              className="w-2.5 h-2.5 text-blue-600"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                              />
+                            </svg>
+                          </div>
+                          First Name <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          id="firstName"
+                          name="firstName"
+                          value={profileForm.firstName}
+                          onChange={handleProfileFormChange}
+                          className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
+                          placeholder="Enter first name"
+                          required
+                        />
+                      </div>
+
+                      <div>
+                        <label
+                          htmlFor="lastName"
+                          className="flex items-center gap-1.5 text-xs font-semibold text-gray-700 mb-1.5"
+                        >
+                          <div className="w-4 h-4 bg-white border-2 border-blue-500 rounded flex items-center justify-center">
+                            <svg
+                              className="w-2.5 h-2.5 text-blue-600"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                              />
+                            </svg>
+                          </div>
+                          Last Name <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          id="lastName"
+                          name="lastName"
+                          value={profileForm.lastName}
+                          onChange={handleProfileFormChange}
+                          className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
+                          placeholder="Enter last name"
+                          required
+                        />
+                      </div>
                     </div>
 
                     <div>
@@ -979,92 +1221,10 @@ function SuperAdmin() {
                         required
                       />
                     </div>
-                  </div>
 
-                  <div>
-                    <label
-                      htmlFor="contactNumber"
-                      className="flex items-center gap-1.5 text-xs font-semibold text-gray-700 mb-1.5"
-                    >
-                      <div className="w-4 h-4 bg-white border-2 border-blue-500 rounded flex items-center justify-center">
-                        <svg
-                          className="w-2.5 h-2.5 text-blue-600"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
-                          />
-                        </svg>
-                      </div>
-                      Contact Number
-                    </label>
-                    <input
-                      type="tel"
-                      id="contactNumber"
-                      name="contactNumber"
-                      value={profileForm.contactNumber}
-                      onChange={handleProfileFormChange}
-                      className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
-                      placeholder="Enter contact number (optional)"
-                    />
-                  </div>
-                </div>
-
-                {/* Password Section */}
-                <div className="pt-4 border-t border-gray-200 space-y-3">
-                  <div className="flex items-center gap-2 pb-1.5">
-                    <div className="w-5 h-5 bg-white border-2 border-blue-500 rounded flex items-center justify-center">
-                      <svg
-                        className="w-3 h-3 text-blue-600"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                        />
-                      </svg>
-                    </div>
-                    <h3 className="text-sm font-semibold text-gray-900">
-                      Change Password
-                    </h3>
-                    <span className="text-xs text-gray-500 font-normal">
-                      (Optional)
-                    </span>
-                  </div>
-
-                  <div className="bg-green-50/50 border border-green-100 rounded-lg p-2.5 mb-3">
-                    <p className="text-xs text-green-700 flex items-center gap-1.5">
-                      <svg
-                        className="w-3.5 h-3.5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                        />
-                      </svg>
-                      Leave password fields empty if you don't want to change
-                      your password
-                    </p>
-                  </div>
-
-                  <div className="space-y-3">
                     <div>
                       <label
-                        htmlFor="currentPassword"
+                        htmlFor="contactNumber"
                         className="flex items-center gap-1.5 text-xs font-semibold text-gray-700 mb-1.5"
                       >
                         <div className="w-4 h-4 bg-white border-2 border-blue-500 rounded flex items-center justify-center">
@@ -1078,25 +1238,57 @@ function SuperAdmin() {
                               strokeLinecap="round"
                               strokeLinejoin="round"
                               strokeWidth={2}
-                              d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                              d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
                             />
                           </svg>
                         </div>
-                        Current Password
+                        Contact Number
                       </label>
-                      <PasswordInput
-                        name="currentPassword"
-                        value={profileForm.currentPassword}
+                      <input
+                        type="tel"
+                        id="contactNumber"
+                        name="contactNumber"
+                        value={profileForm.contactNumber}
                         onChange={handleProfileFormChange}
-                        placeholder="Enter current password"
-                        className="w-full text-sm"
+                        className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
+                        placeholder="Enter contact number (optional)"
                       />
                     </div>
+                  </div>
+                )}
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {/* Security Tab */}
+                {profileActiveTab === "security" && (
+                  <div className="space-y-4 animate-in fade-in duration-300">
+                    <div className="flex items-center gap-2 pb-1.5">
+                      <div className="w-5 h-5 bg-white border-2 border-blue-500 rounded flex items-center justify-center">
+                        <svg
+                          className="w-3 h-3 text-blue-600"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                          />
+                        </svg>
+                      </div>
+                      <h3 className="text-sm font-semibold text-gray-900">
+                        Change Password
+                      </h3>
+                    </div>
+
+                    <p className="text-xs text-slate-500 bg-amber-50 border border-amber-100/50 rounded-xl px-3 py-2">
+                      Leave blank to keep your current password
+                    </p>
+
+                    <div className="space-y-3">
                       <div>
                         <label
-                          htmlFor="newPassword"
+                          htmlFor="currentPassword"
                           className="flex items-center gap-1.5 text-xs font-semibold text-gray-700 mb-1.5"
                         >
                           <div className="w-4 h-4 bg-white border-2 border-blue-500 rounded flex items-center justify-center">
@@ -1110,54 +1302,87 @@ function SuperAdmin() {
                                 strokeLinecap="round"
                                 strokeLinejoin="round"
                                 strokeWidth={2}
-                                d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"
+                                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
                               />
                             </svg>
                           </div>
-                          New Password
+                          Current Password
                         </label>
                         <PasswordInput
-                          name="newPassword"
-                          value={profileForm.newPassword}
+                          name="currentPassword"
+                          value={profileForm.currentPassword}
                           onChange={handleProfileFormChange}
-                          placeholder="Min 6 characters"
+                          placeholder="Enter current password"
                           className="w-full text-sm"
                         />
                       </div>
 
-                      <div>
-                        <label
-                          htmlFor="confirmPassword"
-                          className="flex items-center gap-1.5 text-xs font-semibold text-gray-700 mb-1.5"
-                        >
-                          <div className="w-4 h-4 bg-white border-2 border-blue-500 rounded flex items-center justify-center">
-                            <svg
-                              className="w-2.5 h-2.5 text-blue-600"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                              />
-                            </svg>
-                          </div>
-                          Confirm Password
-                        </label>
-                        <PasswordInput
-                          name="confirmPassword"
-                          value={profileForm.confirmPassword}
-                          onChange={handleProfileFormChange}
-                          placeholder="Confirm new password"
-                          className="w-full text-sm"
-                        />
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                          <label
+                            htmlFor="newPassword"
+                            className="flex items-center gap-1.5 text-xs font-semibold text-gray-700 mb-1.5"
+                          >
+                            <div className="w-4 h-4 bg-white border-2 border-blue-500 rounded flex items-center justify-center">
+                              <svg
+                                className="w-2.5 h-2.5 text-blue-600"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"
+                                />
+                              </svg>
+                            </div>
+                            New Password
+                          </label>
+                          <PasswordInput
+                            name="newPassword"
+                            value={profileForm.newPassword}
+                            onChange={handleProfileFormChange}
+                            placeholder="Min 6 characters"
+                            className="w-full text-sm"
+                          />
+                        </div>
+
+                        <div>
+                          <label
+                            htmlFor="confirmPassword"
+                            className="flex items-center gap-1.5 text-xs font-semibold text-gray-700 mb-1.5"
+                          >
+                            <div className="w-4 h-4 bg-white border-2 border-blue-500 rounded flex items-center justify-center">
+                              <svg
+                                className="w-2.5 h-2.5 text-blue-600"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                                />
+                              </svg>
+                            </div>
+                            Confirm Password
+                          </label>
+                          <PasswordInput
+                            name="confirmPassword"
+                            value={profileForm.confirmPassword}
+                            onChange={handleProfileFormChange}
+                            placeholder="Confirm new password"
+                            className="w-full text-sm"
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
+                )}
 
                 {/* Action Buttons */}
                 <div className="flex justify-end gap-2 pt-4 border-t border-gray-200">
