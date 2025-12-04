@@ -4,8 +4,7 @@ const {
   sendNewApplicationNotification, 
   sendVerificationStatusNotification, 
   sendApplicationSubmittedNotification,
-  sendVerificationApprovalEmail,
-  sendVerificationRejectionEmail 
+  sendVerificationApprovalEmail
 } = require('../utils/emailService');
 const { hasRequiredDocuments } = require('./businessController');
 const multer = require('multer');
@@ -631,11 +630,10 @@ exports.downloadDocument = async (req, res) => {
   }
 };
 
-// Get document info by ID (public endpoint for resubmission)
+// Get document info by ID
 exports.getDocumentInfo = async (req, res) => {
   try {
     const { documentId } = req.params;
-
     if (!documentId) {
       return res.status(400).json({ error: 'Document ID is required' });
     }
@@ -645,7 +643,6 @@ exports.getDocumentInfo = async (req, res) => {
       return res.status(404).json({ error: 'Document not found' });
     }
 
-    // Only return necessary fields
     res.json({
       document_id: document.document_id,
       business_id: document.business_id,
@@ -661,97 +658,3 @@ exports.getDocumentInfo = async (req, res) => {
     res.status(500).json({ error: 'Failed to retrieve document information' });
   }
 };
-
-// Resubmit a rejected document
-exports.resubmitDocument = async (req, res) => {
-  const client = await pool.connect();
-  
-  try {
-    const { document_id } = req.body;
-    const file = req.file;
-    
-    if (!document_id) {
-      return res.status(400).json({ error: 'Document ID is required' });
-    }
-    
-    if (!file) {
-      return res.status(400).json({ error: 'No file uploaded' });
-    }
-
-    // Get the document to verify it exists and is rejected
-    const document = await BusinessDocument.findById(document_id, client);
-    if (!document) {
-      return res.status(404).json({ error: 'Document not found' });
-    }
-    
-    if (document.verification_status !== 'rejected') {
-      return res.status(400).json({ error: 'Only rejected documents can be resubmitted' });
-    }
-
-    await client.query('BEGIN');
-
-    // Upload the new file to Supabase
-    const fileBuffer = fs.readFileSync(file.path);
-    const uploadResult = await supabaseStorage.uploadFile(
-      fileBuffer,
-      file.originalname,
-      file.mimetype,
-      document.business_id,
-      document.document_type // Include document type in the path for better organization
-    );
-
-    if (!uploadResult.success) {
-      throw new Error('Failed to upload document to storage');
-    }
-
-    // Update the document record with the new file
-    const updatedDocument = await BusinessDocument.update(
-      document_id,
-      {
-        document_name: file.originalname,
-        file_path: uploadResult.url,
-        file_size: file.size,
-        mime_type: file.mimetype,
-        verification_status: 'pending',
-        verification_notes: null,
-        verified_at: null,
-        verified_by: null
-      },
-      client
-    );
-
-    // Clean up the uploaded file
-    fs.unlinkSync(file.path);
-    
-    await client.query('COMMIT');
-
-    res.json({
-      success: true,
-      message: 'Document resubmitted successfully',
-      document: updatedDocument
-    });
-
-  } catch (error) {
-    await client.query('ROLLBACK');
-    console.error('Document resubmission error:', error);
-    
-    // Clean up the uploaded file if it exists
-    if (req.file && req.file.path) {
-      try {
-        fs.unlinkSync(req.file.path);
-      } catch (e) {
-        console.error('Error cleaning up uploaded file:', e);
-      }
-    }
-    
-    res.status(500).json({
-      success: false,
-      error: 'Failed to resubmit document',
-      details: error.message
-    });
-  } finally {
-    client.release();
-  }
-};
-
-// All exports are already defined above with exports.functionName

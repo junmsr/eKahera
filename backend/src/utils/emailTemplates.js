@@ -40,12 +40,11 @@ const getApprovalEmailTemplate = (businessName, documents) => {
   `;
 };
 
-const getRejectionEmailTemplate = (businessName, documents, rejectionReason, userEmail) => {
-  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+const getRejectionEmailTemplate = (businessName, documents, rejectionReason) => {
   const documentList = documents.map(doc => {
     const status = doc.verification_status === 'approved' 
       ? '✅ Approved' 
-      : `❌ Rejected - <a href="${frontendUrl}/resubmit-document/${doc.document_id}?email=${encodeURIComponent(userEmail)}" style="color: #ef4444; text-decoration: underline;">Resubmit</a>`;
+      : '❌ Rejected';
     return `<li>${doc.document_type}: <strong>${status}</strong></li>`;
   }).join('\n');
 
@@ -72,17 +71,7 @@ const getRejectionEmailTemplate = (businessName, documents, rejectionReason, use
           </p>
         </div>
         
-        <p>Please review the feedback and resubmit the required documents to upload a new version.</p>
-        
-        <p>Or you can also resubmit all documents at once:</p>
-        <div style="text-align: center; margin: 24px 0;">
-          <a href="${frontendUrl}/resubmit-application?email=${encodeURIComponent(userEmail)}" 
-             style="display: inline-block; background-color: #ef4444; color: white; 
-                    padding: 12px 24px; text-decoration: none; border-radius: 6px; 
-                    font-weight: 600; font-size: 16px;">
-            Resubmit All Documents
-          </a>
-        </div>
+        <p>Please review the feedback and contact our support team if you have any questions.</p>
         
         <p>If you have any questions, please don't hesitate to contact our support team.</p>
         
@@ -94,5 +83,6 @@ const getRejectionEmailTemplate = (businessName, documents, rejectionReason, use
 
 module.exports = {
   getApprovalEmailTemplate,
-  getRejectionEmailTemplate
+  getRejectionEmailTemplate: (businessName, documents, rejectionReason) => 
+    getRejectionEmailTemplate(businessName, documents, rejectionReason)
 };

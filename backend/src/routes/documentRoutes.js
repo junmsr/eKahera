@@ -19,7 +19,7 @@ const upload = multer({
     filename: (req, file, cb) => {
       const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
       const ext = path.extname(file.originalname);
-      cb(null, `resubmit-${uniqueSuffix}${ext}`);
+      cb(null, `doc-${uniqueSuffix}${ext}`);
     }
   }),
   fileFilter: (req, file, cb) => {
@@ -35,14 +35,6 @@ const upload = multer({
     fileSize: 10 * 1024 * 1024, // 10MB limit
   }
 });
-
-// Public routes (for document resubmission without authentication)
-router.get('/:documentId/info', documentController.getDocumentInfo);
-
-router.post('/resubmit',
-  upload.single('document'),
-  documentController.resubmitDocument
-);
 
 // Public routes (for business registration)
 router.post('/upload',

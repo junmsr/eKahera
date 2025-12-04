@@ -29,6 +29,7 @@ import Receipt from "./pages/Receipt.jsx";
 import Documents from "./pages/Documents.jsx";
 import DocumentResubmission from "./pages/DocumentResubmission";
 import DocumentResubmitPage from "./pages/DocumentResubmitPage.jsx";
+import PublicDocumentResubmit from "./pages/PublicDocumentResubmit.jsx";
 import NotFound from "./pages/NotFound.jsx";
 import CustomerWaitingPage from "./pages/CustomerWaitingPage.jsx";
 import 'react-toastify/dist/ReactToastify.css';
@@ -64,6 +65,7 @@ const router = createBrowserRouter(
         { path: "superadmin/stores/:id", element: <SuperAdminView /> },
         { path: "setup", element: <InitialSetup /> },
         { path: "resubmit-application", element: <DocumentResubmission /> },
+        { path: "resubmit-documents", element: <PublicDocumentResubmit /> },
         { path: "resubmit-document/:documentId", element: <DocumentResubmitPage /> },
         // Catch-all route for 404
         { path: "*", element: <NotFound /> },
