@@ -300,48 +300,6 @@ export default function DashboardBusinessReport() {
           })()}
         </div>
       </div>
-
-      {/* Bottom KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full">
-        {/* Cash Flow */}
-        <div className="bg-gradient-to-br from-green-100 to-green-200 rounded-lg p-6 border border-green-300 shadow-md flex flex-col justify-center">
-          <p className="text-xs font-semibold text-green-700 uppercase tracking-wider mb-2">
-            Cash Flow
-          </p>
-          <p className="text-2xl font-bold text-green-900">
-            ₱{businessStats.cashFlow.toLocaleString()}
-          </p>
-          <p className="text-sm font-semibold text-green-700 mt-2">
-            Positive this month
-          </p>
-        </div>
-
-        {/* Operating Costs */}
-        <div className="bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg p-6 border border-blue-300 shadow-md flex flex-col justify-center">
-          <p className="text-xs font-semibold text-blue-700 uppercase tracking-wider mb-2">
-            Operating Costs
-          </p>
-          <p className="text-2xl font-bold text-blue-900">
-            ₱{businessStats.operatingCosts.toLocaleString()}
-          </p>
-          <p className="text-sm font-semibold text-blue-700 mt-2">
-            Controlled & optimized
-          </p>
-        </div>
-
-        {/* Profit Growth */}
-        <div className="bg-gradient-to-br from-purple-100 to-purple-200 rounded-lg p-6 border border-purple-300 shadow-md flex flex-col justify-center">
-          <p className="text-xs font-semibold text-purple-700 uppercase tracking-wider mb-2">
-            Profit Growth
-          </p>
-          <p className="text-2xl font-bold text-purple-900">
-            +{businessStats.profitGrowth}%
-          </p>
-          <p className="text-sm font-semibold text-purple-700 mt-2">
-            vs. previous month
-          </p>
-        </div>
-      </div>
     </section>
   );
 }
