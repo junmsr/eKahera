@@ -1,7 +1,6 @@
 import { Outlet } from 'react-router-dom';
 import SetupGuard from './components/common/SetupGuard';
 import VerificationGuard from './components/common/VerificationGuard';
-import 'react-toastify/dist/ReactToastify.css';
 /**
  * Main App Component
  * Serves as the root layout for the application
