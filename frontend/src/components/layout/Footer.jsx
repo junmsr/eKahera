@@ -36,7 +36,7 @@ function Footer({ className = "" }) {
       transition={{ duration: 0.5 }}
     >
       {/* Enhanced gradient background */}
-      <motion.div
+      <motion.div 
         className="absolute inset-0 bg-gradient-to-b from-white via-slate-50/80 to-blue-50/40"
         layoutId="footer-bg"
         initial={{ opacity: 0 }}
@@ -48,8 +48,7 @@ function Footer({ className = "" }) {
       <motion.div
         className="absolute -bottom-40 -left-40 w-[500px] h-[500px] rounded-full blur-3xl"
         style={{
-          background:
-            "radial-gradient(circle, rgba(96, 165, 250, 0.15) 0%, rgba(34, 211, 238, 0.1) 100%)",
+          background: 'radial-gradient(circle, rgba(96, 165, 250, 0.15) 0%, rgba(34, 211, 238, 0.1) 100%)'
         }}
         animate={{
           scale: [1, 1.1, 1],
@@ -64,8 +63,7 @@ function Footer({ className = "" }) {
       <motion.div
         className="absolute -bottom-40 -right-40 w-[500px] h-[500px] rounded-full blur-3xl"
         style={{
-          background:
-            "radial-gradient(circle, rgba(192, 132, 252, 0.15) 0%, rgba(236, 72, 153, 0.1) 100%)",
+          background: 'radial-gradient(circle, rgba(192, 132, 252, 0.15) 0%, rgba(236, 72, 153, 0.1) 100%)'
         }}
         animate={{
           scale: [1, 1.15, 1],
@@ -79,21 +77,21 @@ function Footer({ className = "" }) {
       />
 
       {/* Subtle grid pattern */}
-      <motion.div
+      <motion.div 
         className="absolute inset-0 opacity-40"
         style={{
           backgroundImage: [
-            "linear-gradient(rgba(59, 130, 246, 0.02) 1px, transparent 1px)",
-            "linear-gradient(90deg, rgba(59, 130, 246, 0.02) 1px, transparent 1px)",
-          ].join(","),
-          backgroundSize: "3rem 3rem",
+            'linear-gradient(rgba(59, 130, 246, 0.02) 1px, transparent 1px)',
+            'linear-gradient(90deg, rgba(59, 130, 246, 0.02) 1px, transparent 1px)'
+          ].join(','),
+          backgroundSize: '3rem 3rem'
         }}
         initial={{ opacity: 0 }}
         animate={{ opacity: 0.4 }}
         transition={{ duration: 1, delay: 0.3 }}
       />
 
-      <motion.div
+      <motion.div 
         className="relative z-10 max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 pt-24 pb-16"
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
@@ -123,21 +121,19 @@ function Footer({ className = "" }) {
             {/* Contact Info with enhanced styling */}
             <motion.div className="space-y-4 mb-8">
               <motion.a
-                href="mailto:business.ekahera@gmail.com"
+                href="mailto:support@ekahera.com"
                 className="flex items-center gap-3 text-sm text-slate-700 hover:text-blue-600 transition-all duration-300 group"
                 whileHover={{ x: 6, scale: 1.02 }}
               >
                 <motion.div
                   className="h-10 w-10 rounded-xl flex items-center justify-center transition-all duration-300 shadow-sm group-hover:shadow-md"
                   style={{
-                    background:
-                      "linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)",
+                    background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)'
                   }}
                   whileHover={{
                     rotate: 5,
-                    background:
-                      "linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)",
-                    scale: 1.05,
+                    background: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)',
+                    scale: 1.05
                   }}
                 >
                   <svg
@@ -153,9 +149,7 @@ function Footer({ className = "" }) {
                     <path d="M22 6l-10 7L2 6" />
                   </svg>
                 </motion.div>
-                <motion.span className="font-medium">
-                  business.ekahera@gmail.com
-                </motion.span>
+                <motion.span className="font-medium">support@ekahera.com</motion.span>
               </motion.a>
 
               <motion.a
@@ -166,14 +160,12 @@ function Footer({ className = "" }) {
                 <motion.div
                   className="h-10 w-10 rounded-xl flex items-center justify-center transition-all duration-300 shadow-sm group-hover:shadow-md"
                   style={{
-                    background:
-                      "linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)",
+                    background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)'
                   }}
                   whileHover={{
                     rotate: 5,
-                    background:
-                      "linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)",
-                    scale: 1.05,
+                    background: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)',
+                    scale: 1.05
                   }}
                 >
                   <svg
@@ -192,9 +184,7 @@ function Footer({ className = "" }) {
                     />
                   </svg>
                 </motion.div>
-                <motion.span className="font-medium">
-                  +63 970 846 8324
-                </motion.span>
+                <motion.span className="font-medium">+63 970 846 8324</motion.span>
               </motion.a>
 
               <motion.a
@@ -237,8 +227,7 @@ function Footer({ className = "" }) {
               <motion.span
                 className="absolute bottom-0 left-0 w-12 h-0.5 rounded-full"
                 style={{
-                  background:
-                    "linear-gradient(90deg, #60a5fa 0%, #22d3ee 100%)",
+                  background: 'linear-gradient(90deg, #60a5fa 0%, #22d3ee 100%)'
                 }}
                 initial={{ width: 0 }}
                 animate={{ width: "100%" }}
@@ -284,9 +273,7 @@ function Footer({ className = "" }) {
                         d={link.icon}
                       />
                     </svg>
-                    <motion.span className="font-medium">
-                      {link.name}
-                    </motion.span>
+                    <motion.span className="font-medium">{link.name}</motion.span>
                   </motion.a>
                 </motion.li>
               ))}
@@ -300,8 +287,7 @@ function Footer({ className = "" }) {
               <motion.span
                 className="absolute bottom-0 left-0 w-12 h-0.5 rounded-full"
                 style={{
-                  background:
-                    "linear-gradient(90deg, #60a5fa 0%, #22d3ee 100%)",
+                  background: 'linear-gradient(90deg, #60a5fa 0%, #22d3ee 100%)'
                 }}
                 initial={{ width: 0 }}
                 animate={{ width: "100%" }}
@@ -330,9 +316,7 @@ function Footer({ className = "" }) {
                       d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
                     />
                   </svg>
-                  <motion.span className="font-medium">
-                    Documentation
-                  </motion.span>
+                  <motion.span className="font-medium">Documentation</motion.span>
                 </motion.a>
               </motion.li>
               <motion.li>
@@ -356,9 +340,7 @@ function Footer({ className = "" }) {
                       d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
                     />
                   </svg>
-                  <motion.span className="font-medium">
-                    Privacy Policy
-                  </motion.span>
+                  <motion.span className="font-medium">Privacy Policy</motion.span>
                 </motion.button>
               </motion.li>
               <motion.li>
@@ -382,9 +364,7 @@ function Footer({ className = "" }) {
                       d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                     />
                   </svg>
-                  <motion.span className="font-medium">
-                    Terms and Conditions
-                  </motion.span>
+                  <motion.span className="font-medium">Terms and Conditions</motion.span>
                 </motion.button>
               </motion.li>
               <motion.li>
@@ -453,7 +433,7 @@ function Footer({ className = "" }) {
         onClose={() => setOpenPrivacy(false)}
       />
     </motion.footer>
-  );
+  )
 }
 
 export default Footer;
