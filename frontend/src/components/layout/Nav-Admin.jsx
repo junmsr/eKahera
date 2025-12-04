@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import Logo from "../common/Logo";
+import Modal from "../modals/Modal";
+import { useAuth } from "../../hooks/useAuth";
 
 // Navigation configuration
 const NAV_ITEMS = [
@@ -187,12 +189,28 @@ const NavigationItem = ({ item, isActive }) => {
  */
 const NavAdmin = ({ isMobile, onLogoutClick }) => {
   const navigate = useNavigate();
-  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const { logout } = useAuth();
+
+  // Logout modal state
+  const [logoutModal, setLogoutModal] = useState({ isOpen: false });
+
+  // --- Logout Modal Handlers ---
+
+  const openLogoutModal = () => {
+    setLogoutModal({ isOpen: true });
+  };
+
+  const closeLogoutModal = () => {
+    setLogoutModal({ isOpen: false });
+  };
 
   const confirmLogout = () => {
-    // Perform logout logic here
-    onLogoutClick();
-    setShowLogoutConfirm(false);
+    sessionStorage.removeItem("auth_token");
+    sessionStorage.removeItem("user");
+    localStorage.removeItem("auth_token"); // Remove local storage token just in case
+    localStorage.removeItem("user"); // Remove local storage user object just in case
+    logout();
+    navigate("/");
   };
 
   const LogoutIcon = () => (
@@ -241,7 +259,7 @@ const NavAdmin = ({ isMobile, onLogoutClick }) => {
           {/* Logout Button */}
           <div className={`${isMobile ? "block" : "mt-auto"}`}>
             <button
-              onClick={() => setShowLogoutConfirm(true)}
+              onClick={openLogoutModal}
               className={STYLES.logoutButton}
               aria-label="Logout"
             >
@@ -254,69 +272,81 @@ const NavAdmin = ({ isMobile, onLogoutClick }) => {
         </nav>
       </aside>
 
-      {showLogoutConfirm && (
-        <div className="fixed inset-0 z-90 flex items-center justify-center">
-          <div
-            className="absolute inset-0 bg-black/80 z-90"
-            onClick={() => setShowLogoutConfirm(false)}
-          />
-          <div className="relative bg-white rounded-xl shadow-xl w-[92%] max-w-md z-100 p-0">
-            {/* Header Section */}
-            <div className="bg-gradient-to-r from-red-50 via-red-50/80 to-orange-50/50 border-b border-red-100 px-6 py-5 rounded-t-2xl">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-red-600 rounded-xl flex items-center justify-center shadow-lg">
-                  <svg
-                    className="w-6 h-6"
-                    fill="none"
-                    stroke="white"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-                    />
-                  </svg>
-                </div>
-                <div className="flex-1">
-                  <h2 className="text-xl font-bold text-gray-900 mb-1">
-                    Confirm Logout
-                  </h2>
-                  <p className="text-sm text-gray-600">
-                    Are you sure you want to log out?
-                  </p>
-                </div>
+      {/* Logout Confirmation Modal */}
+      <Modal
+        isOpen={logoutModal.isOpen}
+        onClose={closeLogoutModal}
+        title=""
+        size="sm"
+      >
+        <div className="p-0">
+          {/* Header Section */}
+          <div className="bg-gradient-to-r from-red-50 via-red-50/80 to-orange-50/50 border-b border-red-100 px-6 py-5 rounded-t-2xl">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-red-600 rounded-xl flex items-center justify-center shadow-lg">
+                <svg
+                  className="w-6 h-6 text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                  />
+                </svg>
               </div>
-            </div>
-
-            {/* Content Section */}
-            <div className="p-6">
-              <p className="text-sm text-gray-700 mb-6">
-                You will be redirected to the login page and your session will
-                end.
-              </p>
-
-              {/* Action Buttons */}
-              <div className="flex justify-end gap-3">
-                <button
-                  onClick={() => setShowLogoutConfirm(false)}
-                  className="px-5 py-2.5 rounded-lg text-sm font-semibold text-gray-700 bg-white border-2 border-gray-300 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={confirmLogout}
-                  className="px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 shadow-md hover:shadow-lg transition-all duration-200 flex items-center gap-2"
-                >
-                  <LogoutIcon />
-                  Logout
-                </button>
+              <div className="flex-1">
+                <h2 className="text-xl font-bold text-gray-900 mb-1">
+                  Confirm Logout
+                </h2>
+                <p className="text-sm text-gray-600">
+                  Are you sure you want to log out?
+                </p>
               </div>
             </div>
           </div>
+
+          {/* Content Section */}
+          <div className="p-6">
+            <p className="text-sm text-gray-700 mb-6">
+              You will be redirected to the login page and your session will
+              end.
+            </p>
+
+            {/* Action Buttons */}
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={closeLogoutModal}
+                className="px-5 py-2.5 rounded-lg text-sm font-semibold text-gray-700 bg-white border-2 border-gray-300 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmLogout}
+                className="px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 shadow-md hover:shadow-lg transition-all duration-200 flex items-center gap-2"
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                  />
+                </svg>
+                Logout
+              </button>
+            </div>
+          </div>
         </div>
-      )}
+      </Modal>
     </>
   );
 };
