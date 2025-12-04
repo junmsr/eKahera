@@ -1,5 +1,8 @@
 const path = require('path');
 const fs = require('fs');
+const compression = require('compression');
+const helmet = require('helmet');
+const express = require('express');
 
 if (process.env.NODE_ENV !== 'production') {
   // Load environment variables from .env file for local development
@@ -51,8 +54,6 @@ const config = {
   SUPABASE_SECRET_ACCESS_KEY: process.env.SUPABASE_SECRET_ACCESS_KEY,
 };
 
-const express = require('express');
-const compression = require('compression');
 const { corsOptions, apiLimiter, securityHeaders, compressionOptions } = require('./config/serverConfig');
 
 // Import routes
@@ -76,6 +77,34 @@ const { startPendingTransactionCleanup } = require('./utils/cleanup');
 
 const app = express();
 
+// Enable compression for all responses
+app.use(compression());
+
+// Security headers
+app.use(helmet({
+  contentSecurityPolicy: false, // Disable CSP for now as it needs specific configuration
+  crossOriginEmbedderPolicy: false, // Required for some features like hot-reloading
+}));
+
+// Set cache headers for static assets
+const staticOptions = {
+  maxAge: '1y',
+  etag: true,
+  lastModified: true,
+  setHeaders: (res, path) => {
+    if (path.endsWith('.html')) {
+      // No cache for HTML files
+      res.setHeader('Cache-Control', 'no-cache');
+    } else if (path.match(/\.(js|css|json)$/)) {
+      // Cache JavaScript, CSS, and JSON files for 1 year
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    }
+  }
+};
+
+// Serve static files with cache headers
+app.use(express.static(path.join(__dirname, '../frontend/dist'), staticOptions));
+
 // Apply security headers
 app.use(securityHeaders);
 
@@ -89,8 +118,8 @@ app.use('/api/', apiLimiter);
 const { paymongoWebhook } = require('./controllers/paymentsController');
 app.post('/api/payments/paymongo/webhook', express.raw({ type: '*/*' }), paymongoWebhook);
 
-// Apply compression (should be before other middleware)
-app.use(compression(compressionOptions));
+// Compression is already applied with default options at the top level
+// We'll use the configured compression options for specific routes if needed
 
 // Parse JSON and URL-encoded bodies
 app.use(express.json({ limit: '10mb' }));
