@@ -128,45 +128,85 @@ exports.getCustomersTimeseries = async (req, res) => {
   }
 };
 
+
+// Helper function to get key metrics for a given period
+const getPeriodMetrics = async (businessId, startDate, endDate) => {
+  // Revenue from transactions
+  const revenueRes = await pool.query(
+    `SELECT COALESCE(SUM(total_amount),0) AS total FROM transactions WHERE business_id = $1 AND created_at >= $2 AND created_at < $3`,
+    [businessId, startDate, endDate]
+  );
+  const revenue = Number(revenueRes.rows[0].total) || 0;
+
+  // Cost of goods sold
+  const costRes = await pool.query(
+    `SELECT COALESCE(SUM(p.cost_price * ti.product_quantity),0) AS total_cost
+     FROM transactions t
+     JOIN transaction_items ti ON ti.transaction_id = t.transaction_id
+     JOIN products p ON p.product_id = ti.product_id
+     WHERE t.business_id = $1 AND t.created_at >= $2 AND t.created_at < $3`,
+    [businessId, startDate, endDate]
+  );
+  const costOfGoods = Number(costRes.rows[0].total_cost) || 0;
+
+  const expenses = costOfGoods;
+
+  // Gross margin
+  const grossMargin = revenue > 0 ? Math.round(((revenue - costOfGoods) / revenue) * 100) : 0;
+
+  // Net profit
+  const netProfit = revenue - expenses;
+
+  return { revenue, expenses, netProfit, grossMargin };
+};
+
 // New endpoints for business report
 exports.getKeyMetrics = async (req, res) => {
   try {
     const role = (req.user?.role || '').toLowerCase();
     const businessId = role === 'superadmin' ? (req.query?.business_id ? Number(req.query.business_id) : null) : (req.user?.businessId || null);
-    if (!businessId) return res.json({ revenue: 0, expenses: 0, netProfit: 0, grossMargin: 0 });
+    if (!businessId) return res.json({
+      revenue: { value: 0, change: 0 },
+      expenses: { value: 0, change: 0 },
+      netProfit: { value: 0, change: 0 },
+      grossMargin: { value: 0, change: 0 }
+    });
 
-    // Revenue from transactions
-    const revenueRes = await pool.query(
-      `SELECT COALESCE(SUM(total_amount),0) AS total FROM transactions WHERE business_id = $1 AND created_at >= NOW() - INTERVAL '30 days'`,
-      [businessId]
-    );
-    const revenue = Number(revenueRes.rows[0].total) || 0;
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(endDate.getDate() - 30);
 
-    // Expenses: assume 65% of revenue for demo
-    const expenses = Math.round(revenue * 0.65);
+    const prevEndDate = startDate;
+    const prevStartDate = new Date();
+    prevStartDate.setDate(prevEndDate.getDate() - 30);
 
-    // Cost of goods sold: sum of cost_price * quantity from transaction_items
-    const costRes = await pool.query(
-      `SELECT COALESCE(SUM(p.cost_price * ti.product_quantity),0) AS total_cost
-       FROM transactions t
-       JOIN transaction_items ti ON ti.transaction_id = t.transaction_id
-       JOIN products p ON p.product_id = ti.product_id
-       WHERE t.business_id = $1 AND t.created_at >= NOW() - INTERVAL '30 days'`,
-      [businessId]
-    );
-    const costOfGoods = Number(costRes.rows[0].total_cost) || 0;
+    const currentMetrics = await getPeriodMetrics(businessId, startDate, endDate);
+    const previousMetrics = await getPeriodMetrics(businessId, prevStartDate, prevEndDate);
 
-    // Gross margin = (revenue - cost) / revenue * 100
-    const grossMargin = revenue > 0 ? Math.round(((revenue - costOfGoods) / revenue) * 100) : 0;
-
-    // Net profit = revenue - expenses
-    const netProfit = revenue - expenses;
+    const calculateChange = (current, previous) => {
+      if (previous === 0) {
+        return current > 0 ? 100 : 0;
+      }
+      return Math.round(((current - previous) / previous) * 100);
+    };
 
     res.json({
-      revenue,
-      expenses,
-      netProfit,
-      grossMargin
+      revenue: {
+        value: currentMetrics.revenue,
+        change: calculateChange(currentMetrics.revenue, previousMetrics.revenue)
+      },
+      expenses: {
+        value: currentMetrics.expenses,
+        change: calculateChange(currentMetrics.expenses, previousMetrics.expenses)
+      },
+      netProfit: {
+        value: currentMetrics.netProfit,
+        change: calculateChange(currentMetrics.netProfit, previousMetrics.netProfit)
+      },
+      grossMargin: {
+        value: currentMetrics.grossMargin,
+        change: calculateChange(currentMetrics.grossMargin, previousMetrics.grossMargin)
+      }
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -211,7 +251,16 @@ exports.getRevenueVsExpenses = async (req, res) => {
         [businessId, monthStart, monthEnd]
       );
       const revenue = Number(revenueRes.rows[0].total) || 0;
-      const expenses = Math.round(revenue * 0.65); // Assume 65%
+      
+      const costRes = await pool.query(
+        `SELECT COALESCE(SUM(p.cost_price * ti.product_quantity),0) AS total_cost
+         FROM transactions t
+         JOIN transaction_items ti ON ti.transaction_id = t.transaction_id
+         JOIN products p ON p.product_id = ti.product_id
+         WHERE t.business_id = $1 AND t.created_at >= $2 AND t.created_at < $3`,
+        [businessId, monthStart, monthEnd]
+      );
+      const expenses = Number(costRes.rows[0].total_cost) || 0;
 
       data.push({
         month: monthStart.toLocaleString('default', { month: 'short' }),
@@ -246,7 +295,15 @@ exports.getProfitTrend = async (req, res) => {
         [businessId, monthStart, monthEnd]
       );
       const revenue = Number(revenueRes.rows[0].total) || 0;
-      const expenses = Math.round(revenue * 0.65);
+      const costRes = await pool.query(
+        `SELECT COALESCE(SUM(p.cost_price * ti.product_quantity),0) AS total_cost
+         FROM transactions t
+         JOIN transaction_items ti ON ti.transaction_id = t.transaction_id
+         JOIN products p ON p.product_id = ti.product_id
+         WHERE t.business_id = $1 AND t.created_at >= $2 AND t.created_at < $3`,
+        [businessId, monthStart, monthEnd]
+      );
+      const expenses = Number(costRes.rows[0].total_cost) || 0;
       const profit = revenue - expenses;
 
       data.push({
@@ -295,26 +352,49 @@ exports.getProductPerformance = async (req, res) => {
     const businessId = role === 'superadmin' ? (req.query?.business_id ? Number(req.query.business_id) : null) : (req.user?.businessId || null);
     if (!businessId) return res.json([]);
 
-    const perfRes = await pool.query(
+    const currentSalesRes = await pool.query(
       `SELECT COALESCE(pc.product_category_name, 'Uncategorized') AS name,
               COALESCE(SUM(ti.subtotal),0) AS sales
        FROM transactions t
        JOIN transaction_items ti ON ti.transaction_id = t.transaction_id
        JOIN products p ON p.product_id = ti.product_id
        LEFT JOIN product_categories pc ON pc.product_category_id = p.product_category_id
-       WHERE t.business_id = $1
+       WHERE t.business_id = $1 AND t.created_at >= NOW() - INTERVAL '30 days'
        GROUP BY pc.product_category_name
        ORDER BY sales DESC
        LIMIT 5`,
       [businessId]
     );
 
-    // Determine trend: compare to previous period (simplified, assume current > previous for demo)
-    const data = perfRes.rows.map((r, idx) => ({
-      name: r.name,
-      sales: Number(r.sales),
-      trend: idx < 2 ? 'up' : idx < 4 ? 'down' : 'flat'
-    }));
+    const previousSalesRes = await pool.query(
+      `SELECT COALESCE(pc.product_category_name, 'Uncategorized') AS name,
+              COALESCE(SUM(ti.subtotal),0) AS sales
+       FROM transactions t
+       JOIN transaction_items ti ON ti.transaction_id = t.transaction_id
+       JOIN products p ON p.product_id = ti.product_id
+       LEFT JOIN product_categories pc ON pc.product_category_id = p.product_category_id
+       WHERE t.business_id = $1 AND t.created_at >= NOW() - INTERVAL '60 days' AND t.created_at < NOW() - INTERVAL '30 days'
+       GROUP BY pc.product_category_name`,
+      [businessId]
+    );
+
+    const previousSalesMap = new Map(previousSalesRes.rows.map(r => [r.name, Number(r.sales)]));
+
+    const data = currentSalesRes.rows.map(r => {
+      const currentSales = Number(r.sales);
+      const previousSales = previousSalesMap.get(r.name) || 0;
+      let trend = 'flat';
+      if (currentSales > previousSales) {
+        trend = 'up';
+      } else if (currentSales < previousSales) {
+        trend = 'down';
+      }
+      return {
+        name: r.name,
+        sales: currentSales,
+        trend: trend
+      };
+    });
 
     res.json(data);
   } catch (err) {
@@ -328,30 +408,24 @@ exports.getBusinessStats = async (req, res) => {
     const businessId = role === 'superadmin' ? (req.query?.business_id ? Number(req.query.business_id) : null) : (req.user?.businessId || null);
     if (!businessId) return res.json({ cashFlow: 0, operatingCosts: 0, profitGrowth: 0 });
 
-    // Cash flow: assume positive, calculate as net profit
-    const revenueRes = await pool.query(
-      `SELECT COALESCE(SUM(total_amount),0) AS total FROM transactions WHERE business_id = $1 AND created_at >= NOW() - INTERVAL '30 days'`,
-      [businessId]
-    );
-    const revenue = Number(revenueRes.rows[0].total) || 0;
-    const expenses = Math.round(revenue * 0.65);
-    const cashFlow = revenue - expenses;
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setMonth(endDate.getMonth() - 1);
 
-    // Operating costs: assume 30% of revenue
-    const operatingCosts = Math.round(revenue * 0.3);
+    const prevEndDate = startDate;
+    const prevStartDate = new Date();
+    prevStartDate.setMonth(prevEndDate.getMonth() - 1);
+
+    const currentMetrics = await getPeriodMetrics(businessId, startDate, endDate);
+    const previousMetrics = await getPeriodMetrics(businessId, prevStartDate, prevEndDate);
+
+    // Cash flow: assume positive, calculate as net profit
+    const cashFlow = currentMetrics.netProfit;
+
+    const operatingCosts = currentMetrics.expenses;
 
     // Profit growth: compare current month to previous
-    const currMonth = await pool.query(
-      `SELECT COALESCE(SUM(total_amount),0) AS total FROM transactions WHERE business_id = $1 AND created_at >= date_trunc('month', NOW())`,
-      [businessId]
-    );
-    const prevMonth = await pool.query(
-      `SELECT COALESCE(SUM(total_amount),0) AS total FROM transactions WHERE business_id = $1 AND created_at >= date_trunc('month', NOW()) - INTERVAL '1 month' AND created_at < date_trunc('month', NOW())`,
-      [businessId]
-    );
-    const curr = Number(currMonth.rows[0].total) || 0;
-    const prev = Number(prevMonth.rows[0].total) || 0;
-    const profitGrowth = prev > 0 ? Math.round(((curr - prev) / prev) * 100 * 10) / 10 : 0;
+    const profitGrowth = previousMetrics.netProfit > 0 ? Math.round(((currentMetrics.netProfit - previousMetrics.netProfit) / previousMetrics.netProfit) * 100 * 10) / 10 : (currentMetrics.netProfit > 0 ? 100 : 0);
 
     res.json({
       cashFlow,

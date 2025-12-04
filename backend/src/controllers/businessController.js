@@ -3,7 +3,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const fs = require('fs');
 const path = require('path');
-const { sendApplicationSubmittedNotification } = require('../utils/emailService');
+const { sendApplicationSubmittedNotification, sendNewApplicationNotification } = require('../utils/emailService');
 const { logAction } = require('../utils/logger');
 const supabaseStorage = require('../utils/supabaseStorage');
 const BusinessDocument = require('../models/BusinessDocument');
@@ -18,30 +18,42 @@ const config = process.env;
 const REQUIRED_DOCUMENT_TYPES = [
   'Business Registration Certificate',
   'Mayor\'s Permit',
-  'BIR Certificate of Registration'
 ];
 
 // Acceptable matchers for each required document (handles synonyms and punctuation variants)
 const REQUIRED_DOCUMENT_MATCHERS = [
   {
-    label: 'Business Registration Certificate',
+    label: 'Business Registration Certificate (DTI/SEC/CDA)',
     tests: [
-      /business.*registration.*cert/i,
-      /\b(dti|sec|cda)\b/i
+      /business.*registration.*certificate.*\(dti\/sec\/cda\)/i,
+      /business.*regis/i,
+      /dti/i,
+      /sec/i,
+      /cda/i,
+      /certificate.*incorp/i,
+      /business.*doc/i
     ]
   },
   {
-    label: 'Mayor\'s Permit',
+    label: "Mayor's Permit / Business Permit",
     tests: [
+      /mayor.*permit.*business.*permit/i,
       /mayor.*permit/i,
-      /business.*permit/i
+      /business.*permit/i,
+      /municipal.*licen/i,
+      /permit/i
     ]
   },
   {
-    label: 'BIR Certificate of Registration',
+    label: 'BIR Certificate of Registration (Form 2303)',
     tests: [
-      /bir.*certificate.*registration/i,
-      /form.*2303/i
+      /bir.*certificate.*registration.*\(form\s*2303\)/i,
+      /bir.*2303/i,
+      /form.*2303/i,
+      /bir.*cert/i,
+      /tax.*cert/i,
+      /registration.*cert/i,
+      /bir.*doc/i
     ]
   }
 ];
@@ -49,6 +61,7 @@ const REQUIRED_DOCUMENT_MATCHERS = [
 // Check if business has uploaded all required documents
 const hasRequiredDocuments = async (businessId) => {
   try {
+    console.log(`Checking required documents for business ID: ${businessId}`);
     const documentsQuery = `
       SELECT DISTINCT document_type
       FROM business_documents
@@ -56,23 +69,52 @@ const hasRequiredDocuments = async (businessId) => {
     `;
     const result = await pool.query(documentsQuery, [businessId]);
     const uploadedTypes = result.rows.map(row => row.document_type);
+    console.log('Uploaded document types from DB:', uploadedTypes);
 
-    // Canonicalize uploaded labels
-    const canonicalize = (s) => String(s || '')
-      .normalize('NFKD')
-      .replace(/[\u0300-\u036f]/g, '') // remove diacritics
-      .replace(/[^a-z0-9]+/gi, ' ') // non-alphanum to space
-      .trim();
+    // Canonicalize uploaded labels - preserve special characters for exact matching
+    const canonicalize = (s) => {
+      if (!s) return '';
+      // First try exact match with original string
+      const exactMatch = REQUIRED_DOCUMENT_MATCHERS.find(doc => 
+        doc.label.toLowerCase() === s.toLowerCase()
+      );
+      if (exactMatch) {
+        console.log(`Exact match found for '${s}'`);
+        return exactMatch.label.toLowerCase();
+      }
+      
+      // If no exact match, try pattern matching
+      const result = String(s)
+        .normalize('NFKD')
+        .replace(/[\u0300-\u036f]/g, '') // remove diacritics
+        .replace(/[^a-z0-9\s()\/\-]+/gi, ' ') // keep spaces, parentheses, slashes, and hyphens
+        .replace(/\s+/g, ' ') // collapse multiple spaces
+        .trim()
+        .toLowerCase();
+      console.log(`Canonicalized '${s}' to '${result}'`);
+      return result;
+    };
 
     const matchedByLabel = new Map();
     REQUIRED_DOCUMENT_MATCHERS.forEach(({ label }) => matchedByLabel.set(label, false));
 
+    console.log('Checking document type matches...');
     uploadedTypes.forEach(uploadedRaw => {
       const uploadedCanon = canonicalize(uploadedRaw);
+      console.log(`Matching document type: ${uploadedRaw} (canonical: ${uploadedCanon})`);
+      
       REQUIRED_DOCUMENT_MATCHERS.forEach(({ label, tests }) => {
         if (matchedByLabel.get(label)) return;
-        const isMatch = tests.some((re) => re.test(uploadedCanon));
-        if (isMatch) matchedByLabel.set(label, true);
+        
+        console.log(`  Checking against matcher: ${label}`);
+        tests.forEach((re, i) => {
+          const isMatch = re.test(uploadedCanon);
+          console.log(`    Test ${i + 1} (${re}): ${isMatch ? 'MATCH' : 'no match'}`);
+          if (isMatch) {
+            console.log(`    ✓ Document type '${uploadedRaw}' matches '${label}'`);
+            matchedByLabel.set(label, true);
+          }
+        });
       });
     });
 
@@ -80,6 +122,9 @@ const hasRequiredDocuments = async (businessId) => {
     const missingTypes = REQUIRED_DOCUMENT_MATCHERS
       .filter(({ label }) => !matchedByLabel.get(label))
       .map(({ label }) => label);
+      
+    console.log('Matched document types:', Object.fromEntries(matchedByLabel));
+    console.log('Missing document types:', missingTypes);
 
     return {
       hasAllRequired,
@@ -246,8 +291,21 @@ exports.listCashiers = async (req, res) => {
   }
 };
 
-// Register business and create user account
 exports.registerBusiness = async (req, res) => {
+  console.log('\n🚀 registerBusiness function called with request body:', JSON.stringify({
+    username: req.body.username,
+    email: req.body.email,
+    businessName: req.body.businessName,
+    businessType: req.body.businessType,
+    country: req.body.country,
+    province: req.body.province,
+    city: req.body.city,
+    barangay: req.body.barangay,
+    houseNumber: req.body.houseNumber,
+    mobile: req.body.mobile,
+    password: req.body.password
+  }, null, 2));
+
   const {
     email,
     username,
@@ -349,6 +407,112 @@ exports.registerBusiness = async (req, res) => {
 
 
     await client.query('COMMIT');
+
+    // Send application submitted email notification
+    console.log('\n=== STARTING EMAIL NOTIFICATION PROCESS ===');
+    console.log('Attempting to send application confirmation email to:', email);
+    console.log('RESEND_API_KEY available:', !!process.env.RESEND_API_KEY);
+    console.log('EMAIL_USER:', process.env.EMAIL_USER);
+    
+    try {
+      const businessData = {
+        email: email,
+        business_name: businessName,
+        business_id: businessResult.rows[0].business_id,
+        created_at: new Date().toISOString()
+      };
+      
+      console.log('\n--- Business Data for Email ---');
+      console.log(JSON.stringify(businessData, null, 2));
+      
+      // Send confirmation email to the business
+      console.log('\n--- Sending Confirmation Email to Business ---');
+      const result = await sendApplicationSubmittedNotification(businessData);
+      console.log('Business confirmation email send result:', result);
+      
+      // Send notification to all super admins about new registration
+      console.log('\n--- STARTING SUPERADMIN NOTIFICATION PROCESS ---');
+      console.log('Fetching superadmin emails from database...');
+      
+      try {
+        // Check if pool is connected
+        console.log('Database pool connection status:', pool ? 'Connected' : 'Not connected');
+        
+        const superAdminResult = await pool.query(
+          'SELECT user_id, email, role FROM users WHERE role = $1',
+          ['superadmin']
+        );
+        
+        console.log('\n--- SUPERADMIN QUERY RESULTS ---');
+        console.log(`Found ${superAdminResult.rowCount} superadmin(s) in database`);
+        console.log('Superadmin records:', JSON.stringify(superAdminResult.rows, null, 2));
+
+        if (superAdminResult.rowCount > 0) {
+          const superAdminEmails = superAdminResult.rows.map(row => row.email).filter(Boolean);
+          console.log('\n--- PROCESSING SUPERADMIN EMAILS ---');
+          console.log(`Found ${superAdminEmails.length} valid superadmin email(s):`, superAdminEmails);
+          
+          if (superAdminEmails.length > 0) {
+            console.log('\n--- SENDING NOTIFICATIONS TO SUPERADMINS ---');
+            console.log('Calling sendNewApplicationNotification with:', {
+              businessData: { 
+                email: businessData.email, 
+                business_name: businessData.business_name,
+                business_id: businessData.business_id
+              },
+              superAdminEmails: superAdminEmails
+            });
+            
+            const notificationResult = await sendNewApplicationNotification(businessData, superAdminEmails);
+            
+            console.log('\n--- NOTIFICATION SEND RESULTS ---');
+            console.log('sendNewApplicationNotification result:', notificationResult);
+            
+            if (notificationResult) {
+              console.log('✅ Successfully sent notifications to all superadmins');
+            } else {
+              console.warn('⚠️ Failed to send notifications to some or all superadmins');
+            }
+          } else {
+            console.warn('⚠️ No valid superadmin emails found after filtering');
+          }
+        } else {
+          console.warn('⚠️ No superadmins found in the database with role = "superadmin"');
+          console.warn('This could indicate a problem with the database or user roles');
+        }
+      } catch (error) {
+        console.error('\n❌ ERROR IN SUPERADMIN NOTIFICATION PROCESS:');
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
+        console.error('Error details:', {
+          name: error.name,
+          code: error.code,
+          detail: error.detail,
+          hint: error.hint,
+          position: error.position,
+          internalPosition: error.internalPosition,
+          internalQuery: error.internalQuery,
+          where: error.where,
+          schema: error.schema,
+          table: error.table,
+          column: error.column,
+          dataType: error.dataType,
+          constraint: error.constraint,
+          file: error.file,
+          line: error.line,
+          routine: error.routine
+        });
+      }
+    } catch (emailError) {
+      console.error('Failed to send email notifications:', {
+        error: emailError.message,
+        stack: emailError.stack,
+        email: email,
+        businessName: businessName,
+        businessId: businessResult.rows[0].business_id
+      });
+      // Don't fail the registration if email sending fails
+    }
 
     logAction({
       userId: userId,
@@ -770,16 +934,24 @@ exports.registerBusinessWithDocuments = [
         RETURNING business_id, business_name
       `, [businessName, businessType, country, businessAddress, houseNumber, mobile, email]);
 
-      const businessId = businessResult.rows[0].business_id;
+      const business = businessResult.rows[0];
+      const businessId = business.business_id;
 
       // Update user with business_id
       await client.query('UPDATE users SET business_id = $1 WHERE user_id = $2', [businessId, userId]);
+      
+      // We'll send the registration confirmation email after the transaction is committed
 
       // Upload documents to Supabase and save to database
       const uploadedDocuments = [];
+      console.log('Processing document uploads...');
+      console.log('Files to process:', files.map(f => f.originalname));
+      console.log('Document types:', parsedDocumentTypes);
+      
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         const documentType = parsedDocumentTypes[i];
+        console.log(`Processing document ${i+1}:`, file.originalname, 'as type:', documentType);
 
         // Read file buffer
         const fileBuffer = fs.readFileSync(file.path);
@@ -824,7 +996,9 @@ exports.registerBusinessWithDocuments = [
       await BusinessVerification.create(businessId);
 
       // Check if all required documents are uploaded
+      console.log('Checking for required documents...');
       const documentStatus = await hasRequiredDocuments(businessId);
+      console.log('Document status after upload:', JSON.stringify(documentStatus, null, 2));
 
       // Generate JWT token
       const token = jwt.sign(
@@ -838,33 +1012,97 @@ exports.registerBusinessWithDocuments = [
         { expiresIn: '24h' }
       );
 
-      // Only send notifications and update status if all required documents are uploaded
-      if (documentStatus.hasAllRequired) {
-                // Get SuperAdmin emails for notification
-                const superAdminResult = await client.query(
-                  'SELECT email FROM users WHERE role = $1',
-                  ['superadmin']
-                );
-        
-                if (superAdminResult.rows.length > 0) {
-                  const superAdminEmails = superAdminResult.rows.map(row => row.email);
-                  // Send notification to super admin about new application
-                  await sendNewApplicationNotification(businessResult.rows[0], superAdminEmails);
-                }
+      // Log document status for debugging
+      console.log('Document status object:', JSON.stringify(documentStatus, null, 2));
+      
+      // Prepare business data for notifications
+      const businessData = {
+        ...businessResult.rows[0],
+        email: email,
+        business_name: businessName,
+        business_id: businessId,
+        created_at: new Date().toISOString(),
+        business_address: `${houseNumber || ''} ${barangayName || ''} ${cityName || ''} ${provinceName || ''}`.trim(),
+        mobile: mobile,
+        business_type: businessType
+      };
 
-        // Send application submitted confirmation to the business
-        await sendApplicationSubmittedNotification(businessResult.rows[0]).catch(error => {
-          console.error('Failed to send application submitted notification:', error);
-        });
+      // Get superadmin emails for notification (but don't send yet)
+      console.log('Preparing to notify superadmins after commit...');
+      const superAdminResult = await client.query(
+        'SELECT email FROM users WHERE role = $1',
+        ['superadmin']
+      );
+      
+      console.log('Superadmin query result:', {
+        rowCount: superAdminResult.rowCount,
+        rows: superAdminResult.rows
+      });
 
-        // Update business verification status to submitted
-        await client.query(
-          'UPDATE business SET verification_status = $1, verification_submitted_at = COALESCE(verification_submitted_at, NOW()), updated_at = NOW() WHERE business_id = $2',
-          ['pending', businessId]
-        );
+      // Prepare business data for notifications
+      const notificationBusinessData = {
+        ...businessData,
+        business_id: businessId, // Ensure we have the correct business_id
+        email: email,
+        business_name: businessName,
+        created_at: new Date().toISOString(),
+        business_address: `${houseNumber || ''} ${barangayName || ''} ${cityName || ''} ${provinceName || ''}`.trim(),
+        mobile: mobile,
+        business_type: businessType
+      };
+
+      console.log('Business data prepared for notifications:', JSON.stringify(notificationBusinessData, null, 2));
+
+      // Update business verification status to submitted
+      await client.query(
+        'UPDATE business SET verification_status = $1, verification_submitted_at = COALESCE(verification_submitted_at, NOW()), updated_at = NOW() WHERE business_id = $2',
+        ['pending', businessId]
+      );
+
+      // Commit the transaction first
+      await client.query('COMMIT');
+      console.log('Transaction committed successfully');
+
+      // Now that the transaction is committed, we can safely send notifications
+      let notificationPromises = [];
+
+      // 1. Send application submitted notification to the business
+      notificationPromises.push((async () => {
+        try {
+          await sendApplicationSubmittedNotification({
+            email: email,
+            business_name: business.business_name,
+            business_id: business.business_id,
+            user_id: userId
+          });
+          console.log(`Registration confirmation email sent to ${email}`);
+          return { success: true };
+        } catch (emailError) {
+          console.error(`Failed to send registration confirmation to ${email}:`, emailError);
+          return { success: false, error: emailError };
+        }
+      })());
+
+      // 2. Send new application notifications to superadmins
+      if (superAdminResult?.rows?.length > 0) {
+        const superAdminEmails = superAdminResult.rows.map(row => row.email).filter(email => email);
+        if (superAdminEmails.length > 0) {
+          notificationPromises.push((async () => {
+            try {
+              console.log('Sending new application notification to superadmins:', superAdminEmails);
+              const notificationResult = await sendNewApplicationNotification(businessData, superAdminEmails);
+              console.log('Superadmin notification result:', notificationResult);
+              return { success: notificationResult, type: 'superadmin' };
+            } catch (error) {
+              console.error('Error sending superadmin notifications:', error);
+              return { success: false, error, type: 'superadmin' };
+            }
+          })());
+        }
       }
 
-      await client.query('COMMIT');
+      // Wait for all notifications to complete, but don't fail the request if they fail
+      await Promise.allSettled(notificationPromises);
 
       logAction({
         userId: userId,
@@ -982,4 +1220,26 @@ const decodePSGCAddress = async (psgcString) => {
 };
 
 // Export the hasRequiredDocuments function for use in other modules
+exports.getBusinessPublic = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!id) {
+      return res.status(400).json({ error: "Business ID is required" });
+    }
+
+    const result = await pool.query(
+      "SELECT business_name FROM business WHERE business_id = $1",
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Business not found" });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error("Get public business info error:", error);
+    res.status(500).json({ error: "Failed to get business information" });
+  }
+};
 module.exports.hasRequiredDocuments = hasRequiredDocuments;

@@ -25,7 +25,7 @@ function Button({
 }) {
   // Base styles
   const baseStyles =
-    "inline-flex items-center justify-center font-sans font-semibold rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 select-none";
+    "inline-flex items-center justify-center font-sans font-semibold rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 select-none";
 
   // Size variants
   const sizeStyles = {

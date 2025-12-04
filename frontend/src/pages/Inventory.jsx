@@ -218,7 +218,7 @@ export default function InventoryPage() {
         }));
         setProducts(mapped);
       } catch (err) {
-        setApiError(err.message || "Failed to load inventory");
+        setApiError("Failed to load inventory");
         setProducts([]);
       } finally {
         setLoading(false);
@@ -480,7 +480,7 @@ export default function InventoryPage() {
       setProducts(mapped);
       setShowProductModal(false);
     } catch (err) {
-      setApiError(err.message || "Failed to save product");
+      setApiError("Failed to save product");
     } finally {
       setLoading(false);
     }
@@ -514,7 +514,7 @@ export default function InventoryPage() {
       setProducts(mapped);
       setShowStockModal(false);
     } catch (err) {
-      setApiError(err.message || "Failed to add stock");
+      setApiError("Failed to add stock");
     } finally {
       setLoading(false);
     }
@@ -547,7 +547,7 @@ export default function InventoryPage() {
       }));
       setProducts(mapped);
     } catch (err) {
-      setApiError(err.message || "Failed to delete product");
+      setApiError("Failed to delete product");
     } finally {
       setLoading(false);
     }

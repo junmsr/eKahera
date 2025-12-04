@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import Background from "../components/layout/Background";
-import Button from "../components/common/Button";
 import DocumentVerification from "../components/ui/SuperAdmin/DocumentVerification";
 import { api } from "../lib/api";
 import Modal from "../components/modals/Modal";
@@ -56,7 +55,6 @@ function SuperAdmin() {
 
   const [stores, setStores] = useState(sampleStores);
   const [loading, setLoading] = useState(false);
-  const [actionLoadingId, setActionLoadingId] = useState(null);
   const [error, setError] = useState("");
   const [deleteModal, setDeleteModal] = useState({
     isOpen: false,
@@ -65,7 +63,10 @@ function SuperAdmin() {
   const [deletePassword, setDeletePassword] = useState("");
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState("");
+  // This state is used to trigger a refresh in the DocumentVerification component
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   // Get token from sessionStorage or localStorage (consistent with other parts of the app)
   const token =
     sessionStorage.getItem("auth_token") || localStorage.getItem("token");
@@ -100,6 +101,15 @@ function SuperAdmin() {
     setLogoutModal({ isOpen: false });
   };
 
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    fetchStores();
+    // Simulate a network request delay for visual feedback
+    setTimeout(() => {
+      setIsRefreshing(false);
+    }, 500);
+  };
+
   const confirmLogout = () => {
     sessionStorage.removeItem("auth_token");
     sessionStorage.removeItem("user");
@@ -125,9 +135,12 @@ function SuperAdmin() {
   })();
 
   useEffect(() => {
+    if (location.state?.from === "storeManagement") {
+      setActiveTab("stores");
+    }
     fetchStores();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [location.state]);
 
   // --- Store Management Handlers ---
 
@@ -147,48 +160,6 @@ function SuperAdmin() {
       setError("Using sample data");
     } finally {
       setLoading(false);
-    }
-  };
-
-  const updateLocalStatus = (id, status) => {
-    setStores((prev) => prev.map((s) => (s.id === id ? { ...s, status } : s)));
-  };
-
-  const handleApprove = async (store) => {
-    if (!store || store.status === "approved") return;
-    setActionLoadingId(store.id);
-    setError("");
-    try {
-      await api(`/api/superadmin/stores/${store.id}/approve`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      updateLocalStatus(store.id, "approved");
-    } catch (err) {
-      // fallback to local update
-      updateLocalStatus(store.id, "approved");
-      setError("Approve updated locally");
-    } finally {
-      setActionLoadingId(null);
-    }
-  };
-
-  const handleReject = async (store) => {
-    if (!store || store.status === "rejected") return;
-    setActionLoadingId(store.id);
-    setError("");
-    try {
-      await api(`/api/superadmin/stores/${store.id}/reject`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      updateLocalStatus(store.id, "rejected");
-    } catch (err) {
-      // fallback to local update
-      updateLocalStatus(store.id, "rejected");
-      setError("Reject updated locally");
-    } finally {
-      setActionLoadingId(null);
     }
   };
 
@@ -219,7 +190,7 @@ function SuperAdmin() {
       setDeleteModal({ isOpen: false, store: null });
       setError("");
     } catch (err) {
-      setDeleteError(err.message || "Unknown error");
+      setDeleteError("Unknown error");
     } finally {
       setDeleteLoading(false);
     }
@@ -253,7 +224,6 @@ function SuperAdmin() {
       });
     } catch (err) {
       setProfileError("Failed to load profile data");
-      console.error("Profile fetch error:", err);
     } finally {
       setProfileLoading(false);
     }
@@ -366,9 +336,8 @@ function SuperAdmin() {
       window.location.reload();
     } catch (err) {
       setProfileError(
-        err.message || "Failed to update profile. Please try again."
+        "Failed to update profile. Please try again."
       );
-      console.error("Profile update error:", err);
     } finally {
       setProfileSaving(false);
     }
@@ -402,6 +371,30 @@ function SuperAdmin() {
                 <ProfileIcon />
               </button>
 
+              {/* Refresh Button */}
+              <button
+                onClick={handleRefresh}
+                disabled={isRefreshing}
+                className="p-2.5 rounded-lg bg-white border border-gray-200 shadow-sm hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 group disabled:opacity-50"
+                title="Refresh Data"
+              >
+                <svg
+                  className={`w-5 h-5 text-gray-600 ${
+                    isRefreshing ? "animate-spin" : ""
+                  }`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                  />
+                </svg>
+              </button>
+
               {/* Logout Button (Using sessionStorage) */}
               <button
                 onClick={openLogoutModal}
@@ -417,6 +410,35 @@ function SuperAdmin() {
             {/* Tab Navigation - Modern Design */}
             <div className="bg-white/80 backdrop-blur-sm border border-gray-200/50 rounded-xl mb-4 sm:mb-5 md:mb-6 shadow-sm overflow-hidden">
               <div className="flex overflow-x-auto">
+                <button
+                  onClick={() => setActiveTab("stores")}
+                  className={`relative px-4 sm:px-5 md:px-6 py-3 sm:py-3.5 md:py-4 font-semibold text-xs sm:text-sm transition-all duration-300 whitespace-nowrap flex-shrink-0 ${
+                    activeTab === "stores"
+                      ? "text-blue-700 bg-blue-50/50"
+                      : "text-gray-600 hover:text-blue-600 hover:bg-gray-50/50"
+                  }`}
+                >
+                  <span className="relative z-10 flex items-center gap-1.5 sm:gap-2">
+                    <svg
+                      className="w-3.5 h-3.5 sm:w-4 sm:h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                      />
+                    </svg>
+                    <span className="hidden sm:inline">Store Management</span>
+                    <span className="sm:hidden">Stores</span>
+                  </span>
+                  {activeTab === "stores" && (
+                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-600 to-blue-700" />
+                  )}
+                </button>
                 <button
                   onClick={() => setActiveTab("verification")}
                   className={`relative px-4 sm:px-5 md:px-6 py-3 sm:py-3.5 md:py-4 font-semibold text-xs sm:text-sm transition-all duration-300 whitespace-nowrap flex-shrink-0 ${
@@ -445,36 +467,7 @@ function SuperAdmin() {
                     <span className="sm:hidden">Verification</span>
                   </span>
                   {activeTab === "verification" && (
-                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-600 to-blue-700" />
-                  )}
-                </button>
-                <button
-                  onClick={() => setActiveTab("stores")}
-                  className={`relative px-4 sm:px-5 md:px-6 py-3 sm:py-3.5 md:py-4 font-semibold text-xs sm:text-sm transition-all duration-300 whitespace-nowrap flex-shrink-0 ${
-                    activeTab === "stores"
-                      ? "text-blue-700 bg-blue-50/50"
-                      : "text-gray-600 hover:text-blue-600 hover:bg-gray-50/50"
-                  }`}
-                >
-                  <span className="relative z-10 flex items-center gap-1.5 sm:gap-2">
-                    <svg
-                      className="w-3.5 h-3.5 sm:w-4 sm:h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-                      />
-                    </svg>
-                    <span className="hidden sm:inline">Store Management</span>
-                    <span className="sm:hidden">Stores</span>
-                  </span>
-                  {activeTab === "stores" && (
-                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-600 to-green-600" />
+                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-green-600 to-blue-600" />
                   )}
                 </button>
               </div>
@@ -482,7 +475,10 @@ function SuperAdmin() {
 
             {/* Tab Content */}
             {activeTab === "verification" ? (
-              <DocumentVerification />
+              <DocumentVerification
+                isRefreshing={isRefreshing}
+                key={activeTab}
+              />
             ) : (
               <div className="bg-white/80 backdrop-blur-sm border border-gray-200/50 rounded-xl shadow-sm overflow-hidden">
                 {/* Header Section */}
@@ -495,28 +491,6 @@ function SuperAdmin() {
                       <p className="text-xs sm:text-sm text-gray-600 mt-1 truncate">
                         Manage and monitor all registered stores
                       </p>
-                    </div>
-                    <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-                      <button
-                        onClick={fetchStores}
-                        className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-white border border-gray-300 rounded-lg text-xs sm:text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 shadow-sm hover:shadow-md whitespace-nowrap"
-                      >
-                        <svg
-                          className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                          />
-                        </svg>
-                        <span className="hidden sm:inline">Refresh</span>
-                        <span className="sm:hidden">Refresh</span>
-                      </button>
                     </div>
                   </div>
                 </div>
@@ -595,6 +569,9 @@ function SuperAdmin() {
                             <th className="text-left py-3 sm:py-4 px-2 sm:px-3 md:px-4 text-xs font-semibold text-gray-700 uppercase tracking-wider min-w-[180px]">
                               Email
                             </th>
+                            <th className="text-left py-3 sm:py-4 px-2 sm:px-3 md:px-4 text-xs font-semibold text-gray-700 uppercase tracking-wider min-w-[150px]">
+                              Business Type
+                            </th>
                             <th className="text-left py-3 sm:py-4 px-2 sm:px-3 md:px-4 text-xs font-semibold text-gray-700 uppercase tracking-wider min-w-[100px]">
                               Status
                             </th>
@@ -627,6 +604,11 @@ function SuperAdmin() {
                                 </p>
                               </td>
                               <td className="py-3 sm:py-4 px-2 sm:px-3 md:px-4">
+                                <p className="text-xs sm:text-sm text-gray-600 truncate max-w-[150px] sm:max-w-none">
+                                  {s.business_type || 'N/A'}
+                                </p>
+                              </td>
+                              <td className="py-3 sm:py-4 px-2 sm:px-3 md:px-4">
                                 {s.status === "approved" ? (
                                   <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-green-100 text-green-700 border border-green-200">
                                     <span className="w-1.5 h-1.5 rounded-full bg-green-600"></span>
@@ -653,97 +635,14 @@ function SuperAdmin() {
                                 <div className="flex items-center justify-end gap-1 sm:gap-1.5 md:gap-2 flex-wrap">
                                   <button
                                     onClick={() => handleView(s)}
-                                    className="p-1.5 sm:p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200 flex-shrink-0"
+                                    className="px-3 py-1.5 text-xs font-semibold text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors"
                                     title="View Details"
                                   >
-                                    <svg
-                                      className="w-4 h-4 sm:w-5 sm:h-5"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      viewBox="0 0 24 24"
-                                    >
-                                      <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                                      />
-                                      <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                                      />
-                                    </svg>
-                                  </button>
-
-                                  <button
-                                    onClick={() => handleApprove(s)}
-                                    disabled={
-                                      s.status === "approved" ||
-                                      actionLoadingId === s.id
-                                    }
-                                    className={`px-2 sm:px-2.5 md:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 whitespace-nowrap flex-shrink-0 ${
-                                      s.status === "approved"
-                                        ? "bg-gray-100 text-gray-500 cursor-not-allowed"
-                                        : "bg-green-50 text-green-700 hover:bg-green-100 border border-green-200 hover:border-green-300 shadow-sm hover:shadow"
-                                    }`}
-                                    title={
-                                      s.status === "approved"
-                                        ? "Already Approved"
-                                        : "Approve Store"
-                                    }
-                                  >
-                                    {actionLoadingId === s.id ? (
-                                      <span className="flex items-center gap-1">
-                                        <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 border-2 border-green-600 border-t-transparent rounded-full animate-spin"></span>
-                                        <span className="hidden sm:inline">
-                                          Processing...
-                                        </span>
-                                        <span className="sm:hidden">...</span>
-                                      </span>
-                                    ) : s.status === "approved" ? (
-                                      "Approved"
-                                    ) : (
-                                      "Approve"
-                                    )}
-                                  </button>
-
-                                  <button
-                                    onClick={() => handleReject(s)}
-                                    disabled={
-                                      s.status === "rejected" ||
-                                      actionLoadingId === s.id
-                                    }
-                                    className={`px-2 sm:px-2.5 md:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 whitespace-nowrap flex-shrink-0 ${
-                                      s.status === "rejected"
-                                        ? "bg-gray-100 text-gray-500 cursor-not-allowed"
-                                        : "bg-red-50 text-red-700 hover:bg-red-100 border border-red-200 hover:border-red-300 shadow-sm hover:shadow"
-                                    }`}
-                                    title={
-                                      s.status === "rejected"
-                                        ? "Already Rejected"
-                                        : "Reject Store"
-                                    }
-                                  >
-                                    {actionLoadingId === s.id ? (
-                                      <span className="flex items-center gap-1">
-                                        <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></span>
-                                        <span className="hidden sm:inline">
-                                          Processing...
-                                        </span>
-                                        <span className="sm:hidden">...</span>
-                                      </span>
-                                    ) : s.status === "rejected" ? (
-                                      "Rejected"
-                                    ) : (
-                                      "Reject"
-                                    )}
+                                    View
                                   </button>
 
                                   <button
                                     onClick={() => handleDelete(s)}
-                                    disabled={actionLoadingId === s.id}
                                     className="p-1.5 sm:p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-all duration-200 border border-transparent hover:border-red-200 flex-shrink-0"
                                     title="Delete Store"
                                   >

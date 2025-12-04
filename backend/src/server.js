@@ -67,6 +67,10 @@ const superAdminRoutes = require('./routes/superAdminRoutes');
 const documentRoutes = require('./routes/documentRoutes');
 const locationRoutes = require('./routes/locationRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
+const cleanupRoutes = require('./routes/cleanupRoutes');
+const cleanupUserRoutes = require('./routes/cleanupUserRoutes');
+const { sendApplicationSubmittedNotification } = require('./utils/emailService');
+const { startPendingTransactionCleanup } = require('./utils/cleanup');
 
 const app = express();
 
@@ -74,7 +78,11 @@ const app = express();
 const { paymongoWebhook } = require('./controllers/paymentsController');
 app.post('/api/payments/paymongo/webhook', express.raw({ type: '*/*' }), paymongoWebhook);
 
-app.use(cors({ origin: ['http://localhost:5173', 'http://localhost:5174', 'https://www.ekahera.online', 'https://ekahera.onrender.com'], credentials: true }));
+app.use(cors({
+  origin: ['http://localhost:5173', 'http://localhost:5174', 'https://www.ekahera.online', 'https://ekahera.onrender.com'],
+  credentials: true,
+  exposedHeaders: ['Content-Disposition']
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -98,6 +106,29 @@ app.use('/api/superadmin', superAdminRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/locations', locationRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/cleanup', cleanupRoutes);
+app.use('/api/cleanup', cleanupUserRoutes);
+
+// Test email endpoint - for debugging only
+app.get('/api/test-email', async (req, res) => {
+  try {
+    console.log('Testing email service...');
+    const testBusiness = {
+      email: process.env.EMAIL_USER, // Send to the configured email
+      business_name: 'Test Business',
+      business_id: 'test-123'
+    };
+    
+    console.log('Sending test email to:', testBusiness.email);
+    const result = await sendApplicationSubmittedNotification(testBusiness);
+    console.log('Email test result:', result);
+    
+    res.json({ success: true, message: 'Test email sent successfully' });
+  } catch (error) {
+    console.error('Email test failed:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
 
 const port = config.PORT || 5000;
 
@@ -106,6 +137,7 @@ if (config.AUTO_INIT_DB === 'true') {
     .then(() => {
       app.listen(port, () => {
         console.log(`API server listening on port ${port}`);
+        startPendingTransactionCleanup();
       });
     })
     .catch((err) => {
@@ -115,6 +147,7 @@ if (config.AUTO_INIT_DB === 'true') {
 } else {
   app.listen(port, () => {
     console.log(`API server listening on port ${port} (DB init skipped)`);
+    startPendingTransactionCleanup();
     // Print a one-time DB host diagnostic
     try {
       const cfgPath = path.join(__dirname, '..', 'config.env');

@@ -1,10 +1,16 @@
 const BusinessDocument = require('../models/BusinessDocument');
 const BusinessVerification = require('../models/BusinessVerification');
-const { sendNewApplicationNotification, sendVerificationStatusNotification, sendApplicationSubmittedNotification } = require('../utils/emailService');
+const { 
+  sendNewApplicationNotification, 
+  sendVerificationStatusNotification, 
+  sendApplicationSubmittedNotification,
+  sendVerificationApprovalEmail
+} = require('../utils/emailService');
 const { hasRequiredDocuments } = require('./businessController');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const fetch = require('node-fetch');
 const pool = require('../config/database');
 const supabaseStorage = require('../utils/supabaseStorage');
 const { logAction } = require('../utils/logger');
@@ -133,16 +139,16 @@ exports.handleDocumentUpload = async (req, res) => {
 
     // Only send notifications and update status if all required documents are uploaded
     if (documentStatus.hasAllRequired) {
-      // Get SuperAdmin email for notification
+      // Get all SuperAdmin emails for notification
       const superAdminResult = await pool.query(
-        'SELECT email FROM users WHERE role = $1 LIMIT 1',
+        'SELECT email FROM users WHERE role = $1',
         ['superadmin']
       );
 
       if (superAdminResult.rowCount > 0) {
-        const superAdminEmail = superAdminResult.rows[0].email;
-        // Send notification to super admin about new application
-        await sendNewApplicationNotification(businessData, superAdminEmail);
+        const superAdminEmails = superAdminResult.rows.map(row => row.email);
+        // Send notification to all super admins about new application
+        await sendNewApplicationNotification(businessData, superAdminEmails);
       }
 
       // Send application submitted confirmation to the business
@@ -244,8 +250,8 @@ exports.verifyDocument = async (req, res) => {
       return res.status(400).json({ error: 'Document ID is required' });
     }
 
-    if (!status || !['approved', 'rejected', 'repass'].includes(status)) {
-      return res.status(400).json({ error: 'Valid status is required (approved, rejected, repass)' });
+    if (!status || !['approved', 'rejected'].includes(status)) {
+      return res.status(400).json({ error: 'Valid status is required (approved, rejected)' });
     }
 
     const updatedDocument = await BusinessDocument.updateVerificationStatus(
@@ -275,49 +281,132 @@ exports.verifyDocument = async (req, res) => {
 
 // Complete business verification (SuperAdmin only)
 exports.completeBusinessVerification = async (req, res) => {
+  const client = await pool.connect();
+  
   try {
+    await client.query('BEGIN');
     const { business_id } = req.params;
-    const { status, rejection_reason, resubmission_notes } = req.body;
+    const { status, rejection_reason } = req.body;
     const reviewedBy = req.user.userId;
 
     if (!business_id) {
+      await pool.query('ROLLBACK');
       return res.status(400).json({ error: 'Business ID is required' });
     }
 
-    if (!status || !['approved', 'rejected', 'repass'].includes(status)) {
-      return res.status(400).json({ error: 'Valid status is required (approved, rejected, repass)' });
+    if (!status || !['approved', 'rejected'].includes(status)) {
+      await pool.query('ROLLBACK');
+      return res.status(400).json({ error: 'Valid status is required (approved, rejected)' });
     }
+
+    // Get business data and documents first
+    const businessResult = await client.query(
+      `SELECT b.*, u.user_id 
+       FROM business b 
+       JOIN users u ON LOWER(b.email) = LOWER(u.email) 
+       WHERE b.business_id = $1`, 
+      [business_id]
+    );
+    
+    if (businessResult.rowCount === 0) {
+      await pool.query('ROLLBACK');
+      return res.status(404).json({ error: 'Business not found' });
+    }
+
+    const businessData = businessResult.rows[0];
+    
+    // Get all documents for this business with their current status
+    const documentsResult = await client.query(`
+      SELECT 
+        document_id,
+        document_type,
+        verification_status,
+        verification_notes,
+        file_path,
+        file_size,
+        mime_type,
+        verified_at,
+        verified_by
+      FROM business_documents 
+      WHERE business_id = $1
+    `, [business_id]);
+    
+    const documents = documentsResult.rows;
 
     // Update business verification status
     const updatedVerification = await BusinessVerification.updateStatus(
-      business_id, status, reviewedBy, rejection_reason, resubmission_notes
+      business_id, 
+      status, 
+      reviewedBy, 
+      rejection_reason,
+      null,
+      client  // Pass the client to use the same connection
     );
 
     if (!updatedVerification) {
+      await client.query('ROLLBACK');
       return res.status(404).json({ error: 'Business verification not found' });
     }
 
-    // Get business data for email notification
-    const businessResult = await pool.query('SELECT * FROM business WHERE business_id = $1', [business_id]);
-    if (businessResult.rowCount > 0) {
-      const businessData = businessResult.rows[0];
-      await sendVerificationStatusNotification(businessData, status, rejection_reason, resubmission_notes);
+    console.log('Sending email to:', businessData.email);
+    console.log('Email status:', status);
+    
+    // Prepare documents data for email with only necessary fields
+    const emailDocuments = documents.map(doc => ({
+      document_type: doc.document_type,
+      verification_status: doc.verification_status,
+      verification_notes: doc.verification_notes
+    }));
+
+    console.log('Documents to include in email:', JSON.stringify(emailDocuments, null, 2));
+    
+    // Send appropriate email notification
+    let emailSent = false;
+    try {
+      if (status === 'approved') {
+        console.log('Sending approval email...');
+        emailSent = await sendVerificationApprovalEmail({
+          ...businessData,
+          user_id: businessData.user_id
+        }, emailDocuments);
+      } else {
+        console.log('Sending rejection email with reason:', rejection_reason);
+        emailSent = await sendVerificationRejectionEmail({
+          ...businessData,
+          user_id: businessData.user_id
+        }, emailDocuments, rejection_reason || 'No specific reason provided.');
+      }
+      console.log('Email sent successfully:', emailSent);
+    } catch (emailError) {
+      console.error('Error sending email:', emailError);
+      // Don't fail the whole operation if email fails
+      emailSent = false;
     }
 
     logAction({
       userId: req.user.userId,
       businessId: business_id,
-      action: `Completed business verification for business ID ${business_id} with status: ${status}`,
+      action: `Completed business verification for ${businessData.business_name} with status: ${status}`,
     });
 
+    await client.query('COMMIT');
+    
     res.json({
-      message: 'Business verification completed successfully',
+      success: true,
+      message: `Business verification ${status} successfully`,
       verification: updatedVerification
     });
 
   } catch (error) {
+    await client.query('ROLLBACK');
     console.error('Complete business verification error:', error);
-    res.status(500).json({ error: 'Failed to complete business verification' });
+    res.status(500).json({ 
+      success: false,
+      error: 'Failed to complete business verification',
+      details: error.message 
+    });
+  } finally {
+    client.release();
   }
 };
 
@@ -331,13 +420,16 @@ exports.getVerificationStats = async (req, res) => {
       pending: 0,
       approved: 0,
       rejected: 0,
-      repass: 0,
       total: 0
     };
 
     stats.forEach(stat => {
-      formattedStats[stat.verification_status] = parseInt(stat.count);
-      formattedStats.total += parseInt(stat.count);
+      const key = stat.verification_status === 'repass' ? 'rejected' : stat.verification_status;
+      const count = parseInt(stat.count, 10);
+      if (formattedStats[key] !== undefined) {
+        formattedStats[key] += count;
+        formattedStats.total += count;
+      }
     });
 
     res.json(formattedStats);
@@ -395,16 +487,16 @@ exports.uploadDocumentsViaUrls = async (req, res) => {
 
     // Only send notifications and update status if all required documents are uploaded
     if (documentStatus.hasAllRequired) {
-      // Get SuperAdmin email for notification
+      // Get all SuperAdmin emails for notification
       const superAdminResult = await pool.query(
-        'SELECT email FROM users WHERE role = $1 LIMIT 1',
+        'SELECT email FROM users WHERE role = $1',
         ['superadmin']
       );
 
       if (superAdminResult.rowCount > 0) {
-        const superAdminEmail = superAdminResult.rows[0].email;
-        // Send notification to super admin about new application
-        await sendNewApplicationNotification(businessData, superAdminEmail);
+        const superAdminEmails = superAdminResult.rows.map(row => row.email);
+        // Send notification to all super admins about new application
+        await sendNewApplicationNotification(businessData, superAdminEmails);
       }
 
       // Send application submitted confirmation to the business
@@ -450,24 +542,119 @@ exports.downloadDocument = async (req, res) => {
       return res.status(404).json({ error: 'Document not found' });
     }
 
-    const filePath = document.file_path;
+    const filePath = document.file_path || '';
+    const storageEndpoint = (process.env.SUPABASE_STORAGE_ENDPOINT || '').replace(/\/$/, '');
+    const bucketPrefix = storageEndpoint && supabaseStorage.bucketName
+      ? `${storageEndpoint}/${supabaseStorage.bucketName}/`
+      : null;
 
     // Check if it's a URL (Supabase) or local path
-    if (filePath.startsWith('http')) {
-      // Redirect to Supabase URL
-      res.redirect(filePath);
+    if (filePath.startsWith('http') && bucketPrefix && filePath.startsWith(bucketPrefix)) {
+      const storageKey = filePath.substring(bucketPrefix.length);
+      try {
+        const downloadResult = await supabaseStorage.downloadFile(storageKey);
+
+        if (!downloadResult.success || !downloadResult.buffer) {
+          console.error('Supabase storage download failed:', downloadResult.error);
+          return res.status(502).json({ error: 'Failed to fetch document from storage' });
+        }
+
+        // Set appropriate headers for file download
+        res.setHeader('Content-Type', downloadResult.contentType || document.mime_type || 'application/octet-stream');
+        res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(document.document_name)}"`);
+        res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition');
+        
+        // Handle different types of responses
+        if (Buffer.isBuffer(downloadResult.buffer)) {
+          // If it's a buffer, send it directly
+          return res.send(downloadResult.buffer);
+        } else if (typeof downloadResult.buffer === 'string') {
+          // If it's a string, convert to buffer and send
+          return res.send(Buffer.from(downloadResult.buffer));
+        } else if (downloadResult.buffer && typeof downloadResult.buffer.pipe === 'function') {
+          // If it's a stream, pipe it
+          return downloadResult.buffer.pipe(res);
+        } else {
+          // Fallback to JSON response if we can't determine the type
+          return res.status(500).json({ error: 'Unsupported file type' });
+        }
+      } catch (storageError) {
+        console.error('Supabase storage fetch threw error:', storageError);
+        return res.status(502).json({ error: 'Failed to fetch document from storage' });
+      }
+    } else if (filePath.startsWith('http')) {
+      try {
+        // Extract the path from the full URL
+        const url = new URL(filePath);
+        const pathParts = url.pathname.split('/');
+        // The path in the bucket is everything after the bucket name
+        const bucketIndex = pathParts.indexOf('eKahera');
+        if (bucketIndex === -1) {
+          throw new Error('Invalid file path format');
+        }
+        const filePathInBucket = pathParts.slice(bucketIndex + 1).join('/');
+        
+        // Download the file using the Supabase client
+        const { data, error } = await supabaseStorage.downloadFile(filePathInBucket);
+        
+        if (error) {
+          console.error('Supabase download error:', error);
+          throw new Error('Failed to download file from storage');
+        }
+        
+        // Set appropriate headers for file download
+        res.setHeader('Content-Type', document.mime_type || 'application/octet-stream');
+        res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(document.document_name)}"`);
+        
+        // Send the file data
+        return res.send(data);
+        
+      } catch (error) {
+        console.error('Error downloading file from Supabase:', error);
+        return res.status(500).json({ error: 'Failed to download file: ' + error.message });
+      }
     } else {
       // Local file
       if (!fs.existsSync(filePath)) {
         return res.status(404).json({ error: 'File not found on server' });
       }
-      res.download(filePath, document.document_name);
+      
+      // Set headers for local file download
+      res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(document.document_name)}"`);
+      res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition');
+      return res.download(filePath, document.document_name);
     }
-
   } catch (error) {
     console.error('Download document error:', error);
     res.status(500).json({ error: 'Failed to download document' });
   }
 };
 
-// All exports are already defined above with exports.functionName
+// Get document info by ID
+exports.getDocumentInfo = async (req, res) => {
+  try {
+    const { documentId } = req.params;
+    if (!documentId) {
+      return res.status(400).json({ error: 'Document ID is required' });
+    }
+
+    const document = await BusinessDocument.findById(documentId);
+    if (!document) {
+      return res.status(404).json({ error: 'Document not found' });
+    }
+
+    res.json({
+      document_id: document.document_id,
+      business_id: document.business_id,
+      document_type: document.document_type,
+      document_name: document.document_name,
+      verification_status: document.verification_status,
+      verification_notes: document.verification_notes,
+      uploaded_at: document.uploaded_at
+    });
+
+  } catch (error) {
+    console.error('Get document info error:', error);
+    res.status(500).json({ error: 'Failed to retrieve document information' });
+  }
+};

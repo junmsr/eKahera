@@ -294,15 +294,21 @@ function ProductForm({
         onChange={onChange}
         required
       />
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <FormField
-          label="Quantity"
-          name="quantity"
-          type="number"
-          value={productForm.quantity}
-          onChange={onChange}
-          required
-        />
+      <div
+        className={`grid grid-cols-1 ${
+          editingProduct ? "md:grid-cols-2" : "md:grid-cols-3"
+        } gap-4`}
+      >
+        {!editingProduct && (
+          <FormField
+            label="Quantity"
+            name="quantity"
+            type="number"
+            value={productForm.quantity}
+            onChange={onChange}
+            required
+          />
+        )}
         <FormField
           label="Cost Price (₱)"
           name="cost_price"

@@ -8,7 +8,8 @@ const {
   createCashier,
   listCashiers,
   checkDocumentStatus,
-  verifyBusinessAccess
+  verifyBusinessAccess,
+  getBusinessPublic
 } = require('../controllers/businessController');
 const { authenticate, authorize, requireDocuments } = require('../middleware/authMiddleware');
 
@@ -17,6 +18,8 @@ router.post('/register', registerBusiness);
 
 // Public route for business registration with documents
 router.post('/register-with-documents', ...registerBusinessWithDocuments);
+
+router.get('/public/:id', getBusinessPublic);
 
 // Protected routes (require authentication)
 router.get('/profile', authenticate, getBusinessProfile);

@@ -32,7 +32,9 @@ class SupabaseStorage {
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        const key = `business_${businessId}/${Date.now()}_${fileName}`;
+        // Encode the filename to handle spaces and special characters
+        const encodedFileName = encodeURIComponent(fileName).replace(/%20/g, '_');
+        const key = `business_${businessId}/${Date.now()}_${encodedFileName}`;
 
         const command = new PutObjectCommand({
           Bucket: this.bucketName,
@@ -114,7 +116,9 @@ class SupabaseStorage {
   }
 
   getPublicUrl(key) {
-    return `${process.env.SUPABASE_STORAGE_ENDPOINT}/${this.bucketName}/${key}`;
+    // Encode the key components to handle special characters
+    const encodedKey = key.split('/').map(part => encodeURIComponent(part)).join('/');
+    return `${process.env.SUPABASE_STORAGE_ENDPOINT}/${this.bucketName}/${encodedKey}`;
   }
 }
 

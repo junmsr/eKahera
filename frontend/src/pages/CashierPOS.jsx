@@ -139,7 +139,7 @@ function CashierPOS() {
               navigate(url.pathname + url.search);
             } catch (_) {}
           } catch (e) {
-            setError(e.message || "Failed to record GCASH payment");
+            setError("Failed to record GCASH payment");
           } finally {
             localStorage.removeItem("pending_gcash_cart");
             // remove query param
@@ -218,7 +218,7 @@ function CashierPOS() {
       setQuantity(1);
       setScannerPaused(false);
     } catch (err) {
-      setError(err.message || "Product not found");
+      setError("Product not found");
     }
   };
 
@@ -249,7 +249,7 @@ function CashierPOS() {
       return resp;
     } catch (err) {
       console.error("Failed to complete transaction:", err);
-      setError(err.message || "Failed to complete transaction");
+      setError("Failed to complete transaction");
       return null;
     }
   };
@@ -316,12 +316,12 @@ function CashierPOS() {
       setAppliedDiscount(null);
       setTransactionId(null);
     } catch (err) {
-      setError(err.message || "Checkout failed");
+      setError("Checkout failed");
     }
   };
 
   const handleCopyTn = () => {
-    navigator.clipboard.writeText(transactionNumber);
+    navigator.clipboard.writeText(user.store_name);
   };
 
   // show confirmation modal first, perform actual logout in confirmLogout
@@ -391,7 +391,7 @@ function CashierPOS() {
           <div className="flex-1 flex items-center justify-center px-2">
             <button
               onClick={handleCopyTn}
-              title="Copy transaction number"
+              title="Copy store name"
               className="inline-flex items-center gap-2 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg px-2.5 py-1.5 shadow-sm hover:bg-blue-100 transition-colors"
             >
               <svg
@@ -408,7 +408,7 @@ function CashierPOS() {
                 />
               </svg>
               <span className="font-mono text-xs sm:text-sm md:text-base font-bold tracking-wider truncate max-w-[50vw]">
-                {transactionNumber}
+                {user.store_name}
               </span>
             </button>
           </div>
@@ -855,7 +855,7 @@ function CashierPOS() {
                     });
                     window.location.href = checkoutUrl;
                   } catch (e) {
-                    setError(e.message || "Failed to init GCash");
+                    setError("Failed to init GCash");
                     localStorage.removeItem("pending_gcash_cart");
                   }
                 })();

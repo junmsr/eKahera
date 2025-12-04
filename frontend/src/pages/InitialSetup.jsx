@@ -121,7 +121,7 @@ export default function InitialSetup() {
       }, 3000);
       
     } catch (err) {
-      setApiError(err.message || "Setup failed. Please try again.");
+      setApiError("Setup failed. Please try again.");
     } finally {
       setLoading(false);
     }

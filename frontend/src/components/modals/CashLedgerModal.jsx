@@ -68,7 +68,7 @@ function CashLedgerModal({ isOpen, onClose }) {
     return (
       <div className="space-y-6">
         {/* Total Cash Display */}
-        <div className="bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-700 text-white rounded-3xl shadow-xl px-8 py-8 text-center">
+        <div className="bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-700 text-white rounded-lg shadow-xl px-8 py-8 text-center">
           <p className="text-sm font-semibold text-blue-100 mb-2">Total Cash on Hand</p>
           <div className="text-5xl font-bold flex items-center justify-center gap-2">
             <span className="text-4xl">₱</span>

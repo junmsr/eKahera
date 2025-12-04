@@ -43,7 +43,7 @@ export default function BaseModal({
 
       {/* Modal */}
       <div
-        className={`relative bg-white rounded-3xl shadow-2xl w-full ${sizeClasses[size]} max-h-[85vh] overflow-hidden flex flex-col z-[10000] ${className}`}
+        className={`relative bg-white rounded-lg shadow-2xl w-full ${sizeClasses[size]} max-h-[85vh] overflow-hidden flex flex-col z-[10000] ${className}`}
       >
         {/* Gradient Background Accents */}
         <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-br from-blue-400/10 to-indigo-600/10 rounded-full blur-3xl -z-10"></div>

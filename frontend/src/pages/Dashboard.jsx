@@ -35,13 +35,19 @@ const SOFT_BLUE = "#93c5fd";
 const SOFT_GREEN = "#1e2cecff";
 const SOFT_PURPLE = "#3e209bff";
 
-function VisitorsChart({ data, className = "" }) {
+function VisitorsChart({ data, className = "", range = "month" }) {
+  const rangeLabels = {
+    week: "last 7 days",
+    month: "last 30 days",
+    year: "last 365 days",
+  };
+
   return (
     <ChartCard
       title={
-        <span className="text-blue-700">Visitors for the last 6 months</span>
+        <span className="text-blue-700">Visitors for the {rangeLabels[range] || "last 6 months"}</span>
       }
-      className={`bg-white/80 backdrop-blur-md border border-white/60 shadow-xl hover:shadow-2xl p-6 ${className}`}
+      className={`bg-white/80 backdrop-blur-md border border-white/60 shadow-xl ${className}`}
     >
       <div className="h-72">
         <ResponsiveContainer width="100%" height="100%">
@@ -77,7 +83,7 @@ function SalesPieChart({ data, className = "" }) {
   return (
     <ChartCard
       title={<span className="text-blue-700">Sales by Product Category</span>}
-      className={`bg-white/80 backdrop-blur-md border border-white/60 shadow-xl hover:shadow-2xl p-6 ${className}`}
+      className={`bg-white/80 backdrop-blur-md border border-white/60 shadow-xl ${className}`}
     >
       <div className="h-72">
         <ResponsiveContainer width="100%" height="100%">
@@ -125,6 +131,14 @@ function SalesPieChart({ data, className = "" }) {
 
 // Main Dashboard Component
 export default function Dashboard() {
+
+  const [keyMetrics, setKeyMetrics] = useState({
+    revenue: { value: 0, change: 0 },
+    expenses: { value: 0, change: 0 },
+    netProfit: { value: 0, change: 0 },
+    grossMargin: { value: 0, change: 0 },
+  });
+
   // State
   const [stats, setStats] = useState([]);
   const [range, setRange] = useState("month");
@@ -232,10 +246,27 @@ export default function Dashboard() {
         setHighlight({
           sales: Number(overview.totalSales || 0),
           transactions: Number(overview.totalTransactions || 0),
+          totalItemsSold: Number(overview.totalItemsSold || 0),
+          averageTransactionValue: Number(overview.averageTransactionValue || 0),
           topProduct:
             (overview.topProducts && overview.topProducts[0]?.product_name) ||
             piePercent[0]?.name ||
             "-",
+        });
+        
+        const revenue = Number(overview.totalSales || 0);
+        const expenses = Number(overview.totalExpenses ?? 0); // add this to overview if available
+        const netProfit = revenue - expenses;
+        const grossMargin = revenue ? Math.round((netProfit / revenue) * 10000) / 100 : 0;
+        const revenueChange = typeof overview.prevTotalSales !== "undefined"
+          ? Math.round(((revenue - Number(overview.prevTotalSales || 0)) / (Number(overview.prevTotalSales || 1))) * 10000) / 100
+          : 0;
+
+        setKeyMetrics({
+          revenue: { value: revenue, change: revenueChange },
+          expenses: { value: expenses, change: 0 },
+          netProfit: { value: netProfit, change: 0 },
+          grossMargin: { value: grossMargin, change: 0 },
         });
       }
 
@@ -376,6 +407,31 @@ export default function Dashboard() {
         <option value="year">Year</option>
       </select>
 
+      <div className="-mt-2 -mb-3 py-8 px-8 pr-12 flex justify-end">
+        <Button
+          onClick={exportToCSV}
+          size="sm"
+          variant="secondary"
+          className="flex items-center gap-2 w-full sm:w-auto shrink-0"
+        >
+          <svg
+            className="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+            />
+          </svg>
+          <span className="hidden sm:inline">Export</span>
+          <span className="sm:hidden">Export</span>
+        </Button>
+      </div>
+
       <div className="relative" ref={notificationRef}>
         <NotificationDropdown
           notifications={notifications}
@@ -407,38 +463,14 @@ export default function Dashboard() {
     <PageLayout
       title="DASHBOARD"
       subtitle=""
-      sidebar={<NavAdmin onLogoutClick={logout} />}
+      sidebar={<NavAdmin />}
       headerActions={headerActions}
       isSidebarOpen={isSidebarOpen}
       setSidebarOpen={setSidebarOpen}
       className="bg-gray-50 min-h-screen"
     >
-      <div className="-mt-2 -mb-11 py-8 px-8 pr-12 flex justify-end">
-        <Button
-          onClick={exportToCSV}
-          size="lg"
-          variant="secondary"
-          className="flex items-center gap-2 w-full sm:w-auto shrink-0"
-        >
-          <svg
-            className="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-            />
-          </svg>
-          <span className="hidden sm:inline">Export</span>
-          <span className="sm:hidden">Export</span>
-        </Button>
-      </div>
       {/* Stats Cards - Mobile View */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 lg:hidden">
+      {/* <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 lg:hidden">
         {loading
           ? Array.from({ length: 4 }).map((_, i) => (
               <div
@@ -474,7 +506,7 @@ export default function Dashboard() {
                 ) : null}
               </div>
             ))}
-      </div>
+      </div> */}
 
       {/* Low Stock Products - Mobile View */}
       <div className="p-4 lg:hidden">
@@ -498,7 +530,53 @@ export default function Dashboard() {
       </div>
 
       {/* Main Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 p-6 pb-10 lg:pb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full p-3">
+        <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
+          <p className="text-xs font-medium text-gray-500 uppercase mb-1">
+            Total Revenue
+          </p>
+          <p className="text-2xl font-bold text-gray-900">
+            ₱{keyMetrics.revenue.value.toLocaleString()}
+          </p>
+          <p className={`text-xs mt-2 ${keyMetrics.revenue.change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            {keyMetrics.revenue.change >= 0 ? '↗' : '↘'} {keyMetrics.revenue.change}%
+          </p>
+        </div>
+        <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
+          <p className="text-xs font-medium text-gray-500 uppercase mb-1">
+            Operating Expenses
+          </p>
+          <p className="text-2xl font-bold text-gray-900">
+            ₱{keyMetrics.expenses.value.toLocaleString()}
+          </p>
+          <p className={`text-xs mt-2 ${keyMetrics.expenses.change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            {keyMetrics.expenses.change >= 0 ? '↗' : '↘'} {keyMetrics.expenses.change}%
+          </p>
+        </div>
+        <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
+          <p className="text-xs font-medium text-gray-500 uppercase mb-1">
+            Net Profit
+          </p>
+          <p className="text-2xl font-bold text-gray-900">
+            ₱{keyMetrics.netProfit.value.toLocaleString()}
+          </p>
+          <p className={`text-xs mt-2 ${keyMetrics.netProfit.change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            {keyMetrics.netProfit.change >= 0 ? '↗' : '↘'} {keyMetrics.netProfit.change}%
+          </p>
+        </div>
+        <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm">
+          <p className="text-xs font-medium text-gray-500 uppercase mb-1">
+            Gross Margin
+          </p>
+          <p className="text-2xl font-bold text-gray-900">
+            {keyMetrics.grossMargin.value}%
+          </p>
+          <p className={`text-xs mt-2 ${keyMetrics.grossMargin.change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            {keyMetrics.grossMargin.change >= 0 ? '↗' : '↘'} {keyMetrics.grossMargin.change}%
+          </p>
+        </div>
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 p-6 pb-10 lg:pb-6 pt-0">
         {/* Main Chart Area */}
         <div className="lg:col-span-8 flex flex-col gap-6">
           {loading ? (
@@ -512,7 +590,7 @@ export default function Dashboard() {
             </>
           ) : (
             <>
-              <VisitorsChart data={chartData} />
+              <VisitorsChart data={chartData} range={range} />
               <SalesPieChart data={pieData} />
             </>
           )}
@@ -542,7 +620,7 @@ export default function Dashboard() {
               <div className="h-4 bg-gray-200 rounded w-4/5"></div>
             </div>
           ) : (
-            <div className="bg-white p-6 rounded-xl shadow-md hidden lg:block">
+            <div className="bg-white p-6 rounded-lg shadow-md hidden lg:block">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-bold text-gray-800">
                   Low Stock Products
@@ -573,7 +651,7 @@ export default function Dashboard() {
           )}
         </div>
       </div>
-      <div className="max-w-10lx mx-auto w-full px-6">
+      <div className="max-w-10lx mx-auto w-full">
         <DashboardBusinessReport />
       </div>
       <ProfileModal

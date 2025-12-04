@@ -144,7 +144,7 @@ function POS() {
               window.location.href = url.toString();
             } catch (_) {}
           } catch (e) {
-            setError(e.message || "Failed to record GCASH payment");
+            setError("Failed to record GCASH payment");
           } finally {
             localStorage.removeItem("pending_gcash_cart");
             // remove query param
@@ -219,7 +219,7 @@ function POS() {
       setQuantity(1);
       setScannerPaused(false);
     } catch (err) {
-      setError(err.message || "Product not found");
+      setError("Product not found");
     }
   };
 
@@ -314,7 +314,7 @@ function POS() {
       setTransactionNumber(`T-${businessId}-${timePart}-${randPart}`);
       // setAppliedDiscount(null); // if using discount
     } catch (err) {
-      setError(err.message || "Checkout failed");
+      setError("Checkout failed");
     }
   };
 
@@ -433,8 +433,8 @@ function POS() {
 
   const handleCopyTn = async () => {
     try {
-      if (!transactionNumber) return;
-      await navigator.clipboard.writeText(transactionNumber);
+      if (!user.store_name) return;
+      await navigator.clipboard.writeText(user.store_name);
     } catch (_) {}
   };
 
@@ -444,8 +444,8 @@ function POS() {
       <div className="flex-1 flex items-center justify-center">
         <button
           onClick={handleCopyTn}
-          title="Copy transaction number"
-          className="inline-flex items-center gap-2 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg px-2 py-1.5 sm:px-2.5 shadow-sm hover:bg-blue-100 transition-colors"
+          title="Copy store name"
+          className="inline-flex items-center gap-2 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg px-2 py-1.5 sm:px-2.5 shadow-sm"
         >
           <svg
             className="w-3 h-3 sm:w-4 sm:h-4"
@@ -460,8 +460,8 @@ function POS() {
               d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2M8 16h8a2 2 0 002-2v-6m-10 8l-2 2m2-2l2 2"
             />
           </svg>
-          <span className="font-mono text-xs sm:text-sm font-bold tracking-wider truncate max-w-[30vw] sm:max-w-[50vw] hidden sm:inline">
-            {transactionNumber}
+          <span className="font-mono text-xs sm:text-sm font-bold tracking-wider truncate max-w-[30vw] sm:max-w-[50vw]">
+            {user.store_name}
           </span>
         </button>
       </div>
@@ -482,7 +482,7 @@ function POS() {
       {/* Cashier Profile Button */}
       <button
         onClick={() => setShowProfileModal(true)}
-        className="flex items-center gap-2 bg-white/80 backdrop-blur-sm p-1.5 sm:px-3 sm:py-2 rounded-lg border border-gray-200/80 hover:bg-white transition-all duration-200 hover:shadow-md hover:scale-[1.02]"
+        className="flex items-center gap-2 bg-white/80 backdrop-blur-sm p-1.5 sm:px-3 sm:py-2 rounded-lg border border-gray-200/80"
       >
         <div className="w-6 h-6 sm:w-7 sm:h-7 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-full flex items-center justify-center text-sm font-medium shadow-md">
           {user.username?.[0]?.toUpperCase() || "A"}
@@ -783,7 +783,7 @@ function POS() {
                   });
                   window.location.href = checkoutUrl;
                 } catch (e) {
-                  setError(e.message || "Failed to init GCash");
+                  setError("Failed to init GCash");
                   localStorage.removeItem("pending_gcash_cart");
                 }
               })();

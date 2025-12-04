@@ -1,5 +1,17 @@
 const pool = require('../config/database');
 
+const normalizeStatus = (status) => (status === 'repass' ? 'rejected' : status);
+const mapStatuses = (rows = []) =>
+  rows.map((row) => ({
+    ...row,
+    verification_status: normalizeStatus(row.verification_status),
+  }));
+const mapDocumentStatuses = (documents = []) =>
+  documents.map((doc) => ({
+    ...doc,
+    verification_status: normalizeStatus(doc.verification_status),
+  }));
+
 class BusinessVerification {
   static async create(businessId) {
     // Since verification is tracked in the business table,
@@ -34,7 +46,7 @@ class BusinessVerification {
     return result.rows[0];
   }
 
-  static async updateStatus(businessId, status, reviewedBy, rejectionReason = null, resubmissionNotes = null) {
+  static async updateStatus(businessId, status, reviewedBy, rejectionReason = null, resubmissionNotes = null, client = null) {
     const query = `
       UPDATE business
       SET verification_status = $1,
@@ -49,9 +61,19 @@ class BusinessVerification {
               verification_rejection_reason, verification_resubmission_notes
     `;
 
-    const result = await pool.query(query, [
-      status, reviewedBy, rejectionReason, resubmissionNotes, businessId
-    ]);
+    const queryParams = [
+      status, 
+      reviewedBy, 
+      rejectionReason, 
+      resubmissionNotes, 
+      businessId
+    ];
+
+    // Use the provided client or create a new connection
+    const result = client 
+      ? await client.query(query, queryParams)
+      : await pool.query(query, queryParams);
+      
     return result.rows[0];
   }
 
@@ -77,7 +99,7 @@ class BusinessVerification {
     `;
 
     const result = await pool.query(query);
-    return result.rows;
+    return mapStatuses(result.rows);
   }
 
   static async getAllBusinessesForVerification() {
@@ -101,15 +123,14 @@ class BusinessVerification {
       ORDER BY
         CASE
           WHEN b.verification_status = 'pending' THEN 1
-          WHEN b.verification_status = 'repass' THEN 2
-          WHEN b.verification_status = 'approved' THEN 3
-          WHEN b.verification_status = 'rejected' THEN 4
+          WHEN b.verification_status = 'approved' THEN 2
+          ELSE 3
         END,
         b.verification_submitted_at ASC
     `;
 
     const result = await pool.query(query);
-    return result.rows;
+    return mapStatuses(result.rows);
   }
 
   static async getVerificationStats() {
@@ -136,7 +157,7 @@ class BusinessVerification {
       WHERE business_id IN (
         SELECT DISTINCT business_id
         FROM business_documents
-      ) AND (verification_status IS NULL OR verification_status NOT IN ('approved', 'rejected', 'repass'))
+      ) AND (verification_status IS NULL OR verification_status NOT IN ('approved', 'rejected'))
     `;
     const result = await pool.query(query);
     return result.rowCount;
@@ -169,7 +190,8 @@ class BusinessVerification {
 
     return {
       ...businessResult.rows[0],
-      documents: documentsResult.rows
+      verification_status: normalizeStatus(businessResult.rows[0].verification_status),
+      documents: mapDocumentStatuses(documentsResult.rows)
     };
   }
 }

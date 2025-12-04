@@ -5,20 +5,34 @@ import Card from "../../common/Card";
 import Loader from "../../common/Loader";
 import DocumentViewerModal from "../../modals/DocumentViewerModal";
 
-export default function DocumentVerification() {
+export default function DocumentVerification({ isRefreshing }) {
   const [pendingVerifications, setPendingVerifications] = useState([]);
   const [selectedBusiness, setSelectedBusiness] = useState(null);
   const [businessDetails, setBusinessDetails] = useState(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
-  const [stats, setStats] = useState({});
+  const [isFetching, setIsFetching] = useState(false);
+  const [stats, setStats] = useState({
+    total: 0,
+    pending: 0,
+    approved: 0,
+    rejected: 0,
+  });
 
   useEffect(() => {
     fetchPendingVerifications();
     fetchStats();
   }, []);
 
+  useEffect(() => {
+    if (isRefreshing) {
+      fetchPendingVerifications();
+      fetchStats();
+    }
+  }, [isRefreshing]);
+
   const fetchPendingVerifications = async () => {
+    setIsFetching(true);
     try {
       // Using sessionStorage and api utility from 'main' branch
       const token = sessionStorage.getItem("auth_token");
@@ -27,13 +41,15 @@ export default function DocumentVerification() {
       });
       setPendingVerifications(data);
     } catch (error) {
-      console.error("Error fetching pending verifications:", error);
+      // console.error("Error fetching pending verifications:", error);
     } finally {
       setLoading(false);
+      setIsFetching(false);
     }
   };
 
   const fetchStats = async () => {
+    setIsFetching(true);
     try {
       // Using sessionStorage and api utility from 'main' branch
       const token = sessionStorage.getItem("auth_token");
@@ -42,6 +58,7 @@ export default function DocumentVerification() {
       });
       // Keeping the filtering logic from 'new-nigga-dave' and 'main'
       const filteredStats = {
+        total: data.total || 0,
         pending: data.pending || 0,
         approved: data.approved || 0,
         rejected: data.rejected || 0,
@@ -49,7 +66,9 @@ export default function DocumentVerification() {
       };
       setStats(filteredStats);
     } catch (error) {
-      console.error("Error fetching stats:", error);
+      // console.error("Error fetching stats:", error);
+    } finally {
+      setIsFetching(false);
     }
   };
 
@@ -62,7 +81,7 @@ export default function DocumentVerification() {
       });
       setBusinessDetails(data);
     } catch (error) {
-      console.error("Error fetching business details:", error);
+      // console.error("Error fetching business details:", error);
     }
   };
 
@@ -85,18 +104,14 @@ export default function DocumentVerification() {
       fetchBusinessDetails(selectedBusiness.business_id);
       alert(`Document ${action} successfully`);
     } catch (error) {
-      console.error("Error updating document:", error);
+      // console.error("Error updating document:", error);
       alert("Error updating document status");
     } finally {
       setActionLoading(false);
     }
   };
 
-  const handleCompleteVerification = async (
-    status,
-    reason = "",
-    notes = ""
-  ) => {
+  const handleCompleteVerification = async (status, reason = "") => {
     setActionLoading(true);
     try {
       // Using sessionStorage and api utility from 'main' branch
@@ -109,7 +124,6 @@ export default function DocumentVerification() {
           body: JSON.stringify({
             status: status,
             rejection_reason: reason,
-            resubmission_notes: notes,
           }),
         }
       );
@@ -120,7 +134,7 @@ export default function DocumentVerification() {
       fetchPendingVerifications();
       fetchStats();
     } catch (error) {
-      console.error("Error completing verification:", error);
+      // console.error("Error completing verification:", error);
       alert("Error completing verification");
     } finally {
       setActionLoading(false);
@@ -144,13 +158,14 @@ export default function DocumentVerification() {
       const a = document.createElement("a");
       a.style.display = "none";
       a.href = url;
-      a.download = fileName;
+      a.download = downloadFileName;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
     } catch (error) {
       console.error("Error downloading document:", error);
-      alert("Error downloading document");
+      alert(error.message || "Error downloading document");
     }
   };
 
@@ -187,15 +202,17 @@ export default function DocumentVerification() {
 
   return (
     <div className="space-y-6">
+      {isFetching && (
+        <div className="fixed inset-0 bg-black bg-opacity-10 flex items-center justify-center z-50">
+          <Loader size="lg" />
+        </div>
+       )}
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="p-4">
           <div className="text-center">
             <div className="text-2xl font-bold text-blue-600">
-              {(stats.pending || 0) +
-                (stats.approved || 0) +
-                (stats.rejected || 0) +
-                (stats.repass || 0)}
+              {stats.total || (stats.pending || 0) + (stats.approved || 0) + (stats.rejected || 0)}
             </div>
             <div className="text-sm text-gray-600">Total Businesses</div>
           </div>
@@ -222,14 +239,6 @@ export default function DocumentVerification() {
               {stats.rejected || 0}
             </div>
             <div className="text-sm text-gray-600">Rejected</div>
-          </div>
-        </Card>
-        <Card className="p-4">
-          <div className="text-center">
-            <div className="text-2xl font-bold text-orange-600">
-              {stats.repass || 0}
-            </div>
-            <div className="text-sm text-gray-600">Repass</div>
           </div>
         </Card>
       </div>
@@ -317,7 +326,6 @@ function BusinessVerificationDetails({
   actionLoading,
 }) {
   const [rejectionReason, setRejectionReason] = useState("");
-  const [resubmissionNotes, setResubmissionNotes] = useState("");
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [showRepassModal, setShowRepassModal] = useState(false);
   const [isViewerOpen, setIsViewerOpen] = useState(false);
@@ -340,8 +348,6 @@ function BusinessVerificationDetails({
         return "text-green-600 bg-green-100";
       case "rejected":
         return "text-red-600 bg-red-100";
-      case "repass":
-        return "text-orange-600 bg-orange-100";
       default:
         return "text-yellow-600 bg-yellow-100";
     }
@@ -350,10 +356,8 @@ function BusinessVerificationDetails({
   const allDocumentsApproved = business.documents?.every(
     (doc) => doc.verification_status === "approved"
   );
-  const hasRejectedOrRepass = business.documents?.some(
-    (doc) =>
-      doc.verification_status === "rejected" ||
-      doc.verification_status === "repass"
+  const hasRejected = business.documents?.some(
+    (doc) => doc.verification_status === "rejected"
   );
 
   return (
@@ -584,6 +588,7 @@ function BusinessVerificationDetails({
       </Card>
 
       {/* Verification Actions */}
+      {business.verification_status !== "approved" && (
       <Card className="p-6">
         <h3 className="text-lg font-semibold mb-4">Complete Verification</h3>
         <div className="flex space-x-3">
@@ -601,21 +606,15 @@ function BusinessVerificationDetails({
           >
             Reject Application
           </Button>
-          <Button
-            variant="outline"
-            onClick={() => setShowRepassModal(true)}
-            disabled={actionLoading}
-          >
-            Request Resubmission
-          </Button>
         </div>
 
-        {!allDocumentsApproved && !hasRejectedOrRepass && (
+        {!allDocumentsApproved && !hasRejected && (
           <p className="text-sm text-gray-600 mt-2">
             All documents must be reviewed before completing verification.
           </p>
         )}
       </Card>
+      )}
 
       {/* Reject Modal */}
       {showRejectModal && (

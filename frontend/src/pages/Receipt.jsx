@@ -53,7 +53,26 @@ export default function Receipt() {
 
 	const payload = useMemo(() => {
 		if (!details) return '';
-		return JSON.stringify({ t: 'receipt', tn, tid: null, total: details.total, b: businessId ? Number(businessId) : null });
+		return JSON.stringify({
+			t: 'receipt',
+			tn,
+			tid: null,
+			total: details.total,
+			b: businessId ? Number(businessId) : null,
+			items: details.items.map(item => ({
+				name: item.name,
+				quantity: item.quantity,
+				price: item.price,
+				subtotal: item.subtotal,
+			})),
+			summary: {
+				subtotal: details.subtotal,
+				discount: details.discountTotal,
+				vatableSales: details.taxDetails.vatableSales,
+				vatAmount: details.taxDetails.vatAmount,
+				grandTotal: details.total,
+			}
+		});
 	}, [tn, details, businessId]);
 
 	const qrSrc = useMemo(() => {

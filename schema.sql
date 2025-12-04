@@ -98,7 +98,7 @@ CREATE TABLE public.business (
     verification_reviewed_by integer,
     verification_rejection_reason text,
     verification_resubmission_notes text,
-    CONSTRAINT check_business_verification_status CHECK (((verification_status)::text = ANY ((ARRAY['pending'::character varying, 'approved'::character varying, 'rejected'::character varying, 'repass'::character varying])::text[])))
+    CONSTRAINT check_business_verification_status CHECK (((verification_status)::text = ANY ((ARRAY['pending'::character varying, 'approved'::character varying, 'rejected'::character varying])::text[])))
 );
 
 
@@ -178,7 +178,7 @@ CREATE TABLE public.business_documents (
     uploaded_at timestamp with time zone DEFAULT now(),
     updated_at timestamp with time zone DEFAULT now(),
     CONSTRAINT check_document_file_size CHECK ((file_size <= 10485760)),
-    CONSTRAINT check_document_verification_status CHECK (((verification_status)::text = ANY ((ARRAY['pending'::character varying, 'approved'::character varying, 'rejected'::character varying, 'repass'::character varying])::text[])))
+    CONSTRAINT check_document_verification_status CHECK (((verification_status)::text = ANY ((ARRAY['pending'::character varying, 'approved'::character varying, 'rejected'::character varying])::text[])))
 );
 
 
@@ -242,11 +242,6 @@ CREATE VIEW public.business_verification_summary AS
             WHEN ((bd.verification_status)::text = 'pending'::text) THEN 1
             ELSE NULL::integer
         END) AS pending_documents,
-    count(
-        CASE
-            WHEN ((bd.verification_status)::text = 'repass'::text) THEN 1
-            ELSE NULL::integer
-        END) AS repass_documents
    FROM ((public.business b
      LEFT JOIN public.business_documents bd ON ((b.business_id = bd.business_id)))
      LEFT JOIN public.users u ON ((b.verification_reviewed_by = u.user_id)))

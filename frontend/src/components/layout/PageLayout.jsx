@@ -1,11 +1,10 @@
 import React, { useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../hooks/useAuth";
 import Background from "./Background";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
 import Header from "./Header";
 import Button from "../common/Button";
-import LogoutModal from "../modals/LogoutModal";
 
 /**
  * PageLayout Component
@@ -28,20 +27,14 @@ export default function PageLayout({
   const toggleTheme = () => setTheme(theme === "light" ? "dark" : "light");
   const touchStartXRef = useRef(null);
   const touchActiveRef = useRef(false);
-  const navigate = useNavigate();
-  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const { logout } = useAuth();
 
-  const handleLogoutClick = () => {
-    setShowLogoutModal(true);
-  };
-
+  const handleLogoutClick = () => setShowLogoutConfirm(true);
+  const handleLogoutCancel = () => setShowLogoutConfirm(false);
   const handleLogoutConfirm = () => {
-    setShowLogoutModal(false);
-    navigate("/");
-  };
-
-  const handleLogoutCancel = () => {
-    setShowLogoutModal(false);
+    logout();
+    setShowLogoutConfirm(false);
   };
 
   return (
@@ -52,18 +45,41 @@ export default function PageLayout({
       floatingElements={false}
       className={theme}
     >
-      <LogoutModal
-        isOpen={showLogoutModal}
-        onClose={handleLogoutCancel}
-        onConfirm={handleLogoutConfirm}
-      />
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/80"
+            onClick={handleLogoutCancel}
+          />
+          <div className="relative bg-white rounded-xl shadow-xl w-[92%] max-w-md p-6 z-10">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              Confirm Logout
+            </h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Are you sure you want to log out?
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={handleLogoutCancel}
+                className="px-3 py-2 rounded-lg bg-gray-100 text-sm font-medium hover:bg-gray-200 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleLogoutConfirm}
+                className="px-3 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition"
+              >
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Navbar */}
       {showNavbar && <Navbar />}
-      {/* Spacer to offset fixed navbar (disabled for compact top spacing) */}
-      {showNavbar && <div className="h-0" aria-hidden="true" />}
       <div
-        className={`flex min-h-screen relative ${className} ${theme}`}
+        className={`flex h-screen relative ${className} ${theme}`}
         onTouchStart={(e) => {
           if (window.innerWidth >= 768) return;
           const x = e.touches?.[0]?.clientX ?? 0;
@@ -96,7 +112,9 @@ export default function PageLayout({
       >
         {/* Sidebar Desktop */}
         {sidebar && (
-          <aside className="hidden md:block fixed top-0 left-0 h-full z-50">{sidebar}</aside>
+          <aside className="hidden md:block fixed top-0 left-0 h-full z-50">
+            {React.cloneElement(sidebar, { onLogoutClick: handleLogoutClick })}
+          </aside>
         )}
         {/* Sidebar Mobile Off-canvas */}
         {sidebar && (
@@ -118,29 +136,29 @@ export default function PageLayout({
         )}
 
         {/* Main Content */}
-        <main
-          className={`flex-1 flex flex-col transition-all duration-300 ${sidebar ? "md:ml-48" : ""} ${isSidebarOpen ? "blur-sm" : ""} overflow-y-auto`}
+        <div
+          className={`flex-1 flex flex-col transition-all duration-300 ${sidebar ? "md:ml-48" : ""} ${isSidebarOpen ? "blur-sm" : ""}`}
         >
-          {/* Header */}
-          {showHeader && (
-            <Header
-              title={title}
-              subtitle={subtitle}
-              headerActions={headerActions}
-              isMobileNavOpen={isSidebarOpen}
-              onMenuClick={() => setSidebarOpen(!isSidebarOpen)}
-              className="bg-white"
-            />
-          )}
+          <main className="flex-1">
+            {/* Header */}
+            {showHeader && (
+              <Header
+                title={title}
+                subtitle={subtitle}
+                headerActions={headerActions}
+                isMobileNavOpen={isSidebarOpen}
+                onMenuClick={() => setSidebarOpen(!isSidebarOpen)}
+                className="bg-white"
+              />
+            )}
 
-          {/* Page Content */}
-          <div className="flex-1 relative">
-            {children}
-          </div>
-        </main>
+            {/* Page Content */}
+            <div className="flex-1 relative">{children}</div>
+          </main>
 
-        {/* Footer */}
-        {showFooter && <Footer className="z-50" />}
+          {/* Footer */}
+          {showFooter && <Footer className="z-50" />}
+        </div>
       </div>
     </Background>
   );

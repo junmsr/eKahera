@@ -60,9 +60,9 @@ export default function GetStartedSingle({ onOpenTerms, onOpenPrivacy }) {
             </div>
 
             <Button
-              label="Go to Login"
-              onClick={() => (window.location.href = "/login")}
-              className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-2 rounded-full font-semibold shadow"
+              label="Return to Home"
+              onClick={() => (window.location.href = "/")}
+              className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-2 rounded-full font-semibold shadow hover:from-blue-700 hover:to-blue-800 transition-colors"
             />
           </Card>
         </div>
@@ -87,60 +87,6 @@ export default function GetStartedSingle({ onOpenTerms, onOpenPrivacy }) {
         onOpenTerms={onOpenTerms}
         onOpenPrivacy={onOpenPrivacy}
       />
-
-      {step === 3 && (
-        <div className="mt-6 space-y-3 max-w-lg">
-          <div className="flex items-start gap-2">
-            <input
-              id="acceptTerms"
-              type="checkbox"
-              checked={hook.form.acceptTerms}
-              onChange={(e) =>
-                hook.setForm((f) => ({ ...f, acceptTerms: e.target.checked }))
-              }
-              className="mt-1 w-4 h-4 text-blue-600 bg-white border-gray-300 rounded focus:ring-blue-500"
-            />
-            <label htmlFor="acceptTerms" className="text-sm text-gray-700">
-              I agree to the{" "}
-              <button
-                type="button"
-                onClick={onOpenTerms}
-                className="text-blue-700 underline underline-offset-2 hover:text-blue-800"
-              >
-                Terms and Conditions
-              </button>
-              .
-            </label>
-          </div>
-
-          <div className="flex items-start gap-2">
-            <input
-              id="acceptPrivacy"
-              type="checkbox"
-              checked={hook.form.acceptPrivacy}
-              onChange={(e) =>
-                hook.setForm((f) => ({ ...f, acceptPrivacy: e.target.checked }))
-              }
-              className="mt-1 w-4 h-4 text-blue-600 bg-white border-gray-300 rounded focus:ring-blue-500"
-            />
-            <label htmlFor="acceptPrivacy" className="text-sm text-gray-700">
-              I have read the{" "}
-              <button
-                type="button"
-                onClick={onOpenPrivacy}
-                className="text-blue-700 underline underline-offset-2 hover:text-blue-800"
-              >
-                Privacy Policy
-              </button>
-              .
-            </label>
-          </div>
-
-          {errors.accept && (
-            <p className="text-red-500 text-sm">{errors.accept}</p>
-          )}
-        </div>
-      )}
     </GetStartedLayout>
   );
 }
