@@ -52,6 +52,10 @@ body {
   transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   animation: fluid-wave 12s ease-in-out infinite;
   background-size: 400% 400%;
+  width: 70%;
+  margin: 1rem auto 0 auto;
+  border-radius: 30px;
+  top: 1rem;
 }
 
 .glass-navbar::before {
@@ -389,6 +393,10 @@ img {
     width: 100%;
     margin-left: 0;
   }
+  .glass-navbar {
+    width: 100%;
+    margin-left: 0;
+  }
 }
 
 /* Hide native browser password reveal/clear icons to avoid duplicate toggles
@@ -406,9 +414,23 @@ input[type="password"]::-webkit-reveal {
 }
 
 @keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
-  20%, 40%, 60%, 80% { transform: translateX(5px); }
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  10%,
+  30%,
+  50%,
+  70%,
+  90% {
+    transform: translateX(-5px);
+  }
+  20%,
+  40%,
+  60%,
+  80% {
+    transform: translateX(5px);
+  }
 }
 
 .shake {
@@ -416,9 +438,23 @@ input[type="password"]::-webkit-reveal {
 }
 
 @keyframes buzz {
-  0%, 100% { transform: translateX(0); }
-  10%, 30%, 50%, 70%, 90% { transform: translateX(-2px); }
-  20%, 40%, 60%, 80% { transform: translateX(2px); }
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  10%,
+  30%,
+  50%,
+  70%,
+  90% {
+    transform: translateX(-2px);
+  }
+  20%,
+  40%,
+  60%,
+  80% {
+    transform: translateX(2px);
+  }
 }
 
 .buzz {
