@@ -51,53 +51,34 @@ export default function Receipt() {
 		}
 	}, [tn, fromCustomer]);
 
-	const payload = useMemo(() => {
-		if (!details) return '';
-		return JSON.stringify({
-			t: 'receipt',
-			tn,
-			tid: null,
-			total: details.total,
-			b: businessId ? Number(businessId) : null,
-			items: details.items.map(item => ({
-				name: item.name,
-				quantity: item.quantity,
-				price: item.price,
-				subtotal: item.subtotal,
-			})),
-			summary: {
-				subtotal: details.subtotal,
-				discount: details.discountTotal,
-				grandTotal: details.total,
-			}
-		});
-	}, [tn, details, businessId]);
-
-	const qrSrc = useMemo(() => {
-		if (!payload) return '';
-		const data = encodeURIComponent(payload);
-		return `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${data}&qzone=2&format=png&_=${Date.now()}`;
-	}, [payload]);
 
 	const handlePrint = () => {
 		window.print();
 	};
 
-	const handleDownload = () => {
-		if (typeof html2canvas === 'undefined') {
-			alert('Download functionality is unavailable. The html2canvas package might be missing. Please run "npm install html2canvas".');
+	const handleDownload = async () => {
+		if (!details || !receiptRef.current) {
+			alert('Receipt content not available for download. Please wait for the receipt to load.');
 			return;
 		}
-		if (receiptRef.current) {
-			html2canvas(receiptRef.current, {
+		
+		try {
+			const canvas = await html2canvas(receiptRef.current, {
 				useCORS: true,
 				scale: 2, // Higher scale for better quality
-			}).then((canvas) => {
-				const link = document.createElement('a');
-				link.download = `eKahera-Receipt-${tn}.png`;
-				link.href = canvas.toDataURL('image/png');
-				link.click();
+				allowTaint: true,
+				backgroundColor: '#ffffff'
 			});
+			
+			const link = document.createElement('a');
+			link.download = `eKahera-Receipt-${tn || 'receipt'}.png`;
+			link.href = canvas.toDataURL('image/png');
+			document.body.appendChild(link);
+			link.click();
+			document.body.removeChild(link);
+		} catch (error) {
+			console.error('Error downloading receipt:', error);
+			alert('Failed to download receipt. Please try again.');
 		}
 	};
 
@@ -166,12 +147,6 @@ export default function Receipt() {
 									<ReceiptRow label="Change" value={`₱${Number(details.payment.change).toFixed(2)}`} />
 								</div>
 							)}
-
-							{/* QR Code */}
-							<div className="pt-2 flex flex-col items-center">
-								<img src={qrSrc} alt="Receipt QR" className="w-[120px] h-[120px] border rounded bg-white" />
-								<div className="text-blue-700 text-xs mt-2 text-center">QR contains a summary of this transaction.</div>
-							</div>
 
 							{/* Footer Message */}
 							<div className="text-center text-xs pt-4 border-t">

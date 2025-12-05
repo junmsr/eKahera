@@ -137,12 +137,59 @@ exports.publicCheckout = async (req, res) => {
   try {
     await client.query('BEGIN');
 
+    // If customer_user_id is not provided, create a customer user as fallback
+    let finalCustomerUserId = customer_user_id || null;
+    if (!finalCustomerUserId) {
+      console.log("[DEBUG publicCheckout] No customer_user_id provided, creating customer user as fallback");
+      try {
+        // Get customer user_type id
+        const utRes = await client.query("SELECT user_type_id FROM user_type WHERE lower(user_type_name) = 'customer' LIMIT 1");
+        const userTypeId = utRes.rows?.[0]?.user_type_id || null;
+        
+        if (userTypeId) {
+          // Generate unique 8-char alphanumeric username
+          const genUsername = () => {
+            const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            let s = '';
+            for (let i = 0; i < 8; i++) s += chars.charAt(Math.floor(Math.random() * chars.length));
+            return s;
+          };
+          
+          let attempts = 0;
+          const maxAttempts = 10;
+          while (attempts < maxAttempts) {
+            attempts++;
+            const username = genUsername();
+            try {
+              const insRes = await client.query(
+                `INSERT INTO users (username, email, contact_number, role, user_type_id, business_id, created_at, updated_at)
+                 VALUES ($1, NULL, NULL, $2, $3, $4, NOW(), NOW()) RETURNING user_id, username`,
+                [username, 'customer', userTypeId, business_id]
+              );
+              finalCustomerUserId = insRes.rows[0].user_id;
+              console.log("[DEBUG publicCheckout] Created customer user as fallback:", finalCustomerUserId);
+              break;
+            } catch (e) {
+              // Unique violation for username -> retry
+              if (e && e.code === '23505') {
+                continue;
+              }
+              throw e;
+            }
+          }
+        }
+      } catch (err) {
+        console.error("[DEBUG publicCheckout] Failed to create customer user as fallback:", err);
+        // Continue with null customer_user_id if creation fails
+      }
+    }
+
     const transaction_number = frontendTxnNumber || generateTransactionNumber(business_id);
 
     // Create transaction with status pending (customer flow)
     const transRes = await client.query(
       'INSERT INTO transactions (business_id, customer_user_id, status, created_at, updated_at, transaction_number) VALUES ($1, $2, $3, now(), now(), $4) RETURNING transaction_id',
-      [business_id, customer_user_id || null, 'pending', transaction_number]
+      [business_id, finalCustomerUserId, 'pending', transaction_number]
     );
     const transaction_id = transRes.rows[0].transaction_id;
 
@@ -190,14 +237,14 @@ exports.publicCheckout = async (req, res) => {
     await client.query(
       `INSERT INTO transaction_payment (transaction_id, user_id, discount_id, payment_type, money_received, money_change)
        VALUES ($1, $2, $3, $4, $5, $6)`,
-      [transaction_id, customer_user_id || null, discount_id || null, (payment_type || 'cash').toString(), money_received || null, money_change]
+      [transaction_id, finalCustomerUserId, discount_id || null, (payment_type || 'cash').toString(), money_received || null, money_change]
     );
 
     await client.query('COMMIT');
     // Log sale for visibility in logs dashboard
     try {
       logAction({
-        userId: customer_user_id || null,
+        userId: finalCustomerUserId,
         businessId: business_id,
         action: `Public checkout for transaction ${transaction_id} with a total of ${total} via ${payment_type}`,
       });

@@ -141,7 +141,7 @@ export default function GetStartedForm({
                 onChange={handleChange}
                 placeholder="09xxxxxxxxx"
                 type="tel"
-                maxLength={15}
+                maxLength={11}
                 error={errors.mobile}
               />
             </div>

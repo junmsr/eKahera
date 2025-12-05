@@ -66,8 +66,17 @@ export default function EnterStore() {
 			if (response.ok) {
 				const data = await response.json();
 				// Store user_id and username in localStorage for use later
-				if (data.user_id) localStorage.setItem("customer_user_id", String(data.user_id));
-				if (data.username) localStorage.setItem("customer_username", data.username);
+				if (data.user_id) {
+					localStorage.setItem("customer_user_id", String(data.user_id));
+					console.log('Customer user created:', data.user_id);
+				}
+				if (data.username) {
+					localStorage.setItem("customer_username", data.username);
+				}
+			} else {
+				const errorData = await response.json().catch(() => ({ error: 'Failed to create customer' }));
+				console.error('Failed to create customer user:', errorData);
+				// Don't block navigation, but log the error
 			}
 		} catch (err) {
 			console.error('Error creating customer user:', err);
