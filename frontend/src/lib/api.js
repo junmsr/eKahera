@@ -72,3 +72,10 @@ export async function createGcashCheckout({ amount, description, referenceNumber
     body: JSON.stringify({ amount, description, referenceNumber, cancelUrl, successUrl })
   });
 }
+
+export async function createMayaCheckout({ amount, description, referenceNumber, cancelUrl, successUrl }) {
+  return await api('/payments/maya/checkout', {
+    method: 'POST',
+    body: JSON.stringify({ amount, description, referenceNumber, cancelUrl, successUrl })
+  });
+}

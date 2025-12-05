@@ -139,7 +139,6 @@ export default function Dashboard() {
     grossMargin: 0,
     totalTransactions: 0,
     totalItemsSold: 0,
-    averageTransactionValue: 0
   });
 
   // State
@@ -161,7 +160,6 @@ export default function Dashboard() {
     transactions: 0,
     topProduct: "-",
     totalItemsSold: 0,
-    averageTransactionValue: 0,
   });
 
   useEffect(() => {
@@ -177,13 +175,12 @@ export default function Dashboard() {
         });
 
         if (overview) {
-          setTodayHighlight({
-            sales: overview.totalSales,
-            transactions: overview.totalTransactions,
-            totalItemsSold: overview.totalItemsSold,
-            averageTransactionValue: overview.averageTransactionValue,
-            topProduct: (overview.topProducts?.[0]?.product_name) || "-",
-          });
+        setTodayHighlight({
+          sales: overview.totalSales,
+          transactions: overview.totalTransactions,
+          totalItemsSold: overview.totalItemsSold,
+          topProduct: (overview.topProducts?.[0]?.product_name) || "-",
+        });
         }
       } catch (err) {
         console.error("Failed to fetch today's data", err);
@@ -227,24 +224,39 @@ export default function Dashboard() {
 
       switch (range) {
         case 'week':
+          // Start of current week (Sunday)
           startDate = new Date(now);
-          startDate.setDate(now.getDate() - now.getDay());
+          const dayOfWeek = now.getDay(); // 0 = Sunday, 6 = Saturday
+          startDate.setDate(now.getDate() - dayOfWeek);
           startDate.setHours(0, 0, 0, 0);
+          // End of current week (Saturday)
+          endDate = new Date(startDate);
+          endDate.setDate(startDate.getDate() + 6);
+          endDate.setHours(23, 59, 59, 999);
           break;
         case 'month':
+          // Start of current month
           startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+          startDate.setHours(0, 0, 0, 0);
+          // End of current month
+          endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+          endDate.setHours(23, 59, 59, 999);
           break;
         case 'year':
+          // Start of current year
           startDate = new Date(now.getFullYear(), 0, 1);
+          startDate.setHours(0, 0, 0, 0);
+          // End of current year
+          endDate = new Date(now.getFullYear(), 11, 31);
+          endDate.setHours(23, 59, 59, 999);
           break;
         default:
           startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+          startDate.setHours(0, 0, 0, 0);
+          endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+          endDate.setHours(23, 59, 59, 999);
           break;
       }
-
-
-      // Set end date to end of current day
-      endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
 
       // Format dates for API - use consistent format (YYYY-MM-DD) for all endpoints
       const formatDate = (date) => {
@@ -308,7 +320,7 @@ export default function Dashboard() {
         percent: (Number(p.value || 0) / pieTotal) * 100,
       }));
 
-      // If overview is available use it for KPIs
+          // If overview is available use it for KPIs
       if (overview) {
         console.log('Overview data received:', overview);
         
@@ -319,7 +331,8 @@ export default function Dashboard() {
         const grossMargin = revenue > 0 ? ((revenue - expenses) / revenue) * 100 : 0;
         const totalTransactions = Number(overview.totalTransactions || 0);
         const totalItemsSold = Number(overview.totalItemsSold || 0);
-        const avgTxValue = Number(overview.averageTransactionValue || (revenue / (totalTransactions || 1)));
+        // Removed avgTxValue calculation as it's no longer needed
+        const topProduct = (overview.topProducts?.[0]?.product_name) || "-";
 
         console.log('Processed metrics:', {
           revenue,
@@ -328,7 +341,7 @@ export default function Dashboard() {
           grossMargin,
           totalTransactions,
           totalItemsSold,
-          avgTxValue
+          topProduct
         });
 
         // Update key metrics with all values
@@ -338,16 +351,53 @@ export default function Dashboard() {
           netProfit,
           grossMargin,
           totalTransactions,
-          totalItemsSold,
-          averageTransactionValue: avgTxValue
+          totalItemsSold
         });
 
-        // Update stats for the stats cards
+        // Format date range for display
+        const formatDateRange = () => {
+          const now = new Date();
+          let startDate, endDate = now;
+          
+          switch (range) {
+            case 'week':
+              startDate = new Date(now);
+              startDate.setDate(now.getDate() - now.getDay());
+              return `${startDate.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })} - ${endDate.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })}`;
+            case 'month':
+              startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+              return startDate.toLocaleDateString('en-PH', { month: 'long', year: 'numeric' });
+            case 'year':
+              return now.getFullYear().toString();
+            default:
+              return now.toLocaleDateString('en-PH');
+          }
+        };
+
+        const dateRangeText = formatDateRange();
+        
+        // Update stats for the stats cards based on selected range
         setStats([
-          { label: "Total Revenue", value: revenue },
-          { label: "Total Transactions", value: totalTransactions },
-          { label: "Total Items Sold", value: totalItemsSold },
-          { label: "Avg TX Value", value: avgTxValue },
+          { 
+            label: range === 'week' ? "This Week's Sales" : range === 'month' ? "This Month's Sales" : "This Year's Sales", 
+            value: `₱${revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+            subtext: dateRangeText
+          },
+          { 
+            label: range === 'week' ? "Weekly Transactions" : range === 'month' ? "Monthly Transactions" : "Yearly Transactions", 
+            value: totalTransactions,
+            subtext: `${dateRangeText}`
+          },
+          { 
+            label: range === 'week' ? "Top Product" : range === 'month' ? "Top Product" : "Top Product", 
+            value: topProduct,
+            subtext: `Total: ${overview.topProducts?.[0]?.total_sold || 0} sold`
+          },
+          { 
+            label: range === 'week' ? "Items Sold" : range === 'month' ? "Items Sold" : "Items Sold", 
+            value: totalItemsSold,
+            subtext: `${totalTransactions} transactions`
+          },
         ]);
       }
 
@@ -460,6 +510,8 @@ export default function Dashboard() {
     link.click();
   };
 
+  // Fetch filtered data when range changes (affects stats cards and graphs)
+  // Note: todayHighlight is fetched separately and is NOT affected by the filter
   useEffect(() => {
     fetchData();
     fetchNotifications();
@@ -622,56 +674,29 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* Main Content */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full p-3">
-        <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200">
-          <p className="text-xs font-medium text-gray-500 uppercase mb-1">
-            Total Revenue
-          </p>
-          <p className="text-2xl font-bold text-gray-900">
-            {formatCurrency(keyMetrics.revenue)}
-          </p>
-          <p className="text-xs text-gray-500 mt-1">
-            {range === 'week' ? 'This Week' : range === 'month' ? 'This Month' : 'This Year'}
-          </p>
-        </div>
-        <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200">
-          <p className="text-xs font-medium text-gray-500 uppercase mb-1">
-            Operating Expenses
-          </p>
-          <p className="text-2xl font-bold text-gray-900">
-            {formatCurrency(keyMetrics.expenses)}
-          </p>
-          <p className="text-xs text-gray-500 mt-1">
-            {range === 'week' ? 'This Week' : range === 'month' ? 'This Month' : 'This Year'}
-          </p>
-        </div>
-        <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200">
-          <p className="text-xs font-medium text-gray-500 uppercase mb-1">
-            Net Profit
-          </p>
-          <p className={`text-2xl font-bold ${keyMetrics.netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-            {formatCurrency(Math.abs(keyMetrics.netProfit))}
-            {keyMetrics.netProfit < 0 && <span className="text-sm text-red-500 ml-1">(Loss)</span>}
-          </p>
-          <p className="text-xs text-gray-500 mt-1">
-            {range === 'week' ? 'This Week' : range === 'month' ? 'This Month' : 'This Year'}
-          </p>
-        </div>
-        <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200">
-          <p className="text-xs font-medium text-gray-500 uppercase mb-1">
-            Gross Margin
-          </p>
-          <p className={`text-2xl font-bold ${keyMetrics.grossMargin >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-            {keyMetrics.grossMargin.toFixed(1)}%
-          </p>
-          <p className="text-xs text-gray-500 mt-1">
-            {range === 'week' ? 'This Week' : range === 'month' ? 'This Month' : 'This Year'}
-          </p>
-        </div>
+      {/* Main Content - Filtered Stats Cards (affected by week/month/year filter) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 p-6 md:p-8">
+        {stats.map((stat, index) => (
+          <div key={index} className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 text-xl font-bold flex-shrink-0">
+                {index === 0 ? '₱' : index === 1 ? '↻' : index === 2 ? '★' : '#'}
+              </div>
+              <div className="min-w-0">
+                <h3 className="text-xs font-semibold text-gray-500 tracking-wide uppercase truncate">{stat.label}</h3>
+                <p className="text-2xl font-bold text-gray-900 mt-1 truncate">{stat.value}</p>
+                {stat.subtext && (
+                  <p className="text-xs text-gray-500 mt-1 truncate">
+                    {stat.subtext}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 p-6 pb-10 lg:pb-6 pt-0">
-        {/* Main Chart Area */}
+        {/* Main Chart Area - Filtered Charts (affected by week/month/year filter) */}
         <div className="lg:col-span-8 flex flex-col gap-6">
           {loading ? (
             <>
@@ -690,7 +715,7 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Sidebar with Stats and Low Stock */}
+        {/* Sidebar with Today's Stats (NOT affected by filter) and Low Stock */}
         <div className="lg:col-span-4 flex flex-col gap-6">
           {loading ? (
             <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200 animate-pulse">
@@ -702,9 +727,7 @@ export default function Dashboard() {
               <div className="h-8 bg-gray-300 rounded w-1/2"></div>
             </div>
           ) : (
-            <div className="hidden lg:block">
-              <DashboardStatsCard stats={todayHighlight} />
-            </div>
+            <DashboardStatsCard stats={todayHighlight} />
           )}
           {loading ? (
             <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200 animate-pulse hidden lg:block">

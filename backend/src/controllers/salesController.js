@@ -126,6 +126,7 @@ exports.checkout = async (req, res) => {
 exports.publicCheckout = async (req, res) => {
   const { items, payment_type, money_received, business_id, customer_user_id, discount_id, discount_percentage, discount_amount, transaction_number: frontendTxnNumber } = req.body || {};
   console.log("[DEBUG publicCheckout] Received items in req.body:", items);
+  console.log("[DEBUG publicCheckout] customer_user_id:", customer_user_id);
   if (!Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ error: 'items are required' });
   }
@@ -312,27 +313,82 @@ exports.completeTransaction = async (req, res) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    const tRes = await client.query('SELECT transaction_id, status FROM transactions WHERE transaction_id = $1 FOR UPDATE', [transactionId]);
+    
+    // Get the transaction with all necessary details
+    const tRes = await client.query(
+      `SELECT t.transaction_id, t.status, t.business_id, t.transaction_number, 
+              t.customer_user_id, t.total_amount, t.created_at
+       FROM transactions t 
+       WHERE t.transaction_id = $1 
+       FOR UPDATE`, 
+      [transactionId]
+    );
+    
     if (tRes.rowCount === 0) {
       await client.query('ROLLBACK');
       return res.status(404).json({ error: 'Transaction not found' });
     }
 
-    const currentStatus = tRes.rows[0].status;
-    if (currentStatus === 'completed') {
+    const transaction = tRes.rows[0];
+    
+    // If already completed, return the existing transaction details
+    if (transaction.status === 'completed') {
       await client.query('ROLLBACK');
-      return res.status(400).json({ error: 'Transaction already completed' });
+      return res.json({ 
+        transaction_id: Number(transactionId),
+        transaction_number: transaction.transaction_number,
+        business_id: transaction.business_id,
+        customer_user_id: transaction.customer_user_id,
+        total_amount: transaction.total_amount,
+        created_at: transaction.created_at,
+        status: 'completed', 
+        message: 'Transaction was already completed' 
+      });
     }
 
-await client.query('UPDATE transactions SET status = $1, cashier_user_id = $2, updated_at = NOW() WHERE transaction_id = $3', ['completed', req.user?.userId || null, transactionId]);
+    // Verify business ID matches cashier's business
+    if (transaction.business_id && req.user?.businessId) {
+      if (Number(transaction.business_id) !== Number(req.user.businessId)) {
+        await client.query('ROLLBACK');
+        return res.status(403).json({ error: 'Transaction does not belong to your business' });
+      }
+    }
+
+    // Update the existing transaction to mark it as completed
+    await client.query(
+      `UPDATE transactions 
+       SET status = $1, 
+           cashier_user_id = $2, 
+           updated_at = NOW() 
+       WHERE transaction_id = $3`, 
+      ['completed', req.user?.userId || null, transactionId]
+    );
+    
     await client.query('COMMIT');
 
-    // Log action
-    try { logAction({ userId: req.user?.userId || null, businessId: req.user?.businessId || null, action: `Transaction ${transactionId} marked completed by user ${req.user?.userId || 'unknown'}` }); } catch (_) {}
+    // Log the action
+    try { 
+      logAction({ 
+        userId: req.user?.userId || null, 
+        businessId: transaction.business_id, 
+        action: `Transaction ${transaction.transaction_number || transactionId} completed by cashier ${req.user?.userId || 'unknown'}` 
+      }); 
+    } catch (_) {}
 
-    res.json({ transaction_id: Number(transactionId), status: 'completed', message: 'Transaction marked completed' });
+    res.json({ 
+      transaction_id: Number(transactionId),
+      transaction_number: transaction.transaction_number,
+      business_id: transaction.business_id,
+      customer_user_id: transaction.customer_user_id,
+      total_amount: transaction.total_amount,
+      created_at: transaction.created_at,
+      status: 'completed', 
+      message: 'Transaction completed successfully',
+      receipt_url: `/receipt?tn=${transaction.transaction_number}`
+    });
   } catch (err) {
     await client.query('ROLLBACK');
+    console.error('Error completing transaction:', err);
     res.status(500).json({ error: err.message });
   } finally {
     client.release();

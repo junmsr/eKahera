@@ -130,8 +130,8 @@ exports.verifyOTP = async (req, res) => {
       return res.status(400).json({ error: 'Too many failed attempts. Please request a new OTP.' });
     }
 
-    // Verify OTP
-    if (storedOTPData.otp === otp) {
+    // Verify OTP (case-insensitive comparison)
+    if (storedOTPData.otp.toUpperCase() === otp.toUpperCase()) {
       console.log(`[verifyOTP] OTP for ${normalizedEmail} matched!`);
       // OTP is correct - remove it from storage
       otpStorage.delete(normalizedEmail);

@@ -7,7 +7,7 @@ import CartTableCard from "../components/ui/POS/CartTableCard";
 import Button from "../components/common/Button";
 import NavAdmin from "../components/layout/Nav-Admin";
 // Background gradient removed for a neutral look
-import { api, createGcashCheckout } from "../lib/api";
+import { api, createGcashCheckout, createMayaCheckout } from "../lib/api";
 import PriceCheckModal from "../components/modals/PriceCheckModal";
 import DiscountModal from "../components/modals/DiscountModal";
 import CashLedgerModal from "../components/modals/CashLedgerModal";
@@ -106,14 +106,18 @@ function POS() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const status = params.get("payment");
-    const pending = localStorage.getItem("pending_gcash_cart");
-    if (status === "success" && pending) {
-      try {
-        const parsed = JSON.parse(pending);
-        // finalize checkout using saved items
-        (async () => {
+    const businessId = user?.businessId || user?.business_id;
+
+    // Check if we're in a new tab (opened from payment)
+    const isNewTab = window.opener && !window.opener.closed;
+
+    const finalizeOnlinePayment = async (pendingCartKey, paymentType) => {
+      const pending = localStorage.getItem(pendingCartKey);
+      if (status === "success" && pending && businessId) {
+        try {
+          const parsed = JSON.parse(pending);
           if (hasFinalizedRef.current) return;
-          const guardKey = "gcash_finalize_done";
+          const guardKey = `${paymentType}_finalize_done`;
           if (sessionStorage.getItem(guardKey) === "1") return;
           hasFinalizedRef.current = true;
           sessionStorage.setItem(guardKey, "1");
@@ -121,7 +125,7 @@ function POS() {
             setError("");
             const body = {
               items: parsed.items || [],
-              payment_type: "gcash",
+              payment_type: paymentType.toLowerCase(),
               money_received: parsed.total || null,
             };
             const resp = await api("/api/sales/checkout", {
@@ -141,27 +145,44 @@ function POS() {
                 url.searchParams.set("tid", String(resp.transaction_id));
               if (resp?.total != null)
                 url.searchParams.set("total", String(resp.total));
-              window.location.href = url.toString();
+              
+              // If in new tab, redirect opener and close this tab
+              if (isNewTab && window.opener) {
+                window.opener.location.href = url.toString();
+                window.close();
+              } else {
+                window.location.href = url.toString();
+              }
             } catch (_) {}
           } catch (e) {
-            setError("Failed to record GCASH payment");
+            setError(`Failed to record ${paymentType} payment`);
           } finally {
-            localStorage.removeItem("pending_gcash_cart");
-            // remove query param
-            const url = new URL(window.location.href);
-            url.searchParams.delete("payment");
-            window.history.replaceState({}, "", url.toString());
+            localStorage.removeItem(pendingCartKey);
+            if (!isNewTab) {
+              const url = new URL(window.location.href);
+              url.searchParams.delete("payment");
+              window.history.replaceState({}, "", url.toString());
+            }
           }
-        })();
-      } catch (_) {
-        localStorage.removeItem("pending_gcash_cart");
+        } catch (_) {
+          localStorage.removeItem(pendingCartKey);
+        }
+      } else if (status === "cancel" && pending) {
+        localStorage.removeItem(pendingCartKey);
+        // If in new tab, close it; otherwise just clean up URL
+        if (isNewTab && window.opener) {
+          window.close();
+        } else {
+          const url = new URL(window.location.href);
+          url.searchParams.delete("payment");
+          window.history.replaceState({}, "", url.toString());
+        }
       }
-    } else if (status === "cancel") {
-      localStorage.removeItem("pending_gcash_cart");
-      const url = new URL(window.location.href);
-      url.searchParams.delete("payment");
-      window.history.replaceState({}, "", url.toString());
-    }
+    };
+    
+    finalizeOnlinePayment("pending_gcash_cart", "GCash");
+    finalizeOnlinePayment("pending_maya_cart", "Maya");
+
   }, []);
 
   const addSkuToCart = async (skuValue, qty = 1) => {
@@ -270,25 +291,27 @@ function POS() {
   // For now, total equals subtotal
   const total = subtotal;
 
-  const handleCheckout = async (
-    paymentType = "cash",
-    moneyReceived = total
-  ) => {
+  const handleCheckout = async (paymentMethod, amountReceived = null) => {
     if (cart.length === 0) return;
     setError("");
     try {
-      const body = {
-        items: cart.map((i) => ({
-          product_id: i.product_id,
-          quantity: i.quantity,
+      // Prepare the checkout payload
+      const payload = {
+        items: cart.map((item) => ({
+          product_id: item.product_id,
+          quantity: item.quantity,
+          price: item.price,
         })),
-        payment_type: paymentType,
-        money_received: moneyReceived,
+        payment_type: paymentMethod,
+        money_received: amountReceived,
+        transaction_id: transactionId, // Include the transaction ID if it exists
+        transaction_number: transactionNumber,
       };
+
       const resp = await api("/api/sales/checkout", {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
-        body: JSON.stringify(body),
+        body: JSON.stringify(payload),
       });
       if (resp?.transaction_number)
         setTransactionNumber(resp.transaction_number);
@@ -314,6 +337,7 @@ function POS() {
       setTransactionNumber(`T-${businessId}-${timePart}-${randPart}`);
       // setAppliedDiscount(null); // if using discount
     } catch (err) {
+      console.error("Checkout error:", err);
       setError("Checkout failed");
     }
   };
@@ -755,42 +779,70 @@ function POS() {
 
           if (method === "cash") {
             setShowCashModal(true);
+          } else if (method === "gcash") {
+            (async () => {
+              try {
+                const successUrl =
+                  window.location.origin + "/pos?payment=success";
+                const cancelUrl =
+                  window.location.origin + "/pos?payment=cancel";
+                // persist cart to finalize after redirect back
+                localStorage.setItem(
+                  "pending_gcash_cart",
+                  JSON.stringify({
+                    items: cart.map((i) => ({
+                      product_id: i.product_id,
+                      quantity: i.quantity,
+                    })),
+                    total,
+                  })
+                );
+                const { checkoutUrl } = await createGcashCheckout({
+                  amount: Number(total || 0),
+                  description: "POS Order",
+                  referenceNumber: transactionNumber || `POS-${Date.now()}`,
+                  cancelUrl,
+                  successUrl,
+                });
+                window.open(checkoutUrl, '_blank');
+              } catch (e) {
+                setError("Failed to init GCash");
+                localStorage.removeItem("pending_gcash_cart");
+              }
+            })();
+          } else if (method === "maya") {
+            (async () => {
+              try {
+                const successUrl =
+                  window.location.origin + "/pos?payment=success";
+                const cancelUrl =
+                  window.location.origin + "/pos?payment=cancel";
+                // persist cart to finalize after redirect back
+                localStorage.setItem(
+                  "pending_maya_cart",
+                  JSON.stringify({
+                    items: cart.map((i) => ({
+                      product_id: i.product_id,
+                      quantity: i.quantity,
+                    })),
+                    total,
+                  })
+                );
+                const { checkoutUrl } = await createMayaCheckout({
+                  amount: Number(total || 0),
+                  description: "POS Order",
+                  referenceNumber: transactionNumber || `POS-${Date.now()}`,
+                  cancelUrl,
+                  successUrl,
+                });
+                window.open(checkoutUrl, '_blank');
+              } catch (e) {
+                setError("Failed to init Maya");
+                localStorage.removeItem("pending_maya_cart");
+              }
+            })();
           } else {
-            if (method === "gcash") {
-              (async () => {
-                try {
-                  const successUrl =
-                    window.location.origin + "/pos?payment=success";
-                  const cancelUrl =
-                    window.location.origin + "/pos?payment=cancel";
-                  // persist cart to finalize after redirect back
-                  localStorage.setItem(
-                    "pending_gcash_cart",
-                    JSON.stringify({
-                      items: cart.map((i) => ({
-                        product_id: i.product_id,
-                        quantity: i.quantity,
-                      })),
-                      total,
-                    })
-                  );
-                  const { checkoutUrl } = await createGcashCheckout({
-                    amount: Number(total || 0),
-                    description: "POS Order",
-                    referenceNumber: transactionNumber || `POS-${Date.now()}`,
-                    cancelUrl,
-                    successUrl,
-                  });
-                  window.location.href = checkoutUrl;
-                } catch (e) {
-                  setError("Failed to init GCash");
-                  localStorage.removeItem("pending_gcash_cart");
-                }
-              })();
-            } else {
-              // For MAYA or others, fall back to existing checkout flow
-              handleCheckout(method);
-            }
+            handleCheckout(method);
           }
         }}
       />
@@ -811,7 +863,12 @@ function POS() {
       <ScanCustomerCartModal
         isOpen={showImportCart}
         onClose={() => setShowImportCart(false)}
-        onImport={(items) => {
+        onImport={(items, transactionId) => {
+          // If we have a transaction ID from the scanned cart, use it
+          if (transactionId) {
+            setTransactionId(transactionId);
+          }
+          
           // Merge imported items into current cart
           setCart((prev) => {
             const bySku = new Map(prev.map((i) => [i.sku, i]));

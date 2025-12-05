@@ -5,7 +5,7 @@ function buildAuthHeader(secretKey) {
 	return `Basic ${token}`;
 }
 
-async function createCheckout({ secretKey, amountCentavos, description, referenceNumber, cancelUrl, successUrl }) {
+async function createCheckout({ secretKey, amountCentavos, description, referenceNumber, cancelUrl, successUrl, paymentMethodTypes }) {
 	const response = await fetch('https://api.paymongo.com/v1/checkout_sessions', {
 		method: 'POST',
 		headers: {
@@ -25,7 +25,7 @@ async function createCheckout({ secretKey, amountCentavos, description, referenc
 							quantity: 1
 						}
 					],
-					payment_method_types: ['gcash'],
+					payment_method_types: paymentMethodTypes,
 					reference_number: referenceNumber,
 					success_url: successUrl,
 					cancel_url: cancelUrl

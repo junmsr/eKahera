@@ -13,9 +13,9 @@ const config = {
 };
 
 exports.register = async (req, res) => {
-  const { first_name, last_name, email, password, role, business_id } = req.body;
-  if (!first_name || !last_name || !email || !password) {
-    return res.status(400).json({ error: 'First name, last name, email and password are required' });
+  const { username, first_name, last_name, email, password, role, business_id } = req.body;
+  if (!username || !first_name || !last_name || !email || !password) {
+    return res.status(400).json({ error: 'Username, first name, last name, email and password are required' });
   }
 
   // Strong password validation
@@ -37,9 +37,14 @@ exports.register = async (req, res) => {
   }
 
   try {
-    const existing = await pool.query('SELECT 1 FROM users WHERE email = $1', [email]);
-    if (existing.rowCount > 0) {
+    // Check if email or username already exists
+    const existingEmail = await pool.query('SELECT 1 FROM users WHERE email = $1', [email]);
+    if (existingEmail.rowCount > 0) {
       return res.status(409).json({ error: 'Email already registered' });
+    }
+    const existingUsername = await pool.query('SELECT 1 FROM users WHERE username = $1', [username]);
+    if (existingUsername.rowCount > 0) {
+      return res.status(409).json({ error: 'Username already taken' });
     }
     const hashedPassword = await bcrypt.hash(password, 12);
     // Map requested role to user_type_id (admin/cashier/customer). Default to customer
@@ -48,10 +53,10 @@ exports.register = async (req, res) => {
     const userTypeId = roleRes.rowCount ? roleRes.rows[0].user_type_id : null;
 
     const result = await pool.query(
-      `INSERT INTO users (first_name, last_name, email, password_hash, role, user_type_id, business_id) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7) 
-       RETURNING user_id, first_name, last_name, email, role, user_type_id, business_id`,
-      [first_name, last_name, email, hashedPassword, desiredRole, userTypeId, business_id || null]
+      `INSERT INTO users (username, first_name, last_name, email, password_hash, role, user_type_id, business_id) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
+       RETURNING user_id, username, first_name, last_name, email, role, user_type_id, business_id`,
+      [username, first_name, last_name, email, hashedPassword, desiredRole, userTypeId, business_id || null]
     );
     const newUser = result.rows[0];
     logAction({
@@ -299,8 +304,9 @@ exports.login = async (req, res) => {
 exports.checkSetupStatus = async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT 1 FROM users WHERE role = $1 LIMIT 1',
-      ['superadmin']
+      `SELECT 1 FROM users u
+       JOIN user_type ut ON ut.user_type_id = u.user_type_id
+       WHERE lower(ut.user_type_name) = 'superadmin' LIMIT 1`
     );
     
     const needsSetup = result.rowCount === 0;
@@ -321,6 +327,12 @@ exports.createInitialSuperAdmin = async (req, res) => {
       error: 'Name, email, password, and password confirmation are required' 
     });
   }
+  
+  // Split name into first_name and last_name (or use name as first_name if no space)
+  const nameParts = name.trim().split(/\s+/);
+  const first_name = nameParts[0] || name;
+  const last_name = nameParts.slice(1).join(' ') || name;
+  const username = name.toLowerCase().replace(/\s+/g, '') || `superadmin_${Date.now()}`;
   
   if (password !== confirmPassword) {
     return res.status(400).json({ error: 'Passwords do not match' });
@@ -353,8 +365,9 @@ exports.createInitialSuperAdmin = async (req, res) => {
   try {
     // Check if superadmin already exists
     const existingSuperAdmin = await pool.query(
-      'SELECT 1 FROM users WHERE role = $1 LIMIT 1',
-      ['superadmin']
+      `SELECT 1 FROM users u
+       JOIN user_type ut ON ut.user_type_id = u.user_type_id
+       WHERE lower(ut.user_type_name) = 'superadmin' LIMIT 1`
     );
     
     if (existingSuperAdmin.rowCount > 0) {
@@ -386,10 +399,10 @@ exports.createInitialSuperAdmin = async (req, res) => {
     
     // Create superadmin user
     const result = await pool.query(
-      `INSERT INTO users (username, name, email, password_hash, role, user_type_id, created_at, updated_at)
-       VALUES ($1, $1, $2, $3, 'superadmin', $4, NOW(), NOW())
-       RETURNING user_id, username, name, email, role, created_at`,
-      [name, email, hashedPassword, superAdminTypeId]
+      `INSERT INTO users (username, first_name, last_name, email, password_hash, role, user_type_id, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, 'superadmin', $6, NOW(), NOW())
+       RETURNING user_id, username, first_name, last_name, email, role, created_at`,
+      [username, first_name, last_name, email, hashedPassword, superAdminTypeId]
     );
     
     const newSuperAdmin = result.rows[0];
@@ -405,7 +418,8 @@ exports.createInitialSuperAdmin = async (req, res) => {
       user_id: newSuperAdmin.user_id,
       email: newSuperAdmin.email,
       username: newSuperAdmin.username,
-      name: newSuperAdmin.name
+      first_name: newSuperAdmin.first_name,
+      last_name: newSuperAdmin.last_name
     });
     
     res.status(201).json({
@@ -413,7 +427,8 @@ exports.createInitialSuperAdmin = async (req, res) => {
       user: {
         user_id: newSuperAdmin.user_id,
         username: newSuperAdmin.username,
-        name: newSuperAdmin.name,
+        first_name: newSuperAdmin.first_name,
+        last_name: newSuperAdmin.last_name,
         email: newSuperAdmin.email,
         role: newSuperAdmin.role,
         created_at: newSuperAdmin.created_at

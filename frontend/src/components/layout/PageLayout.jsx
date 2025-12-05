@@ -27,14 +27,12 @@ export default function PageLayout({
   const toggleTheme = () => setTheme(theme === "light" ? "dark" : "light");
   const touchStartXRef = useRef(null);
   const touchActiveRef = useRef(false);
-  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const { logout } = useAuth();
 
-  const handleLogoutClick = () => setShowLogoutConfirm(true);
-  const handleLogoutCancel = () => setShowLogoutConfirm(false);
-  const handleLogoutConfirm = () => {
+  const handleLogoutClick = () => {
+    // Logout is handled by Nav-Admin component's modal
+    // This function is passed to Nav-Admin and called when user confirms logout
     logout();
-    setShowLogoutConfirm(false);
   };
 
   return (
@@ -45,36 +43,6 @@ export default function PageLayout({
       floatingElements={false}
       className={theme}
     >
-      {showLogoutConfirm && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center">
-          <div
-            className="absolute inset-0 bg-black/80"
-            onClick={handleLogoutCancel}
-          />
-          <div className="relative bg-white rounded-xl shadow-xl w-[92%] max-w-md p-6 z-10">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              Confirm Logout
-            </h3>
-            <p className="text-sm text-gray-600 mb-4">
-              Are you sure you want to log out?
-            </p>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={handleLogoutCancel}
-                className="px-3 py-2 rounded-lg bg-gray-100 text-sm font-medium hover:bg-gray-200 transition"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleLogoutConfirm}
-                className="px-3 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition"
-              >
-                Logout
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Navbar */}
       {showNavbar && <Navbar />}
