@@ -4,13 +4,17 @@ import dayjs from "dayjs";
 import isBetween from "dayjs/plugin/isBetween";
 import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
 import isSameOrAfter from "dayjs/plugin/isSameOrAfter";
+// >>> FIX: Import and extend the minMax plugin
+import minMax from "dayjs/plugin/minMax"; 
 
 dayjs.extend(isBetween);
 dayjs.extend(isSameOrBefore);
 dayjs.extend(isSameOrAfter);
+// >>> FIX: Extend the minMax plugin
+dayjs.extend(minMax); 
 
 const today = dayjs();
-const PH_LOCALE = "en-PH";
+const PH_LOCALE = "en-PH"; // Retained for display consistency
 
 // --- Date Helper Functions ---
 
@@ -22,14 +26,6 @@ const getDaysInMonth = (year, month) => {
     date.add(1, "day");
   }
   return days;
-};
-
-const getMonthStart = (year, month) => {
-  return dayjs().year(year).month(month).startOf("month");
-};
-
-const getMonthEnd = (year, month) => {
-  return dayjs().year(year).month(month).endOf("month");
 };
 
 // --- Modal Sub-Components ---
@@ -46,6 +42,7 @@ function DatePickerGrid({
     .year(currentYear)
     .month(currentMonth)
     .startOf("month");
+  
   const endOfMonth = dayjs()
     .year(currentYear)
     .month(currentMonth)
@@ -55,8 +52,9 @@ function DatePickerGrid({
   const totalDays = endOfMonth.date();
   const calendarDays = [];
 
-  // Add padding days from the previous month (if Monday is the start, use 1, etc.)
-  // We want the week to start on Monday (Mon: 0, Tue: 1, ..., Sun: 6)
+  // We want the week to start on Monday (Monday is dayjs().day(1))
+  // Calculate how many days before Monday the month starts.
+  // dayjs().day() returns 0 for Sunday, 1 for Monday...
   const startOffset = (startDayIndex === 0 ? 6 : startDayIndex - 1);
 
   // Fill in empty spots for previous month
@@ -66,37 +64,33 @@ function DatePickerGrid({
 
   // Fill in the actual days
   for (let i = 1; i <= totalDays; i++) {
-    calendarDays.push(startOfMonth.date(i));
+    const date = startOfMonth.date(i);
+    // Don't show dates past today
+    if (date.isAfter(today.endOf('day'))) break;
+    calendarDays.push(date);
   }
 
   const isSelected = (date) => {
     if (!date) return false;
-    // Week mode: check if it's the start date (to show the "last 7 days" period)
-    if (mode === "Week") {
-      return (
-        startDate &&
-        date.isSame(startDate, "day") &&
-        dayjs(startDate).add(6, "day").isSame(endDate, "day")
-      );
-    }
-    // Custom/Day Mode
-    if (startDate && endDate) {
-      return (
-        date.isSame(startDate, "day") ||
-        date.isSame(endDate, "day") ||
-        date.isBetween(startDate, endDate, "day", "()")
-      );
-    }
-    return false;
+    // Check if date is strictly between start and end (exclusive)
+    return startDate && endDate && date.isBetween(startDate, endDate, "day", "()");
   };
 
   const isRangeStart = (date) => {
     if (!date) return false;
+    // For single-day ranges (Day mode), it's both start and end
+    if (startDate && endDate && startDate.isSame(endDate, 'day')) {
+        return date.isSame(startDate, 'day');
+    }
     return startDate && date.isSame(startDate, "day");
   };
 
   const isRangeEnd = (date) => {
     if (!date) return false;
+     // For single-day ranges (Day mode), it's both start and end
+     if (startDate && endDate && startDate.isSame(endDate, 'day')) {
+        return date.isSame(startDate, 'day');
+    }
     return endDate && date.isSame(endDate, "day");
   };
 
@@ -107,35 +101,32 @@ function DatePickerGrid({
 
   // Helper to determine cell classes
   const getCellClasses = (date) => {
-    if (!date) return "text-gray-300"; // Placeholder cell
+    if (!date) return "text-gray-300";
 
     let classes = "w-10 h-10 flex items-center justify-center rounded-full text-sm font-medium cursor-pointer transition-all duration-150 relative z-10";
 
-    const selected = isSelected(date);
     const start = isRangeStart(date);
     const end = isRangeEnd(date);
-    const inRange = selected && !start && !end;
+    const inRange = isSelected(date);
     const currentDay = isToday(date);
-    const todayUnselected = currentDay && !selected;
+    
+    // Add hover background for all clickable dates
+    classes += " hover:bg-red-50";
 
     if (inRange) {
       // Background for dates between start and end
-      classes += " bg-red-100 text-red-600 rounded-none";
+      classes = "w-10 h-10 flex items-center justify-center rounded-none text-red-600 bg-red-100 relative z-10";
     }
 
     if (start || end) {
       // Fully selected start or end date
-      classes += " bg-red-600 text-white shadow-lg";
-      if (start && end && !date.isSame(startDate, 'day')) {
-         // Single day selection: Day mode or Custom start/end are the same
-        classes = "w-10 h-10 flex items-center justify-center rounded-full text-sm font-medium cursor-pointer transition-all duration-150 bg-red-600 text-white shadow-lg relative z-10";
-      }
-    } else if (todayUnselected) {
-        // Unselected today date
-        classes += " border border-red-400 text-red-600 hover:bg-red-100";
-    } else if (!selected) {
+      classes = "w-10 h-10 flex items-center justify-center rounded-full text-sm font-medium cursor-pointer transition-all duration-150 bg-red-600 text-white shadow-lg relative z-10";
+    } else if (currentDay) {
+      // Unselected today date
+      classes += " border border-red-400 text-red-600";
+    } else {
       // Normal, unselected date
-      classes += " text-gray-700 hover:bg-gray-100";
+      classes += " text-gray-700";
     }
 
     return classes;
@@ -190,17 +181,20 @@ function MonthPickerGrid({ currentYear, startDate, endDate, onMonthClick }) {
   const isSelected = (monthIndex) => {
     if (!startDate || !endDate) return false;
     const startOfMonth = dayjs().year(currentYear).month(monthIndex).startOf('month');
+    
+    // Check if the current month in the loop is the selected month range
     return (
-        startOfMonth.isSameOrAfter(startDate.startOf('month')) &&
-        startOfMonth.isSameOrBefore(endDate.startOf('month'))
+        startOfMonth.isSame(startDate.startOf('month')) && 
+        startOfMonth.isSame(endDate.startOf('month'))
     );
   };
 
   return (
     <div className="grid grid-cols-4 gap-4 mt-4">
       {months.map((month, index) => {
-        const selected = isSelected(index);
-        const disabled = dayjs().year(currentYear).month(index).isAfter(today.endOf('month'), 'month');
+        const startOfMonth = dayjs().year(currentYear).month(index).startOf('month');
+        // Disable months past the current month
+        const disabled = startOfMonth.isAfter(today.startOf('month'));
 
         return (
           <div
@@ -210,7 +204,7 @@ function MonthPickerGrid({ currentYear, startDate, endDate, onMonthClick }) {
           >
             <div
               className={`w-14 h-14 flex items-center justify-center rounded-full text-sm font-medium transition-all duration-150 ${
-                selected
+                isSelected(index)
                   ? "bg-red-600 text-white shadow-lg"
                   : "text-gray-700 hover:bg-gray-100 border border-gray-200"
               }`}
@@ -227,44 +221,67 @@ function MonthPickerGrid({ currentYear, startDate, endDate, onMonthClick }) {
 // --- Main Modal Component ---
 
 export default function DateRangeFilterModal({ isOpen, onClose, onDateRangeApply }) {
-  const [mode, setMode] = useState("Custom");
+  const [mode, setMode] = useState("Month"); // Default to Month to match dashboard state
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
   const [currentYear, setCurrentYear] = useState(today.year());
   const [currentMonth, setCurrentMonth] = useState(today.month()); // 0-11
 
+  const setRange = (start, end, rangeMode) => {
+    // Ensure end date does not exceed today
+    const finalEnd = end.isAfter(today.endOf('day')) ? today.endOf('day') : end;
+    setStartDate(start.startOf('day'));
+    setEndDate(finalEnd);
+    setMode(rangeMode);
+  }
+
+  // Effect to handle initialization and mode changes
   useEffect(() => {
-    if (isOpen) {
-        // Reset or initialize state when modal opens
-        setMode("Custom");
+    if (!isOpen) return;
+    
+    // Set initial range based on mode
+    const now = dayjs();
+    
+    if (mode === "Day") {
+        setRange(now, now, "Day");
+    } else if (mode === "Week") {
+        // Week: Last 7 days including today
+        const start = now.subtract(6, 'day'); 
+        setRange(start, now, "Week");
+    } else if (mode === "Month") {
+        const start = now.startOf('month');
+        setRange(start, now, "Month");
+    } else if (mode === "Custom") {
         setStartDate(null);
         setEndDate(null);
+    }
+    
+    // Update the calendar view to the current month/year
+    if (mode !== "Month") {
         setCurrentYear(today.year());
         setCurrentMonth(today.month());
     }
-  }, [isOpen]);
+  }, [isOpen, mode]); // Rerun when mode changes or modal opens
 
   // Handle date selection in Calendar Grid (Custom/Day/Week)
   const handleDateClick = (date) => {
     date = date.startOf('day'); // Ensure time is ignored
 
     if (mode === "Day") {
-      setStartDate(date);
-      setEndDate(date);
+      setRange(date, date, "Day");
     } else if (mode === "Week") {
-      const weekStart = date.startOf('week').add(1, 'day'); // Monday start
-      const weekEnd = weekStart.add(6, 'day'); // Sunday end
-      setStartDate(date); // We only highlight the selected date
-      setEndDate(date.add(6, 'day')); // But set the range to 7 days starting from it
+      // Week: 7 days including the clicked date, ending on the clicked date
+      const start = date.subtract(6, 'day'); 
+      setRange(start, date, "Week");
     } else if (mode === "Custom") {
       if (!startDate || endDate) {
         // Start a new range
         setStartDate(date);
         setEndDate(null);
       } else if (date.isSameOrBefore(startDate, "day")) {
-        // Select an earlier date as the new start
-        setStartDate(date);
-        setEndDate(startDate); // Swap to ensure start < end
+        // Select an earlier date, or click the same date (making it a single day range)
+        setEndDate(startDate); // The old start becomes the new end
+        setStartDate(date); // The new click becomes the start
       } else {
         // Set the end date
         setEndDate(date);
@@ -276,31 +293,46 @@ export default function DateRangeFilterModal({ isOpen, onClose, onDateRangeApply
   const handleMonthClick = (monthIndex) => {
     const start = dayjs().year(currentYear).month(monthIndex).startOf("month");
     const end = dayjs().year(currentYear).month(monthIndex).endOf("month");
-    setStartDate(start);
-    setEndDate(end.isAfter(today) ? today : end); // Don't select past today
+    
+    // Don't select future months
+    if (start.isAfter(today.startOf('month'))) return;
+
+    setRange(start, end, "Month");
   };
 
   // Switch between date view (month view) and year view (for month selection)
   const switchCalendarView = (targetMonth, targetYear) => {
-    setCurrentMonth(targetMonth);
-    setCurrentYear(targetYear);
+    const newDate = dayjs().year(targetYear).month(targetMonth);
+    
+    // Prevent navigating past the current month/year
+    if (newDate.isAfter(today, 'month')) {
+        setCurrentMonth(today.month());
+        setCurrentYear(today.year());
+    } else {
+        setCurrentMonth(newDate.month());
+        setCurrentYear(newDate.year());
+    }
   };
 
   const isMonthView = mode !== "Month";
-  const yearOptions = [today.year(), today.year() - 1];
+  // Dynamically generate years, including the current and previous one for the Month picker
+  const currentYearInt = today.year();
+  const yearOptions = [currentYearInt, currentYearInt - 1].filter(y => y <= currentYearInt);
 
   // Footer display text
   const footerText = useMemo(() => {
     if (startDate && endDate) {
-      const startStr = startDate.format("MMM D, YYYY");
-      const endStr = endDate.format("MMM D, YYYY");
-
-      if (mode === "Day") return `${startStr}`;
+      // FIX: Use dayjs.min/max (which requires minMax plugin)
+      const finalStart = dayjs.min(startDate, endDate);
+      const finalEnd = dayjs.max(startDate, endDate);
       
-      const diff = endDate.diff(startDate, 'day') + 1;
+      const startStr = finalStart.format("MMM D, YYYY");
+      const endStr = finalEnd.format("MMM D, YYYY");
 
-      if (mode === "Month") return `${startDate.format("MMM YYYY")} (${diff} days)`;
-      if (mode === "Week") return `${startStr} - ${endStr} (${diff} days)`;
+      const diff = finalEnd.diff(finalStart, 'day') + 1;
+      
+      if (diff === 1) return `${startStr} (1 day)`;
+      if (mode === "Month") return `${finalStart.format("MMM YYYY")} (${diff} days)`;
       
       return `${startStr} - ${endStr} (${diff} days)`;
 
@@ -312,41 +344,16 @@ export default function DateRangeFilterModal({ isOpen, onClose, onDateRangeApply
 
   // Apply button handler
   const handleApply = () => {
+    // Done button should be clickable if both start and end are set.
     if (startDate && endDate) {
-      // Ensure the start date is before or same as the end date
+      // FIX: Use dayjs.min/max (which requires minMax plugin)
       const finalStart = dayjs.min(startDate, endDate).startOf('day');
       const finalEnd = dayjs.max(startDate, endDate).endOf('day');
+      
       onDateRangeApply({ startDate: finalStart, endDate: finalEnd, rangeType: mode });
       onClose();
     }
   };
-  
-  // Set the default range when mode changes
-  useEffect(() => {
-    const now = dayjs();
-    if (mode === "Day") {
-        setStartDate(now.startOf('day'));
-        setEndDate(now.endOf('day'));
-    } else if (mode === "Week") {
-        const start = now.startOf('week').add(1, 'day'); // Monday start
-        const end = start.add(6, 'day').endOf('day');
-        setStartDate(start);
-        setEndDate(end);
-    } else if (mode === "Month") {
-        const start = now.startOf('month');
-        const end = now.endOf('day'); // End of today
-        setStartDate(start);
-        setEndDate(end);
-    } else if (mode === "Custom") {
-        setStartDate(null);
-        setEndDate(null);
-    }
-    // Update the calendar view to the current month/year for Custom/Day/Week
-    if (mode !== "Month") {
-        setCurrentYear(today.year());
-        setCurrentMonth(today.month());
-    }
-  }, [mode]);
 
 
   if (!isOpen) return null;
@@ -378,7 +385,7 @@ export default function DateRangeFilterModal({ isOpen, onClose, onDateRangeApply
               className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors duration-150 mr-2 border 
                 ${
                   mode === m
-                    ? "bg-red-500 text-white border-red-500"
+                    ? "bg-red-600 text-white border-red-600"
                     : "bg-white text-gray-700 border-gray-300 hover:bg-red-50"
                 }`}
             >
@@ -408,6 +415,7 @@ export default function DateRangeFilterModal({ isOpen, onClose, onDateRangeApply
                 <button
                   onClick={() => switchCalendarView(currentMonth + 1, currentYear)}
                   className="p-2 text-gray-600 hover:bg-gray-100 rounded-full"
+                  // Disable navigating forward past the current month
                   disabled={dayjs().year(currentYear).month(currentMonth).isSame(today, 'month')}
                 >
                   &gt;
@@ -450,6 +458,7 @@ export default function DateRangeFilterModal({ isOpen, onClose, onDateRangeApply
           </p>
           <button
             onClick={handleApply}
+            // Button is enabled only if both start and end dates are definitively set
             disabled={!startDate || !endDate}
             className={`w-full py-3 rounded-lg text-white font-bold transition-all duration-200 ${
               startDate && endDate
@@ -464,28 +473,3 @@ export default function DateRangeFilterModal({ isOpen, onClose, onDateRangeApply
     </div>
   );
 }
-
-// LowStockList is kept as a separate component for clean code, as in the original
-function LowStockList({ lowStockProducts }) {
-    if (lowStockProducts.length === 0) {
-      return <p className="text-sm text-gray-500">No products with low stock.</p>;
-    }
-  
-    return (
-      <ul className="divide-y divide-gray-200">
-        {lowStockProducts.map((product) => (
-          <li
-            key={product.product_id}
-            className="py-3 flex justify-between items-center"
-          >
-            <span className="text-sm font-medium text-gray-800">
-              {product.product_name}
-            </span>
-            <span className="text-sm font-bold text-red-600">
-              {product.quantity_in_stock} left
-            </span>
-          </li>
-        ))}
-      </ul>
-    );
-  }

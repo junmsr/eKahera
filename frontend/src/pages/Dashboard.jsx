@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { api, authHeaders } from "../lib/api";
 import dayjs from "dayjs"; // Import dayjs for date handling
+// >>> FIX: Import and extend the minMax plugin
+import minMax from "dayjs/plugin/minMax"; 
 
 import {
   LineChart,
@@ -21,7 +23,6 @@ import { useAuth } from "../hooks/useAuth";
 // Components
 import PageLayout from "../components/layout/PageLayout";
 import NavAdmin from "../components/layout/Nav-Admin";
-// import StatsCard from "../components/ui/Dashboard/StatsCard"; // Removed as the UI uses a direct div for KPIs
 import ChartCard from "../components/ui/Dashboard/ChartCard";
 import DashboardStatsCard from "../components/ui/Dashboard/DashboardStatsCard";
 import DashboardBusinessReport from "../components/ui/Dashboard/DashboardBusinessReport";
@@ -31,7 +32,10 @@ import ProfileModal from "../components/modals/ProfileModal";
 import NotificationDropdown from "../components/common/NotificationDropdown";
 
 // NEW MODAL IMPORT
-import DateRangeFilterModal from "../components/modals/DateRangeFilterModal"; 
+import DateRangeFilterModal from "../components/modals/DateRangeFilterModal";
+
+// FIX: Extend the minMax plugin globally for this file
+dayjs.extend(minMax);
 
 
 // Constants
@@ -49,7 +53,7 @@ function VisitorsChart({ data, className = "", rangeType = "Custom" }) {
       case "Day":
         return "Visitors Today";
       case "Week":
-        return "Visitors this Week";
+        return "Visitors for the last 7 days";
       case "Month":
         return "Visitors this Month";
       case "Custom":
@@ -161,11 +165,11 @@ export default function Dashboard() {
 
   // State
   const [stats, setStats] = useState([]);
-  // Replaced 'range' (string) with 'dateRange' (object)
+  // Initial state now calculates the current month range correctly
   const [dateRange, setDateRange] = useState({
     startDate: dayjs().startOf("month"),
     endDate: dayjs().endOf("day"),
-    rangeType: "Month", // Default to 'Month' view
+    rangeType: "Month", 
   }); 
   const [loading, setLoading] = useState(false);
   const [chartData, setChartData] = useState([]);
@@ -250,8 +254,12 @@ export default function Dashboard() {
       // Format dates for API - use consistent format (YYYY-MM-DD)
       const formatDate = (date) => dayjs(date).format("YYYY-MM-DD");
 
-      const startDateStr = formatDate(startDate);
-      const endDateStr = formatDate(endDate);
+      // FIX: Use dayjs.min/max (which now works with the plugin)
+      const finalStart = dayjs.min(startDate, endDate);
+      const finalEnd = dayjs.max(startDate, endDate);
+
+      const startDateStr = formatDate(finalStart);
+      const endDateStr = formatDate(finalEnd);
 
       console.log("Fetching data for date range:", {
         rangeType,
@@ -328,11 +336,11 @@ export default function Dashboard() {
         // Format date range for display
         const dateRangeText = 
             rangeType === "Day" 
-                ? startDate.format("MMM D, YYYY")
-                : `${startDate.format("MMM D")} - ${endDate.format("MMM D, YYYY")}`;
+                ? finalStart.format("MMM D, YYYY")
+                : `${finalStart.format("MMM D")} - ${finalEnd.format("MMM D, YYYY")}`;
         
-        const salesLabel = rangeType === 'Day' ? "Daily Sales" : rangeType === 'Week' ? "Weekly Sales" : rangeType === 'Month' ? "Monthly Sales" : "Total Sales";
-        const transactionsLabel = rangeType === 'Day' ? "Daily Transactions" : rangeType === 'Week' ? "Weekly Transactions" : rangeType === 'Month' ? "Monthly Transactions" : "Total Transactions";
+        const salesLabel = rangeType === 'Day' ? "Daily Sales" : rangeType === 'Week' ? "7-Day Sales" : rangeType === 'Month' ? "Monthly Sales" : "Total Sales";
+        const transactionsLabel = rangeType === 'Day' ? "Daily Transactions" : rangeType === 'Week' ? "7-Day Transactions" : rangeType === 'Month' ? "Monthly Transactions" : "Total Transactions";
 
 
         // Update stats for the stats cards based on selected range
@@ -478,7 +486,7 @@ export default function Dashboard() {
   useEffect(() => {
     fetchData();
     fetchNotifications();
-  }, [dateRange]); // DEPENDENCY CHANGED TO dateRange
+  }, [dateRange]); // DEPENDENCY on dateRange object
 
   // Helper function to format currency values
   const formatCurrency = (value) => {
@@ -494,6 +502,16 @@ export default function Dashboard() {
   const handleDateRangeApply = (newRange) => {
     setDateRange(newRange);
   };
+
+  // FIX: Use dayjs.min/max (which now works with the plugin) to display dates correctly in the header
+  const headerDateDisplay = useMemo(() => {
+    if (!dateRange.startDate || !dateRange.endDate) return "Select Range";
+    
+    const finalStart = dayjs.min(dateRange.startDate, dateRange.endDate);
+    const finalEnd = dayjs.max(dateRange.startDate, dateRange.endDate);
+    
+    return `${finalStart.format("MMM D")} - ${finalEnd.format("MMM D, YYYY")}`;
+  }, [dateRange]);
 
 
   // Header actions - REMOVED SELECT DROPDOWN
@@ -519,7 +537,7 @@ export default function Dashboard() {
       >
         <BiCalendarAlt className="w-4 h-4 sm:w-5 sm:h-5" />
         <span className="hidden sm:inline">
-            {dateRange.startDate.format("MMM D")} - {dateRange.endDate.format("MMM D, YYYY")}
+            {headerDateDisplay}
         </span>
       </button>
 
