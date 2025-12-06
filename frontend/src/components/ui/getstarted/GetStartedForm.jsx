@@ -613,7 +613,16 @@ export default function GetStartedForm({
             <button
               type="button"
               onClick={hook.handleFinish}
-              disabled={loading || !form.documents || form.documents.length === 0 || !form.acceptTerms || !form.acceptPrivacy}
+              disabled={loading || !form.documents || form.documents.length === 0 || 
+                !form.acceptTerms || !form.acceptPrivacy ||
+                // Check if all required documents are uploaded and have types
+                !['Business Registration Certificate (DTI/SEC/CDA)', 
+                  "Mayor's Permit / Business Permit", 
+                  'BIR Certificate of Registration (Form 2303)']
+                  .every(reqType => form.documentTypes?.includes(reqType)) ||
+                // Check if all uploaded documents have a type selected
+                form.documentTypes?.some(type => !type)
+              }
               className="inline-flex items-center px-6 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (

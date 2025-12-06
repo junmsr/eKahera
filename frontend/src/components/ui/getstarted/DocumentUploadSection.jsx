@@ -94,9 +94,18 @@ export default function DocumentUploadSection({ documents, documentTypes, onDocu
     'Other Business Document'
   ];
 
-  // Check if required documents are uploaded
-  const uploadedTypes = documentTypes.filter(type => type);
+  // Check if required documents are uploaded and have types selected
+  const uploadedTypes = documentTypes.filter((type, index) => type && documents[index]);
   const missingRequired = requiredDocuments.filter(req => !uploadedTypes.includes(req));
+  
+  // Check if any uploaded document is missing a type
+  const hasUntypedDocuments = documents.length > 0 && 
+    (documentTypes.length < documents.length || documentTypes.some(type => !type));
+  
+  // Check if all required documents are present with types
+  const allRequiredPresent = requiredDocuments.every(req => 
+    documentTypes.some((type, index) => type === req && documents[index])
+  );
 
   return (
     <div className="space-y-4">
@@ -199,9 +208,33 @@ export default function DocumentUploadSection({ documents, documentTypes, onDocu
           <h4 className="font-semibold text-yellow-800 mb-2">Missing Required Documents:</h4>
           <ul className="text-sm text-yellow-700 space-y-1">
             {missingRequired.map((doc, idx) => (
-              <li key={idx}>• {doc}</li>
+              <li key={idx} className="flex items-center">
+                <span className="mr-2">•</span>
+                <span className="flex-1">{doc}</span>
+                <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full">Required</span>
+              </li>
             ))}
           </ul>
+        </div>
+      )}
+
+      {hasUntypedDocuments && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mt-4">
+          <h4 className="font-semibold text-red-800 mb-2">Action Required:</h4>
+          <p className="text-sm text-red-700">
+            Please select a document type for all uploaded files.
+          </p>
+        </div>
+      )}
+
+      {allRequiredPresent && !hasUntypedDocuments && documents.length > 0 && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4 mt-4">
+          <div className="flex items-center text-green-800">
+            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+            </svg>
+            <span className="font-medium">All required documents are uploaded and typed.</span>
+          </div>
         </div>
       )}
 
