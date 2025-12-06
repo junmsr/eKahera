@@ -19,14 +19,14 @@ import { useAuth } from "../hooks/useAuth";
 // Components
 import PageLayout from "../components/layout/PageLayout";
 import NavAdmin from "../components/layout/Nav-Admin";
-import StatsCard from "../components/ui/Dashboard/StatsCard";
-import ChartCard from "../components/ui/Dashboard/ChartCard";
-import DashboardStatsCard from "../components/ui/Dashboard/DashboardStatsCard";
-import DashboardBusinessReport from "../components/ui/Dashboard/DashboardBusinessReport";
-import Button from "../components/common/Button";
+import StatsCard from "../components/ui/Dashboard/StatsCard"; // Assuming this component exists
+import ChartCard from "../components/ui/Dashboard/ChartCard"; // Assuming this component exists
+import DashboardStatsCard from "../components/ui/Dashboard/DashboardStatsCard"; // Assuming this component exists
+import DashboardBusinessReport from "../components/ui/Dashboard/DashboardBusinessReport"; // Assuming this component exists
+import Button from "../components/common/Button"; // Assuming this component exists
 import { BiBell, BiUser, BiRefresh } from "react-icons/bi";
-import ProfileModal from "../components/modals/ProfileModal";
-import NotificationDropdown from "../components/common/NotificationDropdown";
+import ProfileModal from "../components/modals/ProfileModal"; // Assuming this component exists
+import NotificationDropdown from "../components/common/NotificationDropdown"; // Assuming this component exists
 
 // Constants
 const BLUE_COLORS = ["#2563eb", "#60a5fa", "#93c5fd", "#dbeafe"];
@@ -45,11 +45,13 @@ function VisitorsChart({ data, className = "", range = "month" }) {
   return (
     <ChartCard
       title={
-        <span className="text-blue-700">Visitors for the {rangeLabels[range] || "last 6 months"}</span>
+        <span className="text-blue-700">
+          Visitors for the {rangeLabels[range] || "last 6 months"}
+        </span>
       }
       className={`bg-white/80 backdrop-blur-md border border-white/60 shadow-xl ${className}`}
     >
-      <div className="h-72">
+      <div className="h-72 w-full"> {/* Ensure width is 100% for full responsiveness */}
         <ResponsiveContainer width="100%" height="100%">
           <LineChart
             data={data}
@@ -85,7 +87,7 @@ function SalesPieChart({ data, className = "" }) {
       title={<span className="text-blue-700">Sales by Product Category</span>}
       className={`bg-white/80 backdrop-blur-md border border-white/60 shadow-xl ${className}`}
     >
-      <div className="h-72">
+      <div className="h-72 w-full"> {/* Ensure width is 100% for full responsiveness */}
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
@@ -131,7 +133,6 @@ function SalesPieChart({ data, className = "" }) {
 
 // Main Dashboard Component
 export default function Dashboard() {
-
   const [keyMetrics, setKeyMetrics] = useState({
     revenue: 0,
     expenses: 0,
@@ -139,6 +140,7 @@ export default function Dashboard() {
     grossMargin: 0,
     totalTransactions: 0,
     totalItemsSold: 0,
+    averageTransactionValue: 0,
   });
 
   // State
@@ -167,20 +169,23 @@ export default function Dashboard() {
       try {
         const token = sessionStorage.getItem("auth_token");
         const today = new Date();
-        const startDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+        const startDate = `${today.getFullYear()}-${String(
+          today.getMonth() + 1
+        ).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
 
-        const overview = await api("/api/dashboard/overview", { 
+        const overview = await api("/api/dashboard/overview", {
           headers: authHeaders(token),
-          params: { startDate, endDate: startDate }
+          params: { startDate, endDate: startDate },
         });
 
         if (overview) {
-        setTodayHighlight({
-          sales: overview.totalSales,
-          transactions: overview.totalTransactions,
-          totalItemsSold: overview.totalItemsSold,
-          topProduct: (overview.topProducts?.[0]?.product_name) || "-",
-        });
+          setTodayHighlight({
+            sales: overview.totalSales,
+            transactions: overview.totalTransactions,
+            totalItemsSold: overview.totalItemsSold,
+            averageTransactionValue: overview.averageTransactionValue,
+            topProduct: overview.topProducts?.[0]?.product_name || "-",
+          });
         }
       } catch (err) {
         console.error("Failed to fetch today's data", err);
@@ -217,14 +222,13 @@ export default function Dashboard() {
     try {
       setLoading(true);
       const token = sessionStorage.getItem("auth_token");
-      
+
       // Calculate date range based on selected period
       const now = new Date();
       let startDate, endDate;
 
       switch (range) {
-        case 'week':
-          // Start of current week (Sunday)
+        case "week":
           startDate = new Date(now);
           const dayOfWeek = now.getDay(); // 0 = Sunday, 6 = Saturday
           startDate.setDate(now.getDate() - dayOfWeek);
@@ -234,16 +238,14 @@ export default function Dashboard() {
           endDate.setDate(startDate.getDate() + 6);
           endDate.setHours(23, 59, 59, 999);
           break;
-        case 'month':
-          // Start of current month
+        case "month":
           startDate = new Date(now.getFullYear(), now.getMonth(), 1);
           startDate.setHours(0, 0, 0, 0);
           // End of current month
           endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
           endDate.setHours(23, 59, 59, 999);
           break;
-        case 'year':
-          // Start of current year
+        case "year":
           startDate = new Date(now.getFullYear(), 0, 1);
           startDate.setHours(0, 0, 0, 0);
           // End of current year
@@ -258,54 +260,65 @@ export default function Dashboard() {
           break;
       }
 
+      // Set end date to end of current day
+      endDate = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate(),
+        23,
+        59,
+        59
+      );
+
       // Format dates for API - use consistent format (YYYY-MM-DD) for all endpoints
       const formatDate = (date) => {
         const d = new Date(date);
         const year = d.getFullYear();
-        const month = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
+        const month = String(d.getMonth() + 1).padStart(2, "0");
+        const day = String(d.getDate()).padStart(2, "0");
         return `${year}-${month}-${day}`;
       };
-      
+
       const startDateStr = formatDate(startDate);
       const endDateStr = formatDate(endDate);
-      
-      console.log('Fetching data for date range:', { 
+
+      console.log("Fetching data for date range:", {
         range,
         startDate: startDate.toISOString(),
         endDate: endDate.toISOString(),
         formattedStart: startDateStr,
-        formattedEnd: endDateStr
+        formattedEnd: endDateStr,
       });
 
       // Fetch data for the selected period
-      const [overview, timeseries, pie, inventoryMovement, oldLowStock] = await Promise.all([
-        api("/api/dashboard/overview", { 
-          headers: authHeaders(token),
-          params: { 
-            startDate: startDateStr,
-            endDate: endDateStr
-          }
-        }),
-        api(`/api/stats/customers-timeseries`, { 
-          headers: authHeaders(token),
-          params: {
-            startDate: startDateStr,
-            endDate: endDateStr
-          }
-        }),
-        api("/api/stats/sales-by-category", { 
-          headers: authHeaders(token),
-          params: {
-            startDate: startDateStr,
-            endDate: endDateStr
-          }
-        }),
-        api("/api/dashboard/inventory-movement", {
-          headers: authHeaders(token),
-        }),
-        api("/api/products/low-stock", { headers: authHeaders(token) }),
-      ]);
+      const [overview, timeseries, pie, inventoryMovement, oldLowStock] =
+        await Promise.all([
+          api("/api/dashboard/overview", {
+            headers: authHeaders(token),
+            params: {
+              startDate: startDateStr,
+              endDate: endDateStr,
+            },
+          }),
+          api(`/api/stats/customers-timeseries`, {
+            headers: authHeaders(token),
+            params: {
+              startDate: startDateStr,
+              endDate: endDateStr,
+            },
+          }),
+          api("/api/stats/sales-by-category", {
+            headers: authHeaders(token),
+            params: {
+              startDate: startDateStr,
+              endDate: endDateStr,
+            },
+          }),
+          api("/api/dashboard/inventory-movement", {
+            headers: authHeaders(token),
+          }),
+          api("/api/products/low-stock", { headers: authHeaders(token) }),
+        ]);
 
       // Process the response data
       const derived = (timeseries || []).map((d) => ({
@@ -314,7 +327,8 @@ export default function Dashboard() {
       }));
 
       // Process pie chart data
-      const pieTotal = (pie || []).reduce((s, p) => s + Number(p.value || 0), 0) || 1;
+      const pieTotal =
+        (pie || []).reduce((s, p) => s + Number(p.value || 0), 0) || 1;
       const piePercent = (pie || []).map((p) => ({
         ...p,
         percent: (Number(p.value || 0) / pieTotal) * 100,
@@ -322,8 +336,8 @@ export default function Dashboard() {
 
           // If overview is available use it for KPIs
       if (overview) {
-        console.log('Overview data received:', overview);
-        
+        console.log("Overview data received:", overview);
+
         // Get values from overview, defaulting to 0 if undefined
         const revenue = Number(overview.totalSales || 0);
         const expenses = Number(overview.totalExpenses || 0);
@@ -331,17 +345,18 @@ export default function Dashboard() {
         const grossMargin = revenue > 0 ? ((revenue - expenses) / revenue) * 100 : 0;
         const totalTransactions = Number(overview.totalTransactions || 0);
         const totalItemsSold = Number(overview.totalItemsSold || 0);
-        // Removed avgTxValue calculation as it's no longer needed
-        const topProduct = (overview.topProducts?.[0]?.product_name) || "-";
+        const avgTxValue = Number(
+          overview.averageTransactionValue || revenue / (totalTransactions || 1)
+        );
 
-        console.log('Processed metrics:', {
+        console.log("Processed metrics:", {
           revenue,
           expenses,
           netProfit,
           grossMargin,
           totalTransactions,
           totalItemsSold,
-          topProduct
+          avgTxValue,
         });
 
         // Update key metrics with all values
@@ -351,7 +366,8 @@ export default function Dashboard() {
           netProfit,
           grossMargin,
           totalTransactions,
-          totalItemsSold
+          totalItemsSold,
+          averageTransactionValue: avgTxValue,
         });
 
         // Format date range for display
@@ -404,7 +420,7 @@ export default function Dashboard() {
       // Update chart data
       setChartData(derived);
       setPieData(piePercent);
-      
+
       // Update low stock products
       const lowStock = (inventoryMovement || []).filter(
         (p) => Number(p.quantity_in_stock || 0) <= 10
@@ -519,11 +535,11 @@ export default function Dashboard() {
 
   // Helper function to format currency values
   const formatCurrency = (value) => {
-    return new Intl.NumberFormat('en-PH', {
-      style: 'currency',
-      currency: 'PHP',
+    return new Intl.NumberFormat("en-PH", {
+      style: "currency",
+      currency: "PHP",
       minimumFractionDigits: 2,
-      maximumFractionDigits: 2
+      maximumFractionDigits: 2,
     }).format(value);
   };
 
@@ -534,7 +550,7 @@ export default function Dashboard() {
         onClick={fetchData}
         disabled={loading}
         title="Refresh Data"
-        className="bg-white/80 backdrop-blur-sm hover:bg-white text-gray-700 p-1.5 sm:p-2 rounded-lg border border-gray-200/80 text-sm font-medium transition-all duration-200 hover:shadow-md hover:scale-[1.02]"
+        className="bg-white/80 backdrop-blur-sm hover:bg-white text-gray-700 p-1.5 sm:p-2 rounded-lg border border-gray-200/80 text-sm font-medium transition-all duration-200 hover:shadow-md hover:scale-[1.02] shrink-0"
       >
         <BiRefresh
           className={`w-4 h-4 sm:w-5 sm:h-5 ${loading ? "animate-spin" : ""}`}
@@ -552,7 +568,8 @@ export default function Dashboard() {
         <option value="year">Year</option>
       </select>
 
-      <div className="-mt-2 -mb-3 py-8 px-8 pr-12 flex justify-end">
+      {/* Adjusted Export Button container for better mobile spacing */}
+      <div className="py-2 flex justify-end">
         <Button
           onClick={exportToCSV}
           size="sm"
@@ -614,46 +631,7 @@ export default function Dashboard() {
       setSidebarOpen={setSidebarOpen}
       className="bg-gray-50 min-h-screen"
     >
-      {/* Stats Cards - Mobile View */}
-      {/* <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 lg:hidden">
-        {loading
-          ? Array.from({ length: 4 }).map((_, i) => (
-              <div
-                key={i}
-                className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 animate-pulse"
-              >
-                <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                <div className="h-8 bg-gray-300 rounded w-1/2"></div>
-              </div>
-            ))
-          : stats.map((stat, index) => (
-              <div
-                key={index}
-                className="bg-white p-4 rounded-xl shadow-sm border border-gray-200"
-              >
-                <h4 className="text-sm font-medium text-gray-500">
-                  {stat.label}
-                </h4>
-                <p className="text-2xl font-bold text-gray-900 mt-1">
-                  {typeof stat.value === "number"
-                    ? stat.value.toLocaleString()
-                    : stat.value}
-                </p>
-                {stat.change ? (
-                  <p
-                    className={`text-xs font-medium mt-1 ${
-                      stat.change > 0 ? "text-green-600" : "text-red-600"
-                    }`}
-                  >
-                    {stat.change > 0 ? "+" : ""}
-                    {stat.change.toFixed(2)}%
-                  </p>
-                ) : null}
-              </div>
-            ))}
-      </div> */}
-
-      {/* Low Stock Products - Mobile View */}
+      {/* Low Stock Products - Mobile View (Added padding class p-6-safe) */}
       <div className="p-4 lg:hidden">
         {loading ? (
           <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200 animate-pulse">
@@ -674,29 +652,89 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* Main Content - Filtered Stats Cards (affected by week/month/year filter) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 p-6 md:p-8">
-        {stats.map((stat, index) => (
-          <div key={index} className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 text-xl font-bold flex-shrink-0">
-                {index === 0 ? '₱' : index === 1 ? '↻' : index === 2 ? '★' : '#'}
-              </div>
-              <div className="min-w-0">
-                <h3 className="text-xs font-semibold text-gray-500 tracking-wide uppercase truncate">{stat.label}</h3>
-                <p className="text-2xl font-bold text-gray-900 mt-1 truncate">{stat.value}</p>
-                {stat.subtext && (
-                  <p className="text-xs text-gray-500 mt-1 truncate">
-                    {stat.subtext}
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
-        ))}
+      {/* Key Metrics Cards - Optimized for all screens */}
+      {/* Use p-4 for general padding around the cards, and adjust grid-cols for better responsiveness */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 w-full px-4 sm:px-6 md:px-8 py-2">
+        {/* Card 1: Total Revenue */}
+        <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200">
+          <p className="text-xs font-medium text-gray-500 uppercase mb-1">
+            Total Revenue
+          </p>
+          <p className="text-2xl font-bold text-gray-900">
+            {formatCurrency(keyMetrics.revenue)}
+          </p>
+          <p className="text-xs text-gray-500 mt-1">
+            {range === "week"
+              ? "This Week"
+              : range === "month"
+              ? "This Month"
+              : "This Year"}
+          </p>
+        </div>
+        {/* Card 2: Operating Expenses */}
+        <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200">
+          <p className="text-xs font-medium text-gray-500 uppercase mb-1">
+            Operating Expenses
+          </p>
+          <p className="text-2xl font-bold text-gray-900">
+            {formatCurrency(keyMetrics.expenses)}
+          </p>
+          <p className="text-xs text-gray-500 mt-1">
+            {range === "week"
+              ? "This Week"
+              : range === "month"
+              ? "This Month"
+              : "This Year"}
+          </p>
+        </div>
+        {/* Card 3: Net Profit */}
+        <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200">
+          <p className="text-xs font-medium text-gray-500 uppercase mb-1">
+            Net Profit
+          </p>
+          <p
+            className={`text-2xl font-bold ${
+              keyMetrics.netProfit >= 0 ? "text-green-600" : "text-red-600"
+            }`}
+          >
+            {formatCurrency(Math.abs(keyMetrics.netProfit))}
+            {keyMetrics.netProfit < 0 && (
+              <span className="text-sm text-red-500 ml-1">(Loss)</span>
+            )}
+          </p>
+          <p className="text-xs text-gray-500 mt-1">
+            {range === "week"
+              ? "This Week"
+              : range === "month"
+              ? "This Month"
+              : "This Year"}
+          </p>
+        </div>
+        {/* Card 4: Gross Margin */}
+        <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200">
+          <p className="text-xs font-medium text-gray-500 uppercase mb-1">
+            Gross Margin
+          </p>
+          <p
+            className={`text-2xl font-bold ${
+              keyMetrics.grossMargin >= 0 ? "text-green-600" : "text-red-600"
+            }`}
+          >
+            {keyMetrics.grossMargin.toFixed(1)}%
+          </p>
+          <p className="text-xs text-gray-500 mt-1">
+            {range === "week"
+              ? "This Week"
+              : range === "month"
+              ? "This Month"
+              : "This Year"}
+          </p>
+        </div>
       </div>
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 p-6 pb-10 lg:pb-6 pt-0">
-        {/* Main Chart Area - Filtered Charts (affected by week/month/year filter) */}
+
+      {/* Main Content Area - Optimized for large screen side-by-side layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 p-4 sm:p-6 md:p-8 pt-0">
+        {/* Main Chart Area (8/12 width on large screens) */}
         <div className="lg:col-span-8 flex flex-col gap-6">
           {loading ? (
             <>
@@ -715,8 +753,9 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Sidebar with Today's Stats (NOT affected by filter) and Low Stock */}
+        {/* Sidebar with Stats and Low Stock (4/12 width on large screens) */}
         <div className="lg:col-span-4 flex flex-col gap-6">
+          {/* Dashboard Today Stats Card (Visible on all screens using DashboardStatsCard's internal responsiveness, or just on large screens if desired) */}
           {loading ? (
             <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200 animate-pulse">
               <div className="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
@@ -729,6 +768,8 @@ export default function Dashboard() {
           ) : (
             <DashboardStatsCard stats={todayHighlight} />
           )}
+
+          {/* Low Stock Products - Desktop View (Hidden on lg screens in the mobile block, shown here) */}
           {loading ? (
             <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200 animate-pulse hidden lg:block">
               <div className="h-6 bg-gray-200 rounded w-1/2 mb-6"></div>
@@ -743,34 +784,17 @@ export default function Dashboard() {
                   Low Stock Products
                 </h3>
               </div>
-              {lowStockProducts.length > 0 ? (
-                <ul className="divide-y divide-gray-200">
-                  {lowStockProducts.map((product) => (
-                    <li
-                      key={product.product_id}
-                      className="py-3 flex justify-between items-center"
-                    >
-                      <span className="text-sm font-medium text-gray-800">
-                        {product.product_name}
-                      </span>
-                      <span className="text-sm font-bold text-red-600">
-                        {product.quantity_in_stock} left
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-sm text-gray-500">
-                  No products with low stock.
-                </p>
-              )}
+              <LowStockList lowStockProducts={lowStockProducts} />
             </div>
           )}
         </div>
       </div>
-      <div className="max-w-10lx mx-auto w-full">
+
+      {/* Business Report Component - Ensure it uses the full content width */}
+      <div className="w-full px-4 sm:px-6 md:px-8 pb-8">
         <DashboardBusinessReport />
       </div>
+
       <ProfileModal
         isOpen={showProfileModal}
         onClose={() => setShowProfileModal(false)}
