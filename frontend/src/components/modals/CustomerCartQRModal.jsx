@@ -22,18 +22,26 @@ export default function CustomerCartQRModal({
     if (isOpen && transactionId) {
       const interval = setInterval(async () => {
         try {
+          // API function automatically adds /api prefix, so don't include it
           const response = await api(`/sales/public/transaction/${transactionId}`);
-          if (response.status === 'completed') {
+          // Handle both wrapped and direct response formats
+          const data = response.data || response;
+          console.log('Transaction status check:', data);
+          if (data && data.status === 'completed') {
             setStatus('completed');
             clearInterval(interval);
             if (onTransactionComplete) {
-              onTransactionComplete(response.tn);
+              // Pass transaction number to callback
+              onTransactionComplete(data.tn || data.transaction_number);
             }
+          } else if (data && data.status) {
+            // Update status display
+            setStatus(data.status);
           }
         } catch (err) {
           console.error('Error fetching transaction status:', err);
           setError('Could not fetch transaction status.');
-          clearInterval(interval);
+          // Don't clear interval on error, keep trying
         }
       }, 3000); // Poll every 3 seconds
 

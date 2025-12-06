@@ -281,19 +281,35 @@ const Profile = () => {
     });
   };
 
-  const handleDownloadQr = () => {
+  const handleDownloadQr = async () => {
     const { downloadSrc, businessId } = getQrCodeData(profileData);
     if (!downloadSrc) {
       alert("Business ID not found to generate QR code.");
       return;
     }
 
-    const a = document.createElement("a");
-    a.href = downloadSrc;
-    a.download = `store-${businessId || "qr"}.png`;
-    a.target = "_blank";
-    a.rel = "noopener";
-    a.click();
+    try {
+      // Fetch the image as a blob to handle CORS
+      const response = await fetch(downloadSrc);
+      if (!response.ok) {
+        throw new Error('Failed to fetch QR code image');
+      }
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `store-${businessId || "qr"}.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      
+      // Clean up the object URL
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error downloading QR code:', error);
+      alert('Failed to download QR code. Please try again.');
+    }
   };
 
   // Header actions with modern styling

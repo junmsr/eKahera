@@ -23,14 +23,34 @@ export default function StoreQR() {
 		return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${data}&qzone=2&format=png&_=${nonce}`;
 	}, [storeUrl, nonce]);
 
-	const handleDownload = () => {
-		if (!imgRef.current) return;
-		const link = document.createElement('a');
-		link.href = qrSrc;
-		link.download = `store-${businessId || 'qr'}.png`;
-		link.target = '_blank';
-		link.rel = 'noopener';
-		link.click();
+	const handleDownload = async () => {
+		if (!qrSrc) {
+			alert('QR code not available for download.');
+			return;
+		}
+		
+		try {
+			// Fetch the image as a blob to handle CORS
+			const response = await fetch(qrSrc);
+			if (!response.ok) {
+				throw new Error('Failed to fetch QR code image');
+			}
+			const blob = await response.blob();
+			const url = window.URL.createObjectURL(blob);
+			
+			const link = document.createElement('a');
+			link.href = url;
+			link.download = `store-${businessId || 'qr'}.png`;
+			document.body.appendChild(link);
+			link.click();
+			document.body.removeChild(link);
+			
+			// Clean up the object URL
+			window.URL.revokeObjectURL(url);
+		} catch (error) {
+			console.error('Error downloading QR code:', error);
+			alert('Failed to download QR code. Please try again.');
+		}
 	};
 
 	return (

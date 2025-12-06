@@ -7,7 +7,7 @@ import Card from "../../common/Card";
 import OrderDrawer from "./OrderDrawer";
 import CheckoutModal from "./CheckoutModal";
 import ActionBar from "./ActionBar";
-import { api, createGcashCheckout } from "../../../lib/api";
+import { api, createGcashCheckout, createMayaCheckout } from "../../../lib/api";
 import CustomerCartQRModal from "../../modals/CustomerCartQRModal";
 
 function MobileScannerView() {
@@ -55,52 +55,61 @@ function MobileScannerView() {
     }
   }, []);
 
-  // Handle return from online payment (GCash)
+  // Handle return from online payment (GCash and Maya)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const status = params.get("payment");
-    const pending = localStorage.getItem("pending_gcash_cart_public");
     const businessId = localStorage.getItem("business_id");
-    if (status === "success" && pending && businessId) {
-      try {
-        const parsed = JSON.parse(pending);
-        (async () => {
+
+    const finalizeOnlinePayment = async (pendingCartKey, paymentType) => {
+      const pending = localStorage.getItem(pendingCartKey);
+      if (status === "success" && pending && businessId) {
+        try {
+          const parsed = JSON.parse(pending);
           if (hasFinalizedRef.current) return;
-          const guardKey = "gcash_finalize_done_public";
+          const guardKey = `${paymentType}_finalize_done_public`;
           if (sessionStorage.getItem(guardKey) === "1") return;
           hasFinalizedRef.current = true;
           sessionStorage.setItem(guardKey, "1");
+          // Transaction already created, just redirect to receipt
+          // The webhook will have updated the transaction status to 'completed'
           try {
-            const body = {
-              items: parsed.items || [],
-              payment_type: "gcash",
-              money_received: parsed.total || null,
-              business_id: Number(businessId),
-              transaction_number: parsed.transactionNumber || null,
-            };
-            const resp = await api("/api/sales/public/checkout", {
-              method: "POST",
-              body: JSON.stringify(body),
-            });
-            setCart([]);
             const url = new URL(window.location.origin + "/receipt");
-            url.searchParams.set("tn", resp.transaction_number);
-            url.searchParams.set("tid", String(resp.transaction_id));
-            url.searchParams.set("total", String(resp.total || 0));
-            window.location.href = url.toString();
+            if (parsed.transaction_number) {
+              url.searchParams.set("tn", parsed.transaction_number);
+            }
+            if (parsed.transaction_id) {
+              url.searchParams.set("tid", String(parsed.transaction_id));
+            }
+            // Add from=customer parameter for customer receipts
+            url.searchParams.set("from", "customer");
+            
+            // Check if we're in a new tab (opened from payment)
+            const isNewTab = window.opener && !window.opener.closed;
+            if (isNewTab && window.opener) {
+              // If in new tab, redirect opener and close this tab
+              window.opener.location.href = url.toString();
+              window.close();
+            } else {
+              window.location.href = url.toString();
+            }
           } catch (e) {
-            setError("Failed to record payment");
+            setError("Failed to redirect to receipt");
           } finally {
-            localStorage.removeItem("pending_gcash_cart_public");
+            localStorage.removeItem(pendingCartKey);
             const url = new URL(window.location.href);
             url.searchParams.delete("payment");
             window.history.replaceState({}, "", url.toString());
           }
-        })();
-      } catch (_) {
-        localStorage.removeItem("pending_gcash_cart_public");
+        } catch (_) {
+          localStorage.removeItem(pendingCartKey);
+        }
       }
-    }
+    };
+    
+    finalizeOnlinePayment("pending_gcash_cart_public", "GCash");
+    finalizeOnlinePayment("pending_maya_cart_public", "Maya");
+
   }, []);
 
   const handleScan = async (result) => {
@@ -187,8 +196,11 @@ function MobileScannerView() {
   };
 
   const handleTransactionComplete = (tn) => {
-    setShowCartQR(false);
-    navigate(`/receipt?tn=${tn}&from=customer`);
+    // Navigate to receipt page when transaction is completed
+    if (tn) {
+      setShowCartQR(false);
+      window.location.href = `/receipt?tn=${tn}&from=customer`;
+    }
   };
 
   return (
@@ -405,6 +417,29 @@ function MobileScannerView() {
               }
               if (method === "GCash") {
                 try {
+                  // First create the transaction with status 'pending'
+                  const customerUserId = localStorage.getItem("customer_user_id");
+                  const businessId = localStorage.getItem("business_id");
+                  const transactionNumber = localStorage.getItem("provisionalTransactionNumber") || 
+                    `T-${String(businessId).padStart(2, '0')}-${new Date().toISOString().replace(/[-:T.Z]/g, '').slice(0, 14)}-${Math.floor(1000 + Math.random() * 9000)}`;
+                  
+                  const transactionBody = {
+                    items: cart.map((i) => ({
+                      product_id: i.product_id,
+                      sku: i.sku,
+                      quantity: i.quantity,
+                    })),
+                    payment_type: "gcash",
+                    business_id: Number(businessId),
+                    customer_user_id: customerUserId ? Number(customerUserId) : null,
+                    transaction_number: transactionNumber,
+                  };
+                  
+                  const transactionRes = await api("/api/sales/public/checkout", {
+                    method: "POST",
+                    body: JSON.stringify(transactionBody),
+                  });
+                  
                   const successUrl =
                     window.location.origin + "/customer?payment=success";
                   const cancelUrl =
@@ -412,28 +447,75 @@ function MobileScannerView() {
                   localStorage.setItem(
                     "pending_gcash_cart_public",
                     JSON.stringify({
-                      items: cart.map((i) => ({
-                        product_id: i.product_id,
-                        sku: i.sku,
-                        quantity: i.quantity,
-                      })),
-                      total,
-                      transactionNumber: localStorage.getItem(
-                        "provisionalTransactionNumber"
-                      ),
+                      transaction_id: transactionRes.transaction_id,
+                      transaction_number: transactionRes.transaction_number,
                     })
                   );
                   const { checkoutUrl } = await createGcashCheckout({
                     amount: Number(total || 0),
                     description: "Self-checkout Order",
-                    referenceNumber: `SC-${Date.now()}`,
+                    referenceNumber: transactionRes.transaction_number, // Use actual transaction number
                     cancelUrl,
                     successUrl,
                   });
-                  window.location.href = checkoutUrl;
+                  setCart([]);
+                  window.open(checkoutUrl, '_blank');
                 } catch (e) {
                   setError("Failed to initialize online payment");
                   localStorage.removeItem("pending_gcash_cart_public");
+                } finally {
+                  setShowCheckout(false);
+                }
+                return;
+              }
+              if (method === "Maya") {
+                try {
+                  // First create the transaction with status 'pending'
+                  const customerUserId = localStorage.getItem("customer_user_id");
+                  const businessId = localStorage.getItem("business_id");
+                  const transactionNumber = localStorage.getItem("provisionalTransactionNumber") || 
+                    `T-${String(businessId).padStart(2, '0')}-${new Date().toISOString().replace(/[-:T.Z]/g, '').slice(0, 14)}-${Math.floor(1000 + Math.random() * 9000)}`;
+                  
+                  const transactionBody = {
+                    items: cart.map((i) => ({
+                      product_id: i.product_id,
+                      sku: i.sku,
+                      quantity: i.quantity,
+                    })),
+                    payment_type: "maya",
+                    business_id: Number(businessId),
+                    customer_user_id: customerUserId ? Number(customerUserId) : null,
+                    transaction_number: transactionNumber,
+                  };
+                  
+                  const transactionRes = await api("/api/sales/public/checkout", {
+                    method: "POST",
+                    body: JSON.stringify(transactionBody),
+                  });
+                  
+                  const successUrl =
+                    window.location.origin + "/customer?payment=success";
+                  const cancelUrl =
+                    window.location.origin + "/customer?payment=cancel";
+                  localStorage.setItem(
+                    "pending_maya_cart_public",
+                    JSON.stringify({
+                      transaction_id: transactionRes.transaction_id,
+                      transaction_number: transactionRes.transaction_number,
+                    })
+                  );
+                  const { checkoutUrl } = await createMayaCheckout({
+                    amount: Number(total || 0),
+                    description: "Self-checkout Order",
+                    referenceNumber: transactionRes.transaction_number, // Use actual transaction number
+                    cancelUrl,
+                    successUrl,
+                  });
+                  setCart([]);
+                  window.open(checkoutUrl, '_blank');
+                } catch (e) {
+                  setError("Failed to initialize online payment");
+                  localStorage.removeItem("pending_maya_cart_public");
                 } finally {
                   setShowCheckout(false);
                 }

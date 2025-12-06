@@ -357,7 +357,7 @@ exports.getPaymentMethods = async (req, res) => {
     const data = paymentRes.rows.map(r => ({
       name: r.payment_type,
       value: Math.round((Number(r.count) / total) * 100),
-      fill: r.payment_type === 'Cash' ? '#3b82f6' : r.payment_type === 'GCash' ? '#10b981' : '#f59e0b'
+      fill: r.payment_type === 'Cash' ? '#3b82f6' : r.payment_type === 'GCash' ? '#10b981' : r.payment_type === 'Maya' ? '#8B5CF6' : '#f59e0b'
     }));
 
     res.json(data);

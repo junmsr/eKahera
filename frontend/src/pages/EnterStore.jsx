@@ -31,7 +31,7 @@ export default function EnterStore() {
 	const [scannerPaused, setScannerPaused] = useState(false);
 	const [error, setError] = useState('');
 
-	const handleScan = (result) => {
+	const handleScan = async (result) => {
 		const code = result?.[0]?.rawValue;
 		if (!code) return;
 		setScannerPaused(true);
@@ -52,6 +52,36 @@ export default function EnterStore() {
 		const randPart = Math.floor(1000 + Math.random() * 9000);
 		const transactionNumber = `T-${String(businessId).padStart(2, '0')}-${timePart}-${randPart}`;
 		localStorage.setItem('provisionalTransactionNumber', transactionNumber);
+
+		// Call backend /public/enter-store to create customer user
+		try {
+			const response = await fetch("/api/sales/public/enter-store", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({ business_id: businessId }),
+			});
+
+			if (response.ok) {
+				const data = await response.json();
+				// Store user_id and username in localStorage for use later
+				if (data.user_id) {
+					localStorage.setItem("customer_user_id", String(data.user_id));
+					console.log('Customer user created:', data.user_id);
+				}
+				if (data.username) {
+					localStorage.setItem("customer_username", data.username);
+				}
+			} else {
+				const errorData = await response.json().catch(() => ({ error: 'Failed to create customer' }));
+				console.error('Failed to create customer user:', errorData);
+				// Don't block navigation, but log the error
+			}
+		} catch (err) {
+			console.error('Error creating customer user:', err);
+			// Continue even if user creation fails
+		}
 
 		navigate('/customer');
 	};

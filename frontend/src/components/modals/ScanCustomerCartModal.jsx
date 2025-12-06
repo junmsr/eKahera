@@ -23,39 +23,70 @@ export default function ScanCustomerCartModal({ isOpen, onClose, onImport }) {
       } catch (e) {
         throw new Error("Invalid QR payload");
       }
-      if (!payload || payload.t !== "cart" || !Array.isArray(payload.items))
-        throw new Error("Unsupported QR");
+      
+      // Check if this is a cart QR code with transaction ID
+      if (payload.t === 'cart' && payload.transaction_id) {
+        const { transaction_id, business_id: businessId } = payload;
+        
+        // Verify business ID matches if provided
+        const cashierBusinessId = user?.businessId || user?.business_id;
+        if (businessId && cashierBusinessId && Number(businessId) !== Number(cashierBusinessId)) {
+          throw new Error("This QR code is not valid for this store.");
+        }
 
-      const { b: businessId, items: compactItems } = payload;
-      const cashierBusinessId = user?.businessId || user?.business_id;
-
-      if (
-        businessId &&
-        cashierBusinessId &&
-        Number(businessId) !== Number(cashierBusinessId)
-      ) {
-        throw new Error("This QR code is not valid for this store.");
+        // Complete the existing transaction instead of creating a new one
+        try {
+          const response = await api(`/api/sales/${transaction_id}/complete`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          
+          if (response.transaction_id) {
+            // Transaction completed successfully - navigate to receipt
+            onClose();
+            // Navigate to receipt page for cashier
+            window.location.href = `/receipt?tn=${response.transaction_number}`;
+            return;
+          } else {
+            throw new Error("Failed to complete transaction");
+          }
+        } catch (err) {
+          console.error('Error completing transaction:', err);
+          throw new Error(err.message || "Failed to complete customer transaction");
+        }
       }
+      // Existing cart import logic for backward compatibility
+      else if (payload.t === 'cart' && Array.isArray(payload.items)) {
+        const { items: compactItems, b: businessId } = payload;
+        const cashierBusinessId = user?.businessId || user?.business_id;
 
-      const fullItems = [];
-      for (const it of compactItems) {
-        if (!it?.p || !it?.q) continue;
-        const product = await api(`/api/products/${encodeURIComponent(it.p)}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        fullItems.push({
-          product_id: product.product_id,
-          sku: product.sku,
-          name: product.product_name,
-          quantity: Number(it.q),
-          price: Number(product.selling_price || 0),
-        });
+        if (businessId && cashierBusinessId && Number(businessId) !== Number(cashierBusinessId)) {
+          throw new Error("This QR code is not valid for this store.");
+        }
+
+        const fullItems = [];
+        for (const it of compactItems) {
+          if (!it?.p || !it?.q) continue;
+          const product = await api(`/api/products/${encodeURIComponent(it.p)}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          fullItems.push({
+            product_id: product.product_id,
+            sku: product.sku,
+            name: product.product_name,
+            quantity: Number(it.q),
+            price: Number(product.selling_price || 0)
+          });
+        }
+        if (fullItems.length === 0) throw new Error("No items to import");
+        onImport(fullItems);
+        onClose();
+      } else {
+        throw new Error("Unsupported QR code format");
       }
-      if (fullItems.length === 0) throw new Error("No items to import");
-      onImport(fullItems);
-      onClose();
     } catch (e) {
-      setError(e.message || "Failed to import");
+      setError(e.message || "Failed to process QR code");
+      console.error('Scan error:', e);
     } finally {
       setScannerPaused(false);
     }
