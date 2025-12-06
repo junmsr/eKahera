@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import PageLayout from "../components/layout/PageLayout";
 import NavAdmin from "../components/layout/Nav-Admin";
 import Card from "../components/common/Card";
@@ -228,13 +228,9 @@ const Profile = () => {
   const [error, setError] = useState("");
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const hasFetched = useRef(false);
 
   useEffect(() => {
-    if (!hasFetched.current) {
-      hasFetched.current = true;
-      fetchProfileData();
-    }
+    fetchProfileData();
   }, []);
 
   const fetchProfileData = async () => {
@@ -242,41 +238,28 @@ const Profile = () => {
       setLoading(true);
       setError("");
 
-      // Try both sessionStorage and localStorage for token
-      const token = sessionStorage.getItem("auth_token") || localStorage.getItem("auth_token");
-      
+      const token = sessionStorage.getItem("auth_token");
+      console.log("Auth token:", token ? "Present" : "Missing");
+
       if (!token) {
-        throw new Error("No authentication token found");
+        // Fallback to localStorage if sessionStorage is empty, but warn
+        const fallbackToken = localStorage.getItem("auth_token");
+        if (!fallbackToken) {
+          throw new Error("No authentication token found");
+        }
       }
 
-      console.log("Fetching profile data from /auth/profile");
+      console.log("Fetching profile data from /api/auth/profile");
 
-      // Fetch user profile data from the correct endpoint
-      // The api utility automatically prepends /api, so we don't need it here
-      const response = await api("/auth/profile", {
+      // Fetch user profile data
+      const response = await api("/api/auth/profile", {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
 
       console.log("Profile data received:", response);
-      
-      // Ensure the response has the expected structure
-      if (response && (response.user || response.business)) {
-        setProfileData(response);
-      } else {
-        // If the response doesn't have the expected structure, try to handle it
-        setProfileData({
-          user: {
-            first_name: response?.first_name || "",
-            last_name: response?.last_name || "",
-            email: response?.email || "",
-            role: response?.role || "",
-            ...response
-          },
-          business: response?.business || {}
-        });
-      }
+      setProfileData(response);
     } catch (err) {
       console.error("Failed to fetch profile data:", err);
       setError(

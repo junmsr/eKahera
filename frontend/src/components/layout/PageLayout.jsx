@@ -93,7 +93,10 @@ export default function PageLayout({
             role="dialog"
             aria-modal="true"
           >
-            {React.cloneElement(sidebar, { isMobile: true, onLogoutClick: handleLogoutClick })}
+            {React.cloneElement(sidebar, {
+              isMobile: true,
+              onLogoutClick: handleLogoutClick,
+            })}
           </aside>
         )}
         {sidebar && isSidebarOpen && (
@@ -105,7 +108,9 @@ export default function PageLayout({
 
         {/* Main Content */}
         <div
-          className={`flex-1 flex flex-col transition-all duration-300 ${sidebar ? "md:ml-48" : ""} ${isSidebarOpen ? "blur-sm" : ""}`}
+          className={`flex-1 flex flex-col transition-all duration-300 ${
+            sidebar ? "md:ml-48" : ""
+          } ${isSidebarOpen ? "blur-sm" : ""}`}
         >
           <main className="flex-1">
             {/* Header */}
