@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { api, authHeaders } from "../lib/api";
-import dayjs from "dayjs"; // Import dayjs for date handling
-// >>> FIX: Import and extend the minMax plugin
+import dayjs from "dayjs"; 
 import minMax from "dayjs/plugin/minMax"; 
 
 import {
@@ -30,20 +29,18 @@ import Button from "../components/common/Button";
 import { BiBell, BiUser, BiRefresh, BiCalendarAlt } from "react-icons/bi";
 import ProfileModal from "../components/modals/ProfileModal";
 import NotificationDropdown from "../components/common/NotificationDropdown";
-
-// NEW MODAL IMPORT
 import DateRangeFilterModal from "../components/modals/DateRangeFilterModal";
 
-// FIX: Extend the minMax plugin globally for this file
+// Extend the minMax plugin globally for this file
 dayjs.extend(minMax);
 
 
 // Constants
-const BLUE_COLORS = ["#2563eb", "#60a5fa", "#93c5fd", "#dbeafe"];
+const BLUE_COLORS = ["#2563eb", "#60a5fa", "#93c5fd", "#dbeafe"]; // Blue shades
 
-const SOFT_BLUE = "#93c5fd";
-const SOFT_GREEN = "#1e2cecff";
-const SOFT_PURPLE = "#3e209bff";
+const SOFT_BLUE = "#3b82f6"; // Tailwind blue-500/600 for lines/accents
+const SOFT_GREEN = "#10b981"; // Retain green for profit, or change to a blue accent if desired
+const SOFT_PURPLE = "#8b5cf6"; // Retain purple/accent for pie chart variation
 const TODAY_START = dayjs().startOf('day');
 const TODAY_END = dayjs().endOf('day');
 
@@ -88,7 +85,7 @@ function VisitorsChart({ data, className = "", rangeType = "Custom" }) {
             <Line
               type="monotone"
               dataKey="value"
-              stroke={SOFT_BLUE}
+              stroke={SOFT_BLUE} // Uses SOFT_BLUE constant
               strokeWidth={3}
               dot={{ r: 5, fill: SOFT_BLUE }}
             />
@@ -123,7 +120,7 @@ function SalesPieChart({ data, className = "" }) {
               fill={SOFT_PURPLE}
             >
               {data.map((entry, idx) => {
-                const colors = [SOFT_BLUE, SOFT_GREEN, SOFT_PURPLE];
+                const colors = [SOFT_BLUE, SOFT_GREEN, SOFT_PURPLE]; // Using blue theme colors
                 return (
                   <Cell
                     key={`cell-${idx}`}
@@ -165,7 +162,6 @@ export default function Dashboard() {
 
   // State
   const [stats, setStats] = useState([]);
-  // Initial state now calculates the current month range correctly
   const [dateRange, setDateRange] = useState({
     startDate: dayjs().startOf("month"),
     endDate: dayjs().endOf("day"),
@@ -176,7 +172,7 @@ export default function Dashboard() {
   const [pieData, setPieData] = useState([]);
   const [lowStockProducts, setLowStockProducts] = useState([]);
   const [showProfileModal, setShowProfileModal] = useState(false);
-  const [showFilterModal, setShowFilterModal] = useState(false); // New state for modal
+  const [showFilterModal, setShowFilterModal] = useState(false); 
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -248,13 +244,10 @@ export default function Dashboard() {
       setLoading(true);
       const token = sessionStorage.getItem("auth_token");
 
-      // Use the dates from the dateRange state
       const { startDate, endDate, rangeType } = dateRange;
 
-      // Format dates for API - use consistent format (YYYY-MM-DD)
       const formatDate = (date) => dayjs(date).format("YYYY-MM-DD");
 
-      // FIX: Use dayjs.min/max (which now works with the plugin)
       const finalStart = dayjs.min(startDate, endDate);
       const finalEnd = dayjs.max(startDate, endDate);
 
@@ -267,7 +260,6 @@ export default function Dashboard() {
         formattedEnd: endDateStr,
       });
 
-      // Fetch data for the selected period
       const [overview, timeseries, pie, oldLowStock] = await Promise.all([
         api("/api/dashboard/overview", {
           headers: authHeaders(token),
@@ -293,14 +285,12 @@ export default function Dashboard() {
         api("/api/products/low-stock", { headers: authHeaders(token) }),
       ]);
 
-      // Process the response data
       const derived = (timeseries || []).map((d) => ({
         ...d,
         name: d.date || d.name,
         value: Number(d.customers || d.total || d.value || 0),
       }));
 
-      // Process pie chart data
       const pieTotal =
         (pie || []).reduce((s, p) => s + Number(p.value || 0), 0) || 1;
       const piePercent = (pie || []).map((p) => ({
@@ -308,9 +298,7 @@ export default function Dashboard() {
         percent: (Number(p.value || 0) / pieTotal) * 100,
       }));
 
-      // If overview is available use it for KPIs
       if (overview) {
-        // Get values from overview, defaulting to 0 if undefined
         const revenue = Number(overview.totalSales || 0);
         const expenses = Number(overview.totalExpenses || 0);
         const netProfit = revenue - expenses;
@@ -322,7 +310,6 @@ export default function Dashboard() {
         );
         const topProduct = overview.topProducts?.[0]?.product_name || "-";
 
-        // Update key metrics with all values
         setKeyMetrics({
           revenue,
           expenses,
@@ -333,7 +320,6 @@ export default function Dashboard() {
           averageTransactionValue: avgTxValue,
         });
 
-        // Format date range for display
         const dateRangeText = 
             rangeType === "Day" 
                 ? finalStart.format("MMM D, YYYY")
@@ -343,7 +329,6 @@ export default function Dashboard() {
         const transactionsLabel = rangeType === 'Day' ? "Daily Transactions" : rangeType === 'Week' ? "7-Day Transactions" : rangeType === 'Month' ? "Monthly Transactions" : "Total Transactions";
 
 
-        // Update stats for the stats cards based on selected range
         setStats([
           {
             label: salesLabel,
@@ -371,11 +356,9 @@ export default function Dashboard() {
         ]);
       }
 
-      // Update chart data
       setChartData(derived);
       setPieData(piePercent);
 
-      // Inventory movement is no longer fetched, only low stock
       const lowStock = oldLowStock || [];
       setLowStockProducts(lowStock);
     } catch (err) {
@@ -486,7 +469,7 @@ export default function Dashboard() {
   useEffect(() => {
     fetchData();
     fetchNotifications();
-  }, [dateRange]); // DEPENDENCY on dateRange object
+  }, [dateRange]); 
 
   // Helper function to format currency values
   const formatCurrency = (value) => {
@@ -503,7 +486,6 @@ export default function Dashboard() {
     setDateRange(newRange);
   };
 
-  // FIX: Use dayjs.min/max (which now works with the plugin) to display dates correctly in the header
   const headerDateDisplay = useMemo(() => {
     if (!dateRange.startDate || !dateRange.endDate) return "Select Range";
     
@@ -778,6 +760,10 @@ function LowStockList({ lowStockProducts }) {
   
     return (
       <ul className="divide-y divide-gray-200">
+        <li className="py-2 text-sm font-semibold text-gray-600 flex justify-between">
+            <span>Product</span>
+            <span>Quantity</span>
+        </li>
         {lowStockProducts.map((product) => (
           <li
             key={product.product_id}

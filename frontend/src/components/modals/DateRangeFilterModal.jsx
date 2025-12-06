@@ -1,20 +1,18 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { BiCalendarAlt, BiX } from "react-icons/bi";
+import { BiCalendarAlt, BiX, BiChevronLeft, BiChevronRight } from "react-icons/bi"; // Added BiChevron icons for navigation
 import dayjs from "dayjs";
 import isBetween from "dayjs/plugin/isBetween";
 import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
 import isSameOrAfter from "dayjs/plugin/isSameOrAfter";
-// >>> FIX: Import and extend the minMax plugin
 import minMax from "dayjs/plugin/minMax"; 
 
 dayjs.extend(isBetween);
 dayjs.extend(isSameOrBefore);
 dayjs.extend(isSameOrAfter);
-// >>> FIX: Extend the minMax plugin
 dayjs.extend(minMax); 
 
 const today = dayjs();
-const PH_LOCALE = "en-PH"; // Retained for display consistency
+const PH_LOCALE = "en-PH"; 
 
 // --- Date Helper Functions ---
 
@@ -52,9 +50,7 @@ function DatePickerGrid({
   const totalDays = endOfMonth.date();
   const calendarDays = [];
 
-  // We want the week to start on Monday (Monday is dayjs().day(1))
-  // Calculate how many days before Monday the month starts.
-  // dayjs().day() returns 0 for Sunday, 1 for Monday...
+  // Week starts on Monday (1)
   const startOffset = (startDayIndex === 0 ? 6 : startDayIndex - 1);
 
   // Fill in empty spots for previous month
@@ -78,7 +74,6 @@ function DatePickerGrid({
 
   const isRangeStart = (date) => {
     if (!date) return false;
-    // For single-day ranges (Day mode), it's both start and end
     if (startDate && endDate && startDate.isSame(endDate, 'day')) {
         return date.isSame(startDate, 'day');
     }
@@ -87,7 +82,6 @@ function DatePickerGrid({
 
   const isRangeEnd = (date) => {
     if (!date) return false;
-     // For single-day ranges (Day mode), it's both start and end
      if (startDate && endDate && startDate.isSame(endDate, 'day')) {
         return date.isSame(startDate, 'day');
     }
@@ -103,27 +97,27 @@ function DatePickerGrid({
   const getCellClasses = (date) => {
     if (!date) return "text-gray-300";
 
-    let classes = "w-10 h-10 flex items-center justify-center rounded-full text-sm font-medium cursor-pointer transition-all duration-150 relative z-10";
+    let classes = "w-9 h-9 flex items-center justify-center rounded-full text-sm font-medium cursor-pointer transition-all duration-150 relative z-10"; // Reduced size slightly for cleaner look
 
     const start = isRangeStart(date);
     const end = isRangeEnd(date);
     const inRange = isSelected(date);
     const currentDay = isToday(date);
     
-    // Add hover background for all clickable dates
-    classes += " hover:bg-red-50";
+    // Default hover style
+    classes += " hover:bg-blue-50"; 
 
     if (inRange) {
-      // Background for dates between start and end
-      classes = "w-10 h-10 flex items-center justify-center rounded-none text-red-600 bg-red-100 relative z-10";
+      // Dates in between the range
+      classes = "w-9 h-9 flex items-center justify-center rounded-none text-blue-700 bg-blue-100 relative z-10"; 
     }
 
     if (start || end) {
-      // Fully selected start or end date
-      classes = "w-10 h-10 flex items-center justify-center rounded-full text-sm font-medium cursor-pointer transition-all duration-150 bg-red-600 text-white shadow-lg relative z-10";
+      // Selected start or end date
+      classes = "w-9 h-9 flex items-center justify-center rounded-full text-sm font-medium cursor-pointer transition-all duration-150 bg-blue-600 text-white shadow-md relative z-10"; 
     } else if (currentDay) {
       // Unselected today date
-      classes += " border border-red-400 text-red-600";
+      classes += " border border-blue-400 text-blue-600"; 
     } else {
       // Normal, unselected date
       classes += " text-gray-700";
@@ -154,7 +148,7 @@ function DatePickerGrid({
               </div>
             </div>
           ) : (
-            <div key={`empty-${index}`} className="w-10 h-10"></div>
+            <div key={`empty-${index}`} className="w-9 h-9"></div>
           )}
         </React.Fragment>
       ))}
@@ -164,25 +158,14 @@ function DatePickerGrid({
 
 function MonthPickerGrid({ currentYear, startDate, endDate, onMonthClick }) {
   const months = [
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec",
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun", 
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
   ];
 
   const isSelected = (monthIndex) => {
     if (!startDate || !endDate) return false;
     const startOfMonth = dayjs().year(currentYear).month(monthIndex).startOf('month');
     
-    // Check if the current month in the loop is the selected month range
     return (
         startOfMonth.isSame(startDate.startOf('month')) && 
         startOfMonth.isSame(endDate.startOf('month'))
@@ -190,10 +173,9 @@ function MonthPickerGrid({ currentYear, startDate, endDate, onMonthClick }) {
   };
 
   return (
-    <div className="grid grid-cols-4 gap-4 mt-4">
+    <div className="grid grid-cols-4 gap-3">
       {months.map((month, index) => {
         const startOfMonth = dayjs().year(currentYear).month(index).startOf('month');
-        // Disable months past the current month
         const disabled = startOfMonth.isAfter(today.startOf('month'));
 
         return (
@@ -203,10 +185,10 @@ function MonthPickerGrid({ currentYear, startDate, endDate, onMonthClick }) {
             onClick={() => !disabled && onMonthClick(index)}
           >
             <div
-              className={`w-14 h-14 flex items-center justify-center rounded-full text-sm font-medium transition-all duration-150 ${
+              className={`w-16 h-12 flex items-center justify-center rounded-lg text-sm font-medium transition-all duration-150 ${ 
                 isSelected(index)
-                  ? "bg-red-600 text-white shadow-lg"
-                  : "text-gray-700 hover:bg-gray-100 border border-gray-200"
+                  ? "bg-blue-600 text-white shadow-md" 
+                  : "text-gray-700 border border-gray-300 hover:bg-blue-50"
               }`}
             >
               {month}
@@ -221,14 +203,23 @@ function MonthPickerGrid({ currentYear, startDate, endDate, onMonthClick }) {
 // --- Main Modal Component ---
 
 export default function DateRangeFilterModal({ isOpen, onClose, onDateRangeApply }) {
-  const [mode, setMode] = useState("Month"); // Default to Month to match dashboard state
+  const [mode, setMode] = useState("Month"); 
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
   const [currentYear, setCurrentYear] = useState(today.year());
   const [currentMonth, setCurrentMonth] = useState(today.month()); // 0-11
 
+  // Generate a list of available years (current year and 5 years back)
+  const yearOptions = useMemo(() => {
+    const currentYearInt = today.year();
+    const years = [];
+    for (let i = 0; i < 6; i++) { 
+      years.push(currentYearInt - i);
+    }
+    return years;
+  }, []);
+
   const setRange = (start, end, rangeMode) => {
-    // Ensure end date does not exceed today
     const finalEnd = end.isAfter(today.endOf('day')) ? today.endOf('day') : end;
     setStartDate(start.startOf('day'));
     setEndDate(finalEnd);
@@ -239,51 +230,62 @@ export default function DateRangeFilterModal({ isOpen, onClose, onDateRangeApply
   useEffect(() => {
     if (!isOpen) return;
     
-    // Set initial range based on mode
     const now = dayjs();
     
-    if (mode === "Day") {
-        setRange(now, now, "Day");
-    } else if (mode === "Week") {
-        // Week: Last 7 days including today
-        const start = now.subtract(6, 'day'); 
-        setRange(start, now, "Week");
-    } else if (mode === "Month") {
+    if (mode === "Month") {
+        setCurrentYear(today.year()); 
         const start = now.startOf('month');
         setRange(start, now, "Month");
+    } else if (mode === "Day") {
+        setRange(now, now, "Day");
+    } else if (mode === "Week") {
+        const start = now.subtract(6, 'day'); 
+        setRange(start, now, "Week");
     } else if (mode === "Custom") {
         setStartDate(null);
         setEndDate(null);
     }
     
-    // Update the calendar view to the current month/year
     if (mode !== "Month") {
         setCurrentYear(today.year());
         setCurrentMonth(today.month());
     }
-  }, [isOpen, mode]); // Rerun when mode changes or modal opens
+  }, [isOpen, mode]); 
+  
+  // Effect to re-select the month range when the Year dropdown changes
+  useEffect(() => {
+    if (mode === 'Month') {
+        const selectedMonthIndex = startDate ? startDate.month() : today.month();
+        
+        const start = dayjs().year(currentYear).month(selectedMonthIndex).startOf("month");
+        const end = dayjs().year(currentYear).month(selectedMonthIndex).endOf("month");
+        
+        if (!start.isAfter(today.startOf('month'))) {
+             setRange(start, end, "Month");
+        } else {
+             const currentMonthStart = dayjs().startOf('month');
+             setRange(currentMonthStart, today, "Month");
+        }
+    }
+  }, [currentYear]);
 
   // Handle date selection in Calendar Grid (Custom/Day/Week)
   const handleDateClick = (date) => {
-    date = date.startOf('day'); // Ensure time is ignored
+    date = date.startOf('day'); 
 
     if (mode === "Day") {
       setRange(date, date, "Day");
     } else if (mode === "Week") {
-      // Week: 7 days including the clicked date, ending on the clicked date
       const start = date.subtract(6, 'day'); 
       setRange(start, date, "Week");
     } else if (mode === "Custom") {
       if (!startDate || endDate) {
-        // Start a new range
         setStartDate(date);
         setEndDate(null);
       } else if (date.isSameOrBefore(startDate, "day")) {
-        // Select an earlier date, or click the same date (making it a single day range)
-        setEndDate(startDate); // The old start becomes the new end
-        setStartDate(date); // The new click becomes the start
+        setEndDate(startDate); 
+        setStartDate(date); 
       } else {
-        // Set the end date
         setEndDate(date);
       }
     }
@@ -294,7 +296,6 @@ export default function DateRangeFilterModal({ isOpen, onClose, onDateRangeApply
     const start = dayjs().year(currentYear).month(monthIndex).startOf("month");
     const end = dayjs().year(currentYear).month(monthIndex).endOf("month");
     
-    // Don't select future months
     if (start.isAfter(today.startOf('month'))) return;
 
     setRange(start, end, "Month");
@@ -304,7 +305,6 @@ export default function DateRangeFilterModal({ isOpen, onClose, onDateRangeApply
   const switchCalendarView = (targetMonth, targetYear) => {
     const newDate = dayjs().year(targetYear).month(targetMonth);
     
-    // Prevent navigating past the current month/year
     if (newDate.isAfter(today, 'month')) {
         setCurrentMonth(today.month());
         setCurrentYear(today.year());
@@ -315,14 +315,10 @@ export default function DateRangeFilterModal({ isOpen, onClose, onDateRangeApply
   };
 
   const isMonthView = mode !== "Month";
-  // Dynamically generate years, including the current and previous one for the Month picker
-  const currentYearInt = today.year();
-  const yearOptions = [currentYearInt, currentYearInt - 1].filter(y => y <= currentYearInt);
 
   // Footer display text
   const footerText = useMemo(() => {
     if (startDate && endDate) {
-      // FIX: Use dayjs.min/max (which requires minMax plugin)
       const finalStart = dayjs.min(startDate, endDate);
       const finalEnd = dayjs.max(startDate, endDate);
       
@@ -344,9 +340,7 @@ export default function DateRangeFilterModal({ isOpen, onClose, onDateRangeApply
 
   // Apply button handler
   const handleApply = () => {
-    // Done button should be clickable if both start and end are set.
     if (startDate && endDate) {
-      // FIX: Use dayjs.min/max (which requires minMax plugin)
       const finalStart = dayjs.min(startDate, endDate).startOf('day');
       const finalEnd = dayjs.max(startDate, endDate).endOf('day');
       
@@ -360,51 +354,52 @@ export default function DateRangeFilterModal({ isOpen, onClose, onDateRangeApply
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Blurred Backdrop */}
+      {/* Blurred Backdrop - REVERTED TO STANDARD DIM/BLUR */}
       <div
         className="absolute inset-0 bg-gray-900/40 backdrop-blur-sm"
         onClick={onClose}
       ></div>
 
-      {/* Modal Content */}
-      <div className="bg-white rounded-xl shadow-2xl z-50 w-full max-w-sm md:max-w-md">
-        {/* Header */}
-        <div className="p-4 border-b flex justify-between items-center">
-          <h2 className="text-xl font-bold text-gray-800">Select date range</h2>
-          <button onClick={onClose} className="p-2 rounded-full hover:bg-gray-100">
-            <BiX className="w-6 h-6 text-gray-500" />
-          </button>
-        </div>
-
-        {/* Mode Tabs */}
-        <div className="flex p-4 pb-0">
-          {["Custom", "Week", "Month", "Day"].map((m) => (
-            <button
-              key={m}
-              onClick={() => setMode(m)}
-              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors duration-150 mr-2 border 
-                ${
-                  mode === m
-                    ? "bg-red-600 text-white border-red-600"
-                    : "bg-white text-gray-700 border-gray-300 hover:bg-red-50"
-                }`}
-            >
-              {m}
-            </button>
-          ))}
+      {/* Modal Content - FIXED WIDTH AND CLEANER SHADOW */}
+      <div className="bg-white rounded-xl shadow-2xl z-50 w-full max-w-md"> 
+        {/* Header and Tabs */}
+        <div className="p-4 border-b border-gray-100">
+            <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold text-gray-800">Select date range</h2>
+                <button onClick={onClose} className="p-1 rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition">
+                    <BiX className="w-6 h-6" />
+                </button>
+            </div>
+            {/* Mode Tabs - Cleaned up to match inspiration image styling */}
+            <div className="flex space-x-2 border-b-2 border-gray-100 pb-2">
+                {["Custom", "Week", "Month", "Day"].map((m) => ( 
+                    <button
+                    key={m}
+                    onClick={() => setMode(m)}
+                    className={`px-3 py-1 text-sm font-medium rounded-md transition-colors duration-150 border-b-2 
+                        ${
+                            mode === m
+                                ? "text-blue-700 border-blue-600 font-bold" // Active tab line under text
+                                : "text-gray-500 border-transparent hover:text-blue-500"
+                        }`}
+                    >
+                        {m}
+                    </button>
+                ))}
+            </div>
         </div>
 
         {/* Calendar/Month Picker Area */}
-        <div className="p-4">
-          {isMonthView && (
+        <div className="px-4 py-4 overflow-y-auto max-h-[70vh]">
+          {isMonthView ? (
+            // Day/Week/Custom View
             <>
-              {/* Calendar Navigation (Only for Day/Week/Custom) */}
               <div className="flex justify-between items-center mb-4">
                 <button
                   onClick={() => switchCalendarView(currentMonth - 1, currentYear)}
                   className="p-2 text-gray-600 hover:bg-gray-100 rounded-full"
                 >
-                  &lt;
+                  <BiChevronLeft className="w-5 h-5" />
                 </button>
                 <span className="text-lg font-semibold text-gray-800">
                   {dayjs()
@@ -415,14 +410,12 @@ export default function DateRangeFilterModal({ isOpen, onClose, onDateRangeApply
                 <button
                   onClick={() => switchCalendarView(currentMonth + 1, currentYear)}
                   className="p-2 text-gray-600 hover:bg-gray-100 rounded-full"
-                  // Disable navigating forward past the current month
                   disabled={dayjs().year(currentYear).month(currentMonth).isSame(today, 'month')}
                 >
-                  &gt;
+                  <BiChevronRight className="w-5 h-5" />
                 </button>
               </div>
 
-              {/* Day Calendar Grid */}
               <DatePickerGrid
                 currentMonth={currentMonth}
                 currentYear={currentYear}
@@ -432,38 +425,50 @@ export default function DateRangeFilterModal({ isOpen, onClose, onDateRangeApply
                 mode={mode}
               />
             </>
-          )}
-
-          {mode === "Month" && (
+          ) : (
+            // Month View
             <>
-                {yearOptions.map(year => (
-                    <React.Fragment key={year}>
-                        <h3 className="text-xl font-bold text-center my-4">{year}</h3>
-                        <MonthPickerGrid
-                            currentYear={year}
-                            startDate={startDate}
-                            endDate={endDate}
-                            onMonthClick={handleMonthClick}
-                        />
-                    </React.Fragment>
-                ))}
+                {/* Year Selector with Icon and Clean Input Style */}
+                <div className="relative flex items-center mb-6 mt-2 p-3 bg-gray-50 rounded-lg border border-gray-200 shadow-inner">
+                    <BiCalendarAlt className="w-5 h-5 text-blue-600 mr-3" />
+                    <label htmlFor="year-select" className="sr-only">Select Year</label>
+                    <select
+                        id="year-select"
+                        value={currentYear}
+                        onChange={(e) => setCurrentYear(Number(e.target.value))}
+                        className="w-full bg-transparent text-lg font-bold text-gray-800 outline-none appearance-none cursor-pointer"
+                    >
+                        {yearOptions.map(year => (
+                            <option key={year} value={year}>
+                                {year}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+                
+                {/* Single 12-Month Grid for the selected year */}
+                <MonthPickerGrid
+                    currentYear={currentYear}
+                    startDate={startDate}
+                    endDate={endDate}
+                    onMonthClick={handleMonthClick}
+                />
             </>
           )}
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t">
-          <p className="text-sm font-medium text-gray-600 mb-2">
+        <div className="p-4 border-t border-gray-100 flex justify-between items-center">
+          <p className="text-sm font-medium text-gray-600">
             {footerText}
           </p>
           <button
             onClick={handleApply}
-            // Button is enabled only if both start and end dates are definitively set
             disabled={!startDate || !endDate}
-            className={`w-full py-3 rounded-lg text-white font-bold transition-all duration-200 ${
+            className={`py-2 px-6 rounded-lg text-white font-semibold transition-all duration-200 ${
               startDate && endDate
-                ? "bg-red-600 hover:bg-red-700 shadow-lg"
-                : "bg-red-300 cursor-not-allowed"
+                ? "bg-blue-600 hover:bg-blue-700 shadow-md shadow-blue-500/50" // Stronger button with shadow
+                : "bg-gray-300 text-gray-500 cursor-not-allowed" 
             }`}
           >
             Done
