@@ -4,7 +4,7 @@ import ScannerCard from "../components/ui/POS/ScannerCard";
 import SkuFormCard from "../components/ui/POS/SkuFormCard";
 import CartTableCard from "../components/ui/POS/CartTableCard";
 import Button from "../components/common/Button";
-import { api, createGcashCheckout } from "../lib/api";
+import { api, createGcashCheckout, createMayaCheckout } from "../lib/api";
 import PriceCheckModal from "../components/modals/PriceCheckModal";
 import DiscountModal from "../components/modals/DiscountModal";
 import CashLedgerModal from "../components/modals/CashLedgerModal";
@@ -99,64 +99,87 @@ function CashierPOS() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const status = params.get("payment");
-    const pending = localStorage.getItem("pending_gcash_cart");
-    if (status === "success" && pending) {
-      try {
-        const parsed = JSON.parse(pending);
-        // finalize checkout using saved items
-        (async () => {
-          if (hasFinalizedRef.current) return;
-          const guardKey = "gcash_finalize_done";
-          if (sessionStorage.getItem(guardKey) === "1") return;
-          hasFinalizedRef.current = true;
-          sessionStorage.setItem(guardKey, "1");
-          try {
-            setError("");
-            const body = {
-              items: parsed.items || [],
-              payment_type: "gcash",
-              money_received: parsed.total || null,
-              transaction_id: parsed.transactionId || null,
-              transaction_number: parsed.transactionNumber || null,
-            };
-            const resp = await api("/api/sales/checkout", {
-              method: "POST",
-              headers: { Authorization: `Bearer ${token}` },
-              body: JSON.stringify(body),
-            });
-            if (resp?.transaction_number)
-              setTransactionNumber(resp.transaction_number);
-            if (resp?.transaction_id) setTransactionId(resp.transaction_id);
-            setCart([]);
+    
+    // Check if we're in a new tab (opened from payment)
+    const isNewTab = window.opener && !window.opener.closed;
+
+    const finalizeOnlinePayment = async (pendingCartKey, paymentType) => {
+      const pending = localStorage.getItem(pendingCartKey);
+      if (status === "success" && pending) {
+        try {
+          const parsed = JSON.parse(pending);
+          // finalize checkout using saved items
+          (async () => {
+            if (hasFinalizedRef.current) return;
+            const guardKey = `${paymentType.toLowerCase()}_finalize_done`;
+            if (sessionStorage.getItem(guardKey) === "1") return;
+            hasFinalizedRef.current = true;
+            sessionStorage.setItem(guardKey, "1");
             try {
-              const url = new URL(window.location.origin + "/receipt");
+              setError("");
+              const body = {
+                items: parsed.items || [],
+                payment_type: paymentType.toLowerCase(),
+                money_received: parsed.total || null,
+                transaction_id: parsed.transactionId || null,
+                transaction_number: parsed.transactionNumber || null,
+              };
+              const resp = await api("/api/sales/checkout", {
+                method: "POST",
+                headers: { Authorization: `Bearer ${token}` },
+                body: JSON.stringify(body),
+              });
               if (resp?.transaction_number)
-                url.searchParams.set("tn", resp.transaction_number);
-              if (resp?.transaction_id)
-                url.searchParams.set("tid", String(resp.transaction_id));
-              if (resp?.total != null)
-                url.searchParams.set("total", String(resp.total));
-              navigate(url.pathname + url.search);
-            } catch (_) {}
-          } catch (e) {
-            setError("Failed to record GCASH payment");
-          } finally {
-            localStorage.removeItem("pending_gcash_cart");
-            // remove query param
-            const url = new URL(window.location.href);
-            url.searchParams.delete("payment");
-            window.history.replaceState({}, "", url.toString());
-          }
-        })();
-      } catch (_) {
-        localStorage.removeItem("pending_gcash_cart");
+                setTransactionNumber(resp.transaction_number);
+              if (resp?.transaction_id) setTransactionId(resp.transaction_id);
+              setCart([]);
+              try {
+                const url = new URL(window.location.origin + "/receipt");
+                if (resp?.transaction_number)
+                  url.searchParams.set("tn", resp.transaction_number);
+                if (resp?.transaction_id)
+                  url.searchParams.set("tid", String(resp.transaction_id));
+                if (resp?.total != null)
+                  url.searchParams.set("total", String(resp.total));
+                
+                // If in new tab, redirect opener and close this tab
+                if (isNewTab && window.opener) {
+                  window.opener.location.href = url.toString();
+                  window.close();
+                } else {
+                  navigate(url.pathname + url.search);
+                }
+              } catch (_) {}
+            } catch (e) {
+              setError(`Failed to record ${paymentType} payment`);
+            } finally {
+              localStorage.removeItem(pendingCartKey);
+              if (!isNewTab) {
+                // remove query param
+                const url = new URL(window.location.href);
+                url.searchParams.delete("payment");
+                window.history.replaceState({}, "", url.toString());
+              }
+            }
+          })();
+        } catch (_) {
+          localStorage.removeItem(pendingCartKey);
+        }
+      } else if (status === "cancel" && pending) {
+        localStorage.removeItem(pendingCartKey);
+        // If in new tab, close it; otherwise just clean up URL
+        if (isNewTab && window.opener) {
+          window.close();
+        } else {
+          const url = new URL(window.location.href);
+          url.searchParams.delete("payment");
+          window.history.replaceState({}, "", url.toString());
+        }
       }
-    } else if (status === "cancel") {
-      localStorage.removeItem("pending_gcash_cart");
-      const url = new URL(window.location.href);
-      url.searchParams.delete("payment");
-      window.history.replaceState({}, "", url.toString());
-    }
+    };
+
+    finalizeOnlinePayment("pending_gcash_cart", "GCash");
+    finalizeOnlinePayment("pending_maya_cart", "Maya");
   }, []);
 
   const addSkuToCart = async (skuValue, qty = 1) => {
@@ -857,14 +880,47 @@ function CashierPOS() {
                       cancelUrl,
                       successUrl,
                     });
-                    window.location.href = checkoutUrl;
+                    window.open(checkoutUrl, '_blank');
                   } catch (e) {
                     setError("Failed to init GCash");
                     localStorage.removeItem("pending_gcash_cart");
                   }
                 })();
+              } else if (method === "maya") {
+                (async () => {
+                  try {
+                    const successUrl =
+                      window.location.origin + "/pos?payment=success";
+                    const cancelUrl =
+                      window.location.origin + "/pos?payment=cancel";
+                    // persist cart to finalize after redirect back
+                    localStorage.setItem(
+                      "pending_maya_cart",
+                      JSON.stringify({
+                        items: cart.map((i) => ({
+                          product_id: i.product_id,
+                          quantity: i.quantity,
+                        })),
+                        total,
+                        transactionId: transactionId,
+                        transactionNumber: transactionNumber,
+                      })
+                    );
+                    const { checkoutUrl } = await createMayaCheckout({
+                      amount: Number(total || 0),
+                      description: "POS Order",
+                      referenceNumber: transactionNumber || `POS-${Date.now()}`,
+                      cancelUrl,
+                      successUrl,
+                    });
+                    window.open(checkoutUrl, '_blank');
+                  } catch (e) {
+                    setError("Failed to init Maya");
+                    localStorage.removeItem("pending_maya_cart");
+                  }
+                })();
               } else {
-                // For MAYA or others, fall back to existing checkout flow
+                // For other payment methods, fall back to existing checkout flow
                 handleCheckout(method);
               }
             }
@@ -882,8 +938,26 @@ function CashierPOS() {
         <ScanCustomerCartModal
           isOpen={showImportCart}
           onClose={() => setShowImportCart(false)}
-          onImport={async (items) => {
+          onImport={async (items, transactionId, completionResponse) => {
             try {
+              // If transaction was completed (completionResponse exists), navigate to receipt
+              if (completionResponse && transactionId) {
+                setCart([]);
+                setTransactionId(null);
+                setTransactionNumber(null);
+                setError("");
+                setShowImportCart(false);
+                // Navigate to receipt page for cashier
+                window.location.href = `/receipt?tn=${completionResponse.transaction_number || transactionId}`;
+                return;
+              }
+              
+              // Otherwise, import items (backward compatibility for old QR format)
+              if (!items || items.length === 0) {
+                setError("No items found in QR code");
+                return;
+              }
+              
               console.log("Scanned items:", items);
               // Fetch product details by product_id for all scanned items concurrently
               const fetchedProducts = await Promise.all(

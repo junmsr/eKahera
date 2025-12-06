@@ -48,14 +48,23 @@ export default function CustomerEnter() {
           });
 
           if (!response.ok) {
-            const errorData = await response.json();
+            const errorData = await response.json().catch(() => ({ error: 'Failed to create customer' }));
+            console.error('Failed to create customer user:', errorData);
+            // Don't block navigation, but log the error
           } else {
             const data = await response.json();
-            // Store user_id and username in localStorage for use later (optional)
-            if (data.user_id) localStorage.setItem("customer_user_id", data.user_id);
-            if (data.username) localStorage.setItem("customer_username", data.username);
+            // Store user_id and username in localStorage for use later
+            if (data.user_id) {
+              localStorage.setItem("customer_user_id", String(data.user_id));
+              console.log('Customer user created:', data.user_id);
+            }
+            if (data.username) {
+              localStorage.setItem("customer_username", data.username);
+            }
           }
         } catch (err) {
+          console.error('Error creating customer user:', err);
+          // Don't block navigation, but log the error
         }
 
         // Small delay for better UX feedback

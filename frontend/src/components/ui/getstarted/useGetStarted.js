@@ -129,8 +129,8 @@ export default function useGetStarted() {
       if (usernameError) err.username = usernameError;
 
       if (!form.mobile) err.mobile = "Required";
-      else if (!/^\d{10,15}$/.test(form.mobile))
-        err.mobile = "Invalid mobile number";
+      else if (!/^\d{11}$/.test(form.mobile))
+        err.mobile = "Mobile number must be exactly 11 digits";
       if (!form.password) err.password = "Required";
       else if (form.password.length < 12)
         err.password = "Password must be at least 12 characters long";

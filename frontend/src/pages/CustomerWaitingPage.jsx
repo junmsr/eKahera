@@ -21,16 +21,27 @@ const CustomerWaitingPage = () => {
     const interval = setInterval(async () => {
       try {
         const response = await api(`/sales/public/transaction/${transactionId}`);
-        if (response.status === 'completed') {
+        
+        // Check if response has data property (from the API wrapper)
+        const responseData = response.data || response;
+        
+        if (responseData.status === 'completed') {
           setStatus('completed');
           clearInterval(interval);
-          // Redirect to the receipt page
-          navigate(`/receipt?tn=${response.tn}&from=customer`);
+          // Redirect to the receipt page with the transaction number
+          navigate(`/receipt?tn=${responseData.tn || ''}&from=customer`);
+        } else if (responseData.status) {
+          // Update status if it exists in the response
+          setStatus(responseData.status);
         }
       } catch (err) {
         console.error('Error fetching transaction status:', err);
-        setError('Could not fetch transaction status. Please check your connection.');
-        clearInterval(interval);
+        // More specific error message based on error response
+        const errorMessage = err.response?.data?.error || 
+                           'Could not fetch transaction status. Please check your connection.';
+        setError(errorMessage);
+        // Don't clear the interval on error, keep trying
+        // clearInterval(interval);
       }
     }, 3000); // Poll every 3 seconds
 

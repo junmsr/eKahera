@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { api } from "../../../lib/api"; // Keeping the import from the 'main' branch
+import { api } from "../../../lib/api";
 import Button from "../../common/Button";
 import Card from "../../common/Card";
 import Loader from "../../common/Loader";
 import DocumentViewerModal from "../../modals/DocumentViewerModal";
+import SuperadminAlertModal from "../../modals/SuperadminAlertModal";
 
 export default function DocumentVerification({ isRefreshing }) {
   const [pendingVerifications, setPendingVerifications] = useState([]);
@@ -98,19 +99,28 @@ export default function DocumentVerification({ isRefreshing }) {
   const handleDocumentAction = async (documentId, action, notes = "") => {
     setActionLoading(true);
     try {
-      // Using sessionStorage and api utility from 'main' branch
       const token = sessionStorage.getItem("auth_token");
       await api(`/documents/document/${documentId}/verify`, {
         method: "PUT",
         headers: { Authorization: `Bearer ${token}` },
         body: JSON.stringify({ status: action, notes: notes }),
       });
-      // Refresh business details and show alert (from both branches)
+      // Refresh business details and show success message
       fetchBusinessDetails(selectedBusiness.business_id);
-      alert(`Document ${action} successfully`);
+      setAlert({
+        isOpen: true,
+        title: "Success",
+        message: `Document ${action} successfully`,
+        type: "success"
+      });
     } catch (error) {
-      // console.error("Error updating document:", error);
-      alert("Error updating document status");
+      console.error("Error updating document:", error);
+      setAlert({
+        isOpen: true,
+        title: "Error",
+        message: "Error updating document status",
+        type: "error"
+      });
     } finally {
       setActionLoading(false);
     }
@@ -119,7 +129,6 @@ export default function DocumentVerification({ isRefreshing }) {
   const handleCompleteVerification = async (status, reason = "") => {
     setActionLoading(true);
     try {
-      // Using sessionStorage and api utility from 'main' branch
       const token = sessionStorage.getItem("auth_token");
       await api(
         `/documents/business/${selectedBusiness.business_id}/complete`,
@@ -132,15 +141,28 @@ export default function DocumentVerification({ isRefreshing }) {
           }),
         }
       );
-      // Success logic (from both branches)
-      alert(`Business verification ${status} successfully`);
-      setSelectedBusiness(null);
-      setBusinessDetails(null);
-      fetchPendingVerifications();
-      fetchStats();
+      
+      // Show success message
+      setAlert({
+        isOpen: true,
+        title: "Success",
+        message: `Business verification ${status} successfully`,
+        type: "success",
+        onClose: () => {
+          setSelectedBusiness(null);
+          setBusinessDetails(null);
+          fetchPendingVerifications();
+          fetchStats();
+        }
+      });
     } catch (error) {
-      // console.error("Error completing verification:", error);
-      alert("Error completing verification");
+      console.error("Error completing verification:", error);
+      setAlert({
+        isOpen: true,
+        title: "Error",
+        message: "Error completing verification",
+        type: "error"
+      });
     } finally {
       setActionLoading(false);
     }
@@ -148,7 +170,6 @@ export default function DocumentVerification({ isRefreshing }) {
 
   const downloadDocument = async (documentId, fileName) => {
     try {
-      // Using sessionStorage and api utility with raw response handling from 'main' branch
       const token = sessionStorage.getItem("auth_token");
       const response = await api(
         `/documents/download/${documentId}`,
@@ -170,7 +191,12 @@ export default function DocumentVerification({ isRefreshing }) {
       document.body.removeChild(a);
     } catch (error) {
       console.error("Error downloading document:", error);
-      alert(error.message || "Error downloading document");
+      setAlert({
+        isOpen: true,
+        title: "Error",
+        message: error.message || "Error downloading document",
+        type: "error"
+      });
     }
   };
 
@@ -194,7 +220,12 @@ export default function DocumentVerification({ isRefreshing }) {
       });
     } catch (error) {
       console.error("Error viewing document:", error);
-      alert("Error viewing document");
+      setAlert({
+        isOpen: true,
+        title: "Error",
+        message: "Error viewing document",
+        type: "error"
+      });
     }
   };
 
@@ -328,6 +359,18 @@ export default function DocumentVerification({ isRefreshing }) {
         documentUrl={selectedDocument.url}
         documentName={selectedDocument.name}
       />
+      
+      {/* Alert Modal */}
+      <SuperadminAlertModal
+        isOpen={alert.isOpen}
+        onClose={() => {
+          setAlert(prev => ({ ...prev, isOpen: false }));
+          if (alert.onClose) alert.onClose();
+        }}
+        title={alert.title}
+        message={alert.message}
+        type={alert.type}
+      />
     </div>
   );
 }
@@ -345,6 +388,12 @@ function BusinessVerificationDetails({
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [showRepassModal, setShowRepassModal] = useState(false);
   const [isViewerOpen, setIsViewerOpen] = useState(false);
+  const [alert, setAlert] = useState({
+    isOpen: false,
+    title: "",
+    message: "",
+    type: "info"
+  });
 
   if (!business) {
     return (
@@ -367,6 +416,10 @@ function BusinessVerificationDetails({
     }
   };
 
+  // Check if all documents are either approved or rejected (none pending)
+  const allDocumentsReviewed = business.documents?.every(
+    (doc) => doc.verification_status === "approved" || doc.verification_status === "rejected"
+  );
   const allDocumentsApproved = business.documents?.every(
     (doc) => doc.verification_status === "approved"
   );
@@ -533,16 +586,7 @@ function BusinessVerificationDetails({
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => {
-                          const notes = prompt("Enter notes for rejection:");
-                          if (notes !== null) {
-                            onDocumentAction(
-                              document.document_id,
-                              "rejected",
-                              notes
-                            );
-                          }
-                        }}
+                        onClick={() => onDocumentAction(document.document_id, "rejected")}
                         disabled={actionLoading}
                       >
                         <svg
@@ -569,33 +613,36 @@ function BusinessVerificationDetails({
         )}
       </Card>
 
-      {/* Verification Actions */}
-      {business.verification_status !== "approved" && (
-      <Card className="p-6">
-        <h3 className="text-lg font-semibold mb-4">Complete Verification</h3>
-        <div className="flex space-x-3">
-          <Button
-            onClick={() => onCompleteVerification("approved")}
-            disabled={!allDocumentsApproved || actionLoading}
-            className="bg-green-600 hover:bg-green-700"
-          >
-            Approve Business
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => setShowRejectModal(true)}
-            disabled={actionLoading}
-          >
-            Reject Application
-          </Button>
-        </div>
+      {/* Verification Actions - Only show if business is not approved and not rejected */}
+      {business.verification_status === "pending" && (
+        <Card className="p-6">
+          <h3 className="text-lg font-semibold mb-4">Complete Verification</h3>
+          <div className="flex space-x-3">
+            <Button
+              onClick={() => onCompleteVerification("approved")}
+              disabled={!allDocumentsReviewed || actionLoading}
+              className="bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              title={!allDocumentsReviewed ? "Please review all documents first" : ""}
+            >
+              Approve Business
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setShowRejectModal(true)}
+              disabled={!allDocumentsReviewed || actionLoading}
+              className="disabled:opacity-50 disabled:cursor-not-allowed"
+              title={!allDocumentsReviewed ? "Please review all documents first" : ""}
+            >
+              Reject Application
+            </Button>
+          </div>
 
-        {!allDocumentsApproved && !hasRejected && (
-          <p className="text-sm text-gray-600 mt-2">
-            All documents must be reviewed before completing verification.
-          </p>
-        )}
-      </Card>
+          {!allDocumentsReviewed && (
+            <p className="text-sm text-yellow-600 mt-2">
+              All documents must be reviewed (approved or rejected) before completing verification.
+            </p>
+          )}
+        </Card>
       )}
 
       {/* Reject Modal */}

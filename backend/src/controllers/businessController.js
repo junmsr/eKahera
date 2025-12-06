@@ -915,7 +915,7 @@ exports.registerBusinessWithDocuments = [
 
       // Create user account with user_type_id
       const firstName = req.body.firstName || 'N/A';
-      const lastName = req.body.lastName || 'N/A';
+      const lastName = req.body.lastName || req.body.fullName || 'N/A';
       
       const userResult = await client.query(`
         INSERT INTO users (username, email, password_hash, role, contact_number, user_type_id, first_name, last_name, created_at, updated_at)

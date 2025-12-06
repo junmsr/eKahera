@@ -126,6 +126,7 @@ exports.checkout = async (req, res) => {
 exports.publicCheckout = async (req, res) => {
   const { items, payment_type, money_received, business_id, customer_user_id, discount_id, discount_percentage, discount_amount, transaction_number: frontendTxnNumber } = req.body || {};
   console.log("[DEBUG publicCheckout] Received items in req.body:", items);
+  console.log("[DEBUG publicCheckout] customer_user_id:", customer_user_id);
   if (!Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ error: 'items are required' });
   }
@@ -136,12 +137,59 @@ exports.publicCheckout = async (req, res) => {
   try {
     await client.query('BEGIN');
 
+    // If customer_user_id is not provided, create a customer user as fallback
+    let finalCustomerUserId = customer_user_id || null;
+    if (!finalCustomerUserId) {
+      console.log("[DEBUG publicCheckout] No customer_user_id provided, creating customer user as fallback");
+      try {
+        // Get customer user_type id
+        const utRes = await client.query("SELECT user_type_id FROM user_type WHERE lower(user_type_name) = 'customer' LIMIT 1");
+        const userTypeId = utRes.rows?.[0]?.user_type_id || null;
+        
+        if (userTypeId) {
+          // Generate unique 8-char alphanumeric username
+          const genUsername = () => {
+            const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            let s = '';
+            for (let i = 0; i < 8; i++) s += chars.charAt(Math.floor(Math.random() * chars.length));
+            return s;
+          };
+          
+          let attempts = 0;
+          const maxAttempts = 10;
+          while (attempts < maxAttempts) {
+            attempts++;
+            const username = genUsername();
+            try {
+              const insRes = await client.query(
+                `INSERT INTO users (username, email, contact_number, role, user_type_id, business_id, created_at, updated_at)
+                 VALUES ($1, NULL, NULL, $2, $3, $4, NOW(), NOW()) RETURNING user_id, username`,
+                [username, 'customer', userTypeId, business_id]
+              );
+              finalCustomerUserId = insRes.rows[0].user_id;
+              console.log("[DEBUG publicCheckout] Created customer user as fallback:", finalCustomerUserId);
+              break;
+            } catch (e) {
+              // Unique violation for username -> retry
+              if (e && e.code === '23505') {
+                continue;
+              }
+              throw e;
+            }
+          }
+        }
+      } catch (err) {
+        console.error("[DEBUG publicCheckout] Failed to create customer user as fallback:", err);
+        // Continue with null customer_user_id if creation fails
+      }
+    }
+
     const transaction_number = frontendTxnNumber || generateTransactionNumber(business_id);
 
     // Create transaction with status pending (customer flow)
     const transRes = await client.query(
       'INSERT INTO transactions (business_id, customer_user_id, status, created_at, updated_at, transaction_number) VALUES ($1, $2, $3, now(), now(), $4) RETURNING transaction_id',
-      [business_id, customer_user_id || null, 'pending', transaction_number]
+      [business_id, finalCustomerUserId, 'pending', transaction_number]
     );
     const transaction_id = transRes.rows[0].transaction_id;
 
@@ -189,14 +237,14 @@ exports.publicCheckout = async (req, res) => {
     await client.query(
       `INSERT INTO transaction_payment (transaction_id, user_id, discount_id, payment_type, money_received, money_change)
        VALUES ($1, $2, $3, $4, $5, $6)`,
-      [transaction_id, customer_user_id || null, discount_id || null, (payment_type || 'cash').toString(), money_received || null, money_change]
+      [transaction_id, finalCustomerUserId, discount_id || null, (payment_type || 'cash').toString(), money_received || null, money_change]
     );
 
     await client.query('COMMIT');
     // Log sale for visibility in logs dashboard
     try {
       logAction({
-        userId: customer_user_id || null,
+        userId: finalCustomerUserId,
         businessId: business_id,
         action: `Public checkout for transaction ${transaction_id} with a total of ${total} via ${payment_type}`,
       });
@@ -312,27 +360,82 @@ exports.completeTransaction = async (req, res) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    const tRes = await client.query('SELECT transaction_id, status FROM transactions WHERE transaction_id = $1 FOR UPDATE', [transactionId]);
+    
+    // Get the transaction with all necessary details
+    const tRes = await client.query(
+      `SELECT t.transaction_id, t.status, t.business_id, t.transaction_number, 
+              t.customer_user_id, t.total_amount, t.created_at
+       FROM transactions t 
+       WHERE t.transaction_id = $1 
+       FOR UPDATE`, 
+      [transactionId]
+    );
+    
     if (tRes.rowCount === 0) {
       await client.query('ROLLBACK');
       return res.status(404).json({ error: 'Transaction not found' });
     }
 
-    const currentStatus = tRes.rows[0].status;
-    if (currentStatus === 'completed') {
+    const transaction = tRes.rows[0];
+    
+    // If already completed, return the existing transaction details
+    if (transaction.status === 'completed') {
       await client.query('ROLLBACK');
-      return res.status(400).json({ error: 'Transaction already completed' });
+      return res.json({ 
+        transaction_id: Number(transactionId),
+        transaction_number: transaction.transaction_number,
+        business_id: transaction.business_id,
+        customer_user_id: transaction.customer_user_id,
+        total_amount: transaction.total_amount,
+        created_at: transaction.created_at,
+        status: 'completed', 
+        message: 'Transaction was already completed' 
+      });
     }
 
-await client.query('UPDATE transactions SET status = $1, cashier_user_id = $2, updated_at = NOW() WHERE transaction_id = $3', ['completed', req.user?.userId || null, transactionId]);
+    // Verify business ID matches cashier's business
+    if (transaction.business_id && req.user?.businessId) {
+      if (Number(transaction.business_id) !== Number(req.user.businessId)) {
+        await client.query('ROLLBACK');
+        return res.status(403).json({ error: 'Transaction does not belong to your business' });
+      }
+    }
+
+    // Update the existing transaction to mark it as completed
+    await client.query(
+      `UPDATE transactions 
+       SET status = $1, 
+           cashier_user_id = $2, 
+           updated_at = NOW() 
+       WHERE transaction_id = $3`, 
+      ['completed', req.user?.userId || null, transactionId]
+    );
+    
     await client.query('COMMIT');
 
-    // Log action
-    try { logAction({ userId: req.user?.userId || null, businessId: req.user?.businessId || null, action: `Transaction ${transactionId} marked completed by user ${req.user?.userId || 'unknown'}` }); } catch (_) {}
+    // Log the action
+    try { 
+      logAction({ 
+        userId: req.user?.userId || null, 
+        businessId: transaction.business_id, 
+        action: `Transaction ${transaction.transaction_number || transactionId} completed by cashier ${req.user?.userId || 'unknown'}` 
+      }); 
+    } catch (_) {}
 
-    res.json({ transaction_id: Number(transactionId), status: 'completed', message: 'Transaction marked completed' });
+    res.json({ 
+      transaction_id: Number(transactionId),
+      transaction_number: transaction.transaction_number,
+      business_id: transaction.business_id,
+      customer_user_id: transaction.customer_user_id,
+      total_amount: transaction.total_amount,
+      created_at: transaction.created_at,
+      status: 'completed', 
+      message: 'Transaction completed successfully',
+      receipt_url: `/receipt?tn=${transaction.transaction_number}`
+    });
   } catch (err) {
     await client.query('ROLLBACK');
+    console.error('Error completing transaction:', err);
     res.status(500).json({ error: err.message });
   } finally {
     client.release();

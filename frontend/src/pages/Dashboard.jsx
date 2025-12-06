@@ -162,7 +162,6 @@ export default function Dashboard() {
     transactions: 0,
     topProduct: "-",
     totalItemsSold: 0,
-    averageTransactionValue: 0,
   });
 
   useEffect(() => {
@@ -231,17 +230,33 @@ export default function Dashboard() {
       switch (range) {
         case "week":
           startDate = new Date(now);
-          startDate.setDate(now.getDate() - now.getDay());
+          const dayOfWeek = now.getDay(); // 0 = Sunday, 6 = Saturday
+          startDate.setDate(now.getDate() - dayOfWeek);
           startDate.setHours(0, 0, 0, 0);
+          // End of current week (Saturday)
+          endDate = new Date(startDate);
+          endDate.setDate(startDate.getDate() + 6);
+          endDate.setHours(23, 59, 59, 999);
           break;
         case "month":
           startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+          startDate.setHours(0, 0, 0, 0);
+          // End of current month
+          endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+          endDate.setHours(23, 59, 59, 999);
           break;
         case "year":
           startDate = new Date(now.getFullYear(), 0, 1);
+          startDate.setHours(0, 0, 0, 0);
+          // End of current year
+          endDate = new Date(now.getFullYear(), 11, 31);
+          endDate.setHours(23, 59, 59, 999);
           break;
         default:
           startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+          startDate.setHours(0, 0, 0, 0);
+          endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+          endDate.setHours(23, 59, 59, 999);
           break;
       }
 
@@ -319,7 +334,7 @@ export default function Dashboard() {
         percent: (Number(p.value || 0) / pieTotal) * 100,
       }));
 
-      // If overview is available use it for KPIs
+          // If overview is available use it for KPIs
       if (overview) {
         console.log("Overview data received:", overview);
 
@@ -355,12 +370,50 @@ export default function Dashboard() {
           averageTransactionValue: avgTxValue,
         });
 
-        // Update stats for the stats cards
+        // Format date range for display
+        const formatDateRange = () => {
+          const now = new Date();
+          let startDate, endDate = now;
+          
+          switch (range) {
+            case 'week':
+              startDate = new Date(now);
+              startDate.setDate(now.getDate() - now.getDay());
+              return `${startDate.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })} - ${endDate.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })}`;
+            case 'month':
+              startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+              return startDate.toLocaleDateString('en-PH', { month: 'long', year: 'numeric' });
+            case 'year':
+              return now.getFullYear().toString();
+            default:
+              return now.toLocaleDateString('en-PH');
+          }
+        };
+
+        const dateRangeText = formatDateRange();
+        
+        // Update stats for the stats cards based on selected range
         setStats([
-          { label: "Total Revenue", value: revenue },
-          { label: "Total Transactions", value: totalTransactions },
-          { label: "Total Items Sold", value: totalItemsSold },
-          { label: "Avg TX Value", value: avgTxValue },
+          { 
+            label: range === 'week' ? "This Week's Sales" : range === 'month' ? "This Month's Sales" : "This Year's Sales", 
+            value: `₱${revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+            subtext: dateRangeText
+          },
+          { 
+            label: range === 'week' ? "Weekly Transactions" : range === 'month' ? "Monthly Transactions" : "Yearly Transactions", 
+            value: totalTransactions,
+            subtext: `${dateRangeText}`
+          },
+          { 
+            label: range === 'week' ? "Top Product" : range === 'month' ? "Top Product" : "Top Product", 
+            value: topProduct,
+            subtext: `Total: ${overview.topProducts?.[0]?.total_sold || 0} sold`
+          },
+          { 
+            label: range === 'week' ? "Items Sold" : range === 'month' ? "Items Sold" : "Items Sold", 
+            value: totalItemsSold,
+            subtext: `${totalTransactions} transactions`
+          },
         ]);
       }
 
@@ -473,6 +526,8 @@ export default function Dashboard() {
     link.click();
   };
 
+  // Fetch filtered data when range changes (affects stats cards and graphs)
+  // Note: todayHighlight is fetched separately and is NOT affected by the filter
   useEffect(() => {
     fetchData();
     fetchNotifications();

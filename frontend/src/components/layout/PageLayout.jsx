@@ -29,7 +29,11 @@ export default function PageLayout({
   const touchActiveRef = useRef(false);
   const { logout } = useAuth();
 
-  const handleLogoutClick = () => logout();
+  const handleLogoutClick = () => {
+    // Logout is handled by Nav-Admin component's modal
+    // This function is passed to Nav-Admin and called when user confirms logout
+    logout();
+  };
 
   return (
     <Background
@@ -39,6 +43,7 @@ export default function PageLayout({
       floatingElements={false}
       className={theme}
     >
+
       {/* Navbar */}
       {showNavbar && <Navbar />}
       <div
