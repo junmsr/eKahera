@@ -768,8 +768,10 @@ export default function Dashboard() {
           )}
         </div>
       </div>
-      <div className="max-w-10lx mx-auto w-full">
-        <DashboardBusinessReport />
+
+      {/* Business Report Component - Ensure it uses the full content width */}
+      <div className="w-full px-4 sm:px-6 md:px-8 pb-8">
+        <DashboardBusinessReport dateRange={dateRange} />
       </div>
       <ProfileModal
         isOpen={showProfileModal}

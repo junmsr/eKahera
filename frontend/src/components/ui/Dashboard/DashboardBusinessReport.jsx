@@ -24,7 +24,7 @@ const TrendIcon = ({ trend }) => {
   return <span className="text-gray-400 font-semibold text-xl">→</span>;
 };
 
-export default function DashboardBusinessReport() {
+export default function DashboardBusinessReport({ dateRange }) {
   const [salesByLocation, setSalesByLocation] = useState([]);
   const [revenueVsExpenses, setRevenueVsExpenses] = useState([]);
   const [profitTrend, setProfitTrend] = useState([]);
@@ -50,6 +50,40 @@ export default function DashboardBusinessReport() {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        // Format dates for API calls using dayjs if available, otherwise Date
+        const formatDate = (date) => {
+          if (!date) return null;
+          // Handle dayjs objects
+          if (date.format) {
+            return date.format("YYYY-MM-DD");
+          }
+          // Handle Date objects
+          const d = new Date(date);
+          const year = d.getFullYear();
+          const month = String(d.getMonth() + 1).padStart(2, '0');
+          const day = String(d.getDate()).padStart(2, '0');
+          return `${year}-${month}-${day}`;
+        };
+
+        const startDate = dateRange?.startDate ? formatDate(dateRange.startDate) : null;
+        const endDate = dateRange?.endDate ? formatDate(dateRange.endDate) : null;
+
+        // Build query string for API calls
+        const buildQueryString = (params) => {
+          const queryParams = new URLSearchParams();
+          if (params.startDate) queryParams.append('startDate', params.startDate);
+          if (params.endDate) queryParams.append('endDate', params.endDate);
+          const queryString = queryParams.toString();
+          return queryString ? `?${queryString}` : '';
+        };
+
+        const queryParams = {};
+        if (startDate && endDate) {
+          queryParams.startDate = startDate;
+          queryParams.endDate = endDate;
+        }
+        const queryString = buildQueryString(queryParams);
+
         const [
           keyMetricsRes,
           salesByLocationRes,
@@ -59,13 +93,13 @@ export default function DashboardBusinessReport() {
           productPerformanceRes,
           businessStatsRes,
         ] = await Promise.all([
-          api("/api/stats/key-metrics"),
-          api("/api/stats/sales-by-location"),
-          api("/api/stats/revenue-vs-expenses"),
-          api("/api/stats/profit-trend"),
-          api("/api/stats/payment-methods"),
-          api("/api/stats/product-performance"),
-          api("/api/stats/business-stats"),
+          api(`/api/stats/key-metrics${queryString}`),
+          api(`/api/stats/sales-by-location${queryString}`),
+          api(`/api/stats/revenue-vs-expenses${queryString}`),
+          api(`/api/stats/profit-trend${queryString}`),
+          api(`/api/stats/payment-methods${queryString}`),
+          api(`/api/stats/product-performance${queryString}`),
+          api(`/api/stats/business-stats${queryString}`),
         ]);
 
         setKeyMetrics(keyMetricsRes || {});
@@ -81,7 +115,7 @@ export default function DashboardBusinessReport() {
     };
 
     fetchData();
-  }, []);
+  }, [dateRange]);
 
   return (
     <section className="w-full px-5 md:px-8 py-6 bg-gray-50">
