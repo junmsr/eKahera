@@ -47,7 +47,6 @@ const TODAY_START = dayjs().startOf('day');
 const TODAY_END = dayjs().endOf('day');
 
 function VisitorsChart({ data, className = "", rangeType = "Custom" }) {
-  const chartRef = useRef(null);
   const getChartTitle = (rangeType) => {
     switch (rangeType) {
       case "Day":
@@ -67,7 +66,7 @@ function VisitorsChart({ data, className = "", rangeType = "Custom" }) {
       title={<span className="text-blue-700">{getChartTitle(rangeType)}</span>}
       className={`bg-white/80 backdrop-blur-md border border-white/60 shadow-xl ${className}`}
     >
-      <div ref={chartRef} className="h-72 w-full">
+      <div className="h-72 w-full">
         {" "}
         {/* Ensure width is 100% for full responsiveness */}
         <ResponsiveContainer width="100%" height="100%">
@@ -100,13 +99,12 @@ function VisitorsChart({ data, className = "", rangeType = "Custom" }) {
 }
 
 function SalesPieChart({ data, className = "" }) {
-  const chartRef = useRef(null);
   return (
     <ChartCard
       title={<span className="text-blue-700">Sales by Product Category</span>}
       className={`bg-white/80 backdrop-blur-md border border-white/60 shadow-xl ${className}`}
     >
-      <div ref={chartRef} className="h-72 w-full">
+      <div className="h-72 w-full">
         {" "}
         {/* Ensure width is 100% for full responsiveness */}
         <ResponsiveContainer width="100%" height="100%">
@@ -508,65 +506,140 @@ export default function Dashboard() {
 
       // Helper function to capture element as image
       const captureElement = async (element, options = {}) => {
-        if (!element) return null;
+        if (!element) {
+          console.warn("captureElement: element is null");
+          return null;
+        }
         try {
+          console.log("Starting capture for element:", element.className);
+          
           // Scroll element into view
           element.scrollIntoView({ behavior: 'instant', block: 'center' });
-          await new Promise(resolve => setTimeout(resolve, 500));
+          await new Promise(resolve => setTimeout(resolve, 800));
+          
+          // Check if SVG elements exist
+          const svgs = element.querySelectorAll('svg');
+          console.log(`Found ${svgs.length} SVG elements in chart`);
           
           // Force re-render of SVG elements
-          const svgs = element.querySelectorAll('svg');
-          svgs.forEach(svg => {
+          svgs.forEach((svg, index) => {
             svg.style.display = 'block';
+            svg.style.visibility = 'visible';
+            svg.style.opacity = '1';
             const rechartsWrapper = svg.closest('.recharts-wrapper');
             if (rechartsWrapper) {
               rechartsWrapper.style.display = 'block';
               rechartsWrapper.style.width = '100%';
               rechartsWrapper.style.height = '100%';
+              rechartsWrapper.style.visibility = 'visible';
             }
+            console.log(`SVG ${index} prepared for capture`);
           });
           
-          await new Promise(resolve => setTimeout(resolve, 200));
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          // Ensure element has dimensions
+          if (element.offsetWidth === 0 || element.offsetHeight === 0) {
+            console.warn("Element has zero dimensions:", element.offsetWidth, "x", element.offsetHeight);
+            return null;
+          }
           
           const canvas = await html2canvas(element, {
             useCORS: true,
             scale: 2,
             backgroundColor: "#ffffff",
-            logging: false,
+            logging: false, // Disable verbose logging
             allowTaint: true,
             removeContainer: false,
             foreignObjectRendering: true,
-            windowWidth: element.scrollWidth,
-            windowHeight: element.scrollHeight,
-            onclone: (clonedDoc, element) => {
+            width: element.scrollWidth || element.offsetWidth,
+            height: element.scrollHeight || element.offsetHeight,
+            x: 0,
+            y: 0,
+            onclone: (clonedDoc, clonedElement) => {
+              console.log("onclone called, processing SVG elements");
+              
               // Force SVG rendering in cloned document
-              const clonedElement = clonedDoc.querySelector(`[data-html2canvas-ignore="false"]`) || element;
-              const svgs = clonedElement.querySelectorAll('svg');
-              svgs.forEach(svg => {
+              const clonedSvgs = clonedElement.querySelectorAll('svg');
+              console.log(`Found ${clonedSvgs.length} SVG elements in cloned document`);
+              
+              clonedSvgs.forEach((svg, index) => {
                 svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
                 svg.style.display = 'block';
                 svg.style.visibility = 'visible';
+                svg.style.opacity = '1';
+                
                 const rechartsWrapper = svg.closest('.recharts-wrapper');
                 if (rechartsWrapper) {
                   rechartsWrapper.style.display = 'block';
                   rechartsWrapper.style.visibility = 'visible';
+                  rechartsWrapper.style.width = '100%';
+                  rechartsWrapper.style.height = '100%';
                 }
+                
+                // Also check for recharts-surface
+                const surface = svg.querySelector('.recharts-surface');
+                if (surface) {
+                  surface.style.display = 'block';
+                  surface.style.visibility = 'visible';
+                }
+                
+                console.log(`SVG ${index} processed in clone`);
               });
               
-              // Add styles to ensure charts are visible
+              // Add comprehensive styles to ensure charts are visible
               const style = clonedDoc.createElement('style');
               style.textContent = `
-                svg { display: block !important; visibility: visible !important; }
-                .recharts-wrapper { display: block !important; visibility: visible !important; }
-                .recharts-surface { display: block !important; visibility: visible !important; }
-                .recharts-legend-wrapper { display: block !important; }
-                .recharts-tooltip-wrapper { display: none !important; }
+                svg { 
+                  display: block !important; 
+                  visibility: visible !important; 
+                  opacity: 1 !important;
+                }
+                .recharts-wrapper { 
+                  display: block !important; 
+                  visibility: visible !important; 
+                  width: 100% !important;
+                  height: 100% !important;
+                }
+                .recharts-surface { 
+                  display: block !important; 
+                  visibility: visible !important; 
+                }
+                .recharts-legend-wrapper { 
+                  display: block !important; 
+                  visibility: visible !important;
+                }
+                .recharts-tooltip-wrapper { 
+                  display: none !important; 
+                }
+                .recharts-responsive-container {
+                  display: block !important;
+                  visibility: visible !important;
+                }
               `;
               clonedDoc.head.appendChild(style);
             },
             ...options,
           });
-          return canvas.toDataURL("image/png");
+          
+          console.log("Canvas created:", canvas.width, "x", canvas.height);
+          
+          // Verify canvas has content by checking if it's not blank
+          const ctx = canvas.getContext('2d');
+          const imageData = ctx.getImageData(0, 0, Math.min(100, canvas.width), Math.min(100, canvas.height));
+          const hasContent = imageData.data.some((pixel, index) => {
+            // Check alpha channel (every 4th value) - if any pixel is not fully transparent, there's content
+            return index % 4 === 3 && pixel > 0;
+          });
+          
+          if (!hasContent) {
+            console.warn("Canvas appears to be blank/empty");
+          }
+          
+          const dataUrl = canvas.toDataURL("image/png");
+          console.log("Data URL length:", dataUrl.length, "Has content:", hasContent);
+          
+          return dataUrl;
         } catch (error) {
           console.error("Error capturing element:", error);
           return null;
@@ -602,11 +675,27 @@ export default function Dashboard() {
 
         const metricsImg = await captureElement(keyMetricsRef.current);
         if (metricsImg) {
+          // Get actual image dimensions
+          const img = new Image();
+          img.src = metricsImg;
+          await new Promise((resolve) => {
+            img.onload = resolve;
+          });
+          
           const imgWidth = contentWidth;
-          const imgHeight = (keyMetricsRef.current.offsetHeight * imgWidth) / keyMetricsRef.current.offsetWidth;
+          const imgHeight = (img.height * imgWidth) / img.width;
+          console.log("Key Metrics image dimensions:", img.width, "x", img.height, "-> PDF:", imgWidth, "x", imgHeight);
+          
           checkNewPage(imgHeight + 5);
-          pdf.addImage(metricsImg, "PNG", margin, yPosition, imgWidth, imgHeight);
-          yPosition += imgHeight + 5;
+          try {
+            pdf.addImage(metricsImg, "PNG", margin, yPosition, imgWidth, imgHeight);
+            yPosition += imgHeight + 5;
+            console.log("Key Metrics added to PDF at y:", yPosition - imgHeight - 5);
+          } catch (error) {
+            console.error("Error adding Key Metrics to PDF:", error);
+          }
+        } else {
+          console.warn("Key Metrics image is null");
         }
       }
 
@@ -617,32 +706,96 @@ export default function Dashboard() {
       pdf.text("Charts & Analytics", margin, yPosition);
       yPosition += 8;
 
-      // Visitors Chart
+      // Visitors Chart - capture the entire chart card
       if (visitorsChartRef.current) {
-        const chartImg = await captureElement(visitorsChartRef.current);
+        // Find the ChartCard element (the actual card with background)
+        const chartCard = visitorsChartRef.current.querySelector('.bg-white\\/80, .bg-white') || 
+                         visitorsChartRef.current.querySelector('[class*="bg-white"]') ||
+                         visitorsChartRef.current.firstElementChild;
+        const elementToCapture = chartCard || visitorsChartRef.current;
+        
+        console.log("Capturing Visitors Chart:", {
+          hasRef: !!visitorsChartRef.current,
+          hasCard: !!chartCard,
+          element: elementToCapture
+        });
+        
+        const chartImg = await captureElement(elementToCapture);
         if (chartImg) {
+          // Get actual image dimensions
+          const img = new Image();
+          img.src = chartImg;
+          await new Promise((resolve) => {
+            img.onload = resolve;
+          });
+          
           const imgWidth = contentWidth;
-          const imgHeight = (visitorsChartRef.current.offsetHeight * imgWidth) / visitorsChartRef.current.offsetWidth;
-          checkNewPage(imgHeight + 5);
-          pdf.addImage(chartImg, "PNG", margin, yPosition, imgWidth, imgHeight);
-          yPosition += imgHeight + 5;
+          const imgHeight = (img.height * imgWidth) / img.width;
+          console.log("Visitors Chart image dimensions:", img.width, "x", img.height, "-> PDF:", imgWidth, "x", imgHeight);
+          
+          if (imgHeight > 0 && imgWidth > 0) {
+            checkNewPage(imgHeight + 5);
+            try {
+              pdf.addImage(chartImg, "PNG", margin, yPosition, imgWidth, imgHeight);
+              console.log("Visitors Chart added to PDF - Position:", { x: margin, y: yPosition, w: imgWidth, h: imgHeight });
+              yPosition += imgHeight + 5;
+            } catch (error) {
+              console.error("Error adding Visitors Chart to PDF:", error);
+            }
+          } else {
+            console.warn("Visitors Chart image has invalid dimensions:", imgWidth, "x", imgHeight);
+          }
         } else {
-          console.warn("Failed to capture Visitors Chart");
+          console.warn("Failed to capture Visitors Chart - no image data");
         }
+      } else {
+        console.warn("Visitors Chart ref is null");
       }
 
-      // Pie Chart
+      // Pie Chart - capture the entire chart card
       if (pieChartRef.current) {
-        const chartImg = await captureElement(pieChartRef.current);
+        // Find the ChartCard element (the actual card with background)
+        const chartCard = pieChartRef.current.querySelector('.bg-white\\/80, .bg-white') || 
+                         pieChartRef.current.querySelector('[class*="bg-white"]') ||
+                         pieChartRef.current.firstElementChild;
+        const elementToCapture = chartCard || pieChartRef.current;
+        
+        console.log("Capturing Pie Chart:", {
+          hasRef: !!pieChartRef.current,
+          hasCard: !!chartCard,
+          element: elementToCapture
+        });
+        
+        const chartImg = await captureElement(elementToCapture);
         if (chartImg) {
+          // Get actual image dimensions
+          const img = new Image();
+          img.src = chartImg;
+          await new Promise((resolve) => {
+            img.onload = resolve;
+          });
+          
           const imgWidth = contentWidth;
-          const imgHeight = (pieChartRef.current.offsetHeight * imgWidth) / pieChartRef.current.offsetWidth;
-          checkNewPage(imgHeight + 5);
-          pdf.addImage(chartImg, "PNG", margin, yPosition, imgWidth, imgHeight);
-          yPosition += imgHeight + 5;
+          const imgHeight = (img.height * imgWidth) / img.width;
+          console.log("Pie Chart image dimensions:", img.width, "x", img.height, "-> PDF:", imgWidth, "x", imgHeight);
+          
+          if (imgHeight > 0 && imgWidth > 0) {
+            checkNewPage(imgHeight + 5);
+            try {
+              pdf.addImage(chartImg, "PNG", margin, yPosition, imgWidth, imgHeight);
+              console.log("Pie Chart added to PDF - Position:", { x: margin, y: yPosition, w: imgWidth, h: imgHeight });
+              yPosition += imgHeight + 5;
+            } catch (error) {
+              console.error("Error adding Pie Chart to PDF:", error);
+            }
+          } else {
+            console.warn("Pie Chart image has invalid dimensions:", imgWidth, "x", imgHeight);
+          }
         } else {
-          console.warn("Failed to capture Pie Chart");
+          console.warn("Failed to capture Pie Chart - no image data");
         }
+      } else {
+        console.warn("Pie Chart ref is null");
       }
 
       // Business Report Section
@@ -969,10 +1122,10 @@ export default function Dashboard() {
             </>
           ) : (
             <>
-              <div ref={visitorsChartRef}>
+              <div ref={visitorsChartRef} className="chart-export-container">
                 <VisitorsChart data={chartData} rangeType={dateRange.rangeType} />
               </div>
-              <div ref={pieChartRef}>
+              <div ref={pieChartRef} className="chart-export-container">
                 <SalesPieChart data={pieData} />
               </div>
             </>
