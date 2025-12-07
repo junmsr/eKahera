@@ -18,15 +18,18 @@ function GetStartedLayout({
   progress,
   loading,
   errors,
+  form = {}, // Default to empty object to prevent undefined errors
+  success = false,
   onBack,
   onNext,
   onFinish,
   children,
 }) {
-  const showBack = step > 0;
+  const showBack = step > 0 && !success;
   const isOtpStep = step === 1;
-  const showNext = step < steps.length - 1 && !isOtpStep;
-  const showFinish = step === steps.length - 1;
+  const showNext = step < steps.length - 1 && !isOtpStep && !success;
+  const showFinish = step === steps.length - 1 && !success;
+  const showSuccess = success;
 
   return (
     <Background variant="gradientBlue" pattern="dots" overlay floatingElements>
@@ -108,7 +111,7 @@ function GetStartedLayout({
                 <div className="max-w-lg">{children}</div>
               </div>
 
-              {(showBack || showNext || showFinish) && (
+              {(showBack || showNext || showFinish || showSuccess) && (
                 <div className="mt-8 md:mt-6 flex items-center justify-center gap-4">
                   {showBack && (
                     <Button
@@ -133,11 +136,31 @@ function GetStartedLayout({
                   {showFinish && (
                     <Button
                       onClick={onFinish}
-                      disabled={loading}
+                      disabled={loading || 
+                        !form?.documents?.length || 
+                        !form?.acceptTerms || 
+                        !form?.acceptPrivacy ||
+                        // Check if all required documents are uploaded and have types
+                        !['Business Registration Certificate (DTI/SEC/CDA)', 
+                          "Mayor's Permit / Business Permit", 
+                          'BIR Certificate of Registration (Form 2303)']
+                          .every(reqType => form.documentTypes?.includes(reqType)) ||
+                        // Check if all uploaded documents have a type selected
+                        form.documentTypes?.some(type => !type)
+                      }
                       variant="primary"
                       className="w-48"
                     >
                       {loading ? <Loader size="sm" /> : "Finish"}
+                    </Button>
+                  )}
+                  {showSuccess && (
+                    <Button
+                      onClick={() => (window.location.href = "/")}
+                      variant="primary"
+                      className="w-48"
+                    >
+                      Return to Home
                     </Button>
                   )}
                 </div>
