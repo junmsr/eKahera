@@ -72,6 +72,8 @@ exports.getStoreById = async (req, res) => {
     const ownerResult = await pool.query(`
       SELECT 
         username,
+        first_name,
+        last_name,
         email,
         contact_number,
         created_at,
@@ -132,9 +134,11 @@ exports.getStoreById = async (req, res) => {
     // Format response similar to what frontend expects
     const storeDetails = {
       id: business.id,
-      name: owner?.username || business.name,
-      firstName: owner?.username?.split(' ')[0] || business.name,
-      lastName: owner?.username?.split(' ')[1] || '',
+      name: owner?.first_name && owner?.last_name 
+        ? `${owner.first_name} ${owner.last_name}` 
+        : owner?.username || business.name,
+      firstName: owner?.first_name || owner?.username?.split(' ')[0] || business.name,
+      lastName: owner?.last_name || owner?.username?.split(' ').slice(1).join(' ') || '',
       email: business.email,
       phone: business.phone,
       storeName: business.storeName,
