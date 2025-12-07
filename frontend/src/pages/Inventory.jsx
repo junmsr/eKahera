@@ -3,6 +3,8 @@ import PageLayout from "../components/layout/PageLayout";
 import NavAdmin from "../components/layout/Nav-Admin";
 import Inventory from "../components/inventory/Inventory";
 import Modal from "../components/modals/Modal";
+import Button from "../components/common/Button";
+
 import ProductFormModal from "../components/modals/ProductFormModal";
 import { api, authHeaders } from "../lib/api";
 
@@ -568,11 +570,76 @@ export default function InventoryPage() {
     setPage(1);
   };
 
+  const handleExport = () => {
+    const csv = convertToCSV(allProducts);
+    const timestamp = new Date().toISOString().split("T")[0];
+    const filename = `inventory_export_${timestamp}.csv`;
+    downloadCSV(csv, filename);
+  };
+
+const headerActions = (
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 sm:gap-4 mb-4 sm:mb-0 w-full">
+      <div className="flex items-center justify-end gap-2 sm:gap-3 w-auto">
+        
+        {/* EXPORT Button: ICON ONLY on Mobile, ICON + TEXT on Desktop */}
+        <Button
+          onClick={handleExport}
+          variant="secondary"
+          // Ensure fixed width on mobile for icon, then auto width on desktop
+          className="text-sm flex items-center justify-center sm:justify-start gap-1 sm:gap-2 shrink-0 !py-2 !px-2 sm:!px-2 min-w-[40px] sm:min-w-[40px] lg:min-w-0"
+        >
+          <svg
+            className="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+            />
+          </svg>
+          {/* Text is hidden on mobile (default) and shown from 'sm' breakpoint up */}
+          <span className="hidden sm:inline">Export</span> 
+        </Button>
+        
+        {/* ADD PRODUCT Button: 'Add' on Mobile, 'Add Product' on Desktop */}
+        <Button
+          onClick={openAddProduct}
+          variant="primary"
+          microinteraction={true}
+          // Same width logic as Export button
+          className="bg-blue-600 text-md text-white font-semibold rounded-lg shadow hover:bg-blue-700 transition gap-1 sm:gap-2 flex items-center justify-center sm:justify-start !py-2 !px-2 sm:!px-2 shrink-0 min-w-[40px] sm:min-w-[40px] lg:min-w-0"
+        >
+          <svg
+            className="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 4v16m8-8H4"
+            />
+          </svg>
+          {/* Full text is hidden on mobile, short text shown on mobile */}
+          <span className="hidden sm:block">Add Product</span>
+          <span className="sm:inline"></span>
+        </Button>
+      </div>
+    </div>
+);
+
   return (
     <PageLayout
       title="INVENTORY"
       sidebar={<NavAdmin />}
       isSidebarOpen={isSidebarOpen}
+      headerActions={headerActions}
       setSidebarOpen={setSidebarOpen}
       showHeader={true}
       showNavbar={false}
