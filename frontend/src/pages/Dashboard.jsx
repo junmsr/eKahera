@@ -1,5 +1,8 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { api, authHeaders } from "../lib/api";
+import dayjs from "dayjs"; 
+import minMax from "dayjs/plugin/minMax"; 
+
 import {
   LineChart,
   Line,
@@ -19,39 +22,51 @@ import { useAuth } from "../hooks/useAuth";
 // Components
 import PageLayout from "../components/layout/PageLayout";
 import NavAdmin from "../components/layout/Nav-Admin";
-import StatsCard from "../components/ui/Dashboard/StatsCard"; // Assuming this component exists
-import ChartCard from "../components/ui/Dashboard/ChartCard"; // Assuming this component exists
-import DashboardStatsCard from "../components/ui/Dashboard/DashboardStatsCard"; // Assuming this component exists
-import DashboardBusinessReport from "../components/ui/Dashboard/DashboardBusinessReport"; // Assuming this component exists
-import Button from "../components/common/Button"; // Assuming this component exists
-import { BiBell, BiUser, BiRefresh } from "react-icons/bi";
-import ProfileModal from "../components/modals/ProfileModal"; // Assuming this component exists
-import NotificationDropdown from "../components/common/NotificationDropdown"; // Assuming this component exists
+import ChartCard from "../components/ui/Dashboard/ChartCard";
+import DashboardStatsCard from "../components/ui/Dashboard/DashboardStatsCard";
+import DashboardBusinessReport from "../components/ui/Dashboard/DashboardBusinessReport";
+import Button from "../components/common/Button";
+import { BiBell, BiUser, BiRefresh, BiCalendarAlt } from "react-icons/bi";
+import ProfileModal from "../components/modals/ProfileModal";
+import NotificationDropdown from "../components/common/NotificationDropdown";
+import DateRangeFilterModal from "../components/modals/DateRangeFilterModal";
+
+// Extend the minMax plugin globally for this file
+dayjs.extend(minMax);
+
 
 // Constants
-const BLUE_COLORS = ["#2563eb", "#60a5fa", "#93c5fd", "#dbeafe"];
+const BLUE_COLORS = ["#2563eb", "#60a5fa", "#93c5fd", "#dbeafe"]; // Blue shades
 
-const SOFT_BLUE = "#93c5fd";
-const SOFT_GREEN = "#1e2cecff";
-const SOFT_PURPLE = "#3e209bff";
+const SOFT_BLUE = "#3b82f6"; // Tailwind blue-500/600 for lines/accents
+const SOFT_GREEN = "#10b981"; // Retain green for profit, or change to a blue accent if desired
+const SOFT_PURPLE = "#8b5cf6"; // Retain purple/accent for pie chart variation
+const TODAY_START = dayjs().startOf('day');
+const TODAY_END = dayjs().endOf('day');
 
-function VisitorsChart({ data, className = "", range = "month" }) {
-  const rangeLabels = {
-    week: "this week",
-    month: "this month",
-    year: "this year",
+function VisitorsChart({ data, className = "", rangeType = "Custom" }) {
+  const getChartTitle = (rangeType) => {
+    switch (rangeType) {
+      case "Day":
+        return "Visitors Today";
+      case "Week":
+        return "Visitors for the last 7 days";
+      case "Month":
+        return "Visitors this Month";
+      case "Custom":
+      default:
+        return "Visitors for the selected range";
+    }
   };
 
   return (
     <ChartCard
-      title={
-        <span className="text-blue-700">
-          Visitors for the {rangeLabels[range] || "last 6 months"}
-        </span>
-      }
+      title={<span className="text-blue-700">{getChartTitle(rangeType)}</span>}
       className={`bg-white/80 backdrop-blur-md border border-white/60 shadow-xl ${className}`}
     >
-      <div className="h-72 w-full"> {/* Ensure width is 100% for full responsiveness */}
+      <div className="h-72 w-full">
+        {" "}
+        {/* Ensure width is 100% for full responsiveness */}
         <ResponsiveContainer width="100%" height="100%">
           <LineChart
             data={data}
@@ -70,7 +85,7 @@ function VisitorsChart({ data, className = "", range = "month" }) {
             <Line
               type="monotone"
               dataKey="value"
-              stroke={SOFT_BLUE}
+              stroke={SOFT_BLUE} // Uses SOFT_BLUE constant
               strokeWidth={3}
               dot={{ r: 5, fill: SOFT_BLUE }}
             />
@@ -87,7 +102,9 @@ function SalesPieChart({ data, className = "" }) {
       title={<span className="text-blue-700">Sales by Product Category</span>}
       className={`bg-white/80 backdrop-blur-md border border-white/60 shadow-xl ${className}`}
     >
-      <div className="h-72 w-full"> {/* Ensure width is 100% for full responsiveness */}
+      <div className="h-72 w-full">
+        {" "}
+        {/* Ensure width is 100% for full responsiveness */}
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
@@ -103,7 +120,7 @@ function SalesPieChart({ data, className = "" }) {
               fill={SOFT_PURPLE}
             >
               {data.map((entry, idx) => {
-                const colors = [SOFT_BLUE, SOFT_GREEN, SOFT_PURPLE];
+                const colors = [SOFT_BLUE, SOFT_GREEN, SOFT_PURPLE]; // Using blue theme colors
                 return (
                   <Cell
                     key={`cell-${idx}`}
@@ -145,12 +162,17 @@ export default function Dashboard() {
 
   // State
   const [stats, setStats] = useState([]);
-  const [range, setRange] = useState("month");
+  const [dateRange, setDateRange] = useState({
+    startDate: dayjs().startOf("month"),
+    endDate: dayjs().endOf("day"),
+    rangeType: "Month", 
+  }); 
   const [loading, setLoading] = useState(false);
   const [chartData, setChartData] = useState([]);
   const [pieData, setPieData] = useState([]);
   const [lowStockProducts, setLowStockProducts] = useState([]);
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showFilterModal, setShowFilterModal] = useState(false); 
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -162,28 +184,27 @@ export default function Dashboard() {
     transactions: 0,
     topProduct: "-",
     totalItemsSold: 0,
+    averageTransactionValue: 0,
   });
 
+  // Fetch Today's data (independent of the main filter)
   useEffect(() => {
     const fetchTodayData = async () => {
       try {
         const token = sessionStorage.getItem("auth_token");
-        const today = new Date();
-        const startDate = `${today.getFullYear()}-${String(
-          today.getMonth() + 1
-        ).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+        const todayStr = dayjs().format("YYYY-MM-DD");
 
         const overview = await api("/api/dashboard/overview", {
           headers: authHeaders(token),
-          params: { startDate, endDate: startDate },
+          params: { startDate: todayStr, endDate: todayStr },
         });
 
         if (overview) {
           setTodayHighlight({
-            sales: overview.totalSales,
-            transactions: overview.totalTransactions,
-            totalItemsSold: overview.totalItemsSold,
-            averageTransactionValue: overview.averageTransactionValue,
+            sales: overview.totalSales || 0,
+            transactions: overview.totalTransactions || 0,
+            totalItemsSold: overview.totalItemsSold || 0,
+            averageTransactionValue: overview.averageTransactionValue || 0,
             topProduct: overview.topProducts?.[0]?.product_name || "-",
           });
         }
@@ -223,110 +244,53 @@ export default function Dashboard() {
       setLoading(true);
       const token = sessionStorage.getItem("auth_token");
 
-      // Calculate date range based on selected period
-      const now = new Date();
-      let startDate, endDate;
+      const { startDate, endDate, rangeType } = dateRange;
 
-      switch (range) {
-        case "week":
-          startDate = new Date(now);
-          const dayOfWeek = now.getDay(); // 0 = Sunday, 6 = Saturday
-          startDate.setDate(now.getDate() - dayOfWeek);
-          startDate.setHours(0, 0, 0, 0);
-          // End of current week (Saturday)
-          endDate = new Date(startDate);
-          endDate.setDate(startDate.getDate() + 6);
-          endDate.setHours(23, 59, 59, 999);
-          break;
-        case "month":
-          startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-          startDate.setHours(0, 0, 0, 0);
-          // End of current month
-          endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-          endDate.setHours(23, 59, 59, 999);
-          break;
-        case "year":
-          startDate = new Date(now.getFullYear(), 0, 1);
-          startDate.setHours(0, 0, 0, 0);
-          // End of current year
-          endDate = new Date(now.getFullYear(), 11, 31);
-          endDate.setHours(23, 59, 59, 999);
-          break;
-        default:
-          startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-          startDate.setHours(0, 0, 0, 0);
-          endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-          endDate.setHours(23, 59, 59, 999);
-          break;
-      }
+      const formatDate = (date) => dayjs(date).format("YYYY-MM-DD");
 
-      // Set end date to end of current day
-      endDate = new Date(
-        now.getFullYear(),
-        now.getMonth(),
-        now.getDate(),
-        23,
-        59,
-        59
-      );
+      const finalStart = dayjs.min(startDate, endDate);
+      const finalEnd = dayjs.max(startDate, endDate);
 
-      // Format dates for API - use consistent format (YYYY-MM-DD) for all endpoints
-      const formatDate = (date) => {
-        const d = new Date(date);
-        const year = d.getFullYear();
-        const month = String(d.getMonth() + 1).padStart(2, "0");
-        const day = String(d.getDate()).padStart(2, "0");
-        return `${year}-${month}-${day}`;
-      };
-
-      const startDateStr = formatDate(startDate);
-      const endDateStr = formatDate(endDate);
+      const startDateStr = formatDate(finalStart);
+      const endDateStr = formatDate(finalEnd);
 
       console.log("Fetching data for date range:", {
-        range,
-        startDate: startDate.toISOString(),
-        endDate: endDate.toISOString(),
+        rangeType,
         formattedStart: startDateStr,
         formattedEnd: endDateStr,
       });
 
-      // Fetch data for the selected period
-      const [overview, timeseries, pie, inventoryMovement, oldLowStock] =
-        await Promise.all([
-          api("/api/dashboard/overview", {
-            headers: authHeaders(token),
-            params: {
-              startDate: startDateStr,
-              endDate: endDateStr,
-            },
-          }),
-          api(`/api/stats/customers-timeseries`, {
-            headers: authHeaders(token),
-            params: {
-              startDate: startDateStr,
-              endDate: endDateStr,
-            },
-          }),
-          api("/api/stats/sales-by-category", {
-            headers: authHeaders(token),
-            params: {
-              startDate: startDateStr,
-              endDate: endDateStr,
-            },
-          }),
-          api("/api/dashboard/inventory-movement", {
-            headers: authHeaders(token),
-          }),
-          api("/api/products/low-stock", { headers: authHeaders(token) }),
-        ]);
+      const [overview, timeseries, pie, oldLowStock] = await Promise.all([
+        api("/api/dashboard/overview", {
+          headers: authHeaders(token),
+          params: {
+            startDate: startDateStr,
+            endDate: endDateStr,
+          },
+        }),
+        api(`/api/stats/customers-timeseries`, {
+          headers: authHeaders(token),
+          params: {
+            startDate: startDateStr,
+            endDate: endDateStr,
+          },
+        }),
+        api("/api/stats/sales-by-category", {
+          headers: authHeaders(token),
+          params: {
+            startDate: startDateStr,
+            endDate: endDateStr,
+          },
+        }),
+        api("/api/products/low-stock", { headers: authHeaders(token) }),
+      ]);
 
-      // Process the response data
       const derived = (timeseries || []).map((d) => ({
         ...d,
+        name: d.date || d.name,
         value: Number(d.customers || d.total || d.value || 0),
       }));
 
-      // Process pie chart data
       const pieTotal =
         (pie || []).reduce((s, p) => s + Number(p.value || 0), 0) || 1;
       const piePercent = (pie || []).map((p) => ({
@@ -334,32 +298,18 @@ export default function Dashboard() {
         percent: (Number(p.value || 0) / pieTotal) * 100,
       }));
 
-          // If overview is available use it for KPIs
       if (overview) {
-        console.log("Overview data received:", overview);
-
-        // Get values from overview, defaulting to 0 if undefined
         const revenue = Number(overview.totalSales || 0);
         const expenses = Number(overview.totalExpenses || 0);
-        const netProfit = revenue - expenses; // Calculate net profit if not provided
+        const netProfit = revenue - expenses;
         const grossMargin = revenue > 0 ? ((revenue - expenses) / revenue) * 100 : 0;
         const totalTransactions = Number(overview.totalTransactions || 0);
         const totalItemsSold = Number(overview.totalItemsSold || 0);
         const avgTxValue = Number(
           overview.averageTransactionValue || revenue / (totalTransactions || 1)
         );
+        const topProduct = overview.topProducts?.[0]?.product_name || "-";
 
-        console.log("Processed metrics:", {
-          revenue,
-          expenses,
-          netProfit,
-          grossMargin,
-          totalTransactions,
-          totalItemsSold,
-          avgTxValue,
-        });
-
-        // Update key metrics with all values
         setKeyMetrics({
           revenue,
           expenses,
@@ -370,62 +320,47 @@ export default function Dashboard() {
           averageTransactionValue: avgTxValue,
         });
 
-        // Format date range for display
-        const formatDateRange = () => {
-          const now = new Date();
-          let startDate, endDate = now;
-          
-          switch (range) {
-            case 'week':
-              startDate = new Date(now);
-              startDate.setDate(now.getDate() - now.getDay());
-              return `${startDate.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })} - ${endDate.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })}`;
-            case 'month':
-              startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-              return startDate.toLocaleDateString('en-PH', { month: 'long', year: 'numeric' });
-            case 'year':
-              return now.getFullYear().toString();
-            default:
-              return now.toLocaleDateString('en-PH');
-          }
-        };
-
-        const dateRangeText = formatDateRange();
+        const dateRangeText = 
+            rangeType === "Day" 
+                ? finalStart.format("MMM D, YYYY")
+                : `${finalStart.format("MMM D")} - ${finalEnd.format("MMM D, YYYY")}`;
         
-        // Update stats for the stats cards based on selected range
+        const salesLabel = rangeType === 'Day' ? "Daily Sales" : rangeType === 'Week' ? "7-Day Sales" : rangeType === 'Month' ? "Monthly Sales" : "Total Sales";
+        const transactionsLabel = rangeType === 'Day' ? "Daily Transactions" : rangeType === 'Week' ? "7-Day Transactions" : rangeType === 'Month' ? "Monthly Transactions" : "Total Transactions";
+
+
         setStats([
-          { 
-            label: range === 'week' ? "This Week's Sales" : range === 'month' ? "This Month's Sales" : "This Year's Sales", 
-            value: `₱${revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-            subtext: dateRangeText
+          {
+            label: salesLabel,
+            value: `₱${revenue.toLocaleString(undefined, {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}`,
+            subtext: dateRangeText,
           },
-          { 
-            label: range === 'week' ? "Weekly Transactions" : range === 'month' ? "Monthly Transactions" : "Yearly Transactions", 
+          {
+            label: transactionsLabel,
             value: totalTransactions,
-            subtext: `${dateRangeText}`
+            subtext: `${dateRangeText}`,
           },
-          { 
-            label: range === 'week' ? "Top Product" : range === 'month' ? "Top Product" : "Top Product", 
+          {
+            label: "Top Product",
             value: topProduct,
-            subtext: `Total: ${overview.topProducts?.[0]?.total_sold || 0} sold`
+            subtext: `Total: ${overview.topProducts?.[0]?.total_sold || 0} sold`,
           },
-          { 
-            label: range === 'week' ? "Items Sold" : range === 'month' ? "Items Sold" : "Items Sold", 
+          {
+            label: "Items Sold",
             value: totalItemsSold,
-            subtext: `${totalTransactions} transactions`
+            subtext: `${totalTransactions} transactions`,
           },
         ]);
       }
 
-      // Update chart data
       setChartData(derived);
       setPieData(piePercent);
 
-      // Update low stock products
-      const lowStock = (inventoryMovement || []).filter(
-        (p) => Number(p.quantity_in_stock || 0) <= 10
-      );
-      setLowStockProducts(lowStock.length ? lowStock : oldLowStock || []);
+      const lowStock = oldLowStock || [];
+      setLowStockProducts(lowStock);
     } catch (err) {
       console.error("Failed to fetch dashboard data", err);
     } finally {
@@ -434,6 +369,7 @@ export default function Dashboard() {
   };
 
   const fetchNotifications = async () => {
+    // ... (Notification fetching logic remains the same)
     try {
       const token = sessionStorage.getItem("auth_token");
       const resp = await api("/api/logs", { headers: authHeaders(token) });
@@ -449,7 +385,7 @@ export default function Dashboard() {
           id: log.log_id,
           title: log.action,
           message: `${log.username} (${log.role}) did an action: ${log.action}`,
-          time: new Date(log.date_time).toLocaleString(),
+          time: dayjs(log.date_time).format('MMM D, h:mm A'),
           isRead: readIds.has(log.log_id),
         }));
       setNotifications(mapped);
@@ -460,6 +396,7 @@ export default function Dashboard() {
   };
 
   const handleMarkAsRead = (id) => {
+    // ... (Notification handling logic remains the same)
     const readIds = JSON.parse(
       sessionStorage.getItem("read_notif_ids") || "[]"
     );
@@ -475,7 +412,24 @@ export default function Dashboard() {
     setUnreadCount((c) => Math.max(0, c - 1));
   };
 
+  const handleDeleteNotification = (id) => {
+    // ... (Notification handling logic remains the same)
+    const deletedIds = JSON.parse(
+      sessionStorage.getItem("deleted_notif_ids") || "[]"
+    );
+    sessionStorage.setItem(
+      "deleted_notif_ids",
+      JSON.stringify([...deletedIds, id])
+    );
+    setNotifications((notifs) => notifs.filter((n) => n.id !== id));
+    const notif = notifications.find((n) => n.id === id);
+    if (notif && !notif.isRead) {
+      setUnreadCount((c) => Math.max(0, c - 1));
+    }
+  };
+  
   const handleMarkAsUnread = (id) => {
+    // ... (Notification handling logic remains the same)
     const readIds = JSON.parse(
       sessionStorage.getItem("read_notif_ids") || "[]"
     );
@@ -486,27 +440,12 @@ export default function Dashboard() {
     );
     setUnreadCount((c) => c + 1);
   };
-
-  const handleDeleteNotification = (id) => {
-    const deletedIds = JSON.parse(
-      sessionStorage.getItem("deleted_notif_ids") || "[]"
-    );
-    sessionStorage.setItem(
-      "deleted_notif_ids",
-      JSON.stringify([...deletedIds, id])
-    );
-    setNotifications((notifs) => notifs.filter((n) => n.id !== id));
-    // Update unread count if deleted notification was unread
-    const notif = notifications.find((n) => n.id === id);
-    if (notif && !notif.isRead) {
-      setUnreadCount((c) => Math.max(0, c - 1));
-    }
-  };
-
+  
   // Export to CSV
   const exportToCSV = () => {
+    // ... (Export logic remains the same)
     const headers = ["Label", "Value", "Change"];
-    const rows = stats.map((s) => [s.label, s.value, s.change]);
+    const rows = stats.map((s) => [s.label, s.value, s.change || "-"]);
     // Add low stock products
     if (lowStockProducts.length > 0) {
       rows.push(["", "", ""]); // separator
@@ -526,12 +465,11 @@ export default function Dashboard() {
     link.click();
   };
 
-  // Fetch filtered data when range changes (affects stats cards and graphs)
-  // Note: todayHighlight is fetched separately and is NOT affected by the filter
+  // Fetch filtered data when dateRange changes
   useEffect(() => {
     fetchData();
     fetchNotifications();
-  }, [range]);
+  }, [dateRange]); 
 
   // Helper function to format currency values
   const formatCurrency = (value) => {
@@ -542,8 +480,23 @@ export default function Dashboard() {
       maximumFractionDigits: 2,
     }).format(value);
   };
+  
+  // New handler to receive selected dates from modal
+  const handleDateRangeApply = (newRange) => {
+    setDateRange(newRange);
+  };
 
-  // Header actions
+  const headerDateDisplay = useMemo(() => {
+    if (!dateRange.startDate || !dateRange.endDate) return "Select Range";
+    
+    const finalStart = dayjs.min(dateRange.startDate, dateRange.endDate);
+    const finalEnd = dayjs.max(dateRange.startDate, dateRange.endDate);
+    
+    return `${finalStart.format("MMM D")} - ${finalEnd.format("MMM D, YYYY")}`;
+  }, [dateRange]);
+
+
+  // Header actions - REMOVED SELECT DROPDOWN
   const headerActions = (
     <div className="flex items-center gap-2">
       <button
@@ -557,16 +510,18 @@ export default function Dashboard() {
         />
       </button>
 
-      <select
-        className="bg-white/80 backdrop-blur-sm hover:bg-white text-gray-700 px-1.5 sm:px-3 py-1.5 sm:py-2 rounded-lg border border-gray-200/80 text-xs sm:text-sm font-medium transition-all duration-200 outline-none cursor-pointer hover:shadow-md"
-        value={range}
-        onChange={(e) => setRange(e.target.value)}
+      {/* NEW CALENDAR BUTTON */}
+      <button
+        onClick={() => setShowFilterModal(true)}
         disabled={loading}
+        title="Select Date Range"
+        className="flex items-center gap-1 sm:gap-2 bg-white/80 backdrop-blur-sm hover:bg-white text-gray-700 px-1.5 sm:px-3 py-1.5 sm:py-2 rounded-lg border border-gray-200/80 text-xs sm:text-sm font-medium transition-all duration-200 outline-none cursor-pointer hover:shadow-md hover:scale-[1.02] shrink-0"
       >
-        <option value="week">Week</option>
-        <option value="month">Month</option>
-        <option value="year">Year</option>
-      </select>
+        <BiCalendarAlt className="w-4 h-4 sm:w-5 sm:h-5" />
+        <span className="hidden sm:inline">
+            {headerDateDisplay}
+        </span>
+      </button>
 
       {/* Adjusted Export Button container for better mobile spacing */}
       <div className="py-2 flex justify-end">
@@ -653,7 +608,6 @@ export default function Dashboard() {
       </div>
 
       {/* Key Metrics Cards - Optimized for all screens */}
-      {/* Use p-4 for general padding around the cards, and adjust grid-cols for better responsiveness */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 w-full px-4 sm:px-6 md:px-8 py-2">
         {/* Card 1: Total Revenue */}
         <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200">
@@ -664,11 +618,7 @@ export default function Dashboard() {
             {formatCurrency(keyMetrics.revenue)}
           </p>
           <p className="text-xs text-gray-500 mt-1">
-            {range === "week"
-              ? "This Week"
-              : range === "month"
-              ? "This Month"
-              : "This Year"}
+            For selected range
           </p>
         </div>
         {/* Card 2: Operating Expenses */}
@@ -680,11 +630,7 @@ export default function Dashboard() {
             {formatCurrency(keyMetrics.expenses)}
           </p>
           <p className="text-xs text-gray-500 mt-1">
-            {range === "week"
-              ? "This Week"
-              : range === "month"
-              ? "This Month"
-              : "This Year"}
+            For selected range
           </p>
         </div>
         {/* Card 3: Net Profit */}
@@ -703,11 +649,7 @@ export default function Dashboard() {
             )}
           </p>
           <p className="text-xs text-gray-500 mt-1">
-            {range === "week"
-              ? "This Week"
-              : range === "month"
-              ? "This Month"
-              : "This Year"}
+            For selected range
           </p>
         </div>
         {/* Card 4: Gross Margin */}
@@ -723,11 +665,7 @@ export default function Dashboard() {
             {keyMetrics.grossMargin.toFixed(1)}%
           </p>
           <p className="text-xs text-gray-500 mt-1">
-            {range === "week"
-              ? "This Week"
-              : range === "month"
-              ? "This Month"
-              : "This Year"}
+            For selected range
           </p>
         </div>
       </div>
@@ -747,7 +685,7 @@ export default function Dashboard() {
             </>
           ) : (
             <>
-              <VisitorsChart data={chartData} range={range} />
+              <VisitorsChart data={chartData} rangeType={dateRange.rangeType} />
               <SalesPieChart data={pieData} />
             </>
           )}
@@ -755,7 +693,6 @@ export default function Dashboard() {
 
         {/* Sidebar with Stats and Low Stock (4/12 width on large screens) */}
         <div className="lg:col-span-4 flex flex-col gap-6">
-          {/* Dashboard Today Stats Card (Visible on all screens using DashboardStatsCard's internal responsiveness, or just on large screens if desired) */}
           {loading ? (
             <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200 animate-pulse">
               <div className="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
@@ -766,10 +703,14 @@ export default function Dashboard() {
               <div className="h-8 bg-gray-300 rounded w-1/2"></div>
             </div>
           ) : (
-            <DashboardStatsCard stats={todayHighlight} />
+            <DashboardStatsCard 
+                stats={todayHighlight}
+                formatCurrency={formatCurrency}
+                rangeType="Today" // Explicitly label this card as "Today's" stats
+            />
           )}
 
-          {/* Low Stock Products - Desktop View (Hidden on lg screens in the mobile block, shown here) */}
+          {/* Low Stock Products - Desktop View */}
           {loading ? (
             <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200 animate-pulse hidden lg:block">
               <div className="h-6 bg-gray-200 rounded w-1/2 mb-6"></div>
@@ -800,30 +741,42 @@ export default function Dashboard() {
         onClose={() => setShowProfileModal(false)}
         userData={user}
       />
+      
+      {/* NEW DATE RANGE FILTER MODAL */}
+      <DateRangeFilterModal
+        isOpen={showFilterModal}
+        onClose={() => setShowFilterModal(false)}
+        onDateRangeApply={handleDateRangeApply}
+      />
     </PageLayout>
   );
 }
 
+// LowStockList is kept as a separate component for clean code, as in the original
 function LowStockList({ lowStockProducts }) {
-  if (lowStockProducts.length === 0) {
-    return <p className="text-sm text-gray-500">No products with low stock.</p>;
-  }
-
-  return (
-    <ul className="divide-y divide-gray-200">
-      {lowStockProducts.map((product) => (
-        <li
-          key={product.product_id}
-          className="py-3 flex justify-between items-center"
-        >
-          <span className="text-sm font-medium text-gray-800">
-            {product.product_name}
-          </span>
-          <span className="text-sm font-bold text-red-600">
-            {product.quantity_in_stock} left
-          </span>
+    if (lowStockProducts.length === 0) {
+      return <p className="text-sm text-gray-500">No products with low stock.</p>;
+    }
+  
+    return (
+      <ul className="divide-y divide-gray-200">
+        <li className="py-2 text-sm font-semibold text-gray-600 flex justify-between">
+            <span>Product</span>
+            <span>Quantity</span>
         </li>
-      ))}
-    </ul>
-  );
-}
+        {lowStockProducts.map((product) => (
+          <li
+            key={product.product_id}
+            className="py-3 flex justify-between items-center"
+          >
+            <span className="text-sm font-medium text-gray-800">
+              {product.product_name}
+            </span>
+            <span className="text-sm font-bold text-red-600">
+              {product.quantity_in_stock} left
+            </span>
+          </li>
+        ))}
+      </ul>
+    );
+  }
