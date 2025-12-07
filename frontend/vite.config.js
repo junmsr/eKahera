@@ -27,6 +27,18 @@ export default defineConfig(({ mode }) => {
       }),
       tailwindcss()
     ],
+    css: {
+      modules: {
+        scopeBehaviour: 'local',
+      },
+      preprocessorOptions: {
+        css: {
+          modules: {
+            localsConvention: 'camelCaseOnly',
+          },
+        },
+      },
+    },
     server: {
       proxy: proxySettings,
     },

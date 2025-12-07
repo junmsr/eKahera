@@ -1,46 +1,73 @@
-import { StrictMode, Suspense, lazy } from "react";
+import React, { StrictMode, Suspense, lazy } from "react";
 import { createRoot } from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import './index.css'; // Import global styles first
 
 // App (keep it non-lazy as it's the root)
 import App from "./App.jsx";
 
-// Lazy load all page components
-const Home = lazy(() => import("./pages/Home.jsx"));
-const Services = lazy(() => import("./pages/Services.jsx"));
-const GetStarted = lazy(() => import("./pages/GetStarted.jsx"));
-const Contact = lazy(() => import("./pages/Contact.jsx"));
-const Login = lazy(() => import("./pages/Login.jsx"));
-const Dashboard = lazy(() => import("./pages/Dashboard.jsx"));
-const POS = lazy(() => import("./pages/POS.jsx"));
-const CashierPOS = lazy(() => import("./pages/CashierPOS.jsx"));
-const Inventory = lazy(() => import("./pages/Inventory.jsx"));
-const MobileScanner = lazy(() => import("./pages/MobileScanner.jsx"));
-const SelectRole = lazy(() => import("./pages/SelectRole"));
-const Customer = lazy(() => import("./pages/Customer"));
-const CustomerEnter = lazy(() => import("./pages/CustomerEnter.jsx"));
-const EnterStore = lazy(() => import("./pages/EnterStore.jsx"));
-const Cashiers = lazy(() => import("./pages/Cashiers"));
-const Logs = lazy(() => import("./pages/Logs.jsx"));
-const Profile = lazy(() => import("./pages/Profile.jsx"));
-const SuperAdmin = lazy(() => import("./pages/SuperAdmin.jsx"));
-const SuperAdminView = lazy(() => import("./pages/SuperAdminView.jsx"));
-const InitialSetup = lazy(() => import("./pages/InitialSetup.jsx"));
-const StoreQR = lazy(() => import("./pages/StoreQR.jsx"));
-const Receipt = lazy(() => import("./pages/Receipt.jsx"));
-const Documents = lazy(() => import("./pages/Documents.jsx"));
-const DocumentResubmission = lazy(() => import("./pages/DocumentResubmission"));
-const DocumentResubmitPage = lazy(() => import("./pages/DocumentResubmitPage.jsx"));
-const PublicDocumentResubmit = lazy(() => import("./pages/PublicDocumentResubmit.jsx"));
-const NotFound = lazy(() => import("./pages/NotFound.jsx"));
-const CustomerWaitingPage = lazy(() => import("./pages/CustomerWaitingPage.jsx"));
+// Preload function for components with styles
+const lazyWithPreload = (importFn) => {
+  const Component = lazy(importFn);
+  // Add preload method to the lazy component
+  Component.preload = importFn;
+  return Component;
+};
 
-// Loading component for Suspense fallback
-const LoadingFallback = () => (
-  <div className="flex items-center justify-center min-h-screen">
-    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-  </div>
-);
+// Lazy load all page components with preload support
+const Home = lazyWithPreload(() => import("./pages/Home.jsx"));
+const Services = lazyWithPreload(() => import("./pages/Services.jsx"));
+const GetStarted = lazyWithPreload(() => import("./pages/GetStarted.jsx"));
+const Contact = lazyWithPreload(() => import("./pages/Contact.jsx"));
+const Login = lazyWithPreload(() => import("./pages/Login.jsx"));
+const Dashboard = lazyWithPreload(() => import("./pages/Dashboard.jsx"));
+const POS = lazyWithPreload(() => import("./pages/POS.jsx"));
+const CashierPOS = lazyWithPreload(() => import("./pages/CashierPOS.jsx"));
+const Inventory = lazyWithPreload(() => import("./pages/Inventory.jsx"));
+const MobileScanner = lazyWithPreload(() => import("./pages/MobileScanner.jsx"));
+const SelectRole = lazyWithPreload(() => import("./pages/SelectRole"));
+const Customer = lazyWithPreload(() => import("./pages/Customer"));
+const CustomerEnter = lazyWithPreload(() => import("./pages/CustomerEnter.jsx"));
+const EnterStore = lazyWithPreload(() => import("./pages/EnterStore.jsx"));
+const Cashiers = lazyWithPreload(() => import("./pages/Cashiers"));
+const Logs = lazyWithPreload(() => import("./pages/Logs.jsx"));
+const Profile = lazyWithPreload(() => import("./pages/Profile.jsx"));
+const SuperAdmin = lazyWithPreload(() => import("./pages/SuperAdmin.jsx"));
+const SuperAdminView = lazyWithPreload(() => import("./pages/SuperAdminView.jsx"));
+const InitialSetup = lazyWithPreload(() => import("./pages/InitialSetup.jsx"));
+const StoreQR = lazyWithPreload(() => import("./pages/StoreQR.jsx"));
+const Receipt = lazyWithPreload(() => import("./pages/Receipt.jsx"));
+const Documents = lazyWithPreload(() => import("./pages/Documents.jsx"));
+const DocumentResubmission = lazyWithPreload(() => import("./pages/DocumentResubmission"));
+const DocumentResubmitPage = lazyWithPreload(() => import("./pages/DocumentResubmitPage.jsx"));
+const PublicDocumentResubmit = lazyWithPreload(() => import("./pages/PublicDocumentResubmit.jsx"));
+const NotFound = lazyWithPreload(() => import("./pages/NotFound.jsx"));
+const CustomerWaitingPage = lazyWithPreload(() => import("./pages/CustomerWaitingPage.jsx"));
+
+// Enhanced Loading component for Suspense fallback
+const LoadingFallback = () => {
+  // Preload all components in the background
+  React.useEffect(() => {
+    const preloadComponents = async () => {
+      try {
+        await Promise.all([
+          Home.preload(),
+          Services.preload(),
+          // Add other critical components you want to preload
+        ]);
+      } catch (error) {
+        console.error('Failed to preload components:', error);
+      }
+    };
+    preloadComponents();
+  }, []);
+
+  return (
+    <div className="flex items-center justify-center min-h-screen">
+      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+    </div>
+  );
+};
 // Router Configuration with Suspense
 const router = createBrowserRouter(
   [
