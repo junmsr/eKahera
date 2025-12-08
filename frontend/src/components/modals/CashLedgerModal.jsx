@@ -142,21 +142,6 @@ function CashLedgerModal({ isOpen, onClose }) {
   const renderTransactions = () => {
     return (
       <div className="space-y-4">
-        {/* Back Button */}
-        <button
-          type="button"
-          onClick={() => {
-            setSelectedPaymentType(null);
-            setTab('SUMMARY');
-          }}
-          className="text-sm text-blue-600 hover:text-blue-800 font-semibold flex items-center gap-2 hover:gap-3 transition-all"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-          Back to Summary
-        </button>
-
         {/* Transactions Title */}
         <div className="bg-gradient-to-r from-indigo-50 to-blue-50 rounded-2xl p-4 border border-indigo-100/50">
           <h3 className="font-bold text-lg text-gray-900">{selectedPaymentType ? `${selectedPaymentType} Transactions` : 'All Transactions'}</h3>
