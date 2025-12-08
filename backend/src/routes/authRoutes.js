@@ -1,10 +1,13 @@
 const express = require('express');
 const router = express.Router();
-const { register, login, getProfile, checkSetupStatus, createInitialSuperAdmin, inviteSuperAdmin, checkUsername, checkEmail, checkExistingUser } = require('../controllers/authController');
+const { register, login, getProfile, checkSetupStatus, createInitialSuperAdmin, inviteSuperAdmin, checkUsername, checkEmail, checkExistingUser, requestPasswordReset, resetPassword, checkPasswordResetEmail } = require('../controllers/authController');
 const { authenticate, authorize } = require('../middleware/authMiddleware');
 
 router.post('/register', register);
 router.post('/login', login);
+router.post('/forgot-password/check', checkPasswordResetEmail);
+router.post('/forgot-password/request', requestPasswordReset);
+router.post('/forgot-password/reset', resetPassword);
 
 // Availability check routes (no authentication required for registration flow)
 router.get('/check-username/:username', checkUsername);

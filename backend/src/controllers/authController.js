@@ -5,11 +5,28 @@ const fs = require('fs');
 const path = require('path');
 const { logAction } = require('../utils/logger');
 const { hasRequiredDocuments } = require('./businessController');
-const { sendOTP } = require('./otpController');
+const { sendOTP, generateOTPForPurpose, validateOTPForPurpose } = require('./otpController');
 const { sendApplicationSubmittedNotification } = require('../utils/emailService');
 
 const config = {
   JWT_SECRET: process.env.JWT_SECRET
+};
+
+const validatePasswordStrength = (password) => {
+  if (!password || password.length < 12) {
+    return 'Password must be at least 12 characters long';
+  }
+
+  const hasUpperCase = /[A-Z]/.test(password);
+  const hasLowerCase = /[a-z]/.test(password);
+  const hasNumbers = /\d/.test(password);
+  const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+
+  if (!hasUpperCase || !hasLowerCase || !hasNumbers || !hasSpecialChar) {
+    return 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character';
+  }
+
+  return null;
 };
 
 exports.register = async (req, res) => {
@@ -297,6 +314,120 @@ exports.login = async (req, res) => {
     console.error('Login error:', err);
     console.error('Stack trace:', err.stack);
     res.status(500).json({ error: 'Login failed. Please try again.' });
+  }
+};
+
+// Check if email exists for password reset (explicit validation)
+exports.checkPasswordResetEmail = async (req, res) => {
+  const { email } = req.body || {};
+
+  if (!email) {
+    return res.status(400).json({ error: 'Email is required' });
+  }
+
+  try {
+    const normalizedEmail = email.trim().toLowerCase();
+    const userResult = await pool.query(
+      'SELECT user_id FROM users WHERE lower(email) = lower($1)',
+      [normalizedEmail]
+    );
+
+    if (userResult.rowCount === 0) {
+      return res.status(404).json({ error: 'Email not found' });
+    }
+
+    return res.json({ exists: true });
+  } catch (err) {
+    console.error('Password reset email check error:', err);
+    return res.status(500).json({ error: 'Failed to check email.' });
+  }
+};
+
+// Request password reset - requires prior existence check
+exports.requestPasswordReset = async (req, res) => {
+  const { email } = req.body || {};
+
+  if (!email) {
+    return res.status(400).json({ error: 'Email is required' });
+  }
+
+  const normalizedEmail = email.trim().toLowerCase();
+
+  try {
+    const userResult = await pool.query(
+      'SELECT user_id, business_id FROM users WHERE lower(email) = lower($1)',
+      [normalizedEmail]
+    );
+
+    if (userResult.rowCount === 0) {
+      return res.status(404).json({ error: 'Email not found' });
+    }
+
+    await generateOTPForPurpose(email, 'password_reset');
+    logAction({
+      userId: userResult.rows[0].user_id,
+      businessId: userResult.rows[0].business_id || null,
+      action: 'Password reset requested',
+    });
+
+    return res.json({
+      message: 'Reset code sent to the email.',
+    });
+  } catch (err) {
+    console.error('Password reset request error:', err);
+    return res.status(500).json({ error: 'Failed to process password reset request.' });
+  }
+};
+
+// Reset password using OTP
+exports.resetPassword = async (req, res) => {
+  const { email, otp, newPassword } = req.body || {};
+
+  if (!email || !otp || !newPassword) {
+    return res.status(400).json({ error: 'Email, OTP, and new password are required' });
+  }
+
+  const passwordError = validatePasswordStrength(newPassword);
+  if (passwordError) {
+    return res.status(400).json({ error: passwordError });
+  }
+
+  const normalizedEmail = email.trim().toLowerCase();
+
+  try {
+    const userResult = await pool.query(
+      'SELECT user_id, business_id FROM users WHERE lower(email) = lower($1)',
+      [normalizedEmail]
+    );
+
+    if (userResult.rowCount === 0) {
+      return res.status(400).json({ error: 'Invalid reset request. Please request a new code.' });
+    }
+
+    const otpResult = validateOTPForPurpose(email, otp, 'password_reset');
+    if (!otpResult.valid) {
+      return res.status(400).json({
+        error: otpResult.message || 'Invalid or expired OTP.',
+        attemptsLeft: otpResult.attemptsLeft,
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+    await pool.query(
+      'UPDATE users SET password_hash = $1, updated_at = NOW() WHERE user_id = $2',
+      [hashedPassword, userResult.rows[0].user_id]
+    );
+
+    logAction({
+      userId: userResult.rows[0].user_id,
+      businessId: userResult.rows[0].business_id || null,
+      action: 'Password reset successful',
+    });
+
+    return res.json({ message: 'Password has been reset successfully.' });
+  } catch (err) {
+    console.error('Password reset error:', err);
+    return res.status(500).json({ error: 'Failed to reset password. Please try again.' });
   }
 };
 

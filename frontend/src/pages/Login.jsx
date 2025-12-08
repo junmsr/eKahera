@@ -162,8 +162,11 @@ export default function Login() {
                 />
               </div>
 
-              <div className="flex items-center justify-end mt-1">
-                <div className="text-sm text-gray-500">
+              <div className="flex items-center justify-between mt-1 text-sm text-gray-500">
+                <Link to="/forgot-password" className="text-blue-600 hover:underline">
+                  Forgot password?
+                </Link>
+                <div>
                   Need an account?{" "}
                   <a
                     href="/get-started"

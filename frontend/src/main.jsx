@@ -20,6 +20,7 @@ const Services = lazyWithPreload(() => import("./pages/Services.jsx"));
 const GetStarted = lazyWithPreload(() => import("./pages/GetStarted.jsx"));
 const Contact = lazyWithPreload(() => import("./pages/Contact.jsx"));
 const Login = lazyWithPreload(() => import("./pages/Login.jsx"));
+const ForgotPassword = lazyWithPreload(() => import("./pages/ForgotPassword.jsx"));
 const Dashboard = lazyWithPreload(() => import("./pages/Dashboard.jsx"));
 const POS = lazyWithPreload(() => import("./pages/POS.jsx"));
 const CashierPOS = lazyWithPreload(() => import("./pages/CashierPOS.jsx"));
@@ -112,6 +113,14 @@ const router = createBrowserRouter(
           element: (
             <Suspense fallback={<LoadingFallback />}>
               <Login />
+            </Suspense>
+          ) 
+        },
+        { 
+          path: "forgot-password", 
+          element: (
+            <Suspense fallback={<LoadingFallback />}>
+              <ForgotPassword />
             </Suspense>
           ) 
         },

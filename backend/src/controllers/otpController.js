@@ -1,10 +1,18 @@
 const otpGenerator = require('otp-generator');
-const { sendOTPNotification } = require('../utils/emailService');
+const { sendOTPNotification, sendPasswordResetOTP } = require('../utils/emailService');
 const fs = require('fs');
 const path = require('path');
 
 // File-based storage for OTPs (persists across server restarts)
 const otpStorageFile = path.join(__dirname, '../../otp-storage.json');
+const DEFAULT_PURPOSE = 'general';
+const OTP_EXPIRATION_MS = 5 * 60 * 1000; // 5 minutes
+const OTP_ATTEMPT_LIMIT = 5;
+
+const normalizeEmail = (email = '') => email.trim().toLowerCase();
+const buildKey = (email, purpose = DEFAULT_PURPOSE) => `${purpose}:${normalizeEmail(email)}`;
+// Support legacy keys that did not include a purpose
+const buildLegacyKey = (email) => normalizeEmail(email);
 
 // Helper function to load OTP storage from file
 const loadOTPStorage = () => {
@@ -17,7 +25,7 @@ const loadOTPStorage = () => {
       for (const [key, value] of Object.entries(parsed)) {
         map.set(key, {
           ...value,
-          expirationTime: value.expirationTime // Keep as number
+          expirationTime: value.expirationTime, // Keep as number
         });
       }
       return map;
@@ -35,7 +43,7 @@ const saveOTPStorage = (storage) => {
     for (const [key, value] of storage.entries()) {
       data[key] = {
         ...value,
-        expirationTime: value.expirationTime // Save as number/timestamp
+        expirationTime: value.expirationTime, // Save as number/timestamp
       };
     }
     fs.writeFileSync(otpStorageFile, JSON.stringify(data, null, 2));
@@ -44,168 +52,180 @@ const saveOTPStorage = (storage) => {
   }
 };
 
-// Load initial storage
 const otpStorage = loadOTPStorage();
 
-// Generate and send OTP
+const getEmailSender = (purpose = DEFAULT_PURPOSE) =>
+  purpose === 'password_reset' ? sendPasswordResetOTP : sendOTPNotification;
+
+const persistOTP = (key, data) => {
+  otpStorage.set(key, data);
+  saveOTPStorage(otpStorage);
+};
+
+const deleteOTP = (key) => {
+  otpStorage.delete(key);
+  saveOTPStorage(otpStorage);
+};
+
+const createOTPEntry = (email, purpose = DEFAULT_PURPOSE) => {
+  const key = buildKey(email, purpose);
+  const otp = otpGenerator.generate(4, {
+    digits: true,
+    alphabets: true,
+    upperCase: true,
+    specialChars: false,
+  });
+  const expirationTime = Date.now() + OTP_EXPIRATION_MS;
+
+  // Remove any legacy entry for this email to avoid conflicts
+  otpStorage.delete(buildLegacyKey(email));
+
+  persistOTP(key, {
+    otp,
+    expirationTime,
+    attempts: 0,
+    purpose,
+  });
+
+  return { key, otp, expirationTime };
+};
+
+const findStoredOTP = (email, purpose = DEFAULT_PURPOSE) => {
+  const key = buildKey(email, purpose);
+  const legacyKey = buildLegacyKey(email);
+  return {
+    key,
+    legacyKey,
+    value: otpStorage.get(key) || otpStorage.get(legacyKey),
+  };
+};
+
+const verifyOTPCode = (email, otp, purpose = DEFAULT_PURPOSE) => {
+  const normalizedEmail = normalizeEmail(email);
+  const { key, legacyKey, value } = findStoredOTP(normalizedEmail, purpose);
+
+  if (!value) {
+    return { valid: false, message: 'OTP expired or not found. Please request a new one.' };
+  }
+
+  const isExpired = Date.now() > value.expirationTime;
+  if (isExpired) {
+    deleteOTP(key);
+    deleteOTP(legacyKey);
+    return { valid: false, message: 'OTP has expired. Please request a new one.' };
+  }
+
+  if (value.attempts >= OTP_ATTEMPT_LIMIT) {
+    deleteOTP(key);
+    deleteOTP(legacyKey);
+    return { valid: false, message: 'Too many failed attempts. Please request a new OTP.' };
+  }
+
+  if (value.otp.toUpperCase() !== otp.toUpperCase()) {
+    value.attempts += 1;
+    persistOTP(key, value);
+    return {
+      valid: false,
+      message: 'Invalid OTP. Please try again.',
+      attemptsLeft: OTP_ATTEMPT_LIMIT - value.attempts,
+    };
+  }
+
+  // Successful verification - clean up
+  deleteOTP(key);
+  deleteOTP(legacyKey);
+  return { valid: true };
+};
+
+const generateAndSendOTP = async (email, purpose = DEFAULT_PURPOSE) => {
+  const normalizedEmail = normalizeEmail(email);
+  const { key, otp, expirationTime } = createOTPEntry(normalizedEmail, purpose);
+
+  const emailSender = getEmailSender(purpose);
+  const emailSent = await emailSender(email, otp);
+
+  if (!emailSent) {
+    deleteOTP(key);
+    throw new Error('Failed to send OTP email');
+  }
+
+  return { otp, expirationTime };
+};
+
+// Generate and send OTP via API
 exports.sendOTP = async (req, res) => {
-  const { email } = req.body;
+  const { email, purpose = DEFAULT_PURPOSE } = req.body;
 
   if (!email) {
     return res.status(400).json({ error: 'Email is required' });
   }
 
-  const normalizedEmail = email.trim().toLowerCase();
-
   try {
-    // Generate 4-character alphanumeric OTP
-    console.log(`[sendOTP] Generating OTP for email: ${normalizedEmail}`);
-    const otp = otpGenerator.generate(4, {
-      digits: true,
-      alphabets: true,
-      upperCase: true,
-      specialChars: false
-    });
-    console.log(`[sendOTP] Generated OTP: ${otp}`);
-
-    // Store OTP with expiration (5 minutes)
-    const expirationTime = Date.now() + (5 * 60 * 1000); // 5 minutes
-    otpStorage.set(normalizedEmail, {
-      otp,
-      expirationTime,
-      attempts: 0
-    });
-    saveOTPStorage(otpStorage); // Persist to file
-    console.log(`[sendOTP] Stored OTP for ${normalizedEmail}: ${otpStorage.get(normalizedEmail).otp}, expires: ${new Date(expirationTime).toLocaleTimeString()}`);
-
-    // Send email using the new email service
-    const emailSent = await sendOTPNotification(email, otp);
-
-    if (!emailSent) {
-      throw new Error('Failed to send OTP email');
-    }
-
-    res.json({ 
+    await generateAndSendOTP(email, purpose || DEFAULT_PURPOSE);
+    res.json({
       message: 'OTP sent successfully',
-      email: email
+      email,
+      purpose: purpose || DEFAULT_PURPOSE,
     });
-
   } catch (error) {
     console.error('Error sending OTP:', error);
     res.status(500).json({ error: 'Failed to send OTP. Please try again.' });
   }
 };
 
-// Verify OTP
+// Verify OTP via API
 exports.verifyOTP = async (req, res) => {
-  const { email, otp } = req.body;
-  const normalizedEmail = email.trim().toLowerCase();
-  console.log(`[verifyOTP] Received verification request for email: ${normalizedEmail}, OTP: ${otp}`);
-
+  const { email, otp, purpose = DEFAULT_PURPOSE } = req.body;
   if (!email || !otp) {
     return res.status(400).json({ error: 'Email and OTP are required' });
   }
 
   try {
-    const storedOTPData = otpStorage.get(normalizedEmail);
-    console.log(`[verifyOTP] Stored OTP data for ${normalizedEmail}:`, storedOTPData ? storedOTPData.otp : 'Not found');
-
-    if (!storedOTPData) {
-      return res.status(400).json({ error: 'OTP expired or not found. Please request a new one.' });
-    }
-
-    // Check if OTP is expired
-    if (Date.now() > storedOTPData.expirationTime) {
-      console.log(`[verifyOTP] OTP for ${normalizedEmail} expired. Current time: ${new Date().toLocaleTimeString()}, Expiration time: ${new Date(storedOTPData.expirationTime).toLocaleTimeString()}`);
-      otpStorage.delete(normalizedEmail);
-      saveOTPStorage(otpStorage); // Persist changes
-      return res.status(400).json({ error: 'OTP has expired. Please request a new one.' });
-    }
-
-    // Check if too many attempts
-    if (storedOTPData.attempts >= 5) {
-      console.log(`[verifyOTP] Too many failed attempts for ${normalizedEmail}.`);
-      otpStorage.delete(normalizedEmail);
-      saveOTPStorage(otpStorage); // Persist changes
-      return res.status(400).json({ error: 'Too many failed attempts. Please request a new OTP.' });
-    }
-
-    // Verify OTP (case-insensitive comparison)
-    if (storedOTPData.otp.toUpperCase() === otp.toUpperCase()) {
-      console.log(`[verifyOTP] OTP for ${normalizedEmail} matched!`);
-      // OTP is correct - remove it from storage
-      otpStorage.delete(normalizedEmail);
-      saveOTPStorage(otpStorage); // Persist changes
-
-      res.json({
-        message: 'OTP verified successfully',
-        verified: true
-      });
-    } else {
-      console.log(`[verifyOTP] OTP for ${normalizedEmail} did NOT match. Stored: ${storedOTPData.otp}, Received: ${otp}`);
-      // Increment attempts
-      storedOTPData.attempts += 1;
-      otpStorage.set(normalizedEmail, storedOTPData);
-      saveOTPStorage(otpStorage); // Persist changes
-
-      res.status(400).json({
-        error: 'Invalid OTP. Please try again.',
-        attemptsLeft: 5 - storedOTPData.attempts
+    const result = verifyOTPCode(email, otp, purpose || DEFAULT_PURPOSE);
+    if (!result.valid) {
+      return res.status(400).json({
+        error: result.message,
+        attemptsLeft: result.attemptsLeft,
       });
     }
 
+    res.json({
+      message: 'OTP verified successfully',
+      verified: true,
+    });
   } catch (error) {
     console.error('Error verifying OTP:', error);
     res.status(500).json({ error: 'Failed to verify OTP. Please try again.' });
   }
 };
 
-// Resend OTP
+// Resend OTP via API
 exports.resendOTP = async (req, res) => {
-  const { email } = req.body;
+  const { email, purpose = DEFAULT_PURPOSE } = req.body;
 
   if (!email) {
     return res.status(400).json({ error: 'Email is required' });
   }
 
-  const normalizedEmail = email.trim().toLowerCase();
-
   try {
-    // Remove existing OTP if any
-    otpStorage.delete(normalizedEmail);
-    saveOTPStorage(otpStorage); // Persist deletion
+    // Remove any existing OTP before generating a new one
+    const { key, legacyKey } = findStoredOTP(email, purpose || DEFAULT_PURPOSE);
+    deleteOTP(key);
+    deleteOTP(legacyKey);
 
-    // Generate new 4-character alphanumeric OTP
-    const otp = otpGenerator.generate(4, {
-      digits: true,
-      alphabets: true,
-      upperCase: true,
-      specialChars: false
-    });
-
-    // Store new OTP with expiration (5 minutes)
-    const expirationTime = Date.now() + (5 * 60 * 1000);
-    otpStorage.set(normalizedEmail, {
-      otp,
-      expirationTime,
-      attempts: 0
-    });
-    saveOTPStorage(otpStorage); // Persist new OTP
-
-    // Send email using the new email service
-    const emailSent = await sendOTPNotification(email, otp);
-
-    if (!emailSent) {
-      throw new Error('Failed to send new OTP email');
-    }
+    await generateAndSendOTP(email, purpose || DEFAULT_PURPOSE);
 
     res.json({
       message: 'New OTP sent successfully',
-      email: email
+      email,
+      purpose: purpose || DEFAULT_PURPOSE,
     });
-
   } catch (error) {
     console.error('Error resending OTP:', error);
     res.status(500).json({ error: 'Failed to send new OTP. Please try again.' });
   }
 };
+
+// Helper exports for other controllers
+exports.generateOTPForPurpose = generateAndSendOTP;
+exports.validateOTPForPurpose = verifyOTPCode;

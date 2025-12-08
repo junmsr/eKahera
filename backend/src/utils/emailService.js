@@ -743,6 +743,61 @@ const sendOTPNotification = async (recipientEmail, otp) => {
   }
 };
 
+const sendPasswordResetOTP = async (recipientEmail, otp) => {
+  if (!resend) {
+    console.error('Email sending is disabled. Cannot send password reset OTP.');
+    return false;
+  }
+
+  const subject = 'eKahera - Password Reset Code';
+  const message = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <div style="background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%); padding: 20px; text-align: center;">
+        <h1 style="color: white; margin: 0;">Password Reset Request</h1>
+      </div>
+      <div style="padding: 30px; background: #f9f9f9;">
+        <h2 style="color: #111827; text-align: center; margin-top: 0;">Reset Your Password</h2>
+        <p style="color: #374151; text-align: center; font-size: 15px; line-height: 1.6;">
+          We received a request to reset your eKahera account password.<br />
+          Use the verification code below to proceed. This code expires in <strong>5 minutes</strong>.
+        </p>
+        <div style="text-align: center; margin: 30px 0;">
+          <div style="display: inline-block; background: white; padding: 18px 36px; border-radius: 12px; border: 2px solid #2563eb; box-shadow: 0 10px 25px rgba(37, 99, 235, 0.15);">
+            <span style="font-size: 32px; font-weight: 700; color: #2563eb; letter-spacing: 6px;">${otp}</span>
+          </div>
+        </div>
+        <p style="color: #6b7280; text-align: center; font-size: 14px;">
+          If you did not request a password reset, please ignore this email. Your current password will remain unchanged.
+        </p>
+      </div>
+      <div style="background: #111827; padding: 16px; text-align: center;">
+        <p style="color: #e5e7eb; margin: 0; font-size: 12px;">
+          © ${new Date().getFullYear()} eKahera. All rights reserved.
+        </p>
+      </div>
+    </div>`;
+
+  try {
+    await resend.emails.send({
+      from: 'eKahera <noreply@ekahera.online>',
+      to: recipientEmail,
+      subject,
+      html: message,
+    });
+
+    console.log(`Password reset OTP sent to ${recipientEmail}`);
+    return true;
+  } catch (error) {
+    console.error('Error sending password reset OTP:', error);
+    if (error.statusCode === 429) {
+      console.log('Rate limited while sending password reset OTP, retrying...');
+      await delay(1000);
+      return sendPasswordResetOTP(recipientEmail, otp);
+    }
+    return false;
+  }
+};
+
 // ... (rest of the code remains the same)
 
 module.exports = {
@@ -753,5 +808,6 @@ module.exports = {
   sendVerificationRejectionEmail,
   sendLowStockEmail,
   logEmailNotification,
-  sendOTPNotification
+  sendOTPNotification,
+  sendPasswordResetOTP
 };
