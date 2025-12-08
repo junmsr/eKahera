@@ -10,7 +10,11 @@ function CartTableCard({
   cart,
   handleRemove,
   handleEditQuantity,
+  subtotal,
   total,
+  appliedDiscount,
+  selectedIdx,
+  onSelectRow,
   className = "",
   ...props
 }) {
@@ -153,7 +157,10 @@ function CartTableCard({
                 cart.map((item, idx) => (
                   <tr
                     key={idx}
-                    className="hover:bg-blue-50/50 transition-colors duration-200 group"
+                    className={`hover:bg-blue-50/50 transition-colors duration-200 group ${
+                      selectedIdx === idx ? "ring-2 ring-blue-300 bg-blue-50/40" : ""
+                    }`}
+                    onClick={() => onSelectRow?.(idx)}
                   >
                     <td className="py-1.5 px-2">
                       <div className="flex flex-col">
@@ -239,22 +246,31 @@ function CartTableCard({
           </table>
         </div>
 
-        {/* Total Footer */}
-        <div className="mt-2 pt-2 border-t border-gray-200">
+        <div className="mt-2 pt-2 border-t border-gray-200 space-y-1">
+          <div className="flex justify-between items-center text-sm text-gray-700">
+            <span className="font-semibold">Subtotal</span>
+            <span className="font-bold">
+              ₱{Number(subtotal).toFixed(2)}
+            </span>
+          </div>
+          {appliedDiscount && (
+            <div className="flex justify-between items-center text-xs text-emerald-700">
+              <span className="font-semibold">
+                Discount ({appliedDiscount.label})
+              </span>
+              <span>
+                {appliedDiscount.type === "percentage"
+                  ? `-${appliedDiscount.value}%`
+                  : `-₱${Number(appliedDiscount.value).toFixed(2)}`}
+              </span>
+            </div>
+          )}
           <div className="flex justify-between items-center">
             <span className="text-sm sm:text-base font-semibold text-gray-700">
               Total:
             </span>
             <span className="text-lg sm:text-xl font-extrabold text-blue-600">
-              ₱
-              {cart
-                .reduce(
-                  (sum, item, idx) =>
-                    sum +
-                    item.price * (editingIdx === idx ? editQty : item.quantity),
-                  0
-                )
-                .toFixed(2)}
+              ₱{Number(total).toFixed(2)}
             </span>
           </div>
         </div>

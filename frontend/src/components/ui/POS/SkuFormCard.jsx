@@ -16,6 +16,7 @@ export default React.forwardRef(
       quantity,
       setQuantity,
       handleAddToCart,
+      quantityInputRef,
       className = "",
       ...props
     },
@@ -84,6 +85,7 @@ export default React.forwardRef(
                   −
                 </button>
                 <input
+                  ref={quantityInputRef}
                   type="number"
                   name="quantity"
                   value={quantity}

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { authenticate } = require('../middleware/authMiddleware');
 const { checkout, publicCheckout, enterStore, completeTransaction, getTransactionStatus, getSaleDetailsByTransactionNumber } = require('../controllers/salesController');
+const { getRecentCashierReceipts } = require('../controllers/salesController');
 
 router.post('/checkout', authenticate, checkout);
 router.post('/public/checkout', publicCheckout);
@@ -9,6 +10,7 @@ router.post('/public/checkout', publicCheckout);
 router.post('/public/enter-store', enterStore);
 // Cashier completes a pending transaction (scans customer's cart QR and records payment)
 router.post('/:id/complete', authenticate, completeTransaction);
+router.get('/cashier/recent', authenticate, getRecentCashierReceipts);
 // Public check transaction status (customer can poll this)
 router.get('/public/transaction/:id', getTransactionStatus);
 // Get full sale details for a receipt (authenticated)

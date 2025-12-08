@@ -759,3 +759,39 @@ exports.getProfile = async (req, res) => {
     res.status(500).json({ error: 'Failed to get profile information' });
   }
 };
+
+/**
+ * Allow an authenticated user to update their password.
+ */
+exports.updatePassword = async (req, res) => {
+  const userId = req.user?.userId;
+  const { currentPassword, newPassword } = req.body || {};
+
+  if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ error: 'Current and new passwords are required' });
+  }
+
+  const strengthError = validatePasswordStrength(newPassword);
+  if (strengthError) {
+    return res.status(400).json({ error: strengthError });
+  }
+
+  try {
+    const userRes = await pool.query('SELECT password_hash FROM users WHERE user_id = $1', [userId]);
+    if (!userRes.rowCount) return res.status(404).json({ error: 'User not found' });
+
+    const matches = await bcrypt.compare(currentPassword, userRes.rows[0].password_hash);
+    if (!matches) {
+      return res.status(400).json({ error: 'Current password is incorrect' });
+    }
+
+    const hashed = await bcrypt.hash(newPassword, 12);
+    await pool.query('UPDATE users SET password_hash = $1, updated_at = NOW() WHERE user_id = $2', [hashed, userId]);
+    logAction({ userId, action: 'PASSWORD_CHANGE', metadata: { userId } });
+    return res.json({ message: 'Password updated successfully' });
+  } catch (err) {
+    console.error('Failed to update password', err);
+    return res.status(500).json({ error: 'Failed to update password' });
+  }
+};

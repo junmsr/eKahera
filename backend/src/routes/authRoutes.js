@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { register, login, getProfile, checkSetupStatus, createInitialSuperAdmin, inviteSuperAdmin, checkUsername, checkEmail, checkExistingUser, requestPasswordReset, resetPassword, checkPasswordResetEmail } = require('../controllers/authController');
+const { register, login, getProfile, checkSetupStatus, createInitialSuperAdmin, inviteSuperAdmin, checkUsername, checkEmail, checkExistingUser, requestPasswordReset, resetPassword, checkPasswordResetEmail, updatePassword } = require('../controllers/authController');
 const { authenticate, authorize } = require('../middleware/authMiddleware');
 
 router.post('/register', register);
@@ -21,6 +21,7 @@ router.get('/test', (req, res) => {
 });
 
 router.get('/profile', authenticate, getProfile);
+router.put('/password', authenticate, updatePassword);
 
 // Setup routes (no authentication required for initial setup)
 router.get('/setup/status', checkSetupStatus);
