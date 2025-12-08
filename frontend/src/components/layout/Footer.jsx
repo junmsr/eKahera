@@ -105,7 +105,7 @@ function Footer({ className = "" }) {
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12 lg:gap-16 mb-16"
         >
           {/* Brand Column */}
-          <motion.div variants={itemVariants} className="lg:col-span-1">
+          <motion.div variants={itemVariants} className="lg:col-span-1 flex flex-col items-center md:items-start">
             <motion.div
               className="mb-8"
               whileHover={{ scale: 1.03 }}
@@ -113,7 +113,7 @@ function Footer({ className = "" }) {
             >
               <Logo size={45} className="text-2xl" />
             </motion.div>
-            <motion.p className="text-slate-600 text-sm leading-relaxed mb-8 max-w-xs font-medium">
+            <motion.p className="text-slate-600 text-sm leading-relaxed mb-8 max-w-xs font-medium text-center md:text-left">
               Smart POS platform for fast checkout, unified inventory, and
               real-time analytics.
             </motion.p>
@@ -221,7 +221,7 @@ function Footer({ className = "" }) {
           </motion.div>
 
           {/* Company Column */}
-          <motion.div variants={itemVariants}>
+          <motion.div variants={itemVariants} className="flex flex-col items-center md:items-start">
             <motion.h3 className="text-lg font-bold text-slate-800 mb-6 relative inline-block">
               Quick Links
               <motion.span
@@ -281,7 +281,7 @@ function Footer({ className = "" }) {
           </motion.div>
 
           {/* Support Column */}
-          <motion.div variants={itemVariants}>
+          <motion.div variants={itemVariants} className="flex flex-col items-center md:items-start">
             <motion.h3 className="text-lg font-bold text-slate-800 mb-6 relative inline-block">
               Support
               <motion.span
