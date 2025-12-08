@@ -150,7 +150,7 @@ const AboutUs = () => (
             <div className="relative flex flex-col gap-6">
               <div className="flex items-center gap-3">
                 <span className="h-3 w-3 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 animate-pulse" />
-                <span className="text-xs uppercase tracking-widest text-slate-600 font-bold">
+                <span className="text-xxs uppercase tracking-widest text-slate-10000 font-black">
                   Why eKahera
                 </span>
               </div>
@@ -202,13 +202,13 @@ const AboutUs = () => (
               </ul>
 
               {/* Optional CTA */}
-              <motion.div
+              {/*<motion.div
                 initial={{ opacity: 0, y: 10 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.4, delay: 0.9 }}
                 className="mt-4 pt-6 border-t border-slate-200"
-              ></motion.div>
+              ></motion.div>*/}
             </div>
           </div>
         </motion.div>
