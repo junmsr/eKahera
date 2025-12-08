@@ -1,0 +1,2 @@
+import{j as e}from"./utils-BvZ1fgZQ.js";import"./vendor-90Ex_IR2.js";import{I as r}from"./Input--0S5TeAm.js";function a({label:a,name:s,value:l,onChange:t,placeholder:m,type:n="text",error:o,required:c=!1,className:i="",...d}){return e.jsxs("div",{className:`mb-5 ${i}`,children:[e.jsxs("label",{className:"block mb-1 font-medium text-blue-800",children:[a,c&&e.jsx("span",{className:"text-red-500 ml-1",children:"*"})]}),e.jsx(r,{name:s,value:l,onChange:t,placeholder:m,type:n,error:o,...d})]})}export{a as F};
+//# sourceMappingURL=FormField-BoMr97kn.js.map
