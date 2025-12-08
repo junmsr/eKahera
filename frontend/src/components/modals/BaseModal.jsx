@@ -20,6 +20,7 @@ export default function BaseModal({
   className = "",
   contentClassName = "",
   headerIcon,
+  headerIconBgClassName = "bg-gradient-to-br from-blue-500 to-indigo-600",
   disabled = false,
 }) {
   if (!isOpen) return null;
@@ -54,7 +55,9 @@ export default function BaseModal({
           <div className="sticky top-0 px-6 py-5 bg-gradient-to-r from-white via-slate-50 to-white backdrop-blur-xl border-b border-slate-200/20 flex items-center justify-between z-50 flex-shrink-0">
             <div className="flex items-center gap-3 flex-1">
               {(icon || headerIcon) && (
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0">
+                <div
+                  className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0 ${headerIconBgClassName}`}
+                >
                   {icon || headerIcon}
                 </div>
               )}

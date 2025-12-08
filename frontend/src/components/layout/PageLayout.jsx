@@ -4,11 +4,12 @@ import Background from "./Background";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
 import Header from "./Header";
-import Button from "../common/Button";
+import LogoutModal from "../modals/LogoutModal";
+import { useNavigate } from "react-router-dom";
 
 /**
  * PageLayout Component
- * Provides consistent page structure with header, sidebar, navbar, footer, and main content
+ * Provides consistent page structure with header, sidebar, navbar, footer, and main content.
  */
 export default function PageLayout({
   children,
@@ -23,16 +24,30 @@ export default function PageLayout({
   isSidebarOpen,
   setSidebarOpen,
 }) {
+  const navigate = useNavigate();
   const [theme, setTheme] = useState("light");
-  const toggleTheme = () => setTheme(theme === "light" ? "dark" : "light");
   const touchStartXRef = useRef(null);
   const touchActiveRef = useRef(false);
   const { logout } = useAuth();
 
-  const handleLogoutClick = () => {
-    // Logout is handled by Nav-Admin component's modal
-    // This function is passed to Nav-Admin and called when user confirms logout
+  // --- Logout Modal State ---
+  const [isLogoutModalOpen, setLogoutModalOpen] = useState(false);
+
+  const openLogoutModal = () => {
+    setLogoutModalOpen(true);
+  };
+
+  const closeLogoutModal = () => {
+    setLogoutModalOpen(false);
+  };
+
+  const confirmLogout = () => {
+    sessionStorage.removeItem("auth_token");
+    sessionStorage.removeItem("user");
+    localStorage.removeItem("auth_token");
+    localStorage.removeItem("user");
     logout();
+    navigate("/");
   };
 
   return (
@@ -43,7 +58,6 @@ export default function PageLayout({
       floatingElements={false}
       className={theme}
     >
-
       {/* Navbar */}
       {showNavbar && <Navbar />}
       <div
@@ -81,7 +95,7 @@ export default function PageLayout({
         {/* Sidebar Desktop */}
         {sidebar && (
           <aside className="hidden md:block fixed top-0 left-0 h-full z-50">
-            {React.cloneElement(sidebar, { onLogoutClick: handleLogoutClick })}
+            {React.cloneElement(sidebar, { onLogoutClick: openLogoutModal })}
           </aside>
         )}
         {/* Sidebar Mobile Off-canvas */}
@@ -95,7 +109,7 @@ export default function PageLayout({
           >
             {React.cloneElement(sidebar, {
               isMobile: true,
-              onLogoutClick: handleLogoutClick,
+              onLogoutClick: openLogoutModal,
             })}
           </aside>
         )}
@@ -133,6 +147,13 @@ export default function PageLayout({
           {showFooter && <Footer className="z-50" />}
         </div>
       </div>
+
+      {/* Logout Modal - Rendered at the top level */}
+      <LogoutModal
+        isOpen={isLogoutModalOpen}
+        onClose={closeLogoutModal}
+        onConfirm={confirmLogout}
+      />
     </Background>
   );
 }
