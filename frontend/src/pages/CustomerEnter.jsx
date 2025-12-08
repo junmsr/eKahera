@@ -447,8 +447,7 @@ export default function CustomerEnter() {
                   </h3>
                   <p className="text-sm text-gray-600">
                     Make sure your device has camera permissions enabled. The QR
-                    code is typically displayed at the store entrance or on
-                    staff uniforms.
+                    code is typically displayed at the store entrance.
                   </p>
                 </div>
               </div>
