@@ -413,18 +413,14 @@ function Footer({ className = "" }) {
 
         {/* Enhanced Bottom Bar */}
         <motion.div
-          className="flex flex-col md:flex-row justify-between items-center gap-3 md:gap-6 text-sm"
+          className="flex flex-col justify-center items-center gap-3 text-sm"
           variants={itemVariants}
           initial="hidden"
           animate="visible"
         >
-          <motion.p className="text-slate-500 text-sm mb-4 md:mb-0">
+          <p className="text-slate-500 text-sm text-center">
             &copy; {new Date().getFullYear()} eKahera. All rights reserved.
-          </motion.p>
-          <span className="hidden md:block text-slate-300 text-lg">•</span>
-          <motion.p className="text-slate-600 text-sm mb-6">
-            Follow us on social media for the latest updates and news.
-          </motion.p>
+          </p>
         </motion.div>
       </motion.div>
       <TermsModal open={openTerms} onClose={() => setOpenTerms(false)} />
