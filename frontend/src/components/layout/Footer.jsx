@@ -188,7 +188,7 @@ function Footer({ className = "" }) {
               </motion.a>
 
               <motion.a
-                href="https://www.google.com/maps/search/?api=1&query=200+T.+De+Castro+Street,+Zone-8+Bulan,+Sorsogon"
+                href="https://www.google.com/maps/place/Bicol+University,+West+(Main+Campus)/@13.1473394,123.7249139,17z/data=!4m10!1m2!2m1!1sBicol+University!3m6!1s0x33a103e3fd7f2aff:0x2acc0a750f85d29b!8m2!3d13.1443405!4d123.7231321!15sChBCaWNvbCBVbml2ZXJzaXR5WhIiEGJpY29sIHVuaXZlcnNpdHmSARFwdWJsaWNfdW5pdmVyc2l0eZoBI0NoWkRTVWhOTUc5blMwVkpRMEZuU1VSbE5XWm1SV0ozRUFF4AEA-gEECAAQJw!16s%2Fg%2F11xkrw1fz?entry=ttu&g_ep=EgoyMDI1MTIwMi4wIKXMDSoASAFQAw%3D%3D"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-3 text-sm text-slate-700 hover:text-blue-600 transition-all duration-300 group"
@@ -212,9 +212,9 @@ function Footer({ className = "" }) {
                   </svg>
                 </motion.div>
                 <motion.span className="font-medium">
-                  200 T. De Castro Street, Zone-8
+                  Bicol University, West (Main Campus)
                   <br />
-                  Bulan, Sorsogon, Philippines
+                  Legazpi City, Albay, Philippines
                 </motion.span>
               </motion.a>
             </motion.div>
