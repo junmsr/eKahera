@@ -37,8 +37,25 @@ export async function api(path, options = {}, returnRawResponse = false) {
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  const finalUrl =
-    (API_BASE || "") + (path.startsWith("/api") ? path : `/api${path}`);
+  // Handle params - convert to query string
+  let finalPath = path.startsWith("/api") ? path : `/api${path}`;
+  if (options.params) {
+    const queryParams = new URLSearchParams();
+    Object.entries(options.params).forEach(([key, value]) => {
+      if (value !== null && value !== undefined && value !== '') {
+        queryParams.append(key, value);
+      }
+    });
+    const queryString = queryParams.toString();
+    if (queryString) {
+      finalPath += (finalPath.includes('?') ? '&' : '?') + queryString;
+    }
+    // Remove params from options to avoid passing it to fetch
+    const { params, ...restOptions } = options;
+    options = restOptions;
+  }
+
+  const finalUrl = (API_BASE || "") + finalPath;
   const res = await fetch(finalUrl, {
     ...options,
     credentials: "include",

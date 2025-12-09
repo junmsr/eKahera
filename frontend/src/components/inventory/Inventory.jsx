@@ -731,9 +731,7 @@ function Inventory({
   onSearchChange,
   onEdit,
   onDelete,
-  onAddProduct,
   onStockEntry,
-  onExport,
   categories = [],
   selectedCategory,
   onCategoryFilter,
@@ -752,68 +750,10 @@ function Inventory({
     (p) => Number(p.quantity || 0) < 10
   ).length;
 
-  const handleExport = () => {
-    const csv = convertToCSV(allProducts);
-    const timestamp = new Date().toISOString().split("T")[0];
-    const filename = `inventory_export_${timestamp}.csv`;
-    downloadCSV(csv, filename);
-  };
-
   return (
     <div
       className={`w-full max-w-full overflow-x-hidden py-4 sm:py-6 px-4 md:px-6 ${className}`}
     >
-      {/* Header with Actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 sm:gap-4 mb-4 sm:mb-6 w-full">
-        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full sm:w-auto">
-          <Button
-            onClick={handleExport}
-            size="lg"
-            variant="secondary"
-            className="flex items-center gap-2 w-full sm:w-auto shrink-0"
-          >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-              />
-            </svg>
-            <span className="hidden sm:inline">Export</span>
-            <span className="sm:hidden">Export</span>
-          </Button>
-          <Button
-            onClick={onAddProduct}
-            size="lg"
-            variant="primary"
-            microinteraction
-            className="flex items-center gap-2 shadow-lg hover:shadow-xl w-full sm:w-auto shrink-0"
-          >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 4v16m8-8H4"
-              />
-            </svg>
-            <span className="hidden sm:inline">Add Product</span>
-            <span className="sm:hidden">Add</span>
-          </Button>
-        </div>
-      </div>
-
       {/* Quick Stats Bar */}
       <Card className="mb-4 sm:mb-6 p-3 sm:p-4 md:p-6 bg-gradient-to-r from-blue-50/80 to-indigo-50/80 border-blue-100 w-full overflow-hidden">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 w-full">
