@@ -20,6 +20,7 @@
     "@tailwindcss/vite": "^4.1.10",
     "@yudiel/react-qr-scanner": "^2.3.1",
     "axios": "^1.13.2",
+    "dayjs": "^1.11.19",
     "flubber": "^0.4.2",
     "framer-motion": "^12.23.0",
     "html2canvas": "^1.4.1",
