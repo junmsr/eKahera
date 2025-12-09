@@ -3,7 +3,7 @@ import BaseModal from "./BaseModal";
 import Button from "../common/Button";
 import { api } from "../../lib/api";
 
-function RecentReceiptsModal({ isOpen, onClose }) {
+function AdminReceiptsModal({ isOpen, onClose }) {
   const [receipts, setReceipts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -15,12 +15,13 @@ function RecentReceiptsModal({ isOpen, onClose }) {
       setError("");
       try {
         const token = sessionStorage.getItem("auth_token");
-        const data = await api("/api/sales/cashier/recent", {
+        const data = await api("/api/sales/business/recent", {
           headers: { Authorization: `Bearer ${token}` },
         });
         setReceipts(Array.isArray(data) ? data : []);
       } catch (e) {
-        setError("Failed to load receipts");
+        console.error("Error fetching receipts:", e);
+        setError("Failed to load receipts. Please try again.");
       } finally {
         setLoading(false);
       }
@@ -41,8 +42,8 @@ function RecentReceiptsModal({ isOpen, onClose }) {
     <BaseModal
       isOpen={isOpen}
       onClose={onClose}
-      title="Recent Receipts"
-      subtitle="Latest transactions handled by you"
+      title="All Transactions"
+      subtitle="Latest transactions across all cashiers"
       size="lg"
       footer={
         <Button
@@ -55,7 +56,7 @@ function RecentReceiptsModal({ isOpen, onClose }) {
     >
       {loading && (
         <div className="text-sm text-gray-600 py-4 text-center">
-          Loading receipts...
+          Loading transactions...
         </div>
       )}
       {error && (
@@ -65,7 +66,7 @@ function RecentReceiptsModal({ isOpen, onClose }) {
       )}
       {!loading && !error && receipts.length === 0 && (
         <div className="text-sm text-gray-500 py-6 text-center">
-          No receipts found.
+          No transactions found.
         </div>
       )}
       <div className="space-y-2 max-h-[60vh] overflow-y-auto">
@@ -78,7 +79,7 @@ function RecentReceiptsModal({ isOpen, onClose }) {
             <div className="flex justify-between items-center">
               <div>
                 <p className="text-sm font-semibold text-gray-900">
-                  {r.transaction_number || "Txn"}
+                  {r.transaction_number || `TXN-${r.transaction_id || ''}`}
                 </p>
                 <p className="text-xs text-gray-600">
                   {new Date(r.updated_at || r.created_at).toLocaleString()}
@@ -108,4 +109,4 @@ function RecentReceiptsModal({ isOpen, onClose }) {
   );
 }
 
-export default RecentReceiptsModal;
+export default AdminReceiptsModal;

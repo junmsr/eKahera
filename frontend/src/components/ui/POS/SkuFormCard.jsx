@@ -1,7 +1,5 @@
 import React from "react";
 import Card from "../../common/Card";
-import FormField from "../../common/FormField";
-import Input from "../../common/Input";
 import Button from "../../common/Button";
 
 /**

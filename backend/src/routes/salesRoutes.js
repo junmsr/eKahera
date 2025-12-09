@@ -1,8 +1,16 @@
 const express = require('express');
 const router = express.Router();
 const { authenticate } = require('../middleware/authMiddleware');
-const { checkout, publicCheckout, enterStore, completeTransaction, getTransactionStatus, getSaleDetailsByTransactionNumber } = require('../controllers/salesController');
-const { getRecentCashierReceipts } = require('../controllers/salesController');
+const { 
+  checkout, 
+  publicCheckout, 
+  enterStore, 
+  completeTransaction, 
+  getTransactionStatus, 
+  getSaleDetailsByTransactionNumber,
+  getRecentCashierReceipts,
+  getRecentBusinessReceipts 
+} = require('../controllers/salesController');
 
 router.post('/checkout', authenticate, checkout);
 router.post('/public/checkout', publicCheckout);
@@ -17,5 +25,8 @@ router.get('/public/transaction/:id', getTransactionStatus);
 router.get('/details/:tn', authenticate, getSaleDetailsByTransactionNumber);
 // Get full sale details for a receipt (public)
 router.get('/public/details/:tn', getSaleDetailsByTransactionNumber);
+
+// Get recent transactions for the business (admin view)
+router.get('/business/recent', authenticate, getRecentBusinessReceipts);
 
 module.exports = router;

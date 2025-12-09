@@ -685,3 +685,116 @@ exports.getRecentCashierReceipts = async (req, res) => {
     return res.status(500).json({ error: 'Failed to fetch receipts' });
   }
 };
+
+/**
+ * Get recent transactions for the entire business (admin view)
+ */
+exports.getRecentBusinessReceipts = async (req, res) => {
+  const businessId = req.user?.businessId;
+  if (!businessId) return res.status(400).json({ error: 'Business ID is required' });
+
+  try {
+    const result = await pool.query(
+      `
+        SELECT
+        t.transaction_id,
+        t.transaction_number,
+        t.created_at,
+        t.updated_at,
+        t.status,
+        t.total_amount::numeric,
+        t.business_id,
+        t.cashier_user_id,
+        u.username as cashier_name,
+        -- Payment information
+        COALESCE((
+          SELECT payment_type 
+          FROM transaction_payment 
+          WHERE transaction_id = t.transaction_id 
+          ORDER BY 
+            CASE WHEN payment_type = 'cash' THEN 0 ELSE 1 END,  -- Prefer 'cash' payments
+            transaction_payment_id DESC 
+          LIMIT 1
+        ), 'cash') as payment_type,
+        COALESCE((
+          SELECT money_received 
+          FROM transaction_payment 
+          WHERE transaction_id = t.transaction_id 
+          ORDER BY 
+            CASE WHEN payment_type = 'cash' THEN 0 ELSE 1 END,  -- Prefer 'cash' payments
+            transaction_payment_id DESC 
+          LIMIT 1
+        ), t.total_amount)::numeric as amount_received,
+        COALESCE((
+          SELECT money_change 
+          FROM transaction_payment 
+          WHERE transaction_id = t.transaction_id 
+          ORDER BY 
+            CASE WHEN payment_type = 'cash' THEN 0 ELSE 1 END,  -- Prefer 'cash' payments
+            transaction_payment_id DESC 
+          LIMIT 1
+        ), 0)::numeric as change_given,
+        -- Rest of the query remains the same...
+        CASE WHEN EXISTS (
+          SELECT 1 
+          FROM transaction_payment 
+          WHERE transaction_id = t.transaction_id 
+          AND discount_id IS NOT NULL
+        ) THEN 'Discount Applied' ELSE 'No discount' END as discount_info,
+        0 as discount_percentage,
+        0 as discount_amount,
+        (SELECT COUNT(*) FROM transaction_items WHERE transaction_id = t.transaction_id) as item_count,
+        (SELECT p.product_name 
+        FROM transaction_items ti 
+        LEFT JOIN products p ON p.product_id = ti.product_id 
+        WHERE ti.transaction_id = t.transaction_id 
+        ORDER BY ti.transaction_item_id
+        LIMIT 1) as first_product_name
+      FROM transactions t
+      LEFT JOIN users u ON t.cashier_user_id = u.user_id
+      WHERE t.business_id = $1
+        AND t.status = 'completed'
+      ORDER BY t.updated_at DESC NULLS LAST, t.created_at DESC NULLS LAST
+      LIMIT 50
+      `,
+      [businessId]
+    );
+
+    // Format the response to match the frontend expectations
+    const formattedRows = (result.rows || []).map(row => {
+      const total = parseFloat(row.total_amount) || 0;
+      const amountReceived = parseFloat(row.amount_received) || total;
+      const change = parseFloat(row.change_given) || 0;
+      
+      return {
+        transaction_id: row.transaction_id,
+        transaction_number: row.transaction_number,
+        created_at: row.created_at,
+        updated_at: row.updated_at,
+        status: row.status,
+        total_amount: total,
+        payment: {
+          method: row.payment_type || 'cash',
+          amountTendered: amountReceived,
+          change: change,
+          amount_received: amountReceived,
+          money_change: change
+        },
+        cashier_name: row.cashier_name || 'Unknown',
+        discount_percentage: row.discount_percentage,
+        discount_amount: row.discount_amount,
+        items: [{
+          product_name: row.first_product_name || 'Item',
+          quantity: row.item_count || 1,
+          price: (total / (row.item_count || 1)).toFixed(2),
+          subtotal: total.toFixed(2)
+        }]
+      };
+    });
+    
+    return res.json(formattedRows);
+  } catch (err) {
+    console.error('Failed to fetch business receipts', err);
+    return res.status(500).json({ error: 'Failed to fetch business receipts' });
+  }
+};
