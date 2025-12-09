@@ -12,7 +12,8 @@ import CheckoutModal from "../components/modals/CheckoutModal";
 import CashPaymentModal from "../components/modals/CashPaymentModal";
 import ScanCustomerCartModal from "../components/modals/ScanCustomerCartModal";
 import ProfileModal from "../components/modals/ProfileModal";
-import { BiBell, BiUser } from "react-icons/bi";
+import RecentReceiptsModal from "../components/modals/RecentReceiptsModal";
+import { BiReceipt, BiUser } from "react-icons/bi";
 
 function CashierPOS() {
   const navigate = useNavigate();
@@ -35,18 +36,20 @@ function CashierPOS() {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [transactionNumber, setTransactionNumber] = useState("");
   const [transactionId, setTransactionId] = useState(null);
-  const [showNotifications, setShowNotifications] = useState(false);
+  const [showReceipts, setShowReceipts] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const notificationRef = useRef(null);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const touchStartXRef = useRef(null);
   const touchActiveRef = useRef(false);
+  const [selectedCartIdx, setSelectedCartIdx] = useState(0);
+  const skuInputRef = useRef(null);
+  const quantityInputRef = useRef(null);
 
   const token = sessionStorage.getItem("auth_token");
   const user = JSON.parse(sessionStorage.getItem("user") || "{}");
   const hasFinalizedRef = React.useRef(false);
 
-  // Add keyboard shortcuts for buttons: F4-F8
   useEffect(() => {
     const keyDownHandler = (e) => {
       if (e.repeat) return;
@@ -73,13 +76,92 @@ function CashierPOS() {
             setShowCheckout(true);
           }
           break;
+        case "Delete":
+          e.preventDefault();
+          setCart((prev) => {
+            if (prev.length === 0) return prev;
+            const next = [...prev];
+            next.splice(selectedCartIdx ?? 0, 1);
+            return next;
+          });
+          setSelectedCartIdx((idx) => Math.max(0, idx - 1));
+          break;
+        case "ArrowDown":
+          if (cart.length > 0) {
+            e.preventDefault();
+            setSelectedCartIdx((idx) =>
+              Math.min(cart.length - 1, (idx ?? 0) + 1)
+            );
+          }
+          break;
+        case "ArrowUp":
+          if (cart.length > 0) {
+            e.preventDefault();
+            setSelectedCartIdx((idx) => Math.max(0, (idx ?? 0) - 1));
+          }
+          break;
+        case "Enter":
+          if (e.ctrlKey || e.metaKey) {
+            e.preventDefault();
+            setShowCheckout(true);
+          }
+          break;
+        case "d":
+        case "D":
+          if (e.altKey) {
+            e.preventDefault();
+            setShowDiscount(true);
+          }
+          break;
+        case "l":
+        case "L":
+          if (e.altKey) {
+            e.preventDefault();
+            setShowCashLedger(true);
+          }
+          break;
+        case "p":
+        case "P":
+          if (e.altKey) {
+            e.preventDefault();
+            setShowPriceCheck(true);
+          }
+          break;
+        case "r":
+        case "R":
+          if (e.altKey) {
+            e.preventDefault();
+            setShowReceipts(true);
+          }
+          break;
+        case "q":
+        case "Q":
+          if (e.altKey) {
+            e.preventDefault();
+            setShowImportCart(true);
+          }
+          break;
+        case "s":
+        case "S":
+          if (e.ctrlKey && e.shiftKey) {
+            e.preventDefault();
+            skuInputRef.current?.focus();
+          }
+          break;
+        case "k":
+        case "K":
+          if (e.ctrlKey && e.shiftKey) {
+            e.preventDefault();
+            quantityInputRef.current?.focus();
+          }
+          break;
         default:
           break;
       }
     };
     window.addEventListener("keydown", keyDownHandler);
     return () => window.removeEventListener("keydown", keyDownHandler);
-  }, [cart.length]);
+  }, [cart.length, selectedCartIdx]);
 
   // Generate a client-side provisional transaction number when POS opens
   useEffect(() => {
@@ -250,17 +332,35 @@ function CashierPOS() {
   };
 
   const handleRemove = (idx) => setCart(cart.filter((_, i) => i !== idx));
+  const handleEditQuantity = (idx, qty) => {
+    setCart((prev) =>
+      prev.map((item, i) =>
+        i === idx ? { ...item, quantity: Math.max(1, qty) } : item
+      )
+    );
+  };
+
+  useEffect(() => {
+    if (cart.length === 0) {
+      setSelectedCartIdx(0);
+    } else {
+      setSelectedCartIdx((idx) => Math.min(idx ?? 0, cart.length - 1));
+    }
+  }, [cart.length]);
 
   const subtotal = cart.reduce(
     (sum, item) => sum + item.price * item.quantity,
     0
   );
-
-  // Placeholder for appliedDiscount state and discount calculation if needed
-  // const [appliedDiscount, setAppliedDiscount] = useState(null);
-  // const total = calculateTotalWithDiscount(subtotal, appliedDiscount);
-  // For now, total equals subtotal
-  const total = subtotal;
+  const total =
+    appliedDiscount?.type === "percentage"
+      ? Math.max(
+          0,
+          subtotal - subtotal * (Number(appliedDiscount.value || 0) / 100)
+        )
+      : appliedDiscount?.type === "amount"
+      ? Math.max(0, subtotal - Number(appliedDiscount.value || 0))
+      : subtotal;
 
   const completeTransactionCall = async (transId) => {
     if (!transId) return;
@@ -293,11 +393,11 @@ function CashierPOS() {
         })),
         payment_type: paymentType,
         money_received: moneyReceived,
-        ...(appliedDiscount &&
-        typeof appliedDiscount.value === "string" &&
-        appliedDiscount.value.endsWith("%")
-          ? { discount_percentage: parseFloat(appliedDiscount.value) }
-          : appliedDiscount
+        ...(appliedDiscount?.discount_id
+          ? { discount_id: appliedDiscount.discount_id }
+          : appliedDiscount?.type === "percentage"
+          ? { discount_percentage: Number(appliedDiscount.value) }
+          : appliedDiscount?.type === "amount"
           ? { discount_amount: Number(appliedDiscount.value) }
           : {}),
       };
@@ -367,11 +467,11 @@ function CashierPOS() {
   const headerActions = (
     <div className="flex items-center gap-2">
       <button
-        onClick={() => setShowNotifications(!showNotifications)}
+        onClick={() => setShowReceipts(true)}
         className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-        title="Notifications"
+        title="Recent Receipts (Alt+R)"
       >
-        <BiBell className="w-5 h-5 text-gray-600" />
+        <BiReceipt className="w-5 h-5 text-gray-600" />
       </button>
       <button
         onClick={() => setShowProfileModal(true)}
@@ -413,6 +513,9 @@ function CashierPOS() {
           <div className="flex items-center gap-3">
             <span className="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight">
               POS
+            </span>
+            <span className="text-xs sm:text-sm font-semibold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-1 rounded-lg">
+              Cashier ID: {user?.userId || user?.user_id || user?.id || "N/A"}
             </span>
           </div>
           <div className="flex-1 flex items-center justify-center px-2">
@@ -563,11 +666,13 @@ function CashierPOS() {
               {/* SkuFormCard */}
               <div className="flex-shrink-0">
                 <SkuFormCard
+                  ref={skuInputRef}
                   sku={sku}
                   setSku={setSku}
                   quantity={quantity}
                   setQuantity={setQuantity}
                   handleAddToCart={handleAddToCart}
+                  quantityInputRef={quantityInputRef}
                 />
                 {error && (
                   <div className="bg-red-50 border-l-4 border-red-500 rounded-lg p-3 flex items-start gap-2 mt-3">
@@ -606,13 +711,31 @@ function CashierPOS() {
                 <CartTableCard
                   cart={cart}
                   handleRemove={handleRemove}
+                  handleEditQuantity={handleEditQuantity}
                   total={total}
+                  subtotal={subtotal}
+                  appliedDiscount={appliedDiscount}
+                  selectedIdx={selectedCartIdx}
+                  onSelectRow={setSelectedCartIdx}
                   className="flex-1 h-full"
                 />
               </div>
 
               {/* Action Buttons */}
               <div className="grid grid-cols-12 gap-2 sm:gap-3 flex-shrink-0">
+                {appliedDiscount && (
+                  <div className="col-span-12 flex items-center justify-between bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-lg px-3 py-2">
+                    <span className="text-sm font-semibold">
+                      Discount applied: {appliedDiscount.label}
+                    </span>
+                    <button
+                      className="text-xs font-bold underline"
+                      onClick={() => setAppliedDiscount(null)}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                )}
                 {/* Grouped Buttons */}
                 <div className="col-span-8">
                   <div className="grid grid-cols-2 sm:grid-cols-2 gap-2 sm:gap-3">
@@ -689,7 +812,7 @@ function CashierPOS() {
                       iconPosition="left"
                     />
                     <Button
-                      label="IMPORT CART (F7)"
+                      label="SCAN CUSTOMER QR (F7)"
                       size="md"
                       className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
                       onClick={() => setShowImportCart(true)}
@@ -745,6 +868,19 @@ function CashierPOS() {
                 </div>
               </div>
             </div>
+          </div>
+          <div className="mt-3 bg-white/80 border border-gray-200 rounded-xl shadow-sm px-3 py-2 text-[11px] sm:text-xs text-gray-700 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sticky bottom-0">
+            <span className="font-semibold text-blue-700">Keyboard Shortcuts</span>
+            <span>Ctrl+Shift+S: Focus SKU</span>
+            <span>Ctrl+Shift+K: Focus Qty</span>
+            <span>Alt+D: Discount</span>
+            <span>Alt+P: Price Check</span>
+            <span>Alt+L: Cash Ledger</span>
+            <span>Alt+Q: Scan Customer QR</span>
+            <span>Alt+R: Recent Receipts</span>
+            <span>Ctrl+Enter: Checkout</span>
+            <span>Delete: Remove selected item</span>
+            <span>Arrow Up/Down: Move selection</span>
           </div>
         </main>
 
@@ -828,8 +964,7 @@ function CashierPOS() {
           isOpen={showDiscount}
           onClose={() => setShowDiscount(false)}
           onApplyDiscount={(discount) => {
-            // Apply the discount to your transaction/cart here
-            // Optionally handle discount state update
+            setAppliedDiscount(discount);
             setShowDiscount(false);
           }}
         />
@@ -1004,10 +1139,13 @@ function CashierPOS() {
             }
           }}
         />
+        <RecentReceiptsModal
+          isOpen={showReceipts}
+          onClose={() => setShowReceipts(false)}
+        />
         <ProfileModal
           isOpen={showProfileModal}
           onClose={() => setShowProfileModal(false)}
-          userData={user}
         />
       </div>
     </div>

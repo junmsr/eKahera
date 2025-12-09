@@ -1,7 +1,5 @@
 import React from "react";
 import Card from "../../common/Card";
-import FormField from "../../common/FormField";
-import Input from "../../common/Input";
 import Button from "../../common/Button";
 
 /**
@@ -16,6 +14,7 @@ export default React.forwardRef(
       quantity,
       setQuantity,
       handleAddToCart,
+      quantityInputRef,
       className = "",
       ...props
     },
@@ -84,6 +83,7 @@ export default React.forwardRef(
                   −
                 </button>
                 <input
+                  ref={quantityInputRef}
                   type="number"
                   name="quantity"
                   value={quantity}

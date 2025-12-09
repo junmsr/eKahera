@@ -1,7 +1,9 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { api, authHeaders } from "../lib/api";
 import dayjs from "dayjs"; 
-import minMax from "dayjs/plugin/minMax"; 
+import minMax from "dayjs/plugin/minMax";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf"; 
 
 import {
   LineChart,
@@ -186,6 +188,14 @@ export default function Dashboard() {
     totalItemsSold: 0,
     averageTransactionValue: 0,
   });
+  const [exportingPDF, setExportingPDF] = useState(false);
+  
+  // Refs for PDF export
+  const dashboardRef = useRef(null);
+  const visitorsChartRef = useRef(null);
+  const pieChartRef = useRef(null);
+  const keyMetricsRef = useRef(null);
+  const businessReportRef = useRef(null);
 
   // Fetch Today's data (independent of the main filter)
   useEffect(() => {
@@ -465,6 +475,400 @@ export default function Dashboard() {
     link.click();
   };
 
+  // Export to PDF
+  const exportToPDF = async () => {
+    try {
+      setExportingPDF(true);
+      
+      // Wait a bit to ensure all charts are fully rendered
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Scroll to top to ensure all elements are visible
+      window.scrollTo(0, 0);
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      const pdf = new jsPDF("p", "mm", "a4");
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 10;
+      const contentWidth = pageWidth - 2 * margin;
+      let yPosition = margin;
+
+      // Helper function to add a new page if needed
+      const checkNewPage = (requiredHeight) => {
+        if (yPosition + requiredHeight > pageHeight - margin) {
+          pdf.addPage();
+          yPosition = margin;
+          return true;
+        }
+        return false;
+      };
+
+      // Helper function to capture element as image
+      const captureElement = async (element, options = {}) => {
+        if (!element) {
+          console.warn("captureElement: element is null");
+          return null;
+        }
+        try {
+          console.log("Starting capture for element:", element.className);
+          
+          // Scroll element into view
+          element.scrollIntoView({ behavior: 'instant', block: 'center' });
+          await new Promise(resolve => setTimeout(resolve, 800));
+          
+          // Check if SVG elements exist
+          const svgs = element.querySelectorAll('svg');
+          console.log(`Found ${svgs.length} SVG elements in chart`);
+          
+          // Force re-render of SVG elements
+          svgs.forEach((svg, index) => {
+            svg.style.display = 'block';
+            svg.style.visibility = 'visible';
+            svg.style.opacity = '1';
+            const rechartsWrapper = svg.closest('.recharts-wrapper');
+            if (rechartsWrapper) {
+              rechartsWrapper.style.display = 'block';
+              rechartsWrapper.style.width = '100%';
+              rechartsWrapper.style.height = '100%';
+              rechartsWrapper.style.visibility = 'visible';
+            }
+            console.log(`SVG ${index} prepared for capture`);
+          });
+          
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          // Ensure element has dimensions
+          if (element.offsetWidth === 0 || element.offsetHeight === 0) {
+            console.warn("Element has zero dimensions:", element.offsetWidth, "x", element.offsetHeight);
+            return null;
+          }
+          
+          const canvas = await html2canvas(element, {
+            useCORS: true,
+            scale: 2,
+            backgroundColor: "#ffffff",
+            logging: false, // Disable verbose logging
+            allowTaint: true,
+            removeContainer: false,
+            foreignObjectRendering: true,
+            width: element.scrollWidth || element.offsetWidth,
+            height: element.scrollHeight || element.offsetHeight,
+            x: 0,
+            y: 0,
+            onclone: (clonedDoc, clonedElement) => {
+              console.log("onclone called, processing SVG elements");
+              
+              // Force SVG rendering in cloned document
+              const clonedSvgs = clonedElement.querySelectorAll('svg');
+              console.log(`Found ${clonedSvgs.length} SVG elements in cloned document`);
+              
+              clonedSvgs.forEach((svg, index) => {
+                svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+                svg.style.display = 'block';
+                svg.style.visibility = 'visible';
+                svg.style.opacity = '1';
+                
+                const rechartsWrapper = svg.closest('.recharts-wrapper');
+                if (rechartsWrapper) {
+                  rechartsWrapper.style.display = 'block';
+                  rechartsWrapper.style.visibility = 'visible';
+                  rechartsWrapper.style.width = '100%';
+                  rechartsWrapper.style.height = '100%';
+                }
+                
+                // Also check for recharts-surface
+                const surface = svg.querySelector('.recharts-surface');
+                if (surface) {
+                  surface.style.display = 'block';
+                  surface.style.visibility = 'visible';
+                }
+                
+                console.log(`SVG ${index} processed in clone`);
+              });
+              
+              // Add comprehensive styles to ensure charts are visible
+              const style = clonedDoc.createElement('style');
+              style.textContent = `
+                svg { 
+                  display: block !important; 
+                  visibility: visible !important; 
+                  opacity: 1 !important;
+                }
+                .recharts-wrapper { 
+                  display: block !important; 
+                  visibility: visible !important; 
+                  width: 100% !important;
+                  height: 100% !important;
+                }
+                .recharts-surface { 
+                  display: block !important; 
+                  visibility: visible !important; 
+                }
+                .recharts-legend-wrapper { 
+                  display: block !important; 
+                  visibility: visible !important;
+                }
+                .recharts-tooltip-wrapper { 
+                  display: none !important; 
+                }
+                .recharts-responsive-container {
+                  display: block !important;
+                  visibility: visible !important;
+                }
+              `;
+              clonedDoc.head.appendChild(style);
+            },
+            ...options,
+          });
+          
+          console.log("Canvas created:", canvas.width, "x", canvas.height);
+          
+          // Verify canvas has content by checking if it's not blank
+          const ctx = canvas.getContext('2d');
+          const imageData = ctx.getImageData(0, 0, Math.min(100, canvas.width), Math.min(100, canvas.height));
+          const hasContent = imageData.data.some((pixel, index) => {
+            // Check alpha channel (every 4th value) - if any pixel is not fully transparent, there's content
+            return index % 4 === 3 && pixel > 0;
+          });
+          
+          if (!hasContent) {
+            console.warn("Canvas appears to be blank/empty");
+          }
+          
+          const dataUrl = canvas.toDataURL("image/png");
+          console.log("Data URL length:", dataUrl.length, "Has content:", hasContent);
+          
+          return dataUrl;
+        } catch (error) {
+          console.error("Error capturing element:", error);
+          return null;
+        }
+      };
+
+      // Add Header
+      pdf.setFontSize(20);
+      pdf.setTextColor(37, 99, 235); // Blue color
+      pdf.text("Dashboard Report", margin, yPosition);
+      yPosition += 8;
+
+      // Add Date Range
+      pdf.setFontSize(12);
+      pdf.setTextColor(0, 0, 0);
+      const finalStart = dayjs.min(dateRange.startDate, dateRange.endDate);
+      const finalEnd = dayjs.max(dateRange.startDate, dateRange.endDate);
+      const dateRangeText = 
+        dateRange.rangeType === "Day" 
+          ? finalStart.format("MMM D, YYYY")
+          : `${finalStart.format("MMM D")} - ${finalEnd.format("MMM D, YYYY")}`;
+      pdf.text(`Date Range: ${dateRangeText}`, margin, yPosition);
+      pdf.text(`Generated: ${dayjs().format("MMM D, YYYY h:mm A")}`, margin, yPosition + 5);
+      yPosition += 12;
+
+      // Add Key Metrics Section
+      if (keyMetricsRef.current) {
+        checkNewPage(50);
+        pdf.setFontSize(16);
+        pdf.setTextColor(37, 99, 235);
+        pdf.text("Key Metrics", margin, yPosition);
+        yPosition += 8;
+
+        const metricsImg = await captureElement(keyMetricsRef.current);
+        if (metricsImg) {
+          // Get actual image dimensions
+          const img = new Image();
+          img.src = metricsImg;
+          await new Promise((resolve) => {
+            img.onload = resolve;
+          });
+          
+          const imgWidth = contentWidth;
+          const imgHeight = (img.height * imgWidth) / img.width;
+          console.log("Key Metrics image dimensions:", img.width, "x", img.height, "-> PDF:", imgWidth, "x", imgHeight);
+          
+          checkNewPage(imgHeight + 5);
+          try {
+            pdf.addImage(metricsImg, "PNG", margin, yPosition, imgWidth, imgHeight);
+            yPosition += imgHeight + 5;
+            console.log("Key Metrics added to PDF at y:", yPosition - imgHeight - 5);
+          } catch (error) {
+            console.error("Error adding Key Metrics to PDF:", error);
+          }
+        } else {
+          console.warn("Key Metrics image is null");
+        }
+      }
+
+      // Add Charts Section
+      pdf.setFontSize(16);
+      pdf.setTextColor(37, 99, 235);
+      checkNewPage(20);
+      pdf.text("Charts & Analytics", margin, yPosition);
+      yPosition += 8;
+
+      // Visitors Chart - capture the entire chart card
+      if (visitorsChartRef.current) {
+        // Find the ChartCard element (the actual card with background)
+        const chartCard = visitorsChartRef.current.querySelector('.bg-white\\/80, .bg-white') || 
+                         visitorsChartRef.current.querySelector('[class*="bg-white"]') ||
+                         visitorsChartRef.current.firstElementChild;
+        const elementToCapture = chartCard || visitorsChartRef.current;
+        
+        console.log("Capturing Visitors Chart:", {
+          hasRef: !!visitorsChartRef.current,
+          hasCard: !!chartCard,
+          element: elementToCapture
+        });
+        
+        const chartImg = await captureElement(elementToCapture);
+        if (chartImg) {
+          // Get actual image dimensions
+          const img = new Image();
+          img.src = chartImg;
+          await new Promise((resolve) => {
+            img.onload = resolve;
+          });
+          
+          const imgWidth = contentWidth;
+          const imgHeight = (img.height * imgWidth) / img.width;
+          console.log("Visitors Chart image dimensions:", img.width, "x", img.height, "-> PDF:", imgWidth, "x", imgHeight);
+          
+          if (imgHeight > 0 && imgWidth > 0) {
+            checkNewPage(imgHeight + 5);
+            try {
+              pdf.addImage(chartImg, "PNG", margin, yPosition, imgWidth, imgHeight);
+              console.log("Visitors Chart added to PDF - Position:", { x: margin, y: yPosition, w: imgWidth, h: imgHeight });
+              yPosition += imgHeight + 5;
+            } catch (error) {
+              console.error("Error adding Visitors Chart to PDF:", error);
+            }
+          } else {
+            console.warn("Visitors Chart image has invalid dimensions:", imgWidth, "x", imgHeight);
+          }
+        } else {
+          console.warn("Failed to capture Visitors Chart - no image data");
+        }
+      } else {
+        console.warn("Visitors Chart ref is null");
+      }
+
+      // Pie Chart - capture the entire chart card
+      if (pieChartRef.current) {
+        // Find the ChartCard element (the actual card with background)
+        const chartCard = pieChartRef.current.querySelector('.bg-white\\/80, .bg-white') || 
+                         pieChartRef.current.querySelector('[class*="bg-white"]') ||
+                         pieChartRef.current.firstElementChild;
+        const elementToCapture = chartCard || pieChartRef.current;
+        
+        console.log("Capturing Pie Chart:", {
+          hasRef: !!pieChartRef.current,
+          hasCard: !!chartCard,
+          element: elementToCapture
+        });
+        
+        const chartImg = await captureElement(elementToCapture);
+        if (chartImg) {
+          // Get actual image dimensions
+          const img = new Image();
+          img.src = chartImg;
+          await new Promise((resolve) => {
+            img.onload = resolve;
+          });
+          
+          const imgWidth = contentWidth;
+          const imgHeight = (img.height * imgWidth) / img.width;
+          console.log("Pie Chart image dimensions:", img.width, "x", img.height, "-> PDF:", imgWidth, "x", imgHeight);
+          
+          if (imgHeight > 0 && imgWidth > 0) {
+            checkNewPage(imgHeight + 5);
+            try {
+              pdf.addImage(chartImg, "PNG", margin, yPosition, imgWidth, imgHeight);
+              console.log("Pie Chart added to PDF - Position:", { x: margin, y: yPosition, w: imgWidth, h: imgHeight });
+              yPosition += imgHeight + 5;
+            } catch (error) {
+              console.error("Error adding Pie Chart to PDF:", error);
+            }
+          } else {
+            console.warn("Pie Chart image has invalid dimensions:", imgWidth, "x", imgHeight);
+          }
+        } else {
+          console.warn("Failed to capture Pie Chart - no image data");
+        }
+      } else {
+        console.warn("Pie Chart ref is null");
+      }
+
+      // Business Report Section
+      if (businessReportRef.current) {
+        checkNewPage(20);
+        pdf.setFontSize(16);
+        pdf.setTextColor(37, 99, 235);
+        pdf.text("Business Report", margin, yPosition);
+        yPosition += 8;
+
+        const reportImg = await captureElement(businessReportRef.current);
+        if (reportImg) {
+          // Get the actual canvas dimensions from the image
+          const img = new Image();
+          img.src = reportImg;
+          await new Promise((resolve) => {
+            img.onload = resolve;
+          });
+          
+          const imgWidth = contentWidth;
+          const imgHeight = (img.height * imgWidth) / img.width;
+          
+          // If the image is too tall, scale it down to fit on one page
+          const maxHeight = pageHeight - margin - yPosition - 10;
+          let finalImgHeight = imgHeight;
+          let finalImgWidth = imgWidth;
+          
+          if (imgHeight > maxHeight) {
+            finalImgHeight = maxHeight;
+            finalImgWidth = (imgWidth * maxHeight) / imgHeight;
+          }
+          
+          checkNewPage(finalImgHeight + 5);
+          pdf.addImage(reportImg, "PNG", margin, yPosition, finalImgWidth, finalImgHeight);
+          yPosition += finalImgHeight + 5;
+        }
+      }
+
+      // Add Summary Data as Text
+      checkNewPage(30);
+      pdf.setFontSize(16);
+      pdf.setTextColor(37, 99, 235);
+      pdf.text("Summary", margin, yPosition);
+      yPosition += 8;
+
+      pdf.setFontSize(10);
+      pdf.setTextColor(0, 0, 0);
+      const summaryData = [
+        `Total Revenue: ${formatCurrency(keyMetrics.revenue)}`,
+        `Operating Expenses: ${formatCurrency(keyMetrics.expenses)}`,
+        `Net Profit: ${formatCurrency(keyMetrics.netProfit)}`,
+        `Gross Margin: ${keyMetrics.grossMargin.toFixed(1)}%`,
+        `Total Transactions: ${keyMetrics.totalTransactions}`,
+        `Total Items Sold: ${keyMetrics.totalItemsSold}`,
+      ];
+
+      summaryData.forEach((line) => {
+        checkNewPage(6);
+        pdf.text(line, margin, yPosition);
+        yPosition += 6;
+      });
+
+      // Save PDF
+      const fileName = `dashboard-report-${finalStart.format("YYYY-MM-DD")}-to-${finalEnd.format("YYYY-MM-DD")}.pdf`;
+      pdf.save(fileName);
+    } catch (error) {
+      console.error("Error exporting PDF:", error);
+      alert("Failed to export PDF. Please try again.");
+    } finally {
+      setExportingPDF(false);
+    }
+  };
+
   // Fetch filtered data when dateRange changes
   useEffect(() => {
     fetchData();
@@ -523,8 +927,8 @@ export default function Dashboard() {
         </span>
       </button>
 
-      {/* Adjusted Export Button container for better mobile spacing */}
-      <div className="py-2 flex justify-end">
+      {/* Adjusted Export Buttons container for better mobile spacing */}
+      <div className="py-2 flex justify-end gap-2">
         <Button
           onClick={exportToCSV}
           size="sm"
@@ -544,8 +948,41 @@ export default function Dashboard() {
               d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
             />
           </svg>
-          <span className="hidden sm:inline">Export</span>
-          <span className="sm:hidden">Export</span>
+          <span className="hidden sm:inline">Export CSV</span>
+          <span className="sm:hidden">CSV</span>
+        </Button>
+        <Button
+          onClick={exportToPDF}
+          disabled={exportingPDF || loading}
+          size="sm"
+          variant="primary"
+          className="flex items-center gap-2 w-full sm:w-auto shrink-0"
+        >
+          {exportingPDF ? (
+            <>
+              <BiRefresh className="w-5 h-5 animate-spin" />
+              <span className="hidden sm:inline">Exporting...</span>
+              <span className="sm:hidden">...</span>
+            </>
+          ) : (
+            <>
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
+                />
+              </svg>
+              <span className="hidden sm:inline">Export PDF</span>
+              <span className="sm:hidden">PDF</span>
+            </>
+          )}
         </Button>
       </div>
 
@@ -608,7 +1045,7 @@ export default function Dashboard() {
       </div>
 
       {/* Key Metrics Cards - Optimized for all screens */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 w-full px-4 sm:px-6 md:px-8 py-2">
+      <div ref={keyMetricsRef} className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 w-full px-4 sm:px-6 md:px-8 py-2">
         {/* Card 1: Total Revenue */}
         <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200">
           <p className="text-xs font-medium text-gray-500 uppercase mb-1">
@@ -685,8 +1122,12 @@ export default function Dashboard() {
             </>
           ) : (
             <>
-              <VisitorsChart data={chartData} rangeType={dateRange.rangeType} />
-              <SalesPieChart data={pieData} />
+              <div ref={visitorsChartRef} className="chart-export-container">
+                <VisitorsChart data={chartData} rangeType={dateRange.rangeType} />
+              </div>
+              <div ref={pieChartRef} className="chart-export-container">
+                <SalesPieChart data={pieData} />
+              </div>
             </>
           )}
         </div>
@@ -732,7 +1173,7 @@ export default function Dashboard() {
       </div>
 
       {/* Business Report Component - Ensure it uses the full content width */}
-      <div className="w-full px-4 sm:px-6 md:px-8 pb-8">
+      <div ref={businessReportRef} className="w-full px-4 sm:px-6 md:px-8 pb-8">
         <DashboardBusinessReport dateRange={dateRange} />
       </div>
 

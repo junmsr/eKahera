@@ -31,6 +31,53 @@ function GetStartedLayout({
   const showFinish = step === steps.length - 1 && !success;
   const showSuccess = success;
 
+  // Check if current step is valid
+  const isStepValid = () => {
+    if (step === 0) {
+      // Account Info step
+      return (
+        form.email &&
+        form.firstName &&
+        form.fullName &&
+        form.username &&
+        form.mobile?.length === 11 &&
+        form.password &&
+        form.confirmPassword &&
+        form.password === form.confirmPassword &&
+        form.password.length >= 12 &&
+        /[A-Z]/.test(form.password) &&
+        /[a-z]/.test(form.password) &&
+        /\d/.test(form.password) &&
+        /[!@#$%^&*(),.?":{}|<>]/.test(form.password)
+      );
+    } else if (step === 2) {
+      // Business Details step
+      return (
+        form.businessName &&
+        (form.useAdminEmail || form.businessEmail) &&
+        form.businessType &&
+        (form.businessType !== 'Others' || form.customBusinessType) &&
+        form.region &&
+        form.province &&
+        form.city &&
+        form.barangay
+      );
+    } else if (step === 3) {
+      // Document Upload step
+      return (
+        form.documents?.length > 0 &&
+        form.acceptTerms &&
+        form.acceptPrivacy &&
+        ['Business Registration Certificate (DTI/SEC/CDA)', 
+         "Mayor's Permit / Business Permit", 
+         'BIR Certificate of Registration (Form 2303)']
+          .every(reqType => form.documentTypes?.includes(reqType)) &&
+        form.documentTypes?.every(type => type)
+      );
+    }
+    return true; // For other steps (like OTP), consider them valid by default
+  };
+
   return (
     <Background variant="gradientBlue" pattern="dots" overlay floatingElements>
       <div className="flex justify-center px-4 py-10">
@@ -50,6 +97,7 @@ function GetStartedLayout({
                   Create your account, verify your email, add business details
                   and upload documents. You're minutes away from a modern POS.
                 </p>
+               { /*
                 <ul className="text-left text-white/95 text-sm space-y-2">
                   <li className="flex items-center gap-2">
                     <span className="inline-block w-2 h-2 rounded-full bg-white"></span>{" "}
@@ -64,6 +112,7 @@ function GetStartedLayout({
                     Bank‑grade security
                   </li>
                 </ul>
+                */}
               </div>
             </aside>
 
@@ -126,7 +175,7 @@ function GetStartedLayout({
                   {showNext && (
                     <Button
                       onClick={onNext}
-                      disabled={loading}
+                      disabled={loading || !isStepValid()}
                       variant="primary"
                       className="w-48"
                     >

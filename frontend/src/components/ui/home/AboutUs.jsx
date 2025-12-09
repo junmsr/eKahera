@@ -60,9 +60,9 @@ const AboutUs = () => (
           transition={{ duration: 0.6, delay: 0.3 }}
           className="text-slate-700 text-lg md:text-xl font-normal mb-10 max-w-prose leading-relaxed"
         >
-          We build smart, reliable POS software designed to help small and
-          midsize businesses sell faster, operate smarter, and scale with
-          confidence.
+          We build smart, cloud-based POS software designed to help micro, small, 
+          and midsize businesses sell faster, operate smarter, and scale with 
+          confidence through real-time management.
         </motion.p>
 
         <div className="grid grid-cols-1 gap-6 w-full">
@@ -91,9 +91,9 @@ const AboutUs = () => (
                 Our Mission
               </h3>
               <p className="text-slate-600 text-base md:text-lg leading-relaxed">
-                Empower entrepreneurs through simple, fast, and intelligent POS
-                tools that improve checkout, enhance insights, and support
-                business growth.
+                To deliver a simple, web-based platform that empowers Albay businesses 
+                with real-time store management and innovative self-scanning checkout 
+                to drive quick growth and customer delight.
               </p>
             </div>
           </motion.div>
@@ -124,8 +124,8 @@ const AboutUs = () => (
                 Our Vision
               </h3>
               <p className="text-slate-600 text-base md:text-lg leading-relaxed">
-                A future where every store—from micro-kiosks to national
-                chains—runs on simple, secure, and delightful POS technology.
+                To be the digital backbone for every MSME in Albay, setting the 
+                standard for modern, efficient, and self-service retail.
               </p>
             </div>
           </motion.div>

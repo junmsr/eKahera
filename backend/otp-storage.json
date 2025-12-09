@@ -13,5 +13,11 @@
     "otp": "URsk",
     "expirationTime": 1764772148145,
     "attempts": 0
+  },
+  "password_reset:darylmendina@gmail.com": {
+    "otp": "eBds",
+    "expirationTime": 1765184934001,
+    "attempts": 0,
+    "purpose": "password_reset"
   }
 }
