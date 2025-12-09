@@ -9,7 +9,7 @@ const faqs = [
   },
   {
     q: "Can I use this for multiple stores or branches?",
-    a: "Yes! You can manage multiple stores and users from a single account.",
+    a: "For store owners, we only allow one store per account at the moment. For customers, you can shop at any store using the mobile scanner feature.",
   },
   {
     q: "What are the documents needed to get started?",
@@ -17,7 +17,7 @@ const faqs = [
   },
   {
     q: "How do I get support?",
-    a: "You can reach us via the Help Center, email, or chat. We are here to help you succeed.",
+    a: "You can reach us via the email business@ekahera.online, or chat. We are here to help you succeed.",
   },
 ];
 

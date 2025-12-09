@@ -1,68 +1,119 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import BaseModal from "./BaseModal";
 import Button from "../common/Button";
+import { api } from "../../lib/api";
 
 function DiscountModal({ isOpen, onClose, onApplyDiscount }) {
-  // Main modal tab (FIX or PERCENTAGE)
-  const [tab, setTab] = useState("FIX");
-  // Settings modal state
   const [showSettings, setShowSettings] = useState(false);
-  const [settingsTab, setSettingsTab] = useState("PERCENTAGE");
+  const [discounts, setDiscounts] = useState([]);
 
-  // Discounts state
-  const [percentageDiscounts, setPercentageDiscounts] = useState([
-    { label: "PWD/Senior Citizen", value: "5%" },
-  ]);
-  const [fixedDiscounts, setFixedDiscounts] = useState([]);
-
-  // Temp input states for adding new discounts
   const [newDesc, setNewDesc] = useState("");
   const [newValue, setNewValue] = useState("");
-
-  // Selected discount index
   const [selectedIdx, setSelectedIdx] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [settingsTab, setSettingsTab] = useState("PERCENTAGE");
 
-  // Add discount handler
-  const handleAddDiscount = () => {
+  useEffect(() => {
+    if (!isOpen) return;
+    const fetchDiscounts = async () => {
+      setLoading(true);
+      setError("");
+      try {
+        const token = sessionStorage.getItem("auth_token");
+        const data = await api("/api/discounts", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const discountList = (data || []).map(d => ({
+          label: d.discount_name || `${d.discount_percentage}% off`,
+          value: d.discount_percentage,
+          discount_id: d.discount_id,
+          type: "percentage"
+        }));
+        
+        setDiscounts(discountList);
+      } catch (e) {
+        setError("Failed to load discounts");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchDiscounts();
+  }, [isOpen]);
+
+  const handleAddDiscount = async () => {
     if (!newDesc || !newValue) return;
-    if (settingsTab === "PERCENTAGE") {
-      setPercentageDiscounts([
-        ...percentageDiscounts,
-        { label: newDesc, value: newValue + "%" },
+    setSaving(true);
+    try {
+      const token = sessionStorage.getItem("auth_token");
+      const payload = { 
+        discount_name: newDesc, 
+        discount_percentage: Number(newValue) 
+      };
+      
+      const created = await api("/api/discounts", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+      
+      setDiscounts(prev => [
+        ...prev,
+        {
+          label: created.discount_name || newDesc,
+          value: created.discount_percentage,
+          discount_id: created.discount_id,
+          type: "percentage"
+        }
       ]);
-    } else {
-      setFixedDiscounts([
-        ...fixedDiscounts,
-        { label: newDesc, value: parseFloat(newValue).toFixed(2) },
-      ]);
+      
+      setNewDesc("");
+      setNewValue("");
+    } catch (e) {
+      console.error("Failed to add discount:", e);
+      setError("Failed to add discount. Please try again.");
+    } finally {
+      setSaving(false);
     }
-    setNewDesc("");
-    setNewValue("");
   };
 
-  // Remove discount handler
-  const handleRemove = (idx) => {
-    if (settingsTab === "PERCENTAGE") {
-      setPercentageDiscounts(percentageDiscounts.filter((_, i) => i !== idx));
-    } else {
-      setFixedDiscounts(fixedDiscounts.filter((_, i) => i !== idx));
+  const handleRemove = async (discountId) => {
+    if (!discountId) return;
+    
+    try {
+      const token = sessionStorage.getItem("auth_token");
+      await api(`/api/discounts/${discountId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      
+      setDiscounts(prev => prev.filter(d => d.discount_id !== discountId));
+      setSelectedIdx(null); // Reset selected index if the deleted discount was selected
+    } catch (e) {
+      console.error("Failed to remove discount:", e);
+      setError("Failed to remove discount. Please try again.");
     }
   };
 
-  // Save settings and return to main modal
   const handleSaveSettings = () => {
     setShowSettings(false);
   };
 
-  // Confirm handler
-  const handleConfirm = () => {
-    const discounts =
-      tab === "PERCENTAGE" ? percentageDiscounts : fixedDiscounts;
-    if (selectedIdx !== null && discounts[selectedIdx]) {
-      onApplyDiscount(discounts[selectedIdx]);
-      setSelectedIdx(null);
-      onClose();
-    }
+  const handleApplyDiscount = () => {
+    if (selectedIdx == null) return;
+    const discount = discounts[selectedIdx];
+    if (!discount) return;
+    onApplyDiscount({
+      type: discount.type,
+      value: discount.value,
+      label: discount.label,
+      discount_id: discount.discount_id,
+    });
+    onClose();
   };
 
   // Settings Footer
@@ -79,9 +130,9 @@ function DiscountModal({ isOpen, onClose, onApplyDiscount }) {
   const mainFooterContent = (
     <div className="w-full space-y-2">
       <Button
-        label="Confirm Selection"
+        label="Apply Discount"
         variant="primary"
-        onClick={handleConfirm}
+        onClick={handleApplyDiscount}
         disabled={selectedIdx === null}
         className="w-full"
       />
@@ -96,70 +147,26 @@ function DiscountModal({ isOpen, onClose, onApplyDiscount }) {
 
   // Main Discount Modal
   const renderMain = () => {
-    const discounts =
-      tab === "PERCENTAGE" ? percentageDiscounts : fixedDiscounts;
     return (
       <div className="space-y-4">
-        {/* Tabs */}
-        <div className="flex gap-2">
-          <button
-            className={`flex-1 px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
-              tab === "FIX"
-                ? "bg-blue-600 text-white"
-                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-            }`}
-            onClick={() => {
-              setTab("FIX");
-              setSelectedIdx(null);
-            }}
-          >
-            Fixed Amount
-          </button>
-          <button
-            className={`flex-1 px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
-              tab === "PERCENTAGE"
-                ? "bg-blue-600 text-white"
-                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-            }`}
-            onClick={() => {
-              setTab("PERCENTAGE");
-              setSelectedIdx(null);
-            }}
-          >
-            Percentage
-          </button>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-medium">Select Discount</h3>
         </div>
-
-        {/* Discount List */}
-        <div className="space-y-2">
-          {discounts.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              <p>No discounts available yet.</p>
-              <p className="text-xs mt-1">Set up discounts in settings.</p>
-            </div>
-          ) : (
-            discounts.map((d, idx) => (
-              <button
-                key={idx}
-                type="button"
-                className={`w-full border-2 rounded-lg px-4 py-3 text-sm transition-all flex items-center justify-between ${
-                  selectedIdx === idx
-                    ? "border-blue-600 bg-blue-50 ring-2 ring-blue-300"
-                    : "border-gray-200 bg-white hover:border-gray-300"
-                }`}
-                onClick={() => setSelectedIdx(idx)}
-              >
-                <span className="font-medium">{d.label}</span>
-                <span
-                  className={`font-bold ${
-                    selectedIdx === idx ? "text-blue-600" : "text-gray-700"
-                  }`}
-                >
-                  {d.value}
-                </span>
-              </button>
-            ))
-          )}
+        <div className="grid grid-cols-3 gap-2 mb-4 max-h-64 overflow-y-auto">
+          {discounts.map((d, idx) => (
+            <button
+              key={`${d.type}-${idx}`}
+              className={`p-3 border rounded text-center ${
+                selectedIdx === idx
+                  ? "border-blue-500 bg-blue-50"
+                  : "border-gray-200 hover:bg-gray-50"
+              }`}
+              onClick={() => setSelectedIdx(idx)}
+            >
+              <div className="font-medium">{d.label}</div>
+              <div className="text-sm text-gray-500">{d.value}%</div>
+            </button>
+          ))}
         </div>
       </div>
     );
@@ -168,36 +175,20 @@ function DiscountModal({ isOpen, onClose, onApplyDiscount }) {
   // Settings Modal Content
   const renderSettings = () => (
     <div className="space-y-4">
-      {/* Settings Tabs */}
       <div className="flex gap-2">
         <button
           className={`flex-1 px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
-            settingsTab === "PERCENTAGE"
-              ? "bg-blue-600 text-white"
-              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+            settingsTab === "PERCENTAGE" ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700"
           }`}
           onClick={() => setSettingsTab("PERCENTAGE")}
         >
           Percentage
         </button>
-        <button
-          className={`flex-1 px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
-            settingsTab === "FIXED"
-              ? "bg-blue-600 text-white"
-              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-          }`}
-          onClick={() => setSettingsTab("FIXED")}
-        >
-          Fixed Amount
-        </button>
       </div>
 
       {/* Discount List */}
       <div className="space-y-2 max-h-60 overflow-y-auto">
-        {(settingsTab === "PERCENTAGE"
-          ? percentageDiscounts
-          : fixedDiscounts
-        ).map((d, idx) => (
+        {discounts.map((d, idx) => (
           <div
             key={idx}
             className="flex gap-2 items-center bg-gray-50 p-3 rounded-lg"
@@ -252,6 +243,7 @@ function DiscountModal({ isOpen, onClose, onApplyDiscount }) {
           <input
             className="w-24 border border-gray-300 rounded-lg px-3 py-2 text-sm text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder={settingsTab === "PERCENTAGE" ? "0%" : "0.00"}
+            inputMode={settingsTab === "PERCENTAGE" ? "numeric" : "decimal"}
             value={newValue}
             onChange={(e) => setNewValue(e.target.value)}
             type="number"
@@ -262,8 +254,9 @@ function DiscountModal({ isOpen, onClose, onApplyDiscount }) {
             onClick={handleAddDiscount}
             title="Add"
             type="button"
+            disabled={saving}
           >
-            +
+            {saving ? "..." : "+"}
           </button>
         </div>
       </div>
@@ -299,6 +292,11 @@ function DiscountModal({ isOpen, onClose, onApplyDiscount }) {
       size="md"
       contentClassName="space-y-4"
     >
+      {error && (
+        <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+          {error}
+        </div>
+      )}
       {showSettings ? renderSettings() : renderMain()}
     </BaseModal>
   );

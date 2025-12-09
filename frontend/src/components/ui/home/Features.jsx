@@ -17,8 +17,8 @@ const features = [
         <path d="M3 11h18" />
       </svg>
     ),
-    title: "Mobile-Friendly Self-Checkout",
-    desc: "Customers can browse products, scan barcodes, add items to cart, and complete purchases via their smartphones.",
+    title: "Mobile-Friendly Self-Scan",
+    desc: "Optionally, customers can browse products, scan barcodes, add items to cart, and complete purchases via their smartphones.",
   },
   {
     icon: (
@@ -88,7 +88,7 @@ const features = [
       </svg>
     ),
     title: "Inventory Management",
-    desc: "Keeps stock levels updated automatically, tracks product quantities, and prevents overselling with real-time synchronization.",
+    desc: "It keeps stock levels updated automatically, tracks product quantities, and prevents overselling with real-time synchronization, contingent on an active internet connection.",
   },
   {
     icon: (

@@ -15,8 +15,8 @@ import CheckoutModal from "../components/modals/CheckoutModal";
 import CashPaymentModal from "../components/modals/CashPaymentModal";
 import ScanCustomerCartModal from "../components/modals/ScanCustomerCartModal";
 import ProfileModal from "../components/modals/ProfileModal";
-import NotificationDropdown from "../components/common/NotificationDropdown";
-import { BiBell, BiSync, BiUser } from "react-icons/bi";
+import { BiReceipt, BiSync, BiUser } from "react-icons/bi";
+import AdminReceiptsModal from "../components/modals/AdminReceiptsModal";
 import { MdClose } from "react-icons/md";
 
 function POS() {
@@ -39,9 +39,8 @@ function POS() {
   const [error, setError] = useState("");
   const [transactionNumber, setTransactionNumber] = useState("");
   const [transactionId, setTransactionId] = useState(null);
-  const [showNotifications, setShowNotifications] = useState(false);
+  const [showReceipts, setShowReceipts] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
-  const notificationRef = useRef(null);
   const skuInputRef = useRef(null);
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const token = sessionStorage.getItem("auth_token");
@@ -285,11 +284,15 @@ function POS() {
     0
   );
 
-  // Placeholder for appliedDiscount state and discount calculation if needed
-  // const [appliedDiscount, setAppliedDiscount] = useState(null);
-  // const total = calculateTotalWithDiscount(subtotal, appliedDiscount);
-  // For now, total equals subtotal
-  const total = subtotal;
+  // Discount state and calculation
+  const [appliedDiscount, setAppliedDiscount] = useState(null);
+  
+  // Calculate total with discount
+  const total = appliedDiscount?.type === "percentage"
+    ? Math.max(0, subtotal - subtotal * (Number(appliedDiscount.value || 0) / 100))
+    : appliedDiscount?.type === "amount"
+    ? Math.max(0, subtotal - Number(appliedDiscount.value || 0))
+    : subtotal;
 
   const handleCheckout = async (paymentMethod, amountReceived = null) => {
     if (cart.length === 0) return;
@@ -306,6 +309,9 @@ function POS() {
         money_received: amountReceived,
         transaction_id: transactionId, // Include the transaction ID if it exists
         transaction_number: transactionNumber,
+        discount_id: appliedDiscount?.discount_id || null,
+        discount_percentage: appliedDiscount?.type === 'percentage' ? appliedDiscount.value : null,
+        discount_amount: appliedDiscount?.type === 'amount' ? appliedDiscount.value : null,
       };
 
       const resp = await api("/api/sales/checkout", {
@@ -335,125 +341,14 @@ function POS() {
         .slice(0, 14);
       const randPart = Math.floor(1000 + Math.random() * 9000);
       setTransactionNumber(`T-${businessId}-${timePart}-${randPart}`);
-      // setAppliedDiscount(null); // if using discount
+      setAppliedDiscount(null); // Reset discount after successful checkout
     } catch (err) {
       console.error("Checkout error:", err);
       setError("Checkout failed");
     }
   };
 
-  const [notifications, setNotifications] = useState([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-
-  const getReadNotifIds = () => {
-    try {
-      return JSON.parse(sessionStorage.getItem("read_notif_ids") || "[]");
-    } catch (e) {
-      return [];
-    }
-  };
-
-  const fetchNotifications = async () => {
-    try {
-      const resp = await api("/api/logs", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const readIds = new Set(getReadNotifIds());
-      const deletedIds = new Set(
-        JSON.parse(sessionStorage.getItem("deleted_notif_ids") || "[]")
-      );
-      const mapped = (resp || [])
-        .filter((log) => !deletedIds.has(log.log_id))
-        .map((log) => ({
-          id: log.log_id,
-          title: log.action,
-          message: `${log.username} (${log.role}) did an action: ${log.action}`,
-          time: new Date(log.date_time).toLocaleString(),
-          isRead: readIds.has(log.log_id),
-        }));
-      setNotifications(mapped);
-      setUnreadCount(mapped.filter((n) => !n.isRead).length);
-    } catch (e) {
-      console.error("Failed to fetch notifications", e);
-    }
-  };
-
-  const handleMarkAsRead = (id) => {
-    const readIds = getReadNotifIds();
-    if (!readIds.includes(id)) {
-      sessionStorage.setItem(
-        "read_notif_ids",
-        JSON.stringify([...readIds, id])
-      );
-    }
-    setNotifications((notifs) =>
-      notifs.map((n) => (n.id === id ? { ...n, isRead: true } : n))
-    );
-    setUnreadCount((c) => Math.max(0, c - 1));
-  };
-
-  const handleMarkAsUnread = (id) => {
-    const readIds = getReadNotifIds();
-    const filtered = readIds.filter((rid) => rid !== id);
-    sessionStorage.setItem("read_notif_ids", JSON.stringify(filtered));
-    setNotifications((notifs) =>
-      notifs.map((n) => (n.id === id ? { ...n, isRead: false } : n))
-    );
-    setUnreadCount((c) => c + 1);
-  };
-
-  const handleDeleteNotification = (id) => {
-    const deletedIds = JSON.parse(
-      sessionStorage.getItem("deleted_notif_ids") || "[]"
-    );
-    sessionStorage.setItem(
-      "deleted_notif_ids",
-      JSON.stringify([...deletedIds, id])
-    );
-    setNotifications((notifs) => notifs.filter((n) => n.id !== id));
-    // Update unread count if deleted notification was unread
-    const notif = notifications.find((n) => n.id === id);
-    if (notif && !notif.isRead) {
-      setUnreadCount((c) => Math.max(0, c - 1));
-    }
-  };
-
-  useEffect(() => {
-    fetchNotifications();
-  }, []);
-
-  // Fetch business name
-  useEffect(() => {
-    const fetchBusinessName = async () => {
-      try {
-        const resp = await api("/api/business/profile", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (resp?.business?.business_name) {
-          setBusinessName(resp.business.business_name);
-        }
-      } catch (e) {
-        console.error("Failed to fetch business name", e);
-      }
-    };
-    if (token) {
-      fetchBusinessName();
-    }
-  }, [token]);
-
-  // Close dropdown when clicking outside notifications
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (
-        notificationRef.current &&
-        !notificationRef.current.contains(event.target)
-      ) {
-        setShowNotifications(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  const [showRecentReceiptsModal, setShowRecentReceiptsModal] = useState(false);
 
   const handleCopyTn = async () => {
     try {
@@ -464,6 +359,30 @@ function POS() {
 
   const headerActions = (
     <div className="flex items-center gap-1 sm:gap-4 mr-3">
+      {/* Transaction Number display */}
+      <div className="space-y-2">
+        {appliedDiscount && (
+          <div className="flex items-center justify-between text-sm text-green-600">
+            <span>Discount Applied:</span>
+            <span className="font-medium">
+              {appliedDiscount.type === 'percentage' 
+                ? `${appliedDiscount.value}%` 
+                : `₱${Number(appliedDiscount.value).toFixed(2)}`}
+            </span>
+          </div>
+        )}
+        <div className="flex items-center justify-between text-lg font-semibold">
+          <span>Total:</span>
+          <div className="flex items-center gap-2">
+            {appliedDiscount && (
+              <span className="text-sm text-gray-500 line-through">
+                ₱{subtotal.toFixed(2)}
+              </span>
+            )}
+            <span>₱{total.toFixed(2)}</span>
+          </div>
+        </div>
+      </div>
       {/* Transaction Number display */}
       <div className="flex-1 flex items-center justify-center">
         <button
@@ -489,19 +408,19 @@ function POS() {
           </span>
         </button>
       </div>
-      {/* Notification Button with Dropdown */}
-      <div className="relative" ref={notificationRef}>
-        <NotificationDropdown
-          notifications={notifications}
-          unreadCount={unreadCount}
-          onMarkAsRead={handleMarkAsRead}
-          onMarkAsUnread={handleMarkAsUnread}
-          onDelete={handleDeleteNotification}
-          isOpen={showNotifications}
-          onToggle={() => setShowNotifications(!showNotifications)}
-          containerRef={notificationRef}
-        />
-      </div>
+      {/* View All Receipts Button */}
+      <button
+        onClick={() => setShowReceipts(true)}
+        className="flex items-center gap-2 bg-white/80 backdrop-blur-sm p-1.5 sm:px-3 sm:py-2 rounded-lg border border-gray-200/80 hover:bg-gray-50 transition-colors"
+        title="View all receipts"
+      >
+        <div className="relative">
+          <BiReceipt className="w-5 h-5 text-blue-600" />
+        </div>
+        <span className="text-sm font-medium text-gray-700 hidden sm:inline">
+          Receipts
+        </span>
+      </button>
 
       {/* Cashier Profile Button */}
       <button
@@ -520,7 +439,7 @@ function POS() {
 
   return (
     <PageLayout
-      title={businessName ? `${businessName} - POS` : "POS"}
+      title="POS"
       sidebar={<NavAdmin />}
       headerActions={headerActions}
       isSidebarOpen={isSidebarOpen}
@@ -642,15 +561,12 @@ function POS() {
                       iconPosition="left"
                     />
                     <Button
-                      label="DISCOUNT (F5)"
-                      size="md"
-                      className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
+                      label={appliedDiscount ? "Edit Discount (F5)" : "Add Discount (F5)"}
+                      variant={appliedDiscount ? "primary" : "secondary"}
                       onClick={() => setShowDiscount(true)}
-                      variant="secondary"
-                      microinteraction
                       icon={
                         <svg
-                          className="w-4 h-4"
+                          className="w-5 h-5"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -663,7 +579,7 @@ function POS() {
                           />
                         </svg>
                       }
-                      iconPosition="left"
+                      className={`flex-1 ${appliedDiscount ? 'bg-green-600 hover:bg-green-700' : ''}`}
                     />
                     <Button
                       label="PRICE CHECK (F6)"
@@ -690,7 +606,7 @@ function POS() {
                       iconPosition="left"
                     />
                     <Button
-                      label="IMPORT CART (F7)"
+                      label="SCAN CUSTOMER QR (F7)"
                       size="md"
                       className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
                       onClick={() => setShowImportCart(true)}
@@ -754,9 +670,7 @@ function POS() {
         isOpen={showDiscount}
         onClose={() => setShowDiscount(false)}
         onApplyDiscount={(discount) => {
-          // Apply the discount to your transaction/cart here
-          // Optionally handle discount state update
-          setShowDiscount(false);
+          setAppliedDiscount(discount);
         }}
       />
       <PriceCheckModal
@@ -768,6 +682,10 @@ function POS() {
       <CashLedgerModal
         isOpen={showCashLedger}
         onClose={() => setShowCashLedger(false)}
+      />
+      <AdminReceiptsModal
+        isOpen={showReceipts}
+        onClose={() => setShowReceipts(false)}
       />
       <CheckoutModal
         isOpen={showCheckout}

@@ -1,7 +1,9 @@
 import React from "react";
 import Card from "../../common/Card";
 
-function DashboardStatsCard({ stats, className = "", ...props }) {
+function DashboardStatsCard({ stats, className = "", formatCurrency, rangeType, ...props }) {
+  // formatCurrency and rangeType are not used in this component but may be passed from parent
+  // We destructure them to prevent them from being passed to DOM elements
   return (
     <Card
       className={`bg-white backdrop-blur-sm border border-gray-100 shadow-sm rounded-2xl ${className}`}
