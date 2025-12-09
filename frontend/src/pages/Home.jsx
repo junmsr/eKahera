@@ -4,7 +4,7 @@ import PageLayout from "../components/layout/PageLayout";
 import HomeHero from "../components/ui/home/HomeHero";
 import Features from "../components/ui/home/Features";
 import AboutUs from "../components/ui/home/AboutUs";
-import FAQ from "../components/ui/home/FAQ";
+import FAQs from "../components/ui/home/FAQs";
 import SectionWrapper from "../components/ui/home/SectionWrapper";
 // Removed vector image dividers
 import SvgDivider from "../components/ui/home/SvgDivider";
@@ -64,15 +64,15 @@ function Home() {
           <AboutUs />
         </SectionWrapper>
 
-        {/* Divider between About and FAQ */}
+        {/* Divider between About and FAQs */}
         <SvgDivider className="my-8" />
 
         <SectionWrapper
-          id="faq"
+          id="faqs"
           title="Frequently asked questions"
           className="mb-8"
         >
-          <FAQ />
+          <FAQs />
         </SectionWrapper>
       </main>
       {/* Footer is provided by PageLayout when showFooter is true */}

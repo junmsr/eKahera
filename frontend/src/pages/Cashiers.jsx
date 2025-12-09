@@ -3,6 +3,7 @@ import PageLayout from "../components/layout/PageLayout";
 import NavAdmin from "../components/layout/Nav-Admin";
 import Button from "../components/common/Button";
 import CashierFormModal from "../components/modals/CashierFormModal";
+import Modal from "../components/modals/Modal";
 import { api, authHeaders } from "../lib/api";
 
 // (Assuming initialCashiers is defined elsewhere or is intended to be empty)
@@ -26,6 +27,8 @@ export default function Cashiers() {
     status: "ACTIVE",
   });
   const [isSidebarOpen, setSidebarOpen] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [cashierToDelete, setCashierToDelete] = useState(null);
 
   // Load cashiers from API
   useEffect(() => {
@@ -139,9 +142,26 @@ export default function Cashiers() {
   };
 
   // Handle Delete Cashier
-  const handleDeleteCashier = (idx) => {
-    if (window.confirm("Are you sure you want to delete this cashier?")) {
-      setCashiers(cashiers.filter((_, i) => i !== idx));
+  const handleDeleteCashier = (cashier) => {
+    setCashierToDelete(cashier);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!cashierToDelete) return;
+    try {
+      setModalLoading(true);
+      const token = sessionStorage.getItem("auth_token");
+      await api(`/api/users/${cashierToDelete.id}`, {
+        method: "DELETE",
+        headers: authHeaders(token),
+      });
+      setCashiers(cashiers.filter((c) => c.id !== cashierToDelete.id));
+      setShowDeleteModal(false);
+    } catch (err) {
+      setApiError(err.message || "Failed to delete cashier");
+    } finally {
+      setModalLoading(false);
     }
   };
 
@@ -372,7 +392,7 @@ export default function Cashiers() {
                             <Button
                               variant="icon"
                               className="bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-full p-1.5 border border-blue-200"
-                              onClick={() => handleEditCashier(idx)}
+                              onClick={() => handleEditCashier(c)}
                               title="Edit"
                             >
                               <svg
@@ -392,7 +412,7 @@ export default function Cashiers() {
                             <Button
                               variant="icon"
                               className="bg-red-50 hover:bg-red-100 text-red-700 rounded-full p-1.5 border border-red-200"
-                              onClick={() => handleDeleteCashier(idx)}
+                              onClick={() => handleDeleteCashier(c)}
                               title="Delete"
                             >
                               <svg
@@ -485,7 +505,7 @@ export default function Cashiers() {
                         <div className="flex items-center gap-2">
                           <Button
                             variant="icon"
-                            className="bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-full p-1.5 border border-blue-200"
+                            className="bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-full p-1.5 border border-blue-200" // Changed from handleEditCashier(idx)
                             onClick={() => handleEditCashier(idx)}
                             title="Edit"
                           >
@@ -506,7 +526,7 @@ export default function Cashiers() {
                           <Button
                             variant="icon"
                             className="bg-red-50 hover:bg-red-100 text-red-700 rounded-full p-1.5 border border-red-200"
-                            onClick={() => handleDeleteCashier(idx)}
+                            onClick={() => handleDeleteCashier(c)}
                             title="Delete"
                           >
                             <svg
@@ -562,6 +582,60 @@ export default function Cashiers() {
         initialData={form}
         isLoading={modalLoading}
       />
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        title=""
+        size="sm"
+      >
+        <div className="p-0">
+          <div className="bg-gradient-to-r from-red-50 via-red-50/80 to-orange-50/50 border-b border-red-100 px-6 py-5 rounded-t-2xl">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-red-600 rounded-xl flex items-center justify-center shadow-lg">
+                <svg
+                  className="w-6 h-6 text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
+                  />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h2 className="text-xl font-bold text-gray-900 mb-1">
+                  Confirm Deletion
+                </h2>
+                <p className="text-sm text-gray-600">
+                  Are you sure you want to delete this cashier?
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="p-6">
+            <p className="text-sm text-gray-700 mb-6">
+              This action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-3">
+              <Button
+                onClick={() => setShowDeleteModal(false)}
+                variant="secondary"
+                disabled={modalLoading}
+              >
+                Cancel
+              </Button>
+              <Button onClick={confirmDelete} variant="danger" loading={modalLoading}>
+                Delete
+              </Button>
+            </div>
+          </div>
+        </div>
+      </Modal>
     </PageLayout>
   );
 }

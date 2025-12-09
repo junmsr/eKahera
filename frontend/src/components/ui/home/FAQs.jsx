@@ -21,7 +21,7 @@ const faqs = [
   },
 ];
 
-const FAQ = () => {
+const FAQs = () => {
   const [openIndex, setOpenIndex] = useState(0);
   const toggle = (idx) => setOpenIndex((prev) => (prev === idx ? -1 : idx));
   return (
@@ -98,4 +98,4 @@ const FAQ = () => {
   );
 };
 
-export default FAQ;
+export default FAQs;

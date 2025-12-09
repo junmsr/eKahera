@@ -150,7 +150,7 @@ const AboutUs = () => (
             <div className="relative flex flex-col gap-6">
               <div className="flex items-center gap-3">
                 <span className="h-3 w-3 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 animate-pulse" />
-                <span className="text-xs uppercase tracking-widest text-slate-600 font-bold">
+                <span className="text-xxs uppercase tracking-widest text-slate-10000 font-black">
                   Why eKahera
                 </span>
               </div>
@@ -158,19 +158,19 @@ const AboutUs = () => (
               <ul className="space-y-5 text-slate-700">
                 {[
                   {
-                    text: "Real-time sales and inventory monitoring",
+                    text: "Sales and inventory monitoring",
                     icon: "M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z",
                   },
                   {
-                    text: "Multi-branch and multi-user capabilities",
+                    text: "Multi-user capabilities",
                     icon: "M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z",
                   },
                   {
-                    text: "Cloud-first security and performance",
+                    text: "Safe, secured and reliable performance",
                     icon: "M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z",
                   },
                   {
-                    text: "Lightning-fast setup and intuitive UI",
+                    text: "Accessible on any screen with intuitive UI",
                     icon: "M13 10V3L4 14h7v7l9-11h-7z",
                   },
                 ].map((item, idx) => (
@@ -202,13 +202,13 @@ const AboutUs = () => (
               </ul>
 
               {/* Optional CTA */}
-              <motion.div
+              {/*<motion.div
                 initial={{ opacity: 0, y: 10 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.4, delay: 0.9 }}
                 className="mt-4 pt-6 border-t border-slate-200"
-              ></motion.div>
+              ></motion.div>*/}
             </div>
           </div>
         </motion.div>

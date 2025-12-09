@@ -55,12 +55,12 @@ const Header = ({
               </button>
             )}
             <h1 className="text-2xl font-bold truncate">
-              {title.includes(" - POS") ? (
+              {title.includes("POS") ? (
                 <>
-                  <span className="text-blue-600">
+                  {/*<span className="text-blue-600">
                     {title.replace(" - POS", "")}
-                  </span>
-                  <span className="text-gray-900"> - POS</span>
+                  </span>*/}
+                  <span className="text-blue-600">POS</span>
                 </>
               ) : (
                 <span className="text-blue-600">{title}</span>

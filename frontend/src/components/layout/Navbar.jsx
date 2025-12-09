@@ -13,7 +13,7 @@ function Navbar({ className = "" }) {
     { label: "Home", path: "/" },
     { label: "Features", path: "#features" },
     { label: "About", path: "#about" },
-    { label: "FAQ", path: "#faq" },
+    { label: "FAQs", path: "#faqs" },
   ];
 
   const toggleMenu = () => {
