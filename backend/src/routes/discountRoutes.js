@@ -7,3 +7,4 @@ router.get('/', authenticate, getDiscounts);
 router.post('/', authenticate, createDiscount);
 
 module.exports = router;
+

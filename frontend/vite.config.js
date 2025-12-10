@@ -25,7 +25,11 @@ export default defineConfig(({ mode }) => {
           plugins: ['styled-jsx/babel'],
         },
       }),
-      tailwindcss()
+      tailwindcss({
+        css: {
+          colorFunction: 'rgb'
+        }
+      })
     ],
     css: {
       modules: {

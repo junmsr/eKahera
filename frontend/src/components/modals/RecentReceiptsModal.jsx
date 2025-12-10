@@ -109,3 +109,4 @@ function RecentReceiptsModal({ isOpen, onClose }) {
 }
 
 export default RecentReceiptsModal;
+
