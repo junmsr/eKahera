@@ -10,6 +10,7 @@ import { api, authHeaders } from "../lib/api";
 
 const initialProducts = [];
 const initialCategories = [];
+const DEFAULT_LOW_STOCK_LEVEL = 10;
 
 // Function to get predefined categories based on business type
 function getCategoriesByBusinessType(businessType) {
@@ -161,6 +162,7 @@ export default function InventoryPage() {
     quantity: "",
     cost_price: "",
     selling_price: "",
+    low_stock_level: DEFAULT_LOW_STOCK_LEVEL,
   });
   const [stockForm, setStockForm] = useState({ sku: "", quantity: "" });
   const [loading, setLoading] = useState(false);
@@ -169,6 +171,8 @@ export default function InventoryPage() {
   const [page, setPage] = useState(1);
   const [apiError, setApiError] = useState("");
   const [isSidebarOpen, setSidebarOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   // Load inventory and business type from API
   useEffect(() => {
@@ -217,6 +221,9 @@ export default function InventoryPage() {
           selling_price: Number(row.selling_price || 0),
           sku: row.sku || "",
           description: row.description || "",
+          low_stock_level: Number(
+            row.low_stock_level ?? DEFAULT_LOW_STOCK_LEVEL
+          ),
         }));
         setProducts(mapped);
       } catch (err) {
@@ -234,9 +241,10 @@ export default function InventoryPage() {
     (sum, p) => sum + Number(p.selling_price || 0) * Number(p.quantity || 0),
     0
   );
-  const lowStockItems = products.filter(
-    (p) => Number(p.quantity || 0) < 10
-  ).length;
+  const lowStockItems = products.filter((p) => {
+    const threshold = Number(p.low_stock_level ?? DEFAULT_LOW_STOCK_LEVEL);
+    return Number(p.quantity || 0) < threshold;
+  }).length;
 
   const stats = [
     {
@@ -342,10 +350,18 @@ export default function InventoryPage() {
       } else if (stockFilter === "low_stock") {
         filtered = filtered.filter((p) => {
           const qty = Number(p.quantity || 0);
-          return qty > 0 && qty < 10;
+          const threshold = Number(
+            p.low_stock_level ?? DEFAULT_LOW_STOCK_LEVEL
+          );
+          return qty > 0 && qty < threshold;
         });
       } else if (stockFilter === "in_stock") {
-        filtered = filtered.filter((p) => Number(p.quantity || 0) >= 10);
+        filtered = filtered.filter((p) => {
+          const threshold = Number(
+            p.low_stock_level ?? DEFAULT_LOW_STOCK_LEVEL
+          );
+          return Number(p.quantity || 0) >= threshold;
+        });
       }
     }
 
@@ -394,13 +410,20 @@ export default function InventoryPage() {
       quantity: "",
       cost_price: "",
       selling_price: "",
+      low_stock_level: DEFAULT_LOW_STOCK_LEVEL,
     });
     setShowProductModal(true);
   };
 
   const openEditProduct = (product) => {
     setEditingProduct(product);
-    setProductForm({ ...product });
+    setProductForm({
+      ...product,
+      low_stock_level:
+        typeof product.low_stock_level === "number"
+          ? product.low_stock_level
+          : DEFAULT_LOW_STOCK_LEVEL,
+    });
     setShowProductModal(true);
   };
 
@@ -434,6 +457,8 @@ export default function InventoryPage() {
             cost_price: Number(productForm.cost_price) || 0,
             selling_price: Number(productForm.selling_price) || 0,
             sku: (productForm.sku || "").trim(),
+            low_stock_level:
+              Number(productForm.low_stock_level) || DEFAULT_LOW_STOCK_LEVEL,
             category:
               productForm.category === "Others"
                 ? (productForm.customCategory || "").trim()
@@ -463,6 +488,8 @@ export default function InventoryPage() {
             price: Number(productForm.selling_price) || 0,
             sku: (productForm.sku || "").trim() || `SKU-${Date.now()}`,
             quantity: Number(productForm.quantity) || 0,
+            low_stock_level:
+              Number(productForm.low_stock_level) || DEFAULT_LOW_STOCK_LEVEL,
           }),
         });
       }
@@ -478,6 +505,7 @@ export default function InventoryPage() {
         selling_price: Number(row.selling_price || 0),
         sku: row.sku || "",
         description: row.description || "",
+        low_stock_level: Number(row.low_stock_level ?? DEFAULT_LOW_STOCK_LEVEL),
       }));
       setProducts(mapped);
       setShowProductModal(false);
@@ -512,6 +540,7 @@ export default function InventoryPage() {
         selling_price: Number(row.selling_price || 0),
         sku: row.sku || "",
         description: row.description || "",
+        low_stock_level: Number(row.low_stock_level ?? DEFAULT_LOW_STOCK_LEVEL),
       }));
       setProducts(mapped);
       setShowStockModal(false);
@@ -522,15 +551,23 @@ export default function InventoryPage() {
     }
   };
 
+  const handleDeleteRequest = (id) => {
+    const product = products.find((p) => String(p.id) === String(id)) || {
+      id: String(id),
+    };
+    setDeleteTarget(product);
+    setShowDeleteModal(true);
+  };
+
   const handleDeleteProduct = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this product?"))
-      return;
+    const targetId = id ?? deleteTarget?.id;
+    if (!targetId) return;
 
     try {
       setLoading(true);
       setApiError("");
       const token = sessionStorage.getItem("auth_token");
-      await api(`/api/inventory/${id}`, {
+      await api(`/api/inventory/${targetId}`, {
         method: "DELETE",
         headers: authHeaders(token),
       });
@@ -546,8 +583,11 @@ export default function InventoryPage() {
         selling_price: Number(row.selling_price || 0),
         sku: row.sku || "",
         description: row.description || "",
+        low_stock_level: Number(row.low_stock_level ?? DEFAULT_LOW_STOCK_LEVEL),
       }));
       setProducts(mapped);
+      setShowDeleteModal(false);
+      setDeleteTarget(null);
     } catch (err) {
       setApiError("Failed to delete product");
     } finally {
@@ -577,10 +617,9 @@ export default function InventoryPage() {
     downloadCSV(csv, filename);
   };
 
-const headerActions = (
+  const headerActions = (
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 sm:gap-4 mb-4 sm:mb-0 w-full">
       <div className="flex items-center justify-end gap-2 sm:gap-3 w-auto">
-        
         {/* EXPORT Button: ICON ONLY on Mobile, ICON + TEXT on Desktop */}
         <Button
           onClick={handleExport}
@@ -602,9 +641,9 @@ const headerActions = (
             />
           </svg>
           {/* Text is hidden on mobile (default) and shown from 'sm' breakpoint up */}
-          <span className="hidden sm:inline">Export</span> 
+          <span className="hidden sm:inline">Export</span>
         </Button>
-        
+
         {/* ADD PRODUCT Button: 'Add' on Mobile, 'Add Product' on Desktop */}
         <Button
           onClick={openAddProduct}
@@ -632,7 +671,7 @@ const headerActions = (
         </Button>
       </div>
     </div>
-);
+  );
 
   return (
     <PageLayout
@@ -657,7 +696,7 @@ const headerActions = (
         search={search}
         onSearchChange={handleSearchChange}
         onEdit={openEditProduct}
-        onDelete={handleDeleteProduct}
+        onDelete={handleDeleteRequest}
         onAddProduct={openAddProduct}
         onStockEntry={openStockEntry}
         categories={categories}
@@ -732,6 +771,48 @@ const headerActions = (
         onSubmit={handleStockSubmit}
         loading={loading}
       />
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          if (loading) return;
+          setShowDeleteModal(false);
+          setDeleteTarget(null);
+        }}
+        title="Delete Product"
+        size="sm"
+      >
+        <div className="p-6 space-y-4">
+          <p className="text-sm text-gray-700">
+            Are you sure you want to delete{" "}
+            <span className="font-semibold text-gray-900">
+              {deleteTarget?.name || "this product"}
+            </span>
+            ? This action cannot be undone.
+          </p>
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                if (loading) return;
+                setShowDeleteModal(false);
+                setDeleteTarget(null);
+              }}
+              disabled={loading}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              className="bg-red-600 hover:bg-red-700 text-white"
+              onClick={() => handleDeleteProduct()}
+              disabled={loading}
+            >
+              Delete
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </PageLayout>
   );
 }

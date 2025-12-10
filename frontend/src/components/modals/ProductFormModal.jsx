@@ -45,7 +45,7 @@ export default function ProductFormModal({
         "Baby Products",
         "Pet Supplies",
       ],
-      "Pharmacy": [
+      Pharmacy: [
         "Prescription Medicines",
         "OTC Medicines",
         "Vitamins & Supplements",
@@ -90,7 +90,7 @@ export default function ProductFormModal({
         "Fasteners (Nails, Screws, Bolts)",
         "Safety Gear",
       ],
-      "Bookstore": [
+      Bookstore: [
         "Fiction Books",
         "Non-Fiction Books",
         "Educational Books",
@@ -118,7 +118,10 @@ export default function ProductFormModal({
       Others: ["General"],
     };
 
-    const stored = (typeof window !== "undefined" && sessionStorage.getItem("business_type")) || "Others";
+    const stored =
+      (typeof window !== "undefined" &&
+        sessionStorage.getItem("business_type")) ||
+      "Others";
     const list = map[stored] || map["Others"];
     return list.map((name, i) => ({ id: `fb-${i}`, name }));
   };
@@ -130,7 +133,10 @@ export default function ProductFormModal({
     if (categories && categories.length > 0) {
       const first = categories[0];
       const firstName = first && (first.name || first);
-      if (categories.length === 1 && (firstName === "General" || firstName === "Others")) {
+      if (
+        categories.length === 1 &&
+        (firstName === "General" || firstName === "Others")
+      ) {
         return getFallbackCategories();
       }
       return normalizeCategories(categories);
@@ -340,7 +346,7 @@ export default function ProductFormModal({
               required
             />
             <FormField
-              label="Cost Price (₱)"
+              label="Cost Price"
               name="cost_price"
               type="number"
               value={productForm.cost_price}
@@ -350,7 +356,7 @@ export default function ProductFormModal({
               step="0.01"
             />
             <FormField
-              label="Selling Price (₱)"
+              label="Selling Price"
               name="selling_price"
               type="number"
               value={productForm.selling_price}
