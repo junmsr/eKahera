@@ -34,7 +34,7 @@ function ProfitTrendChart({ data, className = "", rangeType = "Custom" }) {
   return (
     <ChartCard
       title={<span className="text-blue-700">{getChartTitle(rangeType)}</span>}
-      className={`bg-white/80 backdrop-blur-md border border-white/60 shadow-xl ${className}`}
+      className={`chart-export-container bg-white/80 backdrop-blur-md border border-white/60 shadow-xl ${className}`}
     >
       <div className="h-72 w-full">
         <ResponsiveContainer width="100%" height="100%">
@@ -191,7 +191,7 @@ export default function DashboardBusinessReport({ dateRange }) {
         />
 
         {/* Payment Methods */}
-        <div className="bg-white/80 backdrop-blur-md border border-white/60 shadow-xl rounded-lg p-6">
+        <div className="chart-export-container bg-white/80 backdrop-blur-md border border-white/60 shadow-xl rounded-lg p-6">
           <h3 className="text-xl font-extrabold text-blue-700 mb-5 select-none">
             Payment Methods
           </h3>

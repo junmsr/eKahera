@@ -202,6 +202,21 @@ export default function Dashboard() {
     );
   };
 
+  // Normalize any CSS color string to a safe RGB/HEX; returns fallback when unsupported
+  const normalizeToRGB = (() => {
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    return (value, fallback = "#ffffff") => {
+      if (!value) return fallback;
+      try {
+        ctx.fillStyle = value;
+        return ctx.fillStyle || fallback;
+      } catch (_) {
+        return fallback;
+      }
+    };
+  })();
+
   // Fetch Today's data (independent of the main filter)
   useEffect(() => {
     const fetchTodayData = async () => {
@@ -755,6 +770,115 @@ export default function Dashboard() {
         });
       });
 
+      // Capture chart areas separately to ensure they render inside the PDF
+      const liveCharts = Array.from(document.querySelectorAll(".chart-export-container"));
+      const chartSnapshots = [];
+      const chartRestorers = [];
+      const sanitizeChartNode = (root) => {
+        const colorProps = [
+          "color",
+          "background-color",
+          "border-color",
+          "outline-color",
+          "text-decoration-color",
+          "column-rule-color",
+          "caret-color",
+          "accent-color",
+          "fill",
+          "stroke",
+        ];
+        const extraProps = [
+          "background",
+          "background-image",
+          "border",
+          "border-top-color",
+          "border-right-color",
+          "border-bottom-color",
+          "border-left-color",
+          "box-shadow",
+          "text-shadow",
+          "outline-color",
+        ];
+        const restores = [];
+        const normalizeOrStrip = (node, prop, value, priority) => {
+          if (!value) return;
+          const lower = value.toLowerCase();
+          const isGradient = lower.includes("gradient") || lower.includes("image-set");
+          if (hasModernColor(lower) || isGradient) {
+            const prev = node.style.getPropertyValue(prop);
+            restores.push(() => node.style.setProperty(prop, prev || "", priority));
+            if (prop.includes("background")) {
+              node.style.setProperty(prop, "none", "important");
+            } else if (prop.includes("shadow")) {
+              node.style.setProperty(prop, "none", "important");
+            } else if (prop.includes("border")) {
+              node.style.setProperty(prop, normalizeToRGB(value, "#e5e7eb"), "important");
+            } else {
+              node.style.setProperty(prop, normalizeToRGB(value, "#1f2937"), "important");
+            }
+          }
+        };
+        const processNode = (node) => {
+          if (!(node instanceof Element)) return;
+          const style = window.getComputedStyle(node);
+          colorProps.forEach((prop) => {
+            const val = style.getPropertyValue(prop);
+            if (hasModernColor(val)) {
+              const prev = node.style.getPropertyValue(prop);
+              restores.push(() => node.style.setProperty(prop, prev || "", style.getPropertyPriority(prop)));
+              node.style.setProperty(prop, normalizeToRGB(val, prop.includes("background") ? "#ffffff" : "#1f2937"), "important");
+            }
+          });
+          [...extraProps].forEach((prop) => {
+            const val = style.getPropertyValue(prop);
+            normalizeOrStrip(node, prop, val, style.getPropertyPriority(prop));
+          });
+        };
+        processNode(root);
+        root.querySelectorAll("*").forEach(processNode);
+        return () => restores.reverse().forEach((fn) => fn());
+      };
+
+      for (const chartNode of liveCharts) {
+        let restoreFn = null;
+        try {
+          restoreFn = sanitizeChartNode(chartNode);
+          chartRestorers.push(restoreFn);
+          const rect = chartNode.getBoundingClientRect();
+          const chartCanvas = await html2canvas(chartNode, {
+            scale: 2,
+            useCORS: true,
+            backgroundColor: "#ffffff",
+          });
+          chartSnapshots.push({
+            dataUrl: chartCanvas.toDataURL("image/png"),
+            width: rect.width,
+            height: rect.height,
+          });
+        } catch (e) {
+          console.warn("Chart capture failed, falling back to default capture", e);
+          chartSnapshots.push(null);
+        } finally {
+          if (restoreFn) restoreFn();
+        }
+      }
+
+      // Replace chart containers in the cloned DOM with static images
+      const cloneCharts = Array.from(clone.querySelectorAll(".chart-export-container"));
+      cloneCharts.forEach((chartNode, idx) => {
+        const snapshot = chartSnapshots[idx];
+        if (!snapshot || !snapshot.dataUrl) return;
+        chartNode.innerHTML = "";
+        const img = document.createElement("img");
+        img.src = snapshot.dataUrl;
+        img.style.width = `${snapshot.width}px`;
+        img.style.height = `${snapshot.height}px`;
+        img.style.objectFit = "contain";
+        img.style.display = "block";
+        img.setAttribute("alt", "Chart snapshot");
+        chartNode.appendChild(img);
+      });
+
       // Add a small delay to ensure all styles are applied
       await new Promise(resolve => setTimeout(resolve, 200));
 
@@ -1064,10 +1188,18 @@ export default function Dashboard() {
               </>
             ) : (
               <>
-                <div ref={visitorsChartRef} className="chart-export-container">
+                <div
+                  ref={visitorsChartRef}
+                  className="chart-export-container"
+                  data-export-chart="visitors"
+                >
                   <VisitorsChart data={chartData} rangeType={dateRange.rangeType} />
                 </div>
-                <div ref={pieChartRef} className="chart-export-container">
+                <div
+                  ref={pieChartRef}
+                  className="chart-export-container"
+                  data-export-chart="sales-pie"
+                >
                   <SalesPieChart data={pieData} />
                 </div>
               </>
