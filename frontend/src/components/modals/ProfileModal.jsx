@@ -149,14 +149,24 @@ const ProfileModal = ({ isOpen, onClose, userData, businessData }) => {
   useEffect(() => {
     const loadProvinces = async () => {
       if (!profileData.region) {
-        setLocationOptions((o) => ({ ...o, provinces: [], cities: [], barangays: [] }));
+        setLocationOptions((o) => ({
+          ...o,
+          provinces: [],
+          cities: [],
+          barangays: [],
+        }));
         return;
       }
       try {
         setLocationLoading((l) => ({ ...l, provinces: true }));
         const data = await getProvinces(profileData.region);
         const options = data.map((p) => ({ value: p.code, label: p.name }));
-        setLocationOptions((o) => ({ ...o, provinces: options, cities: [], barangays: [] }));
+        setLocationOptions((o) => ({
+          ...o,
+          provinces: options,
+          cities: [],
+          barangays: [],
+        }));
 
         // Preselect province if we have a name from initial data
         if (initialLocationRef.current.province) {
@@ -192,7 +202,10 @@ const ProfileModal = ({ isOpen, onClose, userData, businessData }) => {
 
         // Preselect city
         if (initialLocationRef.current.city) {
-          const match = findOptionByLabel(options, initialLocationRef.current.city);
+          const match = findOptionByLabel(
+            options,
+            initialLocationRef.current.city
+          );
           if (match) {
             setProfileData((p) => ({ ...p, city: match.value }));
           }
@@ -815,8 +828,20 @@ const ProfileModal = ({ isOpen, onClose, userData, businessData }) => {
                   { value: "Pharmacy", label: "Pharmacy" },
                   { value: "Services", label: "Services" },
                   ...(profileData.business_type &&
-                  !["Grocery Store","Retail","Restaurant","Cafe","Pharmacy","Services"].includes(profileData.business_type)
-                    ? [{ value: profileData.business_type, label: profileData.business_type }]
+                  ![
+                    "Grocery Store",
+                    "Retail",
+                    "Restaurant",
+                    "Cafe",
+                    "Pharmacy",
+                    "Services",
+                  ].includes(profileData.business_type)
+                    ? [
+                        {
+                          value: profileData.business_type,
+                          label: profileData.business_type,
+                        },
+                      ]
                     : []),
                 ]}
                 placeholder="Select business type"
@@ -850,7 +875,9 @@ const ProfileModal = ({ isOpen, onClose, userData, businessData }) => {
                   })
                 }
                 placeholder={
-                  locationLoading.regions ? "Loading regions..." : "Select Region"
+                  locationLoading.regions
+                    ? "Loading regions..."
+                    : "Select Region"
                 }
                 disabled={locationLoading.regions}
                 error={touched.region && errors.region ? errors.region : null}

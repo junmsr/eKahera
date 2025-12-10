@@ -13,5 +13,10 @@
     "otp": "URsk",
     "expirationTime": 1764772148145,
     "attempts": 0
+  },
+  "missing required documents: • business registration certificate (dti/sec/cda) required • mayor's permit / business permit required • bir certificate of registration (form 2303)": {
+    "otp": "v6fA",
+    "expirationTime": 1765367473740,
+    "attempts": 0
   }
 }
