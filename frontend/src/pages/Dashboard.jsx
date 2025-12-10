@@ -644,96 +644,171 @@ export default function Dashboard() {
   };
 
   const exportToPDF = async () => {
-  setExportingPDF(true);
-  try {
-    const element = document.getElementById("pdf-wrapper");
-    if (!element) throw new Error("Dashboard content not found");
+    setExportingPDF(true);
+    try {
+      const element = document.getElementById("pdf-wrapper");
+      if (!element) throw new Error("Dashboard content not found");
 
-    // Create a clone of the element to avoid affecting the original
-    const clone = element.cloneNode(true);
-    clone.style.position = 'absolute';
-    clone.style.left = '-9999px';
-    document.body.appendChild(clone);
+      // Create a clone of the element to avoid affecting the original
+      const clone = element.cloneNode(true);
+      clone.style.position = 'absolute';
+      clone.style.left = '-9999px';
+      document.body.appendChild(clone);
 
-    // Function to safely set styles
-    const safeSetStyle = (el, prop, value) => {
-      try {
-        el.style.setProperty(prop, value, 'important');
-      } catch (e) {
-        console.warn(`Could not set ${prop}: ${e.message}`);
-      }
-    };
-
-    // Process all elements
-    const allElements = clone.querySelectorAll('*');
-    allElements.forEach(el => {
-      const style = window.getComputedStyle(el);
+      // Create a header with business information
+      const header = document.createElement('div');
+      header.style.padding = '15px 20px';
+      header.style.backgroundColor = '#1a365d';
+      header.style.color = 'white';
+      header.style.borderBottom = '2px solid #2c5282';
       
-      // Process background and color properties
-      ['background', 'background-color', 'color', 'border', 'border-color'].forEach(prop => {
-        try {
-          const value = style.getPropertyValue(prop);
-          if (value && hasModernColor(value)) {
-            safeSetStyle(el, prop, 'transparent');
+      // Format the date range
+      const { startDate, endDate, rangeType } = dateRange;
+      const formatDate = (date) => dayjs(date).format('MMM D, YYYY');
+      const dateRangeText = rangeType === 'Day' 
+        ? formatDate(startDate)
+        : `${formatDate(startDate)} - ${formatDate(endDate)}`;
+      
+      // Business information (you can customize these values)
+      const businessInfo = {
+        name: "eKahera Business",
+        address: "123 Business St, City, Country",
+        contact: "contact@ekahera.com | +1 234 567 890"
+      };
+
+      header.innerHTML = `
+        <div style="max-width: 100%; color: white;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <h1 style="margin: 0; font-size: 24px; font-weight: 600; color: white;">${businessInfo.name}</h1>
+            <div style="text-align: right;">
+              <div style="font-size: 14px; color: #a0aec0;">Report Period</div>
+              <div style="font-weight: 600; font-size: 16px;">${dateRangeText}</div>
+            </div>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 12px; color: #cbd5e0;">
+            <div>${businessInfo.address}</div>
+            <div>${businessInfo.contact}</div>
+          </div>
+        </div>
+      `;
+
+      // Create a summary section
+      const summarySection = document.createElement('div');
+      summarySection.style.padding = '15px';
+      summarySection.style.backgroundColor = '#f7fafc';
+      summarySection.style.borderBottom = '1px solid #e2e8f0';
+      summarySection.style.marginBottom = '20px';
+      
+      // Add key metrics to the summary
+      summarySection.innerHTML = `
+        <h3 style="margin: 0 0 10px 0; color: #2d3748; font-size: 18px;">Key Metrics Summary</h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+          <div style="background: white; padding: 10px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+            <div style="font-size: 12px; color: #718096;">Total Revenue</div>
+            <div style="font-size: 20px; font-weight: 600; color: #2b6cb0;">${formatCurrency(keyMetrics.revenue)}</div>
+          </div>
+          <div style="background: white; padding: 10px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+            <div style="font-size: 12px; color: #718096;">Total Transactions</div>
+            <div style="font-size: 20px; font-weight: 600; color: #2f855a;">${keyMetrics.totalTransactions}</div>
+          </div>
+          <div style="background: white; padding: 10px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+            <div style="font-size: 12px; color: #718096;">Items Sold</div>
+            <div style="font-size: 20px; font-weight: 600; color: #b7791f;">${keyMetrics.totalItemsSold}</div>
+          </div>
+          <div style="background: white; padding: 10px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+            <div style="font-size: 12px; color: #718096;">Net Profit</div>
+            <div style="font-size: 20px; font-weight: 600; color: #2c5282;">${formatCurrency(keyMetrics.netProfit)}</div>
+          </div>
+        </div>
+      `;
+
+      // Insert the header and summary at the top of the clone
+      clone.insertBefore(summarySection, clone.firstChild);
+      clone.insertBefore(header, clone.firstChild);
+
+      // Add a footer with page numbers
+      const footer = document.createElement('div');
+      footer.style.padding = '10px';
+      footer.style.backgroundColor = '#f7fafc';
+      footer.style.borderTop = '1px solid #e2e8f0';
+      footer.style.textAlign = 'center';
+      footer.style.fontSize = '10px';
+      footer.style.color = '#718096';
+      footer.innerText = `Page 1 of 1 • Generated on ${new Date().toLocaleString()}`;
+      clone.appendChild(footer);
+
+      // Process all elements for modern color functions
+      const allElements = clone.querySelectorAll('*');
+      allElements.forEach(el => {
+        const style = window.getComputedStyle(el);
+        
+        // Process background and color properties
+        ['background', 'background-color', 'color', 'border', 'border-color'].forEach(prop => {
+          try {
+            const value = style.getPropertyValue(prop);
+            if (value && hasModernColor(value)) {
+              el.style.setProperty(prop, 'transparent', 'important');
+            }
+          } catch (e) {
+            console.warn(`Error processing ${prop}:`, e);
           }
-        } catch (e) {
-          console.warn(`Error processing ${prop}:`, e);
+        });
+      });
+
+      // Add a small delay to ensure all styles are applied
+      await new Promise(resolve => setTimeout(resolve, 200));
+
+      const canvas = await html2canvas(clone, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff',
+        removeContainer: true,
+        onclone: (clonedDoc) => {
+          document.fonts.ready.then(() => {});
         }
       });
 
-      // Process inline styles
-      if (el.style && el.style.cssText) {
-        const styleText = el.style.cssText;
-        if (hasModernColor(styleText)) {
-          // Remove all color-related properties
-          const colorProps = ['color', 'background', 'background-color', 'border', 'border-color', 
-                            'border-top-color', 'border-right-color', 'border-bottom-color', 
-                            'border-left-color', 'outline', 'outline-color', 'text-decoration-color',
-                            'column-rule-color', 'text-shadow', 'box-shadow'];
-          
-          colorProps.forEach(prop => {
-            if (styleText.includes(prop)) {
-              el.style.removeProperty(prop);
-            }
-          });
-        }
-      }
-    });
+      // Remove the clone
+      document.body.removeChild(clone);
 
-    // Add a small delay to ensure all styles are applied
-    await new Promise(resolve => setTimeout(resolve, 100));
-
-    const canvas = await html2canvas(clone, {
-      scale: 2,
-      useCORS: true,
-      logging: false,
-      backgroundColor: '#ffffff',
-      removeContainer: true,
-      onclone: (clonedDoc) => {
-        // Ensure all fonts are loaded
-        document.fonts.ready.then(() => {});
-      }
-    });
-
-    // Remove the clone
-    document.body.removeChild(clone);
-
-    const imgData = canvas.toDataURL('image/png');
-    const pdf = new jsPDF('p', 'mm', 'a4');
-    const imgProps = pdf.getImageProperties(imgData);
-    const pdfWidth = pdf.internal.pageSize.getWidth() - 20;
-    const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-    
-    pdf.addImage(imgData, 'PNG', 10, 10, pdfWidth, pdfHeight);
-    pdf.save('dashboard-export.pdf');
-    
-  } catch (error) {
-    console.error('Error exporting PDF:', error);
-    alert('Failed to export PDF. Please try again or contact support.');
-  } finally {
-    setExportingPDF(false);
-  }
-};
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const imgProps = pdf.getImageProperties(imgData);
+      const pdfWidth = pdf.internal.pageSize.getWidth() - 20;
+      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+      
+      // Add the image to PDF
+      pdf.addImage(imgData, 'PNG', 10, 10, pdfWidth, pdfHeight);
+      
+      // Set PDF metadata
+      const fileName = `eKahera-Report-${dateRange.rangeType}-${dayjs().format('YYYY-MM-DD')}.pdf`;
+      pdf.setProperties({
+        title: `eKahera Business Report - ${dateRange.rangeType} (${dateRangeText})`,
+        subject: `Business Performance Report - ${dateRangeText}`,
+        author: 'eKahera Business Intelligence',
+        creator: 'eKahera System',
+        keywords: 'business,report,sales,metrics,performance'
+      });
+      
+      // Add a watermark (optional)
+      pdf.setFontSize(60);
+      pdf.setTextColor(240, 240, 240);
+      pdf.text('eKahera', 35, 150, { angle: 45 });
+      
+      // Reset text color
+      pdf.setTextColor(0, 0, 0);
+      
+      // Save the PDF
+      pdf.save(fileName);
+      
+    } catch (error) {
+      console.error('Error exporting PDF:', error);
+      alert('Failed to generate PDF report. Please try again or contact support.');
+    } finally {
+      setExportingPDF(false);
+    }
+  };
 
   // Fetch filtered data when dateRange changes
   useEffect(() => {
