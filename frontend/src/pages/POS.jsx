@@ -49,45 +49,6 @@ function POS() {
   const hasFinalizedRef = React.useRef(false);
   const [businessName, setBusinessName] = useState("");
 
-  // Add keyboard shortcuts for buttons: F3-F8
-  useEffect(() => {
-    const keyDownHandler = (e) => {
-      if (e.repeat) return;
-      switch (e.key) {
-        case "F3":
-          e.preventDefault();
-          skuInputRef.current?.focus();
-          break;
-        case "F4":
-          e.preventDefault();
-          setShowCashLedger(true);
-          break;
-        case "F5":
-          e.preventDefault();
-          setShowDiscount(true);
-          break;
-        case "F6":
-          e.preventDefault();
-          setShowPriceCheck(true);
-          break;
-        case "F7":
-          e.preventDefault();
-          setShowImportCart(true);
-          break;
-        case "F8":
-          e.preventDefault();
-          if (cart.length > 0) {
-            setShowCheckout(true);
-          }
-          break;
-        default:
-          break;
-      }
-    };
-    window.addEventListener("keydown", keyDownHandler);
-    return () => window.removeEventListener("keydown", keyDownHandler);
-  }, [cart.length]);
-
   // Generate a client-side provisional transaction number when POS opens
   useEffect(() => {
     if (!transactionNumber) {
@@ -145,7 +106,7 @@ function POS() {
                 url.searchParams.set("tid", String(resp.transaction_id));
               if (resp?.total != null)
                 url.searchParams.set("total", String(resp.total));
-              
+
               // If in new tab, redirect opener and close this tab
               if (isNewTab && window.opener) {
                 window.opener.location.href = url.toString();
@@ -179,10 +140,9 @@ function POS() {
         }
       }
     };
-    
+
     finalizeOnlinePayment("pending_gcash_cart", "GCash");
     finalizeOnlinePayment("pending_maya_cart", "Maya");
-
   }, []);
 
   const addSkuToCart = async (skuValue, qty = 1) => {
@@ -618,7 +578,7 @@ function POS() {
                 <div className="col-span-8">
                   <div className="grid grid-cols-2 sm:grid-cols-2 gap-2 sm:gap-3">
                     <Button
-                      label="CASH LEDGER (F4)"
+                      label="CASH LEDGER"
                       size="md"
                       className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
                       variant="secondary"
@@ -642,7 +602,7 @@ function POS() {
                       iconPosition="left"
                     />
                     <Button
-                      label="DISCOUNT (F5)"
+                      label="DISCOUNT"
                       size="md"
                       className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
                       onClick={() => setShowDiscount(true)}
@@ -666,7 +626,7 @@ function POS() {
                       iconPosition="left"
                     />
                     <Button
-                      label="PRICE CHECK (F6)"
+                      label="PRICE CHECK"
                       size="md"
                       className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
                       onClick={() => setShowPriceCheck(true)}
@@ -690,7 +650,7 @@ function POS() {
                       iconPosition="left"
                     />
                     <Button
-                      label="IMPORT CART (F7)"
+                      label="IMPORT CART"
                       size="md"
                       className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
                       onClick={() => setShowImportCart(true)}
@@ -719,7 +679,7 @@ function POS() {
                 {/* Checkout Button */}
                 <div className="col-span-4">
                   <Button
-                    label="CHECKOUT (F8)"
+                    label="CHECKOUT"
                     size="md"
                     className="w-full h-full text-sm sm:text-base font-bold"
                     variant="primary"
@@ -804,7 +764,7 @@ function POS() {
                   cancelUrl,
                   successUrl,
                 });
-                window.open(checkoutUrl, '_blank');
+                window.open(checkoutUrl, "_blank");
               } catch (e) {
                 setError("Failed to init GCash");
                 localStorage.removeItem("pending_gcash_cart");
@@ -835,7 +795,7 @@ function POS() {
                   cancelUrl,
                   successUrl,
                 });
-                window.open(checkoutUrl, '_blank');
+                window.open(checkoutUrl, "_blank");
               } catch (e) {
                 setError("Failed to init Maya");
                 localStorage.removeItem("pending_maya_cart");
@@ -868,7 +828,7 @@ function POS() {
           if (transactionId) {
             setTransactionId(transactionId);
           }
-          
+
           // Merge imported items into current cart
           setCart((prev) => {
             const bySku = new Map(prev.map((i) => [i.sku, i]));

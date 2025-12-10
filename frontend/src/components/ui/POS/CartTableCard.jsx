@@ -17,27 +17,6 @@ function CartTableCard({
   const [editingIdx, setEditingIdx] = useState(null);
   const [editQty, setEditQty] = useState(1);
 
-  // Keyboard shortcuts: F1 for edit, F2 for remove
-  useEffect(() => {
-    const handleKeyDown = (event) => {
-      if (event.key === "F1" && cart.length > 0) {
-        event.preventDefault();
-        const firstItemIdx = 0;
-        setEditingIdx(firstItemIdx);
-        setEditQty(cart[firstItemIdx].quantity);
-      } else if (event.key === "F2" && cart.length > 0) {
-        event.preventDefault();
-        const firstItemIdx = 0;
-        handleRemove(firstItemIdx);
-      }
-    };
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [cart, handleRemove]);
-
   const EditIcon = () => (
     <svg
       width="16"
@@ -219,14 +198,14 @@ function CartTableCard({
                             setEditQty(item.quantity);
                           }}
                           className="p-1.5 rounded-md bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 transition-all duration-200"
-                          title="Edit (F1)"
+                          title="Edit"
                         >
                           <EditIcon />
                         </button>
                         <button
                           onClick={() => handleRemove(idx)}
                           className="p-1.5 rounded-md bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 transition-all duration-200"
-                          title="Remove (F2)"
+                          title="Remove"
                         >
                           <DeleteIcon />
                         </button>
