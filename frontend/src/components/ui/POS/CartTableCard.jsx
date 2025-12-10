@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Card from "../../common/Card";
 import Button from "../../common/Button";
 
@@ -12,10 +12,26 @@ function CartTableCard({
   handleEditQuantity,
   total,
   className = "",
+  selectedItemIdx = -1,
+  editingIdx = null,
+  setEditingIdx = () => {},
   ...props
 }) {
-  const [editingIdx, setEditingIdx] = useState(null);
   const [editQty, setEditQty] = useState(1);
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    if (editingIdx !== null && cart[editingIdx]) {
+      setEditQty(cart[editingIdx].quantity);
+      // Focus the input after a short delay to ensure it's rendered
+      setTimeout(() => {
+        if (inputRef.current) {
+          inputRef.current.focus();
+          inputRef.current.select();
+        }
+      }, 10);
+    }
+  }, [editingIdx, cart]);
 
   const EditIcon = () => (
     <svg
@@ -132,7 +148,16 @@ function CartTableCard({
                 cart.map((item, idx) => (
                   <tr
                     key={idx}
-                    className="hover:bg-blue-50/50 transition-colors duration-200 group"
+                    className={`hover:bg-blue-50/50 transition-colors duration-200 group cursor-pointer ${
+                      selectedItemIdx === idx ? "bg-blue-100/70" : ""
+                    }`}
+                    onClick={() => {
+                      // Import or access setSelectedItemIdx from props if needed
+                      // For now, assume it's passed or handle via callback
+                      if (props.onSelectItem) {
+                        props.onSelectItem(idx);
+                      }
+                    }}
                   >
                     <td className="py-1.5 px-2">
                       <div className="flex flex-col">
@@ -147,6 +172,7 @@ function CartTableCard({
                     <td className="py-1.5 px-2 text-center">
                       {editingIdx === idx ? (
                         <input
+                          ref={editingIdx === idx ? inputRef : null}
                           type="number"
                           min="1"
                           value={editQty}

@@ -44,6 +44,8 @@ function POS() {
   const notificationRef = useRef(null);
   const skuInputRef = useRef(null);
   const [isSidebarOpen, setSidebarOpen] = useState(false);
+  const [selectedItemIdx, setSelectedItemIdx] = useState(-1);
+  const [editingIdx, setEditingIdx] = useState(null);
   const token = sessionStorage.getItem("auth_token");
   const user = JSON.parse(sessionStorage.getItem("user") || "{}");
   const hasFinalizedRef = React.useRef(false);
@@ -415,6 +417,155 @@ function POS() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Check if an input is focused
+      const activeElement = document.activeElement;
+      const isInputFocused =
+        activeElement &&
+        (activeElement.tagName === "INPUT" ||
+          activeElement.tagName === "TEXTAREA" ||
+          activeElement.contentEditable === "true");
+
+      // Handle Enter globally for adding to cart
+      if (e.key === "Enter") {
+        e.preventDefault();
+        handleAddToCart();
+        return;
+      }
+
+      // If input is focused, skip other shortcuts
+      if (isInputFocused) {
+        return;
+      }
+
+      // Handle shortcuts
+      switch (e.key) {
+        case "F1":
+          e.preventDefault();
+          if (skuInputRef.current) {
+            skuInputRef.current.focus();
+          }
+          break;
+        case "F4":
+          e.preventDefault();
+          setShowCashLedger(true);
+          break;
+        case "F5":
+          e.preventDefault();
+          setShowDiscount(true);
+          break;
+        case "F6":
+          e.preventDefault();
+          setShowPriceCheck(true);
+          break;
+        case "F7":
+          e.preventDefault();
+          setShowImportCart(true);
+          break;
+        case "F8":
+          e.preventDefault();
+          if (cart.length > 0) {
+            setShowCheckout(true);
+          }
+          break;
+        case "F9":
+          e.preventDefault();
+          if (cart.length > 0) {
+            const idx =
+              selectedItemIdx >= 0 && selectedItemIdx < cart.length
+                ? selectedItemIdx
+                : 0;
+            setSelectedItemIdx(idx);
+            setEditingIdx(idx);
+          }
+          break;
+        case "Delete":
+          if (e.shiftKey) {
+            e.preventDefault();
+            setCart([]);
+            setSelectedItemIdx(-1);
+          } else {
+            e.preventDefault();
+            if (selectedItemIdx >= 0 && selectedItemIdx < cart.length) {
+              handleRemove(selectedItemIdx);
+              if (selectedItemIdx >= cart.length - 1) {
+                setSelectedItemIdx(Math.max(-1, cart.length - 2));
+              }
+            }
+          }
+          break;
+        case "Escape":
+          e.preventDefault();
+          if (
+            showDiscount ||
+            showPriceCheck ||
+            showCashLedger ||
+            showImportCart ||
+            showCheckout ||
+            showCashModal ||
+            showProfileModal
+          ) {
+            setShowDiscount(false);
+            setShowPriceCheck(false);
+            setShowCashLedger(false);
+            setShowImportCart(false);
+            setShowCheckout(false);
+            setShowCashModal(false);
+            setShowProfileModal(false);
+          } else {
+            setSku("");
+            setQuantity(1);
+            if (skuInputRef.current) {
+              skuInputRef.current.focus();
+            }
+          }
+          break;
+        case "ArrowUp":
+          e.preventDefault();
+          setSelectedItemIdx((prev) => Math.max(-1, prev - 1));
+          break;
+        case "ArrowDown":
+          e.preventDefault();
+          setSelectedItemIdx((prev) => Math.min(cart.length - 1, prev + 1));
+          break;
+        default:
+          break;
+      }
+
+      // Handle numpad + and -
+      if (e.location === KeyboardEvent.DOM_KEY_LOCATION_NUMPAD) {
+        if (e.key === "+") {
+          e.preventDefault();
+          if (selectedItemIdx >= 0 && selectedItemIdx < cart.length) {
+            const newQty = cart[selectedItemIdx].quantity + 1;
+            handleEditQuantity(selectedItemIdx, newQty);
+          }
+        } else if (e.key === "-") {
+          e.preventDefault();
+          if (selectedItemIdx >= 0 && selectedItemIdx < cart.length) {
+            const newQty = Math.max(1, cart[selectedItemIdx].quantity - 1);
+            handleEditQuantity(selectedItemIdx, newQty);
+          }
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [
+    cart,
+    selectedItemIdx,
+    showDiscount,
+    showPriceCheck,
+    showCashLedger,
+    showImportCart,
+    showCheckout,
+    showCashModal,
+    showProfileModal,
+  ]);
+
   const handleCopyTn = async () => {
     try {
       if (!user.store_name) return;
@@ -569,6 +720,10 @@ function POS() {
                   handleEditQuantity={handleEditQuantity}
                   total={total}
                   className="flex-1 h-full"
+                  selectedItemIdx={selectedItemIdx}
+                  editingIdx={editingIdx}
+                  setEditingIdx={setEditingIdx}
+                  onSelectItem={setSelectedItemIdx}
                 />
               </div>
 
@@ -578,7 +733,7 @@ function POS() {
                 <div className="col-span-8">
                   <div className="grid grid-cols-2 sm:grid-cols-2 gap-2 sm:gap-3">
                     <Button
-                      label="CASH LEDGER"
+                      label="CASH LEDGER (F4)"
                       size="md"
                       className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
                       variant="secondary"
@@ -602,7 +757,7 @@ function POS() {
                       iconPosition="left"
                     />
                     <Button
-                      label="DISCOUNT"
+                      label="DISCOUNT (F5)"
                       size="md"
                       className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
                       onClick={() => setShowDiscount(true)}
@@ -626,7 +781,7 @@ function POS() {
                       iconPosition="left"
                     />
                     <Button
-                      label="PRICE CHECK"
+                      label="PRICE CHECK (F6)"
                       size="md"
                       className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
                       onClick={() => setShowPriceCheck(true)}
@@ -650,7 +805,7 @@ function POS() {
                       iconPosition="left"
                     />
                     <Button
-                      label="IMPORT CART"
+                      label="IMPORT CART (F7)"
                       size="md"
                       className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
                       onClick={() => setShowImportCart(true)}
@@ -679,7 +834,7 @@ function POS() {
                 {/* Checkout Button */}
                 <div className="col-span-4">
                   <Button
-                    label="CHECKOUT"
+                    label="CHECKOUT (F8)"
                     size="md"
                     className="w-full h-full text-sm sm:text-base font-bold"
                     variant="primary"
