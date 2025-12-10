@@ -170,6 +170,8 @@ export default function InventoryPage() {
   const [apiError, setApiError] = useState("");
   const [isSidebarOpen, setSidebarOpen] = useState(false);
 
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [productToDelete, setProductToDelete] = useState(null);
   // Load inventory and business type from API
   useEffect(() => {
     const fetchInventory = async () => {
@@ -523,31 +525,30 @@ export default function InventoryPage() {
   };
 
   const handleDeleteProduct = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this product?"))
-      return;
+    const product = products.find((p) => p.id === id);
+    if (product) {
+      setProductToDelete(product);
+      setShowDeleteModal(true);
+    }
+  };
 
+  const confirmDeleteProduct = async () => {
+    if (!productToDelete) return;
     try {
       setLoading(true);
       setApiError("");
       const token = sessionStorage.getItem("auth_token");
-      await api(`/api/inventory/${id}`, {
+      await api(`/api/inventory/${productToDelete.id}`, {
         method: "DELETE",
         headers: authHeaders(token),
       });
 
       // Refresh inventory list after deletion
-      const data = await api("/api/inventory", { headers: authHeaders(token) });
-      const mapped = (data || []).map((row) => ({
-        id: String(row.id || ""),
-        name: row.name || "-",
-        category: row.category || "-",
-        quantity: Number(row.quantity || 0),
-        cost_price: Number(row.cost_price || 0),
-        selling_price: Number(row.selling_price || 0),
-        sku: row.sku || "",
-        description: row.description || "",
-      }));
-      setProducts(mapped);
+      setProducts((prev) =>
+        prev.filter((p) => p.id !== productToDelete.id)
+      );
+      setShowDeleteModal(false);
+      setProductToDelete(null);
     } catch (err) {
       setApiError("Failed to delete product");
     } finally {
@@ -731,6 +732,64 @@ const headerActions = (
         onSubmit={handleStockSubmit}
         loading={loading}
       />
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        title=""
+        size="sm"
+      >
+        <div className="p-0">
+          <div className="bg-gradient-to-r from-red-50 via-red-50/80 to-orange-50/50 border-b border-red-100 px-6 py-5 rounded-t-2xl">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-red-600 rounded-xl flex items-center justify-center shadow-lg">
+                <svg
+                  className="w-6 h-6 text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
+                  />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h2 className="text-xl font-bold text-gray-900 mb-1">
+                  Confirm Deletion
+                </h2>
+                <p className="text-sm text-gray-600">
+                  Are you sure you want to delete this product?
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="p-6">
+            <p className="text-sm text-gray-700 mb-2">
+              You are about to delete:{" "}
+              <strong className="text-red-700">{productToDelete?.name}</strong>
+            </p>
+            <p className="text-sm text-gray-700 mb-6">
+              This action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-3">
+              <Button
+                onClick={() => setShowDeleteModal(false)}
+                variant="secondary"
+                disabled={loading}
+              >
+                Cancel
+              </Button>
+              <Button onClick={confirmDeleteProduct} variant="danger" loading={loading}>
+                Delete
+              </Button>
+            </div>
+          </div>
+        </div>
+      </Modal>
     </PageLayout>
   );
 }
