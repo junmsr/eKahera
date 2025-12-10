@@ -10,10 +10,9 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
+  BarChart,
+  Bar,
   ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
   Legend,
 } from "recharts";
 
@@ -103,36 +102,21 @@ function SalesPieChart({ data, className = "" }) {
       className={`bg-white/80 backdrop-blur-md border border-white/60 shadow-xl ${className}`}
     >
       <div className="h-72 w-full">
-        {" "}
-        {/* Ensure width is 100% for full responsiveness */}
         <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
-            <Pie
-              data={data}
-              dataKey="percent"
-              nameKey="name"
-              cx="50%"
-              cy="50%"
-              outerRadius={80}
-              label={(entry) =>
-                `${entry.name} (${Number(entry.percent || 0).toFixed(1)}%)`
-              }
-              fill={SOFT_PURPLE}
-            >
-              {data.map((entry, idx) => {
-                const colors = [SOFT_BLUE, SOFT_GREEN, SOFT_PURPLE]; // Using blue theme colors
-                return (
-                  <Cell
-                    key={`cell-${idx}`}
-                    fill={colors[idx % colors.length]}
-                  />
-                );
-              })}
-            </Pie>
-            <Legend />
+          <BarChart data={data} margin={{ top: 20, right: 20, left: 0, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+            <XAxis
+              dataKey="name"
+              tick={{ fill: "#374151", fontSize: 12 }}
+              interval={0}
+              angle={-20}
+              textAnchor="end"
+              height={60}
+            />
+            <YAxis tick={{ fill: "#374151", fontSize: 12 }} />
             <Tooltip
               formatter={(value, name, props) => [
-                `${Number(value).toFixed(1)}%`,
+                Number(value).toLocaleString(),
                 props?.payload?.name,
               ]}
               contentStyle={{
@@ -141,7 +125,9 @@ function SalesPieChart({ data, className = "" }) {
                 borderRadius: 8,
               }}
             />
-          </PieChart>
+            <Legend />
+            <Bar dataKey="value" fill={SOFT_BLUE} radius={[8, 8, 0, 0]} />
+          </BarChart>
         </ResponsiveContainer>
       </div>
     </ChartCard>

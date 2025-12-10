@@ -524,6 +524,46 @@ exports.inviteSuperAdmin = async (req, res) => {
   }
 };
 
+// Small helper to safely derive readable location fields from the stored business_address
+// Format stored during Get Started: "<house>, <barangay>, <city>, <province>, Philippines"
+const parseBusinessAddress = (addressString = "") => {
+  const parts = addressString
+    .split(",")
+    .map((p) => p.trim())
+    .filter(Boolean);
+
+  if (!parts.length) {
+    return {
+      houseOrStreet: null,
+      barangay: null,
+      city: null,
+      province: null,
+      address_line: null,
+    };
+  }
+
+  // Remove trailing country if present (e.g., "Philippines")
+  while (parts.length && /philippines?/i.test(parts[parts.length - 1])) {
+    parts.pop();
+  }
+
+  const len = parts.length;
+  // Expected order after trimming country: <house/street>, <barangay>, <city>, <province>
+  const province = len >= 1 ? parts[len - 1] ?? null : null;
+  const city = len >= 2 ? parts[len - 2] ?? null : null;
+  const barangay = len >= 3 ? parts[len - 3] ?? null : null;
+  const houseOrStreet =
+    len > 3 ? parts.slice(0, len - 3).join(", ") : parts[0] || null;
+
+  return {
+    houseOrStreet,
+    barangay,
+    city,
+    province,
+    address_line: addressString || null,
+  };
+};
+
 // Get user profile with business information
 exports.getProfile = async (req, res) => {
   try {
@@ -591,6 +631,54 @@ exports.getProfile = async (req, res) => {
       }
     }
 
+    // Normalize business data to expose location parts captured during setup
+    const normalizedBusiness = businessData
+      ? (() => {
+          const parsedAddress = parseBusinessAddress(
+            businessData.business_address || ""
+          );
+          return {
+            business_id: businessData.business_id,
+            business_name: businessData.business_name,
+            business_type: businessData.business_type,
+            country: businessData.country,
+            business_address: businessData.business_address,
+            address_line: parsedAddress.address_line,
+            house_number:
+              businessData.house_number || parsedAddress.houseOrStreet || null,
+            mobile: businessData.mobile,
+            email: businessData.email,
+            region:
+              businessData.region ||
+              businessData.region_name ||
+              businessData.regionName ||
+              null,
+            province:
+              businessData.province ||
+              businessData.province_name ||
+              businessData.provinceName ||
+              parsedAddress.province ||
+              null,
+            city:
+              businessData.city ||
+              businessData.city_name ||
+              businessData.cityName ||
+              parsedAddress.city ||
+              null,
+            barangay:
+              businessData.barangay ||
+              businessData.barangay_name ||
+              businessData.barangayName ||
+              parsedAddress.barangay ||
+              null,
+            created_at: businessData.created_at,
+            updated_at: businessData.updated_at,
+            total_users: businessUsers.length,
+            users: businessUsers,
+          };
+        })()
+      : null;
+
     const response = {
       user: {
         user_id: userData.user_id,
@@ -604,20 +692,7 @@ exports.getProfile = async (req, res) => {
         updated_at: userData.updated_at,
         business_id: userData.business_id
       },
-      business: businessData ? {
-        business_id: businessData.business_id,
-        business_name: businessData.business_name,
-        business_type: businessData.business_type,
-        country: businessData.country,
-        business_address: businessData.business_address,
-        house_number: businessData.house_number,
-        mobile: businessData.mobile,
-        email: businessData.email,
-        created_at: businessData.created_at,
-        updated_at: businessData.updated_at,
-        total_users: businessUsers.length,
-        users: businessUsers
-      } : null
+      business: normalizedBusiness
     };
 
     console.log('Sending profile response:', JSON.stringify(response, null, 2));
