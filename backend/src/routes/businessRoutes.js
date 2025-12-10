@@ -9,7 +9,11 @@ const {
   listCashiers,
   checkDocumentStatus,
   verifyBusinessAccess,
-  getBusinessPublic
+  getBusinessPublic,
+  requestStoreDeletion,
+  cancelStoreDeletion,
+  getStoreDeletionStatus,
+  downloadStoreDeletionExport
 } = require('../controllers/businessController');
 const { authenticate, authorize, requireDocuments } = require('../middleware/authMiddleware');
 
@@ -32,5 +36,11 @@ router.get('/cashiers', authenticate, requireDocuments, authorize(['admin','supe
 // Document validation routes
 router.get('/document-status', authenticate, checkDocumentStatus);
 router.get('/verify-access', authenticate, verifyBusinessAccess);
+
+// Store deletion lifecycle (admin)
+router.get('/delete-request', authenticate, authorize(['admin','superadmin','business_owner']), getStoreDeletionStatus);
+router.post('/delete-request', authenticate, authorize(['admin','superadmin','business_owner']), requestStoreDeletion);
+router.post('/delete-request/cancel', authenticate, authorize(['admin','superadmin','business_owner']), cancelStoreDeletion);
+router.get('/delete-request/export', authenticate, authorize(['admin','superadmin','business_owner']), downloadStoreDeletionExport);
 
 module.exports = router;

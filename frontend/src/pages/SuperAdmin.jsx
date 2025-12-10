@@ -91,6 +91,15 @@ function SuperAdmin() {
   // Logout modal state
   const [logoutModal, setLogoutModal] = useState({ isOpen: false });
 
+  const formatDate = (val) => {
+    if (!val) return "N/A";
+    try {
+      return new Date(val).toLocaleDateString();
+    } catch {
+      return val;
+    }
+  };
+
   // --- Logout Modal Handlers ---
 
   const openLogoutModal = () => {
@@ -609,6 +618,7 @@ function SuperAdmin() {
                                 </p>
                               </td>
                               <td className="py-3 sm:py-4 px-2 sm:px-3 md:px-4">
+                              <div className="flex flex-col gap-1">
                                 {s.status === "approved" ? (
                                   <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-green-100 text-green-700 border border-green-200">
                                     <span className="w-1.5 h-1.5 rounded-full bg-green-600"></span>
@@ -630,6 +640,19 @@ function SuperAdmin() {
                                     Pending
                                   </span>
                                 )}
+                                {s.deletion_status === "pending" && (
+                                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold bg-orange-100 text-orange-700 border border-orange-200">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-orange-500"></span>
+                                    Deletion scheduled {formatDate(s.deletion_scheduled_for)}
+                                  </span>
+                                )}
+                                {s.deletion_status === "cancelled" && (
+                                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold bg-gray-100 text-gray-700 border border-gray-200">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-gray-500"></span>
+                                    Deletion cancelled
+                                  </span>
+                                )}
+                              </div>
                               </td>
                               <td className="py-3 sm:py-4 px-2 sm:px-3 md:px-4">
                                 <div className="flex items-center justify-end gap-1 sm:gap-1.5 md:gap-2 flex-wrap">

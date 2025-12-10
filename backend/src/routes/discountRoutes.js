@@ -8,3 +8,5 @@ router.post('/', authenticate, createDiscount);
 
 module.exports = router;
 
+
+
