@@ -646,12 +646,6 @@ function SuperAdmin() {
                                     Deletion scheduled {formatDate(s.deletion_scheduled_for)}
                                   </span>
                                 )}
-                                {s.deletion_status === "cancelled" && (
-                                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold bg-gray-100 text-gray-700 border border-gray-200">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-gray-500"></span>
-                                    Deletion cancelled
-                                  </span>
-                                )}
                               </div>
                               </td>
                               <td className="py-3 sm:py-4 px-2 sm:px-3 md:px-4">

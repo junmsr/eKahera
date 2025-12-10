@@ -32,12 +32,21 @@ const ProfileModal = ({ isOpen, onClose, userData }) => {
 
   if (!isOpen) return null;
 
+  const normalizeDeletion = (del) => {
+    if (!del) return { status: "none" };
+    if (del.status === "cancelled") return { status: "none" };
+    return del;
+  };
+
   const fetchDeletionStatus = async () => {
     try {
       setDeleteLoading(true);
       const res = await api("/api/business/delete-request");
-      setDeleteState(res?.deletion || { status: "none" });
-      setDeleteMessage(res?.message || "");
+      const normalized = normalizeDeletion(res?.deletion);
+      setDeleteState(normalized);
+      setDeleteMessage(
+        normalized.status === "pending" ? res?.message || "" : ""
+      );
     } catch (e) {
       setDeleteError(
         e?.message || "Could not load deletion status. Please try again."
@@ -117,8 +126,9 @@ const ProfileModal = ({ isOpen, onClose, userData }) => {
       const res = await api("/api/business/delete-request/cancel", {
         method: "POST",
       });
-      setDeleteState(res?.deletion || { status: "none" });
-      setDeleteMessage(res?.message || "Deletion request cancelled.");
+      const normalized = normalizeDeletion(res?.deletion);
+      setDeleteState(normalized);
+      setDeleteMessage("");
       setConfirmText("");
     } catch (e) {
       setDeleteError(
@@ -276,26 +286,28 @@ const ProfileModal = ({ isOpen, onClose, userData }) => {
             </div>
           )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-gray-700 mb-3">
-            <div className="flex items-center gap-2">
-              <span className="font-semibold text-gray-800">Status:</span>
-              <span className="px-2 py-1 rounded-full border text-xs">
-                {deleteState.status || "none"}
-              </span>
+          {deleteState.status === "pending" && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-gray-700 mb-3">
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-gray-800">Status:</span>
+                <span className="px-2 py-1 rounded-full border text-xs">
+                  {deleteState.status || "none"}
+                </span>
+              </div>
+              <div>
+                <span className="font-semibold text-gray-800">Scheduled:</span>{" "}
+                {formatDate(deleteState.scheduledFor)}
+              </div>
+              <div>
+                <span className="font-semibold text-gray-800">Requested:</span>{" "}
+                {formatDate(deleteState.requestedAt)}
+              </div>
+              <div>
+                <span className="font-semibold text-gray-800">Export ready:</span>{" "}
+                {formatDate(deleteState.exportReadyAt)}
+              </div>
             </div>
-            <div>
-              <span className="font-semibold text-gray-800">Scheduled:</span>{" "}
-              {formatDate(deleteState.scheduledFor)}
-            </div>
-            <div>
-              <span className="font-semibold text-gray-800">Requested:</span>{" "}
-              {formatDate(deleteState.requestedAt)}
-            </div>
-            <div>
-              <span className="font-semibold text-gray-800">Export ready:</span>{" "}
-              {formatDate(deleteState.exportReadyAt)}
-            </div>
-          </div>
+          )}
 
           <div className="space-y-2">
             <label className="block text-xs font-semibold text-gray-800">
