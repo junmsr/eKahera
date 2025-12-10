@@ -1,9 +1,11 @@
 import React, { useEffect, useMemo, useState, useRef } from "react";
 import NavAdmin from "../components/layout/Nav-Admin";
-import { BiRefresh } from "react-icons/bi";
+import { BiRefresh, BiCalendarAlt } from "react-icons/bi";
 import PageLayout from "../components/layout/PageLayout";
 import Button from "../components/common/Button";
 import { api, authHeaders } from "../lib/api";
+import dayjs from "dayjs";
+import DateRangeFilterModal from "../components/modals/DateRangeFilterModal";
 
 const LogsPage = () => {
   const [logs, setLogs] = useState([]);
@@ -11,19 +13,54 @@ const LogsPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [clearing, setClearing] = useState(false);
+  const [dateRange, setDateRange] = useState({
+    startDate: dayjs().startOf('month'),
+    endDate: dayjs().endOf('day'),
+    rangeType: 'Month'
+  });
   const [roleFilter, setRoleFilter] = useState("all");
   const [sortOrder, setSortOrder] = useState("desc");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isSidebarOpen, setSidebarOpen] = useState(false);
+  const [showFilterModal, setShowFilterModal] = useState(false);
   const dropdownRef = useRef(null);
+  
+  const headerDateDisplay = useMemo(() => {
+    if (!dateRange.startDate || !dateRange.endDate) return "Select Range";
+    
+    const start = dayjs(dateRange.startDate);
+    const end = dayjs(dateRange.endDate);
+    const diff = end.diff(start, 'day') + 1;
+    
+    if (dateRange.rangeType === 'Day') {
+      return start.format('MMM D, YYYY');
+    } else if (dateRange.rangeType === 'Week') {
+      return `${start.format('MMM D')} - ${end.format('MMM D, YYYY')} (${diff} days)`;
+    } else if (dateRange.rangeType === 'Month') {
+      return `${start.format('MMM YYYY')} (${diff} days)`;
+    } else {
+      return `${start.format('MMM D, YYYY')} - ${end.format('MMM D, YYYY')} (${diff} days)`;
+    }
+  }, [dateRange]);
 
   const fetchLogs = async () => {
     try {
       setLoading(true);
       setError("");
       const token = sessionStorage.getItem("auth_token");
+      
+      // Format dates for the API
+      const params = {};
+      if (dateRange.startDate) {
+        params.startDate = dayjs(dateRange.startDate).format('YYYY-MM-DD');
+      }
+      if (dateRange.endDate) {
+        params.endDate = dayjs(dateRange.endDate).format('YYYY-MM-DD');
+      }
+      
       const data = await api("/api/logs", {
         headers: authHeaders(token),
+        params,
       });
       const normalized = (data || []).map((l) => ({
         id: l.log_id,
@@ -68,7 +105,12 @@ const LogsPage = () => {
     let filtered = logs;
 
     if (roleFilter !== "all") {
-      filtered = filtered.filter((l) => l.role === roleFilter);
+      filtered = filtered.filter((l) => {
+        if (roleFilter === 'customer') {
+          return l.role === 'user' || l.role === 'customer';
+        }
+        return l.role === roleFilter;
+      });
     }
 
     if (searchQuery) {
@@ -80,6 +122,17 @@ const LogsPage = () => {
       );
     }
 
+    // Apply date range filter
+    if (dateRange.startDate) {
+      const startDate = dayjs(dateRange.startDate).startOf('day');
+      const endDate = dateRange.endDate ? dayjs(dateRange.endDate).endOf('day') : dayjs().endOf('day');
+      
+      filtered = filtered.filter(log => {
+        const logDate = dayjs(log.dateTime);
+        return logDate.isBetween(startDate, endDate, null, '[]');
+      });
+    }
+
     filtered.sort((a, b) => {
       const dateA = new Date(a.dateTime);
       const dateB = new Date(b.dateTime);
@@ -87,11 +140,11 @@ const LogsPage = () => {
     });
 
     return filtered;
-  }, [logs, roleFilter, searchQuery, sortOrder]);
+  }, [logs, roleFilter, searchQuery, sortOrder, dateRange]);
 
   const exportToCSV = () => {
     try {
-      const headers = ["User ID", "Username", "Role", "Action", "Time"];
+      const headers = ["Customer ID", "Customer Name", "Role", "Action", "Time"];
 
       const csvRows = [
         headers.join(","),
@@ -171,7 +224,7 @@ const LogsPage = () => {
     { value: "all", label: "All Roles" },
     { value: "cashier", label: "Cashier" },
     { value: "admin", label: "Admin" },
-    { value: "user", label: "User" },
+    { value: "customer", label: "Customer" },
   ];
 
   const selectedRole = roleOptions.find(
@@ -189,25 +242,30 @@ const LogsPage = () => {
         <BiRefresh className={`w-5 h-5 ${loading ? "animate-spin" : ""}`} />
       </button>
 
-      <Button
-        onClick={exportToCSV}
-        variant="secondary"
-        size="md"
-        className="flex items-center gap-2"
-        disabled={filteredLogs.length === 0 || loading}
+      <button
+        onClick={() => setShowFilterModal(true)}
+        disabled={loading}
+        title="Select Date Range"
+        className={`flex items-center gap-1 sm:gap-2 ${
+          dateRange.rangeType !== 'Custom' ? 'bg-blue-50 border-blue-200' : 'bg-white/80 border-gray-200/80'
+        } backdrop-blur-sm hover:bg-white text-gray-700 px-2 sm:px-3 py-1.5 rounded-lg border text-xs sm:text-sm font-medium transition-all duration-200 hover:shadow-md`}
       >
-        Export
-      </Button>
+        <BiCalendarAlt className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+        <span className="hidden sm:inline text-left truncate max-w-[180px]">
+          {headerDateDisplay}
+        </span>
+      </button>
     </div>
   );
 
-return (
+  return (
     <PageLayout
       title="LOGS"
       sidebar={<NavAdmin />}
       isSidebarOpen={isSidebarOpen}
       setSidebarOpen={setSidebarOpen}
       className="overflow-hidden"
+      headerActions={headerActions}
     >
       <div className="h-[calc(100vh-80px)] bg-transparent p-4 flex flex-col overflow-hidden">
         <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between mb-4">
@@ -337,7 +395,7 @@ return (
               <thead className="bg-gray-100/90 backdrop-blur-md sticky top-0 z-10">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    User
+                    Customer
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Role
@@ -484,6 +542,21 @@ return (
             </p>
           </div>
         )}
+        
+        {/* Date Range Filter Modal */}
+        <DateRangeFilterModal
+          isOpen={showFilterModal}
+          onClose={() => setShowFilterModal(false)}
+          onDateRangeApply={(newDateRange) => {
+            setDateRange({
+              startDate: newDateRange.startDate,
+              endDate: newDateRange.endDate,
+              rangeType: newDateRange.rangeType
+            });
+            // Trigger a refetch of logs with the new date range
+            fetchLogs();
+          }}
+        />
       </div>
     </PageLayout>
   );
