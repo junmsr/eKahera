@@ -6,6 +6,7 @@ import Loader from "../components/common/Loader";
 import { api } from "../lib/api";
 import Button from "../components/common/Button";
 import ProfileModal from "../components/modals/ProfileModal";
+import BaseModal from "../components/modals/BaseModal";
 
 // Icon Components
 const UserIcon = (props) => (
@@ -228,9 +229,41 @@ const Profile = () => {
   const [error, setError] = useState("");
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [deleteState, setDeleteState] = useState({ status: "none" });
+  const [deleteMessage, setDeleteMessage] = useState("");
+  const [deleteError, setDeleteError] = useState("");
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [downloadLoading, setDownloadLoading] = useState(false);
+  const [confirmText, setConfirmText] = useState("");
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  const normalizeDeletion = (del) => {
+    if (!del) return { status: "none" };
+    if (del.status === "cancelled") return { status: "none" };
+    return del;
+  };
+
+  const fetchDeletionStatus = async () => {
+    try {
+      setDeleteLoading(true);
+      const res = await api("/api/business/delete-request");
+      const normalized = normalizeDeletion(res?.deletion);
+      setDeleteState(normalized);
+      setDeleteMessage(
+        normalized.status === "pending" ? res?.message || "" : ""
+      );
+    } catch (e) {
+      setDeleteError(
+        e?.message || "Could not load deletion status. Please try again."
+      );
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetchProfileData();
+    fetchDeletionStatus();
   }, []);
 
   const fetchProfileData = async () => {
@@ -279,6 +312,78 @@ const Profile = () => {
       hour: "2-digit",
       minute: "2-digit",
     });
+  };
+
+  const handleDownloadExport = async () => {
+    setDeleteError("");
+    setDownloadLoading(true);
+    try {
+      const res = await api(
+        "/api/business/delete-request/export",
+        { method: "GET" },
+        true
+      );
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `transactions-export.${blob.type.includes("gzip") ? "gz" : "json"}`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (e) {
+      setDeleteError(
+        e?.message || "Failed to download export. Please try again."
+      );
+    } finally {
+      setDownloadLoading(false);
+    }
+  };
+
+  const handleRequestDeletion = async () => {
+    setDeleteError("");
+    setDeleteMessage("");
+    if (confirmText.trim().toLowerCase() !== "delete") {
+      setDeleteError('Type "DELETE" to confirm.');
+      return;
+    }
+    setDeleteLoading(true);
+    try {
+      const res = await api("/api/business/delete-request", { method: "POST" });
+      setDeleteState(res?.deletion || { status: "pending" });
+      setDeleteMessage(
+        res?.message || "Deletion request recorded with a 30-day grace period."
+      );
+      setShowDeleteConfirm(false);
+    } catch (e) {
+      setDeleteError(
+        e?.message || "Could not request deletion. Please try again."
+      );
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  const handleCancelDeletion = async () => {
+    setDeleteError("");
+    setDeleteMessage("");
+    setDeleteLoading(true);
+    try {
+      const res = await api("/api/business/delete-request/cancel", {
+        method: "POST",
+      });
+      const normalized = normalizeDeletion(res?.deletion);
+      setDeleteState(normalized);
+      setDeleteMessage("");
+      setConfirmText("");
+    } catch (e) {
+      setDeleteError(
+        e?.message || "Could not cancel deletion. Please try again."
+      );
+    } finally {
+      setDeleteLoading(false);
+    }
   };
 
   const handleDownloadQr = async () => {
@@ -940,9 +1045,137 @@ const Profile = () => {
                   })()}
                 </>
               )}
-          </React.Fragment>
-        )}
-      </div>
+
+              {/* Store Deletion Section */}
+              <Card className="border-red-100 border-2 mt-6">
+                <div className="p-6">
+                  <div className="flex items-center mb-4">
+                    <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center mr-3">
+                      <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-red-900">Delete Your Store</h3>
+                      <p className="text-sm text-red-600">This action cannot be undone after 30 days</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <p className="text-gray-700">
+                      Download all transactions then schedule deletion with a 30-day recovery window.
+                    </p>
+
+                    {deleteMessage && (
+                      <div className="text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
+                        {deleteMessage}
+                      </div>
+                    )}
+                    {deleteError && (
+                      <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                        {deleteError}
+                      </div>
+                    )}
+
+                    {deleteState.status === "pending" && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-gray-700 p-4 bg-gray-50 rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-gray-800">Status:</span>
+                          <span className="px-2 py-1 rounded-full border text-xs">
+                            {deleteState.status || "none"}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="font-semibold text-gray-800">Scheduled:</span>{" "}
+                          {formatDate(deleteState.scheduledFor)}
+                        </div>
+                        <div>
+                          <span className="font-semibold text-gray-800">Requested:</span>{" "}
+                          {formatDate(deleteState.requestedAt)}
+                        </div>
+                        <div>
+                          <span className="font-semibold text-gray-800">Export ready:</span>{" "}
+                          {formatDate(deleteState.exportReadyAt) || "N/A"}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="space-y-4">
+                      {!showDeleteConfirm ? (
+                        <div className="flex flex-wrap gap-3">
+                          <Button
+                            label={
+                              downloadLoading ? "Preparing..." : "Download transactions"
+                            }
+                            variant="secondary"
+                            onClick={handleDownloadExport}
+                            disabled={downloadLoading}
+                            icon={<DownloadIcon />}
+                          />
+                          <Button
+                            label="Delete store"
+                            variant="danger"
+                            onClick={() => setShowDeleteConfirm(true)}
+                            disabled={deleteLoading || deleteState.status === "pending"}
+                          />
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Type "DELETE" to confirm
+                            </label>
+                            <input
+                              type="text"
+                              className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                              placeholder="DELETE"
+                              value={confirmText}
+                              onChange={(e) => setConfirmText(e.target.value)}
+                            />
+                          </div>
+                          <div className="flex flex-wrap gap-3">
+                            <Button
+                              label="Cancel"
+                              variant="secondary"
+                              onClick={() => {
+                                setShowDeleteConfirm(false);
+                                setConfirmText("");
+                                setDeleteError("");
+                              }}
+                              disabled={deleteLoading}
+                            />
+                            <Button
+                              label={
+                                deleteLoading ? "Processing..." : "Confirm Deletion"
+                              }
+                              variant="danger"
+                              onClick={handleRequestDeletion}
+                              disabled={deleteLoading || confirmText.trim().toLowerCase() !== "delete"}
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {deleteState.status === "pending" && (
+                        <Button
+                          label="Cancel Deletion"
+                          variant="secondary"
+                          onClick={handleCancelDeletion}
+                          disabled={deleteLoading}
+                          className="mt-2"
+                        />
+                      )}
+
+                      <p className="text-sm text-gray-500 mt-2">
+                        You can recover the account within 30 days. After that, the store is permanently removed.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            </React.Fragment>
+          )}
+        </div>
     </PageLayout>
   );
 };
