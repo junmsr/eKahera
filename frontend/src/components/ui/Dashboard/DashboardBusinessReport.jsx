@@ -60,21 +60,26 @@ export default function DashboardBusinessReport({ dateRange }) {
           // Handle Date objects
           const d = new Date(date);
           const year = d.getFullYear();
-          const month = String(d.getMonth() + 1).padStart(2, '0');
-          const day = String(d.getDate()).padStart(2, '0');
+          const month = String(d.getMonth() + 1).padStart(2, "0");
+          const day = String(d.getDate()).padStart(2, "0");
           return `${year}-${month}-${day}`;
         };
 
-        const startDate = dateRange?.startDate ? formatDate(dateRange.startDate) : null;
-        const endDate = dateRange?.endDate ? formatDate(dateRange.endDate) : null;
+        const startDate = dateRange?.startDate
+          ? formatDate(dateRange.startDate)
+          : null;
+        const endDate = dateRange?.endDate
+          ? formatDate(dateRange.endDate)
+          : null;
 
         // Build query string for API calls
         const buildQueryString = (params) => {
           const queryParams = new URLSearchParams();
-          if (params.startDate) queryParams.append('startDate', params.startDate);
-          if (params.endDate) queryParams.append('endDate', params.endDate);
+          if (params.startDate)
+            queryParams.append("startDate", params.startDate);
+          if (params.endDate) queryParams.append("endDate", params.endDate);
           const queryString = queryParams.toString();
-          return queryString ? `?${queryString}` : '';
+          return queryString ? `?${queryString}` : "";
         };
 
         const queryParams = {};
@@ -283,7 +288,6 @@ export default function DashboardBusinessReport({ dateRange }) {
                 }}
                 labelStyle={{ fontWeight: "700", color: "#1e40af" }}
               />
-              <Legend verticalAlign="bottom" height={36} />
             </PieChart>
           </ResponsiveContainer>
         </div>
