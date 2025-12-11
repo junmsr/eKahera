@@ -120,9 +120,10 @@ export default function Cashiers() {
   };
 
   // Handle Edit Cashier
-  const handleEditCashier = (idx) => {
-    setEditingCashier(idx);
-    setForm({ ...cashiers[idx] });
+  const handleEditCashier = (cashier) => {
+    const cashierToEdit = cashiers.find((c) => c.id === cashier.id);
+    // Set the cashier to edit and then show the modal in the next state update
+    setEditingCashier(cashierToEdit);
     setShowEditModal(true);
   };
 
@@ -130,7 +131,10 @@ export default function Cashiers() {
     try {
       setModalLoading(true);
       const updated = [...cashiers];
-      updated[editingCashier] = formData;
+      const index = updated.findIndex((c) => c.id === editingCashier.id);
+      if (index !== -1) {
+        updated[index] = { ...updated[index], ...formData };
+      }
       setCashiers(updated);
       setShowEditModal(false);
       setEditingCashier(null);
@@ -506,7 +510,7 @@ export default function Cashiers() {
                           <Button
                             variant="icon"
                             className="bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-full p-1.5 border border-blue-200" // Changed from handleEditCashier(idx)
-                            onClick={() => handleEditCashier(idx)}
+                            onClick={() => handleEditCashier(c)}
                             title="Edit"
                           >
                             <svg
@@ -579,7 +583,7 @@ export default function Cashiers() {
         onSubmit={handleSaveEdit}
         title="Edit Cashier"
         submitButtonText="Update Cashier"
-        initialData={form}
+        initialData={editingCashier}
         isLoading={modalLoading}
       />
       {/* Delete Confirmation Modal */}

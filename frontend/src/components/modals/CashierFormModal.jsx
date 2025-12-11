@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Button from "../common/Button";
 import FormField from "../common/FormField";
 import BaseModal from "./BaseModal";
@@ -13,18 +13,32 @@ export default function CashierFormModal({
   onSubmit,
   title = "Add Cashier",
   submitButtonText = "Save",
-  initialData = {
+  initialData,
+  isLoading = false,
+}) {
+  const defaultInitialData = {
     name: "",
     password: "",
     number: "",
     email: "",
     status: "ACTIVE",
-  },
-  isLoading = false,
-}) {
-  const [form, setForm] = useState(initialData);
+  };
+
+  const [form, setForm] = useState(initialData || defaultInitialData);
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
+
+  useEffect(() => {
+    if (initialData) {
+      setForm({ ...initialData, password: initialData.password || "" });
+    } else {
+      // When used for "Add", there's no initialData, so we use the default.
+      setForm(defaultInitialData);
+    }
+  }, [initialData]);
+
+  // Reset form state when modal is closed
+  useEffect(() => { if (!isOpen) { setForm(initialData || defaultInitialData); setErrors({}); setTouched({}); } }, [isOpen, initialData]);
 
   // Validation rules
   const validateField = (name, value) => {
@@ -111,7 +125,7 @@ export default function CashierFormModal({
   };
 
   const handleClose = () => {
-    setForm(initialData);
+    setForm(initialData || defaultInitialData);
     setErrors({});
     setTouched({});
     onClose();
@@ -174,7 +188,7 @@ export default function CashierFormModal({
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Name Field */}
         <FormField
-          label="Full Name"
+          label="User Name"
           name="name"
           value={form.name}
           onChange={handleChange}
