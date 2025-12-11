@@ -10,6 +10,13 @@ const BusinessDocument = require('../models/BusinessDocument');
 const BusinessVerification = require('../models/BusinessVerification');
 const multer = require('multer');
 const axios = require('axios');
+const {
+  createDeletionRequest,
+  cancelDeletionRequest,
+  getLatestDeletionRequest,
+  exportTransactions,
+  DEFAULT_GRACE_DAYS
+} = require('../utils/storeDeletionService');
 
 // Use environment variables directly, no manual config.env reading
 const config = process.env;
@@ -1243,6 +1250,133 @@ exports.getBusinessPublic = async (req, res) => {
   } catch (error) {
     console.error("Get public business info error:", error);
     res.status(500).json({ error: "Failed to get business information" });
+  }
+};
+
+// --- Store deletion lifecycle (admin-side) ---
+const toDeletionDto = (request) => {
+  if (!request) {
+    return { status: 'none' };
+  }
+  return {
+    status: request.status,
+    requestedAt: request.requested_at,
+    scheduledFor: request.scheduled_for,
+    exportReadyAt: request.export_ready_at,
+    exportType: request.export_type,
+    exportSizeBytes: request.export_size_bytes,
+    recoveredAt: request.recovered_at,
+    deletedAt: request.deleted_at,
+  };
+};
+
+exports.getStoreDeletionStatus = async (req, res) => {
+  try {
+    const businessId = req.user?.businessId;
+    if (!businessId) {
+      return res.status(400).json({ error: 'Business not found for user' });
+    }
+    const latest = await getLatestDeletionRequest(businessId);
+    res.json({
+      message: latest ? 'Found deletion request' : 'No deletion request',
+      graceDays: DEFAULT_GRACE_DAYS,
+      deletion: toDeletionDto(latest),
+    });
+  } catch (err) {
+    console.error('Get store deletion status error:', err);
+    res.status(500).json({ error: 'Failed to load deletion status' });
+  }
+};
+
+exports.requestStoreDeletion = async (req, res) => {
+  try {
+    const businessId = req.user?.businessId;
+    if (!businessId) {
+      return res.status(400).json({ error: 'Business not found for user' });
+    }
+
+    const { request, alreadyExists } = await createDeletionRequest({
+      businessId,
+      userId: req.user?.userId,
+    });
+
+    res.json({
+      message: alreadyExists
+        ? 'A deletion request is already pending.'
+        : `Store deletion scheduled after a ${DEFAULT_GRACE_DAYS}-day grace period.`,
+      graceDays: DEFAULT_GRACE_DAYS,
+      deletion: toDeletionDto(request),
+    });
+  } catch (err) {
+    console.error('Request store deletion error:', err);
+    res.status(500).json({ error: 'Failed to request store deletion' });
+  }
+};
+
+exports.cancelStoreDeletion = async (req, res) => {
+  try {
+    const businessId = req.user?.businessId;
+    if (!businessId) {
+      return res.status(400).json({ error: 'Business not found for user' });
+    }
+
+    const cancelled = await cancelDeletionRequest({
+      businessId,
+      userId: req.user?.userId,
+    });
+
+    if (!cancelled) {
+      return res.status(404).json({ error: 'No pending deletion request to cancel' });
+    }
+
+    res.json({
+      message: 'Deletion request cancelled. Your store remains active.',
+      deletion: toDeletionDto(cancelled),
+    });
+  } catch (err) {
+    console.error('Cancel store deletion error:', err);
+    res.status(500).json({ error: 'Failed to cancel deletion request' });
+  }
+};
+
+exports.downloadStoreDeletionExport = async (req, res) => {
+  try {
+    const businessId = req.user?.businessId;
+    if (!businessId) {
+      return res.status(400).json({ error: 'Business not found for user' });
+    }
+
+    const latest = await getLatestDeletionRequest(businessId);
+    if (!latest?.export_path) {
+      return res.status(404).json({ error: 'No export available for this business' });
+    }
+
+    const filePath = path.isAbsolute(latest.export_path)
+      ? latest.export_path
+      : path.join(__dirname, '..', '..', latest.export_path);
+
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ error: 'Export file not found on server' });
+    }
+
+    const fileName = path.basename(filePath);
+    const isGzip = latest.export_type === 'gzip';
+    const isCsv = latest.export_type === 'csv';
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    res.setHeader(
+      'Content-Type',
+      isGzip ? 'application/gzip' : isCsv ? 'text/csv' : 'application/json'
+    );
+
+    const stream = fs.createReadStream(filePath);
+    stream.on('error', (err) => {
+      console.error('Stream error for deletion export:', err);
+      res.status(500).end();
+    });
+    stream.pipe(res);
+  } catch (err) {
+    console.error('Download store deletion export error:', err);
+    res.status(500).json({ error: 'Failed to download export' });
   }
 };
 module.exports.hasRequiredDocuments = hasRequiredDocuments;

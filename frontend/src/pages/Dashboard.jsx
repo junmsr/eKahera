@@ -1,3 +1,4 @@
+// Dashboard.jsx — Part 1/3 (start)
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { api, authHeaders } from "../lib/api";
 import dayjs from "dayjs"; 
@@ -36,12 +37,10 @@ import DateRangeFilterModal from "../components/modals/DateRangeFilterModal";
 // Extend the minMax plugin globally for this file
 dayjs.extend(minMax);
 
-
 // Constants
 const BLUE_COLORS = ["#2563eb", "#60a5fa", "#93c5fd", "#dbeafe"]; // Blue shades
-
 const SOFT_BLUE = "#3b82f6"; // Tailwind blue-500/600 for lines/accents
-const SOFT_GREEN = "#10b981"; // Retain green for profit, or change to a blue accent if desired
+const SOFT_GREEN = "#10b981"; // Retain green for profit
 const SOFT_PURPLE = "#8b5cf6"; // Retain purple/accent for pie chart variation
 const TODAY_START = dayjs().startOf('day');
 const TODAY_END = dayjs().endOf('day');
@@ -67,8 +66,6 @@ function VisitorsChart({ data, className = "", rangeType = "Custom" }) {
       className={`bg-white/80 backdrop-blur-md border border-white/60 shadow-xl ${className}`}
     >
       <div className="h-72 w-full">
-        {" "}
-        {/* Ensure width is 100% for full responsiveness */}
         <ResponsiveContainer width="100%" height="100%">
           <LineChart
             data={data}
@@ -87,7 +84,7 @@ function VisitorsChart({ data, className = "", rangeType = "Custom" }) {
             <Line
               type="monotone"
               dataKey="value"
-              stroke={SOFT_BLUE} // Uses SOFT_BLUE constant
+              stroke={SOFT_BLUE}
               strokeWidth={3}
               dot={{ r: 5, fill: SOFT_BLUE }}
             />
@@ -105,8 +102,6 @@ function SalesPieChart({ data, className = "" }) {
       className={`bg-white/80 backdrop-blur-md border border-white/60 shadow-xl ${className}`}
     >
       <div className="h-72 w-full">
-        {" "}
-        {/* Ensure width is 100% for full responsiveness */}
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
@@ -122,13 +117,8 @@ function SalesPieChart({ data, className = "" }) {
               fill={SOFT_PURPLE}
             >
               {data.map((entry, idx) => {
-                const colors = [SOFT_BLUE, SOFT_GREEN, SOFT_PURPLE]; // Using blue theme colors
-                return (
-                  <Cell
-                    key={`cell-${idx}`}
-                    fill={colors[idx % colors.length]}
-                  />
-                );
+                const colors = [SOFT_BLUE, SOFT_GREEN, SOFT_PURPLE];
+                return <Cell key={`cell-${idx}`} fill={colors[idx % colors.length]} />;
               })}
             </Pie>
             <Legend />
@@ -167,14 +157,14 @@ export default function Dashboard() {
   const [dateRange, setDateRange] = useState({
     startDate: dayjs().startOf("month"),
     endDate: dayjs().endOf("day"),
-    rangeType: "Month", 
-  }); 
+    rangeType: "Month",
+  });
   const [loading, setLoading] = useState(false);
   const [chartData, setChartData] = useState([]);
   const [pieData, setPieData] = useState([]);
   const [lowStockProducts, setLowStockProducts] = useState([]);
   const [showProfileModal, setShowProfileModal] = useState(false);
-  const [showFilterModal, setShowFilterModal] = useState(false); 
+  const [showFilterModal, setShowFilterModal] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -189,13 +179,43 @@ export default function Dashboard() {
     averageTransactionValue: 0,
   });
   const [exportingPDF, setExportingPDF] = useState(false);
-  
+
   // Refs for PDF export
   const dashboardRef = useRef(null);
   const visitorsChartRef = useRef(null);
   const pieChartRef = useRef(null);
   const keyMetricsRef = useRef(null);
   const businessReportRef = useRef(null);
+
+  // Helper function to detect modern CSS color functions
+  const hasModernColor = (val = "") => {
+    if (!val) return false;
+    const lower = val.toLowerCase();
+    return (
+      lower.includes("oklab") ||
+      lower.includes("oklch") ||
+      lower.includes("color(") ||
+      lower.includes("color-mix") ||
+      lower.includes("lab(") ||
+      lower.includes("lch(") ||
+      lower.includes("hwb(")
+    );
+  };
+
+  // Normalize any CSS color string to a safe RGB/HEX; returns fallback when unsupported
+  const normalizeToRGB = (() => {
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    return (value, fallback = "#ffffff") => {
+      if (!value) return fallback;
+      try {
+        ctx.fillStyle = value;
+        return ctx.fillStyle || fallback;
+      } catch (_) {
+        return fallback;
+      }
+    };
+  })();
 
   // Fetch Today's data (independent of the main filter)
   useEffect(() => {
@@ -224,7 +244,7 @@ export default function Dashboard() {
     };
     fetchTodayData();
   }, []);
-
+// Dashboard.jsx — Part 2/3 (middle)
   const user = useMemo(() => {
     try {
       return JSON.parse(sessionStorage.getItem("user") || "{}");
@@ -338,7 +358,6 @@ export default function Dashboard() {
         const salesLabel = rangeType === 'Day' ? "Daily Sales" : rangeType === 'Week' ? "7-Day Sales" : rangeType === 'Month' ? "Monthly Sales" : "Total Sales";
         const transactionsLabel = rangeType === 'Day' ? "Daily Transactions" : rangeType === 'Week' ? "7-Day Transactions" : rangeType === 'Month' ? "Monthly Transactions" : "Total Transactions";
 
-
         setStats([
           {
             label: salesLabel,
@@ -379,7 +398,6 @@ export default function Dashboard() {
   };
 
   const fetchNotifications = async () => {
-    // ... (Notification fetching logic remains the same)
     try {
       const token = sessionStorage.getItem("auth_token");
       const resp = await api("/api/logs", { headers: authHeaders(token) });
@@ -406,7 +424,6 @@ export default function Dashboard() {
   };
 
   const handleMarkAsRead = (id) => {
-    // ... (Notification handling logic remains the same)
     const readIds = JSON.parse(
       sessionStorage.getItem("read_notif_ids") || "[]"
     );
@@ -423,7 +440,6 @@ export default function Dashboard() {
   };
 
   const handleDeleteNotification = (id) => {
-    // ... (Notification handling logic remains the same)
     const deletedIds = JSON.parse(
       sessionStorage.getItem("deleted_notif_ids") || "[]"
     );
@@ -439,7 +455,6 @@ export default function Dashboard() {
   };
   
   const handleMarkAsUnread = (id) => {
-    // ... (Notification handling logic remains the same)
     const readIds = JSON.parse(
       sessionStorage.getItem("read_notif_ids") || "[]"
     );
@@ -450,420 +465,448 @@ export default function Dashboard() {
     );
     setUnreadCount((c) => c + 1);
   };
-  
-  // Export to CSV
-  const exportToCSV = () => {
-    // ... (Export logic remains the same)
-    const headers = ["Label", "Value", "Change"];
-    const rows = stats.map((s) => [s.label, s.value, s.change || "-"]);
-    // Add low stock products
-    if (lowStockProducts.length > 0) {
-      rows.push(["", "", ""]); // separator
-      rows.push(["Low Stock Products", "", ""]);
-      rows.push(["Product Name", "Quantity Left", ""]);
-      lowStockProducts.forEach((p) =>
-        rows.push([p.product_name, p.quantity_in_stock, ""])
+
+  // Robust captureElement that clones and copies computed styles safely (forces RGB colors and strips unsupported effects)
+  const captureElement = async (element) => {
+    if (!element) return null;
+
+    const normalizeColor = (() => {
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      return (value, fallback = "#ffffff") => {
+        if (!value) return fallback;
+        try {
+          ctx.fillStyle = value;
+          return ctx.fillStyle || fallback;
+        } catch (_) {
+          return fallback;
+        }
+      };
+    })();
+
+    // Using the top-level hasModernColor function
+
+    const shouldStripBackgroundImage = (value) => {
+      if (!value || value === "none") return false;
+      const lower = value.toLowerCase();
+      return (
+        lower.includes("gradient") ||
+        lower.includes("image-set") ||
+        hasModernColor(lower)
       );
+    };
+
+    const stripProps = new Set([
+      "box-shadow",
+      "filter",
+      "backdrop-filter",
+      "mix-blend-mode",
+      "text-shadow",
+    ]);
+
+    const colorProps = new Set([
+      "color",
+      "background-color",
+      "border-color",
+      "outline-color",
+      "text-decoration-color",
+      "column-rule-color",
+      "caret-color",
+      "accent-color",
+      "fill",
+      "stroke",
+    ]);
+
+    const copyComputedStyles = (source, target) => {
+      const computed = window.getComputedStyle(source);
+
+      for (const prop of computed) {
+        if (prop.startsWith("--")) continue; // drop CSS variables that may carry modern colors
+        if (prop === "background-image" || prop === "background" || prop === "border-image") continue;
+
+        let value = computed.getPropertyValue(prop);
+        const priority = computed.getPropertyPriority(prop);
+
+        if (hasModernColor(value) && !colorProps.has(prop)) {
+          continue; // skip unsupported color functions on non-color props
+        }
+
+        if (colorProps.has(prop)) {
+          value = normalizeColor(value, value);
+        }
+
+        if (stripProps.has(prop)) {
+          value = prop === "mix-blend-mode" ? "normal" : "none";
+        }
+
+        target.style.setProperty(prop, value, priority);
+      }
+
+      // Force safe backgrounds and borders
+      target.style.backgroundColor = normalizeColor(computed.getPropertyValue("background-color"), "#ffffff");
+      target.style.backgroundImage = "none";
+      target.style.background = normalizeColor(computed.getPropertyValue("background-color"), "#ffffff");
+      target.style.borderColor = normalizeColor(computed.getPropertyValue("border-color"), "transparent");
+      target.style.boxShadow = "none";
+      target.style.filter = "none";
+      target.style.mixBlendMode = "normal";
+      target.style.textShadow = "none";
+
+      const rect = source.getBoundingClientRect();
+      target.style.width = `${rect.width}px`;
+      target.style.height = `${rect.height}px`;
+      target.style.boxSizing = computed.getPropertyValue("box-sizing") || "border-box";
+    };
+
+    const clone = element.cloneNode(true);
+
+    const origNodes = [element, ...Array.from(element.querySelectorAll("*"))];
+    const cloneNodes = [clone, ...Array.from(clone.querySelectorAll("*"))];
+    const len = Math.min(origNodes.length, cloneNodes.length);
+
+    for (let i = 0; i < len; i++) {
+      try {
+        copyComputedStyles(origNodes[i], cloneNodes[i]);
+      } catch {
+        // Best-effort; skip nodes that fail style copying
+      }
     }
-    const csvContent = [headers, ...rows]
-      .map((row) => row.join(","))
-      .join("\n");
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = "dashboard-data.csv";
-    link.click();
+
+    // Sanitize SVG/HTML attributes that may carry modern color functions
+    const sanitizeAttributes = (node) => {
+      if (!(node instanceof Element)) return;
+      const attrs = Array.from(node.attributes || []);
+      for (const attr of attrs) {
+        const name = attr.name;
+        const value = attr.value || "";
+        if (hasModernColor(value)) {
+          if (
+            name === "fill" ||
+            name === "stroke" ||
+            name === "stop-color" ||
+            name === "color"
+          ) {
+            node.setAttribute(name, normalizeColor(value, "#000000"));
+          } else {
+            node.removeAttribute(name);
+          }
+        }
+        if (name === "style" && hasModernColor(value)) {
+          node.removeAttribute("style");
+        }
+      }
+      // For SVG gradients/defs, disable by forcing fill/stroke to currentColor
+      if (node.tagName === "linearGradient" || node.tagName === "radialGradient") {
+        node.parentNode && node.parentNode.removeChild(node);
+      }
+      if (node.tagName === "stop" && node.hasAttribute("stop-color")) {
+        node.setAttribute(
+          "stop-color",
+          normalizeColor(node.getAttribute("stop-color"), "#000000")
+        );
+      }
+    };
+
+    clone.querySelectorAll("*").forEach(sanitizeAttributes);
+    sanitizeAttributes(clone);
+
+    const sandbox = document.createElement("div");
+    sandbox.style.position = "absolute";
+    sandbox.style.left = "-9999px";
+    sandbox.style.top = "0";
+    sandbox.style.zIndex = "-9999";
+    sandbox.style.background = normalizeColor(
+      window.getComputedStyle(element).backgroundColor,
+      "#ffffff"
+    );
+    sandbox.appendChild(clone);
+    document.body.appendChild(sandbox);
+
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    const canvas = await html2canvas(clone, {
+      useCORS: true,
+      scale: 2,
+      backgroundColor: "#ffffff",
+      allowTaint: true,
+    });
+
+    document.body.removeChild(sandbox);
+
+    return canvas.toDataURL("image/png");
   };
 
-  // Export to PDF
   const exportToPDF = async () => {
+    setExportingPDF(true);
     try {
-      setExportingPDF(true);
-      
-      // Wait a bit to ensure all charts are fully rendered
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Scroll to top to ensure all elements are visible
-      window.scrollTo(0, 0);
-      await new Promise(resolve => setTimeout(resolve, 200));
-      
-      const pdf = new jsPDF("p", "mm", "a4");
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-      const margin = 10;
-      const contentWidth = pageWidth - 2 * margin;
-      let yPosition = margin;
+      const element = document.getElementById("pdf-wrapper");
+      if (!element) throw new Error("Dashboard content not found");
 
-      // Helper function to add a new page if needed
-      const checkNewPage = (requiredHeight) => {
-        if (yPosition + requiredHeight > pageHeight - margin) {
-          pdf.addPage();
-          yPosition = margin;
-          return true;
-        }
-        return false;
+      // Create a clone of the element to avoid affecting the original
+      const clone = element.cloneNode(true);
+      clone.style.position = 'absolute';
+      clone.style.left = '-9999px';
+      document.body.appendChild(clone);
+
+      // Create a header with business information
+      const header = document.createElement('div');
+      header.style.padding = '15px 20px';
+      header.style.backgroundColor = '#1a365d';
+      header.style.color = 'white';
+      header.style.borderBottom = '2px solid #2c5282';
+      
+      // Format the date range
+      const { startDate, endDate, rangeType } = dateRange;
+      const formatDate = (date) => dayjs(date).format('MMM D, YYYY');
+      const dateRangeText = rangeType === 'Day' 
+        ? formatDate(startDate)
+        : `${formatDate(startDate)} - ${formatDate(endDate)}`;
+      
+      // Business information (you can customize these values)
+      const businessInfo = {
+        name: "eKahera Business",
+        address: "123 Business St, City, Country",
+        contact: "contact@ekahera.com | +1 234 567 890"
       };
 
-      // Helper function to capture element as image
-      const captureElement = async (element, options = {}) => {
-        if (!element) {
-          console.warn("captureElement: element is null");
-          return null;
-        }
-        try {
-          console.log("Starting capture for element:", element.className);
-          
-          // Scroll element into view
-          element.scrollIntoView({ behavior: 'instant', block: 'center' });
-          await new Promise(resolve => setTimeout(resolve, 800));
-          
-          // Check if SVG elements exist
-          const svgs = element.querySelectorAll('svg');
-          console.log(`Found ${svgs.length} SVG elements in chart`);
-          
-          // Force re-render of SVG elements
-          svgs.forEach((svg, index) => {
-            svg.style.display = 'block';
-            svg.style.visibility = 'visible';
-            svg.style.opacity = '1';
-            const rechartsWrapper = svg.closest('.recharts-wrapper');
-            if (rechartsWrapper) {
-              rechartsWrapper.style.display = 'block';
-              rechartsWrapper.style.width = '100%';
-              rechartsWrapper.style.height = '100%';
-              rechartsWrapper.style.visibility = 'visible';
-            }
-            console.log(`SVG ${index} prepared for capture`);
-          });
-          
-          await new Promise(resolve => setTimeout(resolve, 500));
-          
-          // Ensure element has dimensions
-          if (element.offsetWidth === 0 || element.offsetHeight === 0) {
-            console.warn("Element has zero dimensions:", element.offsetWidth, "x", element.offsetHeight);
-            return null;
-          }
-          
-          const canvas = await html2canvas(element, {
-            useCORS: true,
-            scale: 2,
-            backgroundColor: "#ffffff",
-            logging: false, // Disable verbose logging
-            allowTaint: true,
-            removeContainer: false,
-            foreignObjectRendering: true,
-            width: element.scrollWidth || element.offsetWidth,
-            height: element.scrollHeight || element.offsetHeight,
-            x: 0,
-            y: 0,
-            onclone: (clonedDoc, clonedElement) => {
-              console.log("onclone called, processing SVG elements");
-              
-              // Force SVG rendering in cloned document
-              const clonedSvgs = clonedElement.querySelectorAll('svg');
-              console.log(`Found ${clonedSvgs.length} SVG elements in cloned document`);
-              
-              clonedSvgs.forEach((svg, index) => {
-                svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-                svg.style.display = 'block';
-                svg.style.visibility = 'visible';
-                svg.style.opacity = '1';
-                
-                const rechartsWrapper = svg.closest('.recharts-wrapper');
-                if (rechartsWrapper) {
-                  rechartsWrapper.style.display = 'block';
-                  rechartsWrapper.style.visibility = 'visible';
-                  rechartsWrapper.style.width = '100%';
-                  rechartsWrapper.style.height = '100%';
-                }
-                
-                // Also check for recharts-surface
-                const surface = svg.querySelector('.recharts-surface');
-                if (surface) {
-                  surface.style.display = 'block';
-                  surface.style.visibility = 'visible';
-                }
-                
-                console.log(`SVG ${index} processed in clone`);
-              });
-              
-              // Add comprehensive styles to ensure charts are visible
-              const style = clonedDoc.createElement('style');
-              style.textContent = `
-                svg { 
-                  display: block !important; 
-                  visibility: visible !important; 
-                  opacity: 1 !important;
-                }
-                .recharts-wrapper { 
-                  display: block !important; 
-                  visibility: visible !important; 
-                  width: 100% !important;
-                  height: 100% !important;
-                }
-                .recharts-surface { 
-                  display: block !important; 
-                  visibility: visible !important; 
-                }
-                .recharts-legend-wrapper { 
-                  display: block !important; 
-                  visibility: visible !important;
-                }
-                .recharts-tooltip-wrapper { 
-                  display: none !important; 
-                }
-                .recharts-responsive-container {
-                  display: block !important;
-                  visibility: visible !important;
-                }
-              `;
-              clonedDoc.head.appendChild(style);
-            },
-            ...options,
-          });
-          
-          console.log("Canvas created:", canvas.width, "x", canvas.height);
-          
-          // Verify canvas has content by checking if it's not blank
-          const ctx = canvas.getContext('2d');
-          const imageData = ctx.getImageData(0, 0, Math.min(100, canvas.width), Math.min(100, canvas.height));
-          const hasContent = imageData.data.some((pixel, index) => {
-            // Check alpha channel (every 4th value) - if any pixel is not fully transparent, there's content
-            return index % 4 === 3 && pixel > 0;
-          });
-          
-          if (!hasContent) {
-            console.warn("Canvas appears to be blank/empty");
-          }
-          
-          const dataUrl = canvas.toDataURL("image/png");
-          console.log("Data URL length:", dataUrl.length, "Has content:", hasContent);
-          
-          return dataUrl;
-        } catch (error) {
-          console.error("Error capturing element:", error);
-          return null;
-        }
-      };
+      header.innerHTML = `
+        <div style="max-width: 100%; color: white;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <h1 style="margin: 0; font-size: 24px; font-weight: 600; color: white;">${businessInfo.name}</h1>
+            <div style="text-align: right;">
+              <div style="font-size: 14px; color: #a0aec0;">Report Period</div>
+              <div style="font-weight: 600; font-size: 16px;">${dateRangeText}</div>
+            </div>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 12px; color: #cbd5e0;">
+            <div>${businessInfo.address}</div>
+            <div>${businessInfo.contact}</div>
+          </div>
+        </div>
+      `;
 
-      // Add Header
-      pdf.setFontSize(20);
-      pdf.setTextColor(37, 99, 235); // Blue color
-      pdf.text("Dashboard Report", margin, yPosition);
-      yPosition += 8;
+      // Create a summary section
+      const summarySection = document.createElement('div');
+      summarySection.style.padding = '15px';
+      summarySection.style.backgroundColor = '#f7fafc';
+      summarySection.style.borderBottom = '1px solid #e2e8f0';
+      summarySection.style.marginBottom = '20px';
+      
+      // Add key metrics to the summary
+      summarySection.innerHTML = `
+        <h3 style="margin: 0 0 10px 0; color: #2d3748; font-size: 18px;">Key Metrics Summary</h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+          <div style="background: white; padding: 10px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+            <div style="font-size: 12px; color: #718096;">Total Revenue</div>
+            <div style="font-size: 20px; font-weight: 600; color: #2b6cb0;">${formatCurrency(keyMetrics.revenue)}</div>
+          </div>
+          <div style="background: white; padding: 10px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+            <div style="font-size: 12px; color: #718096;">Total Transactions</div>
+            <div style="font-size: 20px; font-weight: 600; color: #2f855a;">${keyMetrics.totalTransactions}</div>
+          </div>
+          <div style="background: white; padding: 10px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+            <div style="font-size: 12px; color: #718096;">Items Sold</div>
+            <div style="font-size: 20px; font-weight: 600; color: #b7791f;">${keyMetrics.totalItemsSold}</div>
+          </div>
+          <div style="background: white; padding: 10px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+            <div style="font-size: 12px; color: #718096;">Net Profit</div>
+            <div style="font-size: 20px; font-weight: 600; color: #2c5282;">${formatCurrency(keyMetrics.netProfit)}</div>
+          </div>
+        </div>
+      `;
 
-      // Add Date Range
-      pdf.setFontSize(12);
-      pdf.setTextColor(0, 0, 0);
-      const finalStart = dayjs.min(dateRange.startDate, dateRange.endDate);
-      const finalEnd = dayjs.max(dateRange.startDate, dateRange.endDate);
-      const dateRangeText = 
-        dateRange.rangeType === "Day" 
-          ? finalStart.format("MMM D, YYYY")
-          : `${finalStart.format("MMM D")} - ${finalEnd.format("MMM D, YYYY")}`;
-      pdf.text(`Date Range: ${dateRangeText}`, margin, yPosition);
-      pdf.text(`Generated: ${dayjs().format("MMM D, YYYY h:mm A")}`, margin, yPosition + 5);
-      yPosition += 12;
+      // Insert the header and summary at the top of the clone
+      clone.insertBefore(summarySection, clone.firstChild);
+      clone.insertBefore(header, clone.firstChild);
 
-      // Add Key Metrics Section
-      if (keyMetricsRef.current) {
-        checkNewPage(50);
-        pdf.setFontSize(16);
-        pdf.setTextColor(37, 99, 235);
-        pdf.text("Key Metrics", margin, yPosition);
-        yPosition += 8;
+      // Add a footer with page numbers
+      const footer = document.createElement('div');
+      footer.style.padding = '10px';
+      footer.style.backgroundColor = '#f7fafc';
+      footer.style.borderTop = '1px solid #e2e8f0';
+      footer.style.textAlign = 'center';
+      footer.style.fontSize = '10px';
+      footer.style.color = '#718096';
+      footer.innerText = `Page 1 of 1 • Generated on ${new Date().toLocaleString()}`;
+      clone.appendChild(footer);
 
-        const metricsImg = await captureElement(keyMetricsRef.current);
-        if (metricsImg) {
-          // Get actual image dimensions
-          const img = new Image();
-          img.src = metricsImg;
-          await new Promise((resolve) => {
-            img.onload = resolve;
-          });
-          
-          const imgWidth = contentWidth;
-          const imgHeight = (img.height * imgWidth) / img.width;
-          console.log("Key Metrics image dimensions:", img.width, "x", img.height, "-> PDF:", imgWidth, "x", imgHeight);
-          
-          checkNewPage(imgHeight + 5);
+      // Process all elements for modern color functions
+      const allElements = clone.querySelectorAll('*');
+      allElements.forEach(el => {
+        const style = window.getComputedStyle(el);
+        
+        // Process background and color properties
+        ['background', 'background-color', 'color', 'border', 'border-color'].forEach(prop => {
           try {
-            pdf.addImage(metricsImg, "PNG", margin, yPosition, imgWidth, imgHeight);
-            yPosition += imgHeight + 5;
-            console.log("Key Metrics added to PDF at y:", yPosition - imgHeight - 5);
-          } catch (error) {
-            console.error("Error adding Key Metrics to PDF:", error);
-          }
-        } else {
-          console.warn("Key Metrics image is null");
-        }
-      }
-
-      // Add Charts Section
-      pdf.setFontSize(16);
-      pdf.setTextColor(37, 99, 235);
-      checkNewPage(20);
-      pdf.text("Charts & Analytics", margin, yPosition);
-      yPosition += 8;
-
-      // Visitors Chart - capture the entire chart card
-      if (visitorsChartRef.current) {
-        // Find the ChartCard element (the actual card with background)
-        const chartCard = visitorsChartRef.current.querySelector('.bg-white\\/80, .bg-white') || 
-                         visitorsChartRef.current.querySelector('[class*="bg-white"]') ||
-                         visitorsChartRef.current.firstElementChild;
-        const elementToCapture = chartCard || visitorsChartRef.current;
-        
-        console.log("Capturing Visitors Chart:", {
-          hasRef: !!visitorsChartRef.current,
-          hasCard: !!chartCard,
-          element: elementToCapture
-        });
-        
-        const chartImg = await captureElement(elementToCapture);
-        if (chartImg) {
-          // Get actual image dimensions
-          const img = new Image();
-          img.src = chartImg;
-          await new Promise((resolve) => {
-            img.onload = resolve;
-          });
-          
-          const imgWidth = contentWidth;
-          const imgHeight = (img.height * imgWidth) / img.width;
-          console.log("Visitors Chart image dimensions:", img.width, "x", img.height, "-> PDF:", imgWidth, "x", imgHeight);
-          
-          if (imgHeight > 0 && imgWidth > 0) {
-            checkNewPage(imgHeight + 5);
-            try {
-              pdf.addImage(chartImg, "PNG", margin, yPosition, imgWidth, imgHeight);
-              console.log("Visitors Chart added to PDF - Position:", { x: margin, y: yPosition, w: imgWidth, h: imgHeight });
-              yPosition += imgHeight + 5;
-            } catch (error) {
-              console.error("Error adding Visitors Chart to PDF:", error);
+            const value = style.getPropertyValue(prop);
+            if (value && hasModernColor(value)) {
+              el.style.setProperty(prop, 'transparent', 'important');
             }
-          } else {
-            console.warn("Visitors Chart image has invalid dimensions:", imgWidth, "x", imgHeight);
+          } catch (e) {
+            console.warn(`Error processing ${prop}:`, e);
           }
-        } else {
-          console.warn("Failed to capture Visitors Chart - no image data");
-        }
-      } else {
-        console.warn("Visitors Chart ref is null");
-      }
-
-      // Pie Chart - capture the entire chart card
-      if (pieChartRef.current) {
-        // Find the ChartCard element (the actual card with background)
-        const chartCard = pieChartRef.current.querySelector('.bg-white\\/80, .bg-white') || 
-                         pieChartRef.current.querySelector('[class*="bg-white"]') ||
-                         pieChartRef.current.firstElementChild;
-        const elementToCapture = chartCard || pieChartRef.current;
-        
-        console.log("Capturing Pie Chart:", {
-          hasRef: !!pieChartRef.current,
-          hasCard: !!chartCard,
-          element: elementToCapture
         });
-        
-        const chartImg = await captureElement(elementToCapture);
-        if (chartImg) {
-          // Get actual image dimensions
-          const img = new Image();
-          img.src = chartImg;
-          await new Promise((resolve) => {
-            img.onload = resolve;
-          });
-          
-          const imgWidth = contentWidth;
-          const imgHeight = (img.height * imgWidth) / img.width;
-          console.log("Pie Chart image dimensions:", img.width, "x", img.height, "-> PDF:", imgWidth, "x", imgHeight);
-          
-          if (imgHeight > 0 && imgWidth > 0) {
-            checkNewPage(imgHeight + 5);
-            try {
-              pdf.addImage(chartImg, "PNG", margin, yPosition, imgWidth, imgHeight);
-              console.log("Pie Chart added to PDF - Position:", { x: margin, y: yPosition, w: imgWidth, h: imgHeight });
-              yPosition += imgHeight + 5;
-            } catch (error) {
-              console.error("Error adding Pie Chart to PDF:", error);
-            }
-          } else {
-            console.warn("Pie Chart image has invalid dimensions:", imgWidth, "x", imgHeight);
-          }
-        } else {
-          console.warn("Failed to capture Pie Chart - no image data");
-        }
-      } else {
-        console.warn("Pie Chart ref is null");
-      }
-
-      // Business Report Section
-      if (businessReportRef.current) {
-        checkNewPage(20);
-        pdf.setFontSize(16);
-        pdf.setTextColor(37, 99, 235);
-        pdf.text("Business Report", margin, yPosition);
-        yPosition += 8;
-
-        const reportImg = await captureElement(businessReportRef.current);
-        if (reportImg) {
-          // Get the actual canvas dimensions from the image
-          const img = new Image();
-          img.src = reportImg;
-          await new Promise((resolve) => {
-            img.onload = resolve;
-          });
-          
-          const imgWidth = contentWidth;
-          const imgHeight = (img.height * imgWidth) / img.width;
-          
-          // If the image is too tall, scale it down to fit on one page
-          const maxHeight = pageHeight - margin - yPosition - 10;
-          let finalImgHeight = imgHeight;
-          let finalImgWidth = imgWidth;
-          
-          if (imgHeight > maxHeight) {
-            finalImgHeight = maxHeight;
-            finalImgWidth = (imgWidth * maxHeight) / imgHeight;
-          }
-          
-          checkNewPage(finalImgHeight + 5);
-          pdf.addImage(reportImg, "PNG", margin, yPosition, finalImgWidth, finalImgHeight);
-          yPosition += finalImgHeight + 5;
-        }
-      }
-
-      // Add Summary Data as Text
-      checkNewPage(30);
-      pdf.setFontSize(16);
-      pdf.setTextColor(37, 99, 235);
-      pdf.text("Summary", margin, yPosition);
-      yPosition += 8;
-
-      pdf.setFontSize(10);
-      pdf.setTextColor(0, 0, 0);
-      const summaryData = [
-        `Total Revenue: ${formatCurrency(keyMetrics.revenue)}`,
-        `Operating Expenses: ${formatCurrency(keyMetrics.expenses)}`,
-        `Net Profit: ${formatCurrency(keyMetrics.netProfit)}`,
-        `Gross Margin: ${keyMetrics.grossMargin.toFixed(1)}%`,
-        `Total Transactions: ${keyMetrics.totalTransactions}`,
-        `Total Items Sold: ${keyMetrics.totalItemsSold}`,
-      ];
-
-      summaryData.forEach((line) => {
-        checkNewPage(6);
-        pdf.text(line, margin, yPosition);
-        yPosition += 6;
       });
 
-      // Save PDF
-      const fileName = `dashboard-report-${finalStart.format("YYYY-MM-DD")}-to-${finalEnd.format("YYYY-MM-DD")}.pdf`;
+      // Capture chart areas separately to ensure they render inside the PDF
+      const liveCharts = Array.from(document.querySelectorAll(".chart-export-container"));
+      const chartSnapshots = [];
+      const chartRestorers = [];
+      const sanitizeChartNode = (root) => {
+        const colorProps = [
+          "color",
+          "background-color",
+          "border-color",
+          "outline-color",
+          "text-decoration-color",
+          "column-rule-color",
+          "caret-color",
+          "accent-color",
+          "fill",
+          "stroke",
+        ];
+        const extraProps = [
+          "background",
+          "background-image",
+          "border",
+          "border-top-color",
+          "border-right-color",
+          "border-bottom-color",
+          "border-left-color",
+          "box-shadow",
+          "text-shadow",
+          "outline-color",
+        ];
+        const restores = [];
+        const normalizeOrStrip = (node, prop, value, priority) => {
+          if (!value) return;
+          const lower = value.toLowerCase();
+          const isGradient = lower.includes("gradient") || lower.includes("image-set");
+          if (hasModernColor(lower) || isGradient) {
+            const prev = node.style.getPropertyValue(prop);
+            restores.push(() => node.style.setProperty(prop, prev || "", priority));
+            if (prop.includes("background")) {
+              node.style.setProperty(prop, "none", "important");
+            } else if (prop.includes("shadow")) {
+              node.style.setProperty(prop, "none", "important");
+            } else if (prop.includes("border")) {
+              node.style.setProperty(prop, normalizeToRGB(value, "#e5e7eb"), "important");
+            } else {
+              node.style.setProperty(prop, normalizeToRGB(value, "#1f2937"), "important");
+            }
+          }
+        };
+        const processNode = (node) => {
+          if (!(node instanceof Element)) return;
+          const style = window.getComputedStyle(node);
+          colorProps.forEach((prop) => {
+            const val = style.getPropertyValue(prop);
+            if (hasModernColor(val)) {
+              const prev = node.style.getPropertyValue(prop);
+              restores.push(() => node.style.setProperty(prop, prev || "", style.getPropertyPriority(prop)));
+              node.style.setProperty(prop, normalizeToRGB(val, prop.includes("background") ? "#ffffff" : "#1f2937"), "important");
+            }
+          });
+          [...extraProps].forEach((prop) => {
+            const val = style.getPropertyValue(prop);
+            normalizeOrStrip(node, prop, val, style.getPropertyPriority(prop));
+          });
+        };
+        processNode(root);
+        root.querySelectorAll("*").forEach(processNode);
+        return () => restores.reverse().forEach((fn) => fn());
+      };
+
+      for (const chartNode of liveCharts) {
+        let restoreFn = null;
+        try {
+          restoreFn = sanitizeChartNode(chartNode);
+          chartRestorers.push(restoreFn);
+          const rect = chartNode.getBoundingClientRect();
+          const chartCanvas = await html2canvas(chartNode, {
+            scale: 2,
+            useCORS: true,
+            backgroundColor: "#ffffff",
+          });
+          chartSnapshots.push({
+            dataUrl: chartCanvas.toDataURL("image/png"),
+            width: rect.width,
+            height: rect.height,
+          });
+        } catch (e) {
+          console.warn("Chart capture failed, falling back to default capture", e);
+          chartSnapshots.push(null);
+        } finally {
+          if (restoreFn) restoreFn();
+        }
+      }
+
+      // Replace chart containers in the cloned DOM with static images
+      const cloneCharts = Array.from(clone.querySelectorAll(".chart-export-container"));
+      cloneCharts.forEach((chartNode, idx) => {
+        const snapshot = chartSnapshots[idx];
+        if (!snapshot || !snapshot.dataUrl) return;
+        chartNode.innerHTML = "";
+        const img = document.createElement("img");
+        img.src = snapshot.dataUrl;
+        img.style.width = `${snapshot.width}px`;
+        img.style.height = `${snapshot.height}px`;
+        img.style.objectFit = "contain";
+        img.style.display = "block";
+        img.setAttribute("alt", "Chart snapshot");
+        chartNode.appendChild(img);
+      });
+
+      // Add a small delay to ensure all styles are applied
+      await new Promise(resolve => setTimeout(resolve, 200));
+
+      const canvas = await html2canvas(clone, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff',
+        removeContainer: true,
+        onclone: (clonedDoc) => {
+          document.fonts.ready.then(() => {});
+        }
+      });
+
+      // Remove the clone
+      document.body.removeChild(clone);
+
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const imgProps = pdf.getImageProperties(imgData);
+      const pdfWidth = pdf.internal.pageSize.getWidth() - 20;
+      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+      
+      // Add the image to PDF
+      pdf.addImage(imgData, 'PNG', 10, 10, pdfWidth, pdfHeight);
+      
+      // Set PDF metadata
+      const fileName = `eKahera-Report-${dateRange.rangeType}-${dayjs().format('YYYY-MM-DD')}.pdf`;
+      pdf.setProperties({
+        title: `eKahera Business Report - ${dateRange.rangeType} (${dateRangeText})`,
+        subject: `Business Performance Report - ${dateRangeText}`,
+        author: 'eKahera Business Intelligence',
+        creator: 'eKahera System',
+        keywords: 'business,report,sales,metrics,performance'
+      });
+      
+      // Add a watermark (optional)
+      pdf.setFontSize(60);
+      pdf.setTextColor(240, 240, 240);
+      pdf.text('eKahera', 35, 150, { angle: 45 });
+      
+      // Reset text color
+      pdf.setTextColor(0, 0, 0);
+      
+      // Save the PDF
       pdf.save(fileName);
+      
     } catch (error) {
-      console.error("Error exporting PDF:", error);
-      alert("Failed to export PDF. Please try again.");
+      console.error('Error exporting PDF:', error);
+      alert('Failed to generate PDF report. Please try again or contact support.');
     } finally {
       setExportingPDF(false);
     }
@@ -873,7 +916,7 @@ export default function Dashboard() {
   useEffect(() => {
     fetchData();
     fetchNotifications();
-  }, [dateRange]); 
+  }, [dateRange]);
 
   // Helper function to format currency values
   const formatCurrency = (value) => {
@@ -884,7 +927,7 @@ export default function Dashboard() {
       maximumFractionDigits: 2,
     }).format(value);
   };
-  
+
   // New handler to receive selected dates from modal
   const handleDateRangeApply = (newRange) => {
     setDateRange(newRange);
@@ -892,13 +935,12 @@ export default function Dashboard() {
 
   const headerDateDisplay = useMemo(() => {
     if (!dateRange.startDate || !dateRange.endDate) return "Select Range";
-    
+
     const finalStart = dayjs.min(dateRange.startDate, dateRange.endDate);
     const finalEnd = dayjs.max(dateRange.startDate, dateRange.endDate);
-    
+
     return `${finalStart.format("MMM D")} - ${finalEnd.format("MMM D, YYYY")}`;
   }, [dateRange]);
-
 
   // Header actions - REMOVED SELECT DROPDOWN
   const headerActions = (
@@ -927,30 +969,7 @@ export default function Dashboard() {
         </span>
       </button>
 
-      {/* Adjusted Export Buttons container for better mobile spacing */}
       <div className="py-2 flex justify-end gap-2">
-        <Button
-          onClick={exportToCSV}
-          size="sm"
-          variant="secondary"
-          className="flex items-center gap-2 w-full sm:w-auto shrink-0"
-        >
-          <svg
-            className="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-            />
-          </svg>
-          <span className="hidden sm:inline">Export CSV</span>
-          <span className="sm:hidden">CSV</span>
-        </Button>
         <Button
           onClick={exportToPDF}
           disabled={exportingPDF || loading}
@@ -1023,144 +1042,19 @@ export default function Dashboard() {
       setSidebarOpen={setSidebarOpen}
       className="bg-gray-50 min-h-screen"
     >
-      {/* Low Stock Products - Mobile View (Added padding class p-6-safe) */}
-      <div className="p-4 lg:hidden">
-        {loading ? (
-          <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200 animate-pulse">
-            <div className="h-6 bg-gray-200 rounded w-1/2 mb-6"></div>
-            <div className="h-4 bg-gray-200 rounded w-full mb-3"></div>
-            <div className="h-4 bg-gray-200 rounded w-full mb-3"></div>
-            <div className="h-4 bg-gray-200 rounded w-4/5"></div>
-          </div>
-        ) : (
-          <div className="bg-white p-6 rounded-xl shadow-md">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-bold text-gray-800">
-                Low Stock Products
-              </h3>
-            </div>
-            <LowStockList lowStockProducts={lowStockProducts} />
-          </div>
-        )}
-      </div>
-
-      {/* Key Metrics Cards - Optimized for all screens */}
-      <div ref={keyMetricsRef} className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 w-full px-4 sm:px-6 md:px-8 py-2">
-        {/* Card 1: Total Revenue */}
-        <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200">
-          <p className="text-xs font-medium text-gray-500 uppercase mb-1">
-            Total Revenue
-          </p>
-          <p className="text-2xl font-bold text-gray-900">
-            {formatCurrency(keyMetrics.revenue)}
-          </p>
-          <p className="text-xs text-gray-500 mt-1">
-            For selected range
-          </p>
-        </div>
-        {/* Card 2: Operating Expenses */}
-        <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200">
-          <p className="text-xs font-medium text-gray-500 uppercase mb-1">
-            Operating Expenses
-          </p>
-          <p className="text-2xl font-bold text-gray-900">
-            {formatCurrency(keyMetrics.expenses)}
-          </p>
-          <p className="text-xs text-gray-500 mt-1">
-            For selected range
-          </p>
-        </div>
-        {/* Card 3: Net Profit */}
-        <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200">
-          <p className="text-xs font-medium text-gray-500 uppercase mb-1">
-            Net Profit
-          </p>
-          <p
-            className={`text-2xl font-bold ${
-              keyMetrics.netProfit >= 0 ? "text-green-600" : "text-red-600"
-            }`}
-          >
-            {formatCurrency(Math.abs(keyMetrics.netProfit))}
-            {keyMetrics.netProfit < 0 && (
-              <span className="text-sm text-red-500 ml-1">(Loss)</span>
-            )}
-          </p>
-          <p className="text-xs text-gray-500 mt-1">
-            For selected range
-          </p>
-        </div>
-        {/* Card 4: Gross Margin */}
-        <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200">
-          <p className="text-xs font-medium text-gray-500 uppercase mb-1">
-            Gross Margin
-          </p>
-          <p
-            className={`text-2xl font-bold ${
-              keyMetrics.grossMargin >= 0 ? "text-green-600" : "text-red-600"
-            }`}
-          >
-            {keyMetrics.grossMargin.toFixed(1)}%
-          </p>
-          <p className="text-xs text-gray-500 mt-1">
-            For selected range
-          </p>
-        </div>
-      </div>
-
-      {/* Main Content Area - Optimized for large screen side-by-side layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 p-4 sm:p-6 md:p-8 pt-0">
-        {/* Main Chart Area (8/12 width on large screens) */}
-        <div className="lg:col-span-8 flex flex-col gap-6">
-          {loading ? (
-            <>
-              <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200 h-[336px] animate-pulse flex items-center justify-center">
-                <div className="w-full h-64 bg-gray-200 rounded-lg"></div>
-              </div>
-              <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200 h-[336px] animate-pulse flex items-center justify-center">
-                <div className="w-64 h-64 bg-gray-200 rounded-full"></div>
-              </div>
-            </>
-          ) : (
-            <>
-              <div ref={visitorsChartRef} className="chart-export-container">
-                <VisitorsChart data={chartData} rangeType={dateRange.rangeType} />
-              </div>
-              <div ref={pieChartRef} className="chart-export-container">
-                <SalesPieChart data={pieData} />
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* Sidebar with Stats and Low Stock (4/12 width on large screens) */}
-        <div className="lg:col-span-4 flex flex-col gap-6">
+      {/* Wrap dashboard content in a stable wrapper we can capture */}
+      <div id="pdf-wrapper" ref={dashboardRef}>
+        {/* Low Stock Products - Mobile View (Added padding class p-6-safe) */}
+        <div className="p-4 lg:hidden">
           {loading ? (
             <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200 animate-pulse">
-              <div className="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
-              <div className="h-8 bg-gray-300 rounded w-1/2 mb-6"></div>
-              <div className="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
-              <div className="h-8 bg-gray-300 rounded w-1/2 mb-6"></div>
-              <div className="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
-              <div className="h-8 bg-gray-300 rounded w-1/2"></div>
-            </div>
-          ) : (
-            <DashboardStatsCard 
-                stats={todayHighlight}
-                formatCurrency={formatCurrency}
-                rangeType="Today" // Explicitly label this card as "Today's" stats
-            />
-          )}
-
-          {/* Low Stock Products - Desktop View */}
-          {loading ? (
-            <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200 animate-pulse hidden lg:block">
               <div className="h-6 bg-gray-200 rounded w-1/2 mb-6"></div>
               <div className="h-4 bg-gray-200 rounded w-full mb-3"></div>
               <div className="h-4 bg-gray-200 rounded w-full mb-3"></div>
               <div className="h-4 bg-gray-200 rounded w-4/5"></div>
             </div>
           ) : (
-            <div className="bg-white p-6 rounded-lg shadow-md hidden lg:block">
+            <div className="bg-white p-6 rounded-xl shadow-md">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-bold text-gray-800">
                   Low Stock Products
@@ -1170,54 +1064,190 @@ export default function Dashboard() {
             </div>
           )}
         </div>
-      </div>
 
-      {/* Business Report Component - Ensure it uses the full content width */}
-      <div ref={businessReportRef} className="w-full px-4 sm:px-6 md:px-8 pb-8">
-        <DashboardBusinessReport dateRange={dateRange} />
-      </div>
+        {/* Key Metrics Cards - Optimized for all screens */}
+        <div ref={keyMetricsRef} className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 w-full px-4 sm:px-6 md:px-8 py-2">
+          {/* Card 1: Total Revenue */}
+          <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200">
+            <p className="text-xs font-medium text-gray-500 uppercase mb-1">
+              Total Revenue
+            </p>
+            <p className="text-2xl font-bold text-gray-900">
+              {formatCurrency(keyMetrics.revenue)}
+            </p>
+            <p className="text-xs text-gray-500 mt-1">
+              For selected range
+            </p>
+          </div>
+          {/* Card 2: Operating Expenses */}
+          <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200">
+            <p className="text-xs font-medium text-gray-500 uppercase mb-1">
+              Operating Expenses
+            </p>
+            <p className="text-2xl font-bold text-gray-900">
+              {formatCurrency(keyMetrics.expenses)}
+            </p>
+            <p className="text-xs text-gray-500 mt-1">
+              For selected range
+            </p>
+          </div>
+          {/* Card 3: Net Profit */}
+          <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200">
+            <p className="text-xs font-medium text-gray-500 uppercase mb-1">
+              Net Profit
+            </p>
+            <p
+              className={`text-2xl font-bold ${
+                keyMetrics.netProfit >= 0 ? "text-green-600" : "text-red-600"
+              }`}
+            >
+              {formatCurrency(Math.abs(keyMetrics.netProfit))}
+              {keyMetrics.netProfit < 0 && (
+                <span className="text-sm text-red-500 ml-1">(Loss)</span>
+              )}
+            </p>
+            <p className="text-xs text-gray-500 mt-1">
+              For selected range
+            </p>
+          </div>
+          {/* Card 4: Gross Margin */}
+          <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200">
+            <p className="text-xs font-medium text-gray-500 uppercase mb-1">
+              Gross Margin
+            </p>
+            <p
+              className={`text-2xl font-bold ${
+                keyMetrics.grossMargin >= 0 ? "text-green-600" : "text-red-600"
+              }`}
+            >
+              {keyMetrics.grossMargin.toFixed(1)}%
+            </p>
+            <p className="text-xs text-gray-500 mt-1">
+              For selected range
+            </p>
+          </div>
+        </div>
 
-      <ProfileModal
-        isOpen={showProfileModal}
-        onClose={() => setShowProfileModal(false)}
-        userData={user}
-      />
-      
-      {/* NEW DATE RANGE FILTER MODAL */}
-      <DateRangeFilterModal
-        isOpen={showFilterModal}
-        onClose={() => setShowFilterModal(false)}
-        onDateRangeApply={handleDateRangeApply}
-      />
+        {/* Main Content Area - Optimized for large screen side-by-side layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 p-4 sm:p-6 md:p-8 pt-0">
+          {/* Main Chart Area (8/12 width on large screens) */}
+          <div className="lg:col-span-8 flex flex-col gap-6">
+            {loading ? (
+              <>
+                <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200 h-[336px] animate-pulse flex items-center justify-center">
+                  <div className="w-full h-64 bg-gray-200 rounded-lg"></div>
+                </div>
+                <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200 h-[336px] animate-pulse flex items-center justify-center">
+                  <div className="w-64 h-64 bg-gray-200 rounded-full"></div>
+                </div>
+              </>
+            ) : (
+              <>
+                <div
+                  ref={visitorsChartRef}
+                  className="chart-export-container"
+                  data-export-chart="visitors"
+                >
+                  <VisitorsChart data={chartData} rangeType={dateRange.rangeType} />
+                </div>
+                <div
+                  ref={pieChartRef}
+                  className="chart-export-container"
+                  data-export-chart="sales-pie"
+                >
+                  <SalesPieChart data={pieData} />
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Sidebar with Stats and Low Stock (4/12 width on large screens) */}
+          <div className="lg:col-span-4 flex flex-col gap-6">
+            {loading ? (
+              <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200 animate-pulse">
+                <div className="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
+                <div className="h-8 bg-gray-300 rounded w-1/2 mb-6"></div>
+                <div className="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
+                <div className="h-8 bg-gray-300 rounded w-1/2 mb-6"></div>
+                <div className="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
+                <div className="h-8 bg-gray-300 rounded w-1/2"></div>
+              </div>
+            ) : (
+              <DashboardStatsCard 
+                  stats={todayHighlight}
+                  formatCurrency={formatCurrency}
+                  rangeType="Today"
+              />
+            )}
+
+            {/* Low Stock Products - Desktop View */}
+            {loading ? (
+              <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200 animate-pulse hidden lg:block">
+                <div className="h-6 bg-gray-200 rounded w-1/2 mb-6"></div>
+                <div className="h-4 bg-gray-200 rounded w-full mb-3"></div>
+                <div className="h-4 bg-gray-200 rounded w-full mb-3"></div>
+                <div className="h-4 bg-gray-200 rounded w-4/5"></div>
+              </div>
+            ) : (
+              <div className="bg-white p-6 rounded-lg shadow-md hidden lg:block">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-bold text-gray-800">
+                    Low Stock Products
+                  </h3>
+                </div>
+                <LowStockList lowStockProducts={lowStockProducts} />
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Business Report Component - Ensure it uses the full content width */}
+        <div ref={businessReportRef} className="w-full px-4 sm:px-6 md:px-8 pb-8">
+          <DashboardBusinessReport dateRange={dateRange} />
+        </div>
+
+        <ProfileModal
+          isOpen={showProfileModal}
+          onClose={() => setShowProfileModal(false)}
+          userData={user}
+        />
+        
+        {/* NEW DATE RANGE FILTER MODAL */}
+        <DateRangeFilterModal
+          isOpen={showFilterModal}
+          onClose={() => setShowFilterModal(false)}
+          onDateRangeApply={handleDateRangeApply}
+        />
+      </div>
     </PageLayout>
   );
 }
 
 // LowStockList is kept as a separate component for clean code, as in the original
 function LowStockList({ lowStockProducts }) {
-    if (lowStockProducts.length === 0) {
-      return <p className="text-sm text-gray-500">No products with low stock.</p>;
-    }
-  
-    return (
-      <ul className="divide-y divide-gray-200">
-        <li className="py-2 text-sm font-semibold text-gray-600 flex justify-between">
-            <span>Product</span>
-            <span>Quantity</span>
-        </li>
-        {lowStockProducts.map((product) => (
-          <li
-            key={product.product_id}
-            className="py-3 flex justify-between items-center"
-          >
-            <span className="text-sm font-medium text-gray-800">
-              {product.product_name}
-            </span>
-            <span className="text-sm font-bold text-red-600">
-              {product.quantity_in_stock} left
-            </span>
-          </li>
-        ))}
-      </ul>
-    );
+  if (lowStockProducts.length === 0) {
+    return <p className="text-sm text-gray-500">No products with low stock.</p>;
   }
+
+  return (
+    <ul className="divide-y divide-gray-200">
+      <li className="py-2 text-sm font-semibold text-gray-600 flex justify-between">
+          <span>Product</span>
+          <span>Quantity</span>
+      </li>
+      {lowStockProducts.map((product) => (
+        <li
+          key={product.product_id}
+          className="py-3 flex justify-between items-center"
+        >
+          <span className="text-sm font-medium text-gray-800">
+            {product.product_name}
+          </span>
+          <span className="text-sm font-bold text-red-600">
+            {product.quantity_in_stock} left
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}

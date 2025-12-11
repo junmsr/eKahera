@@ -2,12 +2,18 @@ const pool = require('../config/database');
 const { logAction } = require('../utils/logger');
 const { sendVerificationStatusNotification } = require('../utils/emailService');
 const bcrypt = require('bcryptjs');
+const {
+  ensureStoreDeletionTable,
+  getLatestDeletionRequest,
+  hardDeleteBusiness
+} = require('../utils/storeDeletionService');
 
 const normalizeStatus = (status) => (status === 'repass' ? 'rejected' : status);
 
 // Get all stores/businesses for SuperAdmin
 exports.getAllStores = async (req, res) => {
   try {
+    await ensureStoreDeletionTable();
     const result = await pool.query(`
       SELECT
         b.business_id as id,
@@ -21,12 +27,23 @@ exports.getAllStores = async (req, res) => {
         b.created_at,
         b.updated_at,
         b.verification_status as status,
-        COUNT(u.user_id) as user_count
+        COUNT(u.user_id) as user_count,
+        sdr.status as deletion_status,
+        sdr.scheduled_for as deletion_scheduled_for,
+        sdr.requested_at as deletion_requested_at
       FROM business b
       LEFT JOIN users u ON u.business_id = b.business_id
+      LEFT JOIN LATERAL (
+        SELECT status, scheduled_for, requested_at
+        FROM store_deletion_requests sdr
+        WHERE sdr.business_id = b.business_id
+        ORDER BY requested_at DESC
+        LIMIT 1
+      ) sdr ON TRUE
       GROUP BY b.business_id, b.business_name, b.email, b.business_type,
                b.country, b.business_address, b.house_number, b.mobile,
-               b.created_at, b.updated_at, b.verification_status
+               b.created_at, b.updated_at, b.verification_status,
+               sdr.status, sdr.scheduled_for, sdr.requested_at
       ORDER BY b.created_at DESC
     `);
     
@@ -108,6 +125,8 @@ exports.getStoreById = async (req, res) => {
       .filter(Boolean)
       .join(", ");
 
+    const deletionInfo = await getLatestDeletionRequest(id);
+
     // Get documents for this business
     const documentsResult = await pool.query(
       `SELECT document_id, document_type, document_name, file_path, verification_status, verification_notes, uploaded_at
@@ -148,6 +167,13 @@ exports.getStoreById = async (req, res) => {
       verificationStatus: normalizeStatus(business.verification_status) || 'pending',
       documents: formattedDocuments,
       verifiedDocuments: approvedDocuments,
+      deletion: deletionInfo
+        ? {
+            status: deletionInfo.status,
+            scheduledFor: deletionInfo.scheduled_for,
+            requestedAt: deletionInfo.requested_at,
+          }
+        : null,
       account: {
         username: owner?.username || 'N/A',
         passwordHint: '******** (Secure)',
@@ -371,61 +397,24 @@ exports.deleteStore = async (req, res) => {
     }
 
     const store = storeResult.rows[0];
+  await hardDeleteBusiness({ businessId: id, performedBy: req.user.userId });
 
-    // Start transaction for cascading delete
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
+  // Log the deletion action
+  logAction({
+    userId: req.user.userId,
+    businessId: null,
+    action: `Deleted store: ${store.business_name} (ID: ${id})`
+  });
 
-      // Delete related data in order (to handle foreign key constraints)
-      // Delete logs
-      await client.query('DELETE FROM logs WHERE business_id = $1', [id]);
+  console.log(`SuperAdmin ${req.user.email} deleted store ${store.business_name}`);
 
-      // Delete transactions (this will cascade to transaction_items, transaction_payment, returns, returned_items)
-      await client.query('DELETE FROM transactions WHERE business_id = $1', [id]);
-
-      // Delete inventory
-      await client.query('DELETE FROM inventory WHERE business_id = $1', [id]);
-
-      // Delete products
-      await client.query('DELETE FROM products WHERE business_id = $1', [id]);
-
-      // Delete business documents
-      await client.query('DELETE FROM business_documents WHERE business_id = $1', [id]);
-
-      // Delete email notifications
-      await client.query('DELETE FROM email_notifications WHERE business_id = $1', [id]);
-
-      // Delete users (this will cascade to related tables)
-      await client.query('DELETE FROM users WHERE business_id = $1', [id]);
-
-      // Finally delete the business
-      await client.query('DELETE FROM business WHERE business_id = $1', [id]);
-
-      await client.query('COMMIT');
-
-      // Log the deletion action
-      logAction({
-        userId: req.user.userId,
-        businessId: null,
-        action: `Deleted store: ${store.business_name} (ID: ${id})`
-      });
-
-      console.log(`SuperAdmin ${req.user.email} deleted store ${store.business_name}`);
-
-      res.json({
-        message: 'Store deleted successfully',
-        store: {
-          id: store.business_id,
-          name: store.business_name
-        }
-      });
-    } catch (err) {
-      await client.query('ROLLBACK');
-      throw err;
-    } finally {
-      client.release();
+  res.json({
+    message: 'Store deleted successfully',
+    store: {
+      id: store.business_id,
+      name: store.business_name
     }
+  });
   } catch (err) {
     console.error('Delete store error:', err);
     res.status(500).json({ error: 'Failed to delete store' });

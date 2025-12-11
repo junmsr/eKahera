@@ -75,6 +75,7 @@ const cleanupRoutes = require('./routes/cleanupRoutes');
 const cleanupUserRoutes = require('./routes/cleanupUserRoutes');
 const { sendApplicationSubmittedNotification } = require('./utils/emailService');
 const { startPendingTransactionCleanup } = require('./utils/cleanup');
+const { startStoreDeletionScheduler } = require('./utils/storeDeletionService');
 
 const app = express();
 
@@ -224,6 +225,7 @@ if (config.AUTO_INIT_DB === 'true') {
       app.listen(port, () => {
         console.log(`API server listening on port ${port}`);
         startPendingTransactionCleanup();
+        startStoreDeletionScheduler();
       });
     })
     .catch((err) => {
@@ -234,6 +236,7 @@ if (config.AUTO_INIT_DB === 'true') {
   app.listen(port, () => {
     console.log(`API server listening on port ${port} (DB init skipped)`);
     startPendingTransactionCleanup();
+    startStoreDeletionScheduler();
     // Print a one-time DB host diagnostic
     try {
       const cfgPath = path.join(__dirname, '..', 'config.env');
