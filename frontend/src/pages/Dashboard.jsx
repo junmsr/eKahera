@@ -465,28 +465,6 @@ export default function Dashboard() {
     );
     setUnreadCount((c) => c + 1);
   };
-  
-  // Export to CSV
-  const exportToCSV = () => {
-    const headers = ["Label", "Value", "Change"];
-    const rows = stats.map((s) => [s.label, s.value, s.change || "-"]);
-    if (lowStockProducts.length > 0) {
-      rows.push(["", "", ""]);
-      rows.push(["Low Stock Products", "", ""]);
-      rows.push(["Product Name", "Quantity Left", ""]);
-      lowStockProducts.forEach((p) =>
-        rows.push([p.product_name, p.quantity_in_stock, ""])
-      );
-    }
-    const csvContent = [headers, ...rows]
-      .map((row) => row.join(","))
-      .join("\n");
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = "dashboard-data.csv";
-    link.click();
-  };
 
   // Robust captureElement that clones and copies computed styles safely (forces RGB colors and strips unsupported effects)
   const captureElement = async (element) => {
@@ -991,30 +969,7 @@ export default function Dashboard() {
         </span>
       </button>
 
-      {/* Adjusted Export Buttons container for better mobile spacing */}
       <div className="py-2 flex justify-end gap-2">
-        <Button
-          onClick={exportToCSV}
-          size="sm"
-          variant="secondary"
-          className="flex items-center gap-2 w-full sm:w-auto shrink-0"
-        >
-          <svg
-            className="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-            />
-          </svg>
-          <span className="hidden sm:inline">Export CSV</span>
-          <span className="sm:hidden">CSV</span>
-        </Button>
         <Button
           onClick={exportToPDF}
           disabled={exportingPDF || loading}
