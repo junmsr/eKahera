@@ -613,19 +613,6 @@ function POS() {
           containerRef={notificationRef}
         />
       </div>
-
-      {/* Cashier Profile Button */}
-      <button
-        onClick={() => setShowProfileModal(true)}
-        className="flex items-center gap-2 bg-white/80 backdrop-blur-sm p-1.5 sm:px-3 sm:py-2 rounded-lg border border-gray-200/80"
-      >
-        <div className="w-6 h-6 sm:w-7 sm:h-7 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-full flex items-center justify-center text-sm font-medium shadow-md">
-          {user.username?.[0]?.toUpperCase() || "A"}
-        </div>
-        <span className="text-sm font-medium text-gray-700 hidden sm:inline">
-          {user.username || "Admin"}
-        </span>
-      </button>
     </div>
   );
 

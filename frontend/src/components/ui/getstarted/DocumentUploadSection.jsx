@@ -29,7 +29,6 @@ export default function DocumentUploadSection({
       "image/jpeg",
       "image/jpg",
       "image/png",
-      "image/gif",
     ];
 
     const maxSizeBytes = 10 * 1024 * 1024; // 10MB
@@ -50,7 +49,7 @@ export default function DocumentUploadSection({
       if (!allowedTypes.includes(file.type)) {
         rejected.push({
           file,
-          reason: "Unsupported file type. Only PDF, JPG, PNG, GIF allowed.",
+          reason: "Unsupported file type. Only PDF, JPG, PNG allowed.",
         });
         return;
       }
@@ -63,7 +62,7 @@ export default function DocumentUploadSection({
       }
       // Basic security check: ensure file is not empty and has valid extension
       const ext = file.name.split(".").pop()?.toLowerCase();
-      const validExts = ["pdf", "jpg", "jpeg", "png", "gif"];
+      const validExts = ["pdf", "jpg", "jpeg", "png"];
       if (!validExts.includes(ext)) {
         rejected.push({ file, reason: "Invalid file extension." });
         return;
@@ -165,15 +164,15 @@ export default function DocumentUploadSection({
             <input
               type="file"
               multiple
-              accept=".pdf,.jpg,.jpeg,.png,.gif"
+              accept=".pdf,.jpg,.jpeg,.png"
               onChange={handleFileChange}
               className="hidden"
             />
           </label>
         </div>
         <p className="text-xs text-gray-500 mt-2">
-          Accepted formats: PDF, JPG, PNG, GIF. Maximum file size: 10MB per
-          file. Secure uploads only.
+          Accepted formats: PDF, JPG, PNG. Maximum file size: 10MB per file.
+          Secure uploads only.
         </p>
       </div>
 
