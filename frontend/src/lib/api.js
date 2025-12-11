@@ -3,8 +3,10 @@ export async function api(path, options = {}, returnRawResponse = false) {
   // - in dev use the local backend so `npm run dev` + Vite proxy still works
   // - in production use a relative path (empty string) so callers can set the
   //   correct API host during the build/deploy (recommended)
+  // Force localhost:5000 for development
   const LOCAL_DEFAULT = "http://localhost:5000";
-  const envUrl = import.meta.env.VITE_API_BASE_URL;
+  // Only use VITE_API_BASE_URL in production, not in development
+  const envUrl = import.meta.env.PROD ? import.meta.env.VITE_API_BASE_URL : '';
   const isLocalHost =
     typeof window !== "undefined" &&
     (window.location.hostname === "localhost" ||
@@ -109,6 +111,11 @@ export async function api(path, options = {}, returnRawResponse = false) {
 
   if (returnRawResponse) {
     return res;
+  }
+
+  // Handle 204 No Content responses (common for DELETE requests)
+  if (res.status === 204) {
+    return null;
   }
 
   const contentType = res.headers.get("content-type") || "";

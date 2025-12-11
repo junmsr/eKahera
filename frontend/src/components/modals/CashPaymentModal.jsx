@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import Button from "../common/Button";
 import BaseModal from "./BaseModal";
 import CashPaymentCompleteModal from "./CashPaymentCompleteModal";
+import { useKeyboardShortcuts } from "../../hooks/useKeyboardShortcuts";
 
 function CashPaymentModal({ isOpen, onClose, total, onConfirm }) {
   const [amountReceived, setAmountReceived] = useState("");
@@ -55,17 +56,41 @@ function CashPaymentModal({ isOpen, onClose, total, onConfirm }) {
     setShowComplete(true);
   };
 
+  useKeyboardShortcuts(
+    [
+      {
+        key: "escape",
+        action: onClose,
+        enabled: isOpen,
+        allowWhileTyping: true,
+      },
+      {
+        key: "enter",
+        action: handleProceed,
+        enabled: isOpen,
+        allowWhileTyping: true,
+      },
+      {
+        key: "e",
+        action: handleExactAmount,
+        enabled: isOpen,
+        allowWhileTyping: true,
+      },
+    ],
+    [isOpen, amountReceived, total]
+  );
+
   const footerContent = (
     <>
       <Button
-        label="Cancel"
+        label="Cancel (Esc)"
         variant="secondary"
         onClick={onClose}
         type="button"
         className="flex-1"
       />
       <Button
-        label="Proceed"
+        label="Proceed (Enter)"
         variant="primary"
         type="button"
         onClick={handleProceed}
@@ -137,10 +162,24 @@ function CashPaymentModal({ isOpen, onClose, total, onConfirm }) {
 
       {/* Exact Amount Button */}
       <Button
-        label="Use Exact Amount"
+        label="Use Exact Amount (E)"
         className="w-full h-10 text-sm font-bold bg-slate-600 hover:bg-slate-700 text-white"
         onClick={handleExactAmount}
       />
+      <div className="text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 space-y-1">
+        <div className="flex items-center justify-between">
+          <span>Use exact total:</span>
+          <span className="font-mono bg-white px-2 py-0.5 rounded">E</span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span>Proceed:</span>
+          <span className="font-mono bg-white px-2 py-0.5 rounded">Enter</span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span>Close:</span>
+          <span className="font-mono bg-white px-2 py-0.5 rounded">Esc</span>
+        </div>
+      </div>
     </BaseModal>
   );
 }

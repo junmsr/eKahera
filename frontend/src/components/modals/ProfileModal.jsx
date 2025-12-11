@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import Button from "../common/Button";
 import BaseModal from "./BaseModal";
 import { api } from "../../lib/api";
+import { useKeyboardShortcuts } from "../../hooks/useKeyboardShortcuts";
 
 const ProfileModal = ({ isOpen, onClose, userData }) => {
   const [form, setForm] = useState({
@@ -12,15 +13,6 @@ const ProfileModal = ({ isOpen, onClose, userData }) => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-
-  useEffect(() => {
-    if (!isOpen) return;
-    setForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
-    setMessage("");
-    setError("");
-  }, [isOpen]);
-
-  if (!isOpen) return null;
 
   const handleSubmit = async () => {
     setError("");
@@ -61,6 +53,33 @@ const ProfileModal = ({ isOpen, onClose, userData }) => {
     }
   };
 
+  useEffect(() => {
+    if (!isOpen) return;
+    setForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
+    setMessage("");
+    setError("");
+  }, [isOpen]);
+
+  useKeyboardShortcuts(
+    [
+      {
+        key: "escape",
+        action: onClose,
+        enabled: isOpen,
+        allowWhileTyping: true,
+      },
+      {
+        key: "enter",
+        action: handleSubmit,
+        enabled: isOpen,
+        allowWhileTyping: true,
+      },
+    ],
+    [isOpen, form]
+  );
+
+  if (!isOpen) return null;
+
   const storeLabel =
     userData?.store_name ||
     userData?.storeName ||
@@ -72,7 +91,19 @@ const ProfileModal = ({ isOpen, onClose, userData }) => {
       isOpen={isOpen}
       onClose={onClose}
       title="Update Password"
-      subtitle="Cashiers can only change their password here"
+      subtitle={
+        <div className="flex flex-col gap-2">
+          <p>Cashiers can only change their password here</p>
+          <div className="mt-2 pt-2 border-t border-gray-200">
+            <p className="text-xs text-gray-500 flex items-center gap-1">
+              <span className="inline-flex items-center justify-center bg-yellow-100 text-yellow-800 text-xs font-medium px-2 py-0.5 rounded">
+                F11
+              </span>
+              <span>Recent Receipts</span>
+            </p>
+          </div>
+        </div>
+      }
       footer={
         <div className="w-full flex gap-2 justify-end">
           <Button
@@ -82,7 +113,9 @@ const ProfileModal = ({ isOpen, onClose, userData }) => {
             disabled={loading}
           />
           <Button
-            label={loading ? "Saving..." : "Save Password"}
+            label={
+              loading ? "Saving..." : "Save Password (Enter)"
+            }
             variant="primary"
             onClick={handleSubmit}
             disabled={loading}
@@ -143,6 +176,16 @@ const ProfileModal = ({ isOpen, onClose, userData }) => {
         <div className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 text-xs text-blue-800">
           Password must be at least 12 characters and include upper, lower,
           number, and special characters.
+        </div>
+        <div className="text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 space-y-1">
+          <div className="flex items-center justify-between">
+            <span>Save password:</span>
+            <span className="font-mono bg-white px-2 py-0.5 rounded">Enter</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span>Close:</span>
+            <span className="font-mono bg-white px-2 py-0.5 rounded">Esc</span>
+          </div>
         </div>
       </div>
     </BaseModal>

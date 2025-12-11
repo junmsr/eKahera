@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { MdClose } from "react-icons/md";
 
 /**
@@ -6,7 +6,7 @@ import { MdClose } from "react-icons/md";
  * Unified modal structure for consistency across the application
  * Provides: backdrop, header with icon, scrollable content, sticky footer, animations
  */
-export default function BaseModal({
+const BaseModal = ({
   isOpen = false,
   onClose,
   title,
@@ -22,8 +22,12 @@ export default function BaseModal({
   headerIcon,
   headerIconBgClassName = "bg-gradient-to-br from-blue-500 to-indigo-600",
   disabled = false,
-}) {
-  if (!isOpen) return null;
+  onKeyDown: onKeyDownProp,
+}) => {
+  // Don't render anything if not open
+  if (!isOpen) {
+    return null;
+  }
 
   // Size mapping
   const sizeClasses = {
@@ -33,18 +37,55 @@ export default function BaseModal({
     full: "max-w-5xl",
   };
 
+  // Handle key down events
+  const handleKeyDown = (e) => {
+    // Close on Escape key
+    if (e.key === 'Escape' && onClose) {
+      onClose();
+    }
+    // Pass through to parent handler so global listeners (e.g., shortcuts) can still fire
+    if (onKeyDownProp) {
+      onKeyDownProp(e);
+    }
+  };
+
+  // Stop click events from propagating to parent
+  const handleModalClick = (e) => {
+    e.stopPropagation();
+  };
+
+  const modalRef = useRef(null);
+
+  // Focus the modal container only when it opens and nothing inside is already focused.
+  useEffect(() => {
+    if (!isOpen) return;
+    if (!modalRef.current) return;
+    const active = document.activeElement;
+    if (!modalRef.current.contains(active)) {
+      modalRef.current.focus();
+    }
+  }, [isOpen]);
+
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+    <>
+      <div 
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] flex items-center justify-center p-4"
+        onKeyDown={handleKeyDown}
+        onClick={onClose}
+      >
       {/* Backdrop */}
       <div
         className="absolute inset-0"
-        onClick={onClose}
         aria-hidden="true"
       ></div>
 
       {/* Modal */}
       <div
-        className={`relative bg-white rounded-lg shadow-2xl w-full ${sizeClasses[size]} max-h-[85vh] overflow-hidden flex flex-col z-[10000] ${className}`}
+        className={`relative bg-white rounded-lg shadow-2xl w-full ${sizeClasses[size]} max-h-[85vh] overflow-hidden flex flex-col z-[10000] modal-container ${className}`}
+        onClick={handleModalClick}
+        onKeyDown={handleKeyDown}
+        tabIndex={-1}
+        ref={modalRef}
       >
         {/* Gradient Background Accents */}
         <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-br from-blue-400/10 to-indigo-600/10 rounded-full blur-3xl -z-10"></div>
@@ -96,6 +137,9 @@ export default function BaseModal({
           </div>
         )}
       </div>
-    </div>
+      </div>
+    </>
   );
-}
+};
+
+export default React.memo(BaseModal);

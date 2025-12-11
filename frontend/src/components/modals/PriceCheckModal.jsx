@@ -3,6 +3,7 @@ import BaseModal from "./BaseModal";
 import Button from "../common/Button";
 import { api } from "../../lib/api";
 import ScannerCard from "../ui/POS/ScannerCard";
+import { useKeyboardShortcuts } from "../../hooks/useKeyboardShortcuts";
 
 function PriceCheckModal({ isOpen, onClose, sku, setSku }) {
   const [product, setProduct] = useState(null);
@@ -45,11 +46,29 @@ function PriceCheckModal({ isOpen, onClose, sku, setSku }) {
 
   const footerContent = (
     <Button
-      label="Close"
+      label="Close (Esc)"
       variant="secondary"
       onClick={onClose}
       className="w-full"
     />
+  );
+
+  useKeyboardShortcuts(
+    [
+      {
+        key: "escape",
+        action: onClose,
+        enabled: isOpen,
+        allowWhileTyping: true,
+      },
+      {
+        key: "enter",
+        action: handleCheck,
+        enabled: isOpen,
+        allowWhileTyping: true,
+      },
+    ],
+    [isOpen, sku]
   );
 
   return (
@@ -105,6 +124,17 @@ function PriceCheckModal({ isOpen, onClose, sku, setSku }) {
           className="w-full border border-gray-300 rounded-lg px-4 py-2 text-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           placeholder="Enter SKU or scan barcode"
         />
+      </div>
+
+      <div className="text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
+        <div className="flex items-center justify-between">
+          <span>Check price:</span>
+          <span className="font-mono bg-white px-2 py-0.5 rounded">Enter</span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span>Close:</span>
+          <span className="font-mono bg-white px-2 py-0.5 rounded">Esc</span>
+        </div>
       </div>
 
       {/* Results */}

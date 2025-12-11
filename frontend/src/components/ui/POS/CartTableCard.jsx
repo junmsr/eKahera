@@ -10,18 +10,35 @@ function CartTableCard({
   cart,
   handleRemove,
   handleEditQuantity,
-  subtotal,
   total,
-  appliedDiscount,
+  className = "",
   selectedIdx,
   onSelectRow,
-  className = "",
-  ...props
+  appliedDiscount,
 }) {
   const [editingIdx, setEditingIdx] = useState(null);
   const [editQty, setEditQty] = useState(1);
 
-  // Keyboard shortcuts have been removed as per request
+  // Keyboard shortcuts: F1 for edit, F2 for remove
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === "F1" && cart.length > 0) {
+        event.preventDefault();
+        const firstItemIdx = 0;
+        setEditingIdx(firstItemIdx);
+        setEditQty(cart[firstItemIdx].quantity);
+      } else if (event.key === "F2" && cart.length > 0) {
+        event.preventDefault();
+        const firstItemIdx = 0;
+        handleRemove(firstItemIdx);
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [cart, handleRemove]);
 
   const EditIcon = () => (
     <svg
@@ -53,7 +70,6 @@ function CartTableCard({
     <Card
       className={`flex-1 flex flex-col bg-white/80 backdrop-blur-md border border-white/60 shadow-xl transition-all duration-300 h-full min-h-0 overflow-hidden ${className}`}
       variant="glass"
-      {...props}
     >
       <div className="flex-1 min-h-0 flex flex-col p-2 sm:p-3">
         {/* Header */}
@@ -138,9 +154,7 @@ function CartTableCard({
                 cart.map((item, idx) => (
                   <tr
                     key={idx}
-                    className={`hover:bg-blue-50/50 transition-colors duration-200 group ${
-                      selectedIdx === idx ? "ring-2 ring-blue-300 bg-blue-50/40" : ""
-                    }`}
+                    className={`hover:bg-blue-50/50 transition-colors duration-200 group ${selectedIdx === idx ? "bg-blue-50/70" : ""}`}
                     onClick={() => onSelectRow?.(idx)}
                   >
                     <td className="py-1.5 px-2">
@@ -211,13 +225,20 @@ function CartTableCard({
                         >
                           <EditIcon />
                         </button>
-                        <button
-                          onClick={() => handleRemove(idx)}
-                          className="p-1.5 rounded-md bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 transition-all duration-200"
-                          title="Remove (F2)"
-                        >
-                          <DeleteIcon />
-                        </button>
+                        <div className="relative">
+                          <button
+                            onClick={() => handleRemove(idx)}
+                            className="p-1.5 rounded-md bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 transition-all duration-200"
+                            title="Remove (F2)"
+                          >
+                            <div className="flex items-center gap-1">
+                              {appliedDiscount && (
+                                <span className="text-xs font-bold text-yellow-600">(R)</span>
+                              )}
+                              <DeleteIcon />
+                            </div>
+                          </button>
+                        </div>
                       </div>
                     </td>
                   </tr>
@@ -227,31 +248,22 @@ function CartTableCard({
           </table>
         </div>
 
-        <div className="mt-2 pt-2 border-t border-gray-200 space-y-1">
-          <div className="flex justify-between items-center text-sm text-gray-700">
-            <span className="font-semibold">Subtotal</span>
-            <span className="font-bold">
-              ₱{Number(subtotal).toFixed(2)}
-            </span>
-          </div>
-          {appliedDiscount && (
-            <div className="flex justify-between items-center text-xs text-emerald-700">
-              <span className="font-semibold">
-                Discount ({appliedDiscount.label})
-              </span>
-              <span>
-                {appliedDiscount.type === "percentage"
-                  ? `-${appliedDiscount.value}%`
-                  : `-₱${Number(appliedDiscount.value).toFixed(2)}`}
-              </span>
-            </div>
-          )}
+        {/* Total Footer */}
+        <div className="mt-2 pt-2 border-t border-gray-200">
           <div className="flex justify-between items-center">
             <span className="text-sm sm:text-base font-semibold text-gray-700">
               Total:
             </span>
             <span className="text-lg sm:text-xl font-extrabold text-blue-600">
-              ₱{Number(total).toFixed(2)}
+              ₱
+              {cart
+                .reduce(
+                  (sum, item, idx) =>
+                    sum +
+                    item.price * (editingIdx === idx ? editQty : item.quantity),
+                  0
+                )
+                .toFixed(2)}
             </span>
           </div>
         </div>

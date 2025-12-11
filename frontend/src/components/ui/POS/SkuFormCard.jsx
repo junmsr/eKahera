@@ -1,5 +1,7 @@
 import React from "react";
 import Card from "../../common/Card";
+import FormField from "../../common/FormField";
+import Input from "../../common/Input";
 import Button from "../../common/Button";
 
 /**
@@ -16,7 +18,6 @@ export default React.forwardRef(
       handleAddToCart,
       quantityInputRef,
       className = "",
-      ...props
     },
     ref
   ) => {
@@ -24,7 +25,6 @@ export default React.forwardRef(
       <Card
         className={`flex-shrink-0 bg-white/80 backdrop-blur-md border border-white/60 shadow-xl hover:shadow-2xl transition-all duration-300 ${className}`}
         variant="glass"
-        {...props}
       >
         <div className="flex flex-col gap-1 p-1 sm:p-2">
           <div className="flex items-center gap-2 mb-0.5">
@@ -83,11 +83,11 @@ export default React.forwardRef(
                   −
                 </button>
                 <input
-                  ref={quantityInputRef}
                   type="number"
                   name="quantity"
                   value={quantity}
                   min={1}
+                  ref={quantityInputRef}
                   onChange={(e) =>
                     setQuantity(Math.max(1, Number(e.target.value) || 1))
                   }

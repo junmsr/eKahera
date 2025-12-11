@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import BaseModal from "./BaseModal";
 import Button from "../common/Button";
 import { api } from "../../lib/api";
+import { useKeyboardShortcuts } from "../../hooks/useKeyboardShortcuts";
 
 function RecentReceiptsModal({ isOpen, onClose }) {
   const [receipts, setReceipts] = useState([]);
@@ -37,6 +38,23 @@ function RecentReceiptsModal({ isOpen, onClose }) {
     window.open(url.toString(), "_blank");
   };
 
+  const openReceiptByIndex = (index) => {
+    if (!receipts[index]) return;
+    openReceipt(receipts[index]);
+  };
+
+  useKeyboardShortcuts(
+    [
+      { key: "escape", action: onClose, enabled: isOpen },
+      ...Array.from({ length: Math.min(9, receipts.length) }).map((_, i) => ({
+        key: String(i + 1),
+        action: () => openReceiptByIndex(i),
+        enabled: isOpen && receipts[i],
+      })),
+    ],
+    [isOpen, receipts]
+  );
+
   return (
     <BaseModal
       isOpen={isOpen}
@@ -46,7 +64,7 @@ function RecentReceiptsModal({ isOpen, onClose }) {
       size="lg"
       footer={
         <Button
-          label="Close"
+          label="Close (Esc)"
           variant="secondary"
           onClick={onClose}
           className="w-full"
@@ -69,7 +87,7 @@ function RecentReceiptsModal({ isOpen, onClose }) {
         </div>
       )}
       <div className="space-y-2 max-h-[60vh] overflow-y-auto">
-        {receipts.map((r) => (
+        {receipts.map((r, idx) => (
           <button
             key={`${r.transaction_id}-${r.transaction_number}`}
             onClick={() => openReceipt(r)}
@@ -85,6 +103,9 @@ function RecentReceiptsModal({ isOpen, onClose }) {
                 </p>
               </div>
               <div className="text-right">
+                <span className="inline-block rounded bg-blue-100 text-blue-700 font-bold text-[11px] px-2 py-1 mb-1">
+                  {idx + 1 <= 9 ? `${idx + 1}` : ""}
+                </span>
                 <p className="text-sm font-bold text-blue-700">
                   ₱{Number(r.total_amount || r.total || 0).toFixed(2)}
                 </p>
@@ -104,11 +125,25 @@ function RecentReceiptsModal({ isOpen, onClose }) {
           </button>
         ))}
       </div>
+      <div className="text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 space-y-1 mt-2">
+        <div className="flex items-center justify-between">
+          <span>Open receipt:</span>
+          <span className="font-mono bg-white px-2 py-0.5 rounded">1-9</span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span>Close:</span>
+          <span className="font-mono bg-white px-2 py-0.5 rounded">Esc</span>
+        </div>
+      </div>
     </BaseModal>
   );
 }
 
 export default RecentReceiptsModal;
+
+
+
+
 
 
 

@@ -59,24 +59,73 @@ exports.getDiscounts = async (req, res) => {
  * Delete a discount by ID
  */
 exports.deleteDiscount = async (req, res) => {
+  console.log('=== DELETE DISCOUNT REQUEST ===');
+  console.log('Request params:', req.params);
+  console.log('Request method:', req.method);
+  console.log('Request URL:', req.url);
+  
   const { id } = req.params;
+  console.log('Raw id from params:', id, 'type:', typeof id);
+  
+  // Convert to number to ensure type matching
+  const discountId = parseInt(id, 10);
+  console.log('Parsed discountId:', discountId, 'type:', typeof discountId);
+  
+  if (isNaN(discountId)) {
+    console.log('Invalid discount ID - NaN');
+    return res.status(400).json({ error: 'Invalid discount ID' });
+  }
   
   try {
-    const result = await pool.query(
-      'DELETE FROM discounts WHERE discount_id = $1 RETURNING *',
-      [id]
+    // First check if the discount exists
+    console.log(`Checking if discount ${discountId} exists...`);
+    const checkResult = await pool.query(
+      'SELECT discount_id, discount_name FROM discounts WHERE discount_id = $1',
+      [discountId]
     );
     
-    if (result.rowCount === 0) {
+    console.log(`Query result: Found ${checkResult.rowCount} discount(s)`);
+    if (checkResult.rowCount > 0) {
+      console.log('Discount found:', checkResult.rows[0]);
+    }
+    
+    if (checkResult.rowCount === 0) {
+      console.log(`Discount ${discountId} not found in database`);
+      // Let's also check what discounts DO exist
+      const allDiscounts = await pool.query('SELECT discount_id, discount_name FROM discounts ORDER BY discount_id');
+      console.log('All discounts in database:', allDiscounts.rows);
       return res.status(404).json({ error: 'Discount not found' });
     }
     
+    // Now delete it
+    console.log(`Deleting discount ${discountId}...`);
+    const result = await pool.query(
+      'DELETE FROM discounts WHERE discount_id = $1 RETURNING *',
+      [discountId]
+    );
+    
+    console.log(`Delete query result: ${result.rowCount} row(s) deleted`);
+    
+    if (result.rowCount === 0) {
+      console.log(`Delete query returned 0 rows for discount ${discountId}`);
+      return res.status(404).json({ error: 'Discount not found' });
+    }
+    
+    console.log(`Successfully deleted discount ID: ${discountId}`);
+    console.log('=== DELETE SUCCESS ===');
     return res.status(204).send();
   } catch (err) {
+    console.error('=== DELETE ERROR ===');
     console.error('Failed to delete discount', err);
+    console.error('Error stack:', err.stack);
     return res.status(500).json({ error: 'Failed to delete discount' });
   }
 };
+
+
+
+
+
 
 
 

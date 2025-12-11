@@ -14,6 +14,7 @@ import ScanCustomerCartModal from "../components/modals/ScanCustomerCartModal";
 import ProfileModal from "../components/modals/ProfileModal";
 import RecentReceiptsModal from "../components/modals/RecentReceiptsModal";
 import { BiReceipt, BiUser } from "react-icons/bi";
+import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 
 function CashierPOS() {
   const navigate = useNavigate();
@@ -49,8 +50,6 @@ function CashierPOS() {
   const token = sessionStorage.getItem("auth_token");
   const user = JSON.parse(sessionStorage.getItem("user") || "{}");
   const hasFinalizedRef = React.useRef(false);
-
-  // Keyboard shortcuts have been removed as per request
 
   // Generate a client-side provisional transaction number when POS opens
   useEffect(() => {
@@ -237,6 +236,31 @@ function CashierPOS() {
     }
   }, [cart.length]);
 
+  // Pause scanner when any modal is open to avoid hardware scanner/keyboard events interfering with shortcuts
+  useEffect(() => {
+    const anyModalOpen =
+      showDiscount ||
+      showPriceCheck ||
+      showImportCart ||
+      showCashLedger ||
+      showCheckout ||
+      showCashModal ||
+      showReceipts ||
+      showProfileModal ||
+      showLogoutConfirm;
+    setScannerPaused(anyModalOpen);
+  }, [
+    showDiscount,
+    showPriceCheck,
+    showImportCart,
+    showCashLedger,
+    showCheckout,
+    showCashModal,
+    showReceipts,
+    showProfileModal,
+    showLogoutConfirm,
+  ]);
+
   const subtotal = cart.reduce(
     (sum, item) => sum + item.price * item.quantity,
     0
@@ -336,6 +360,162 @@ function CashierPOS() {
     navigator.clipboard.writeText(user.store_name);
   };
 
+  const focusSkuInput = () => {
+    skuInputRef.current?.focus();
+    skuInputRef.current?.select?.();
+  };
+
+  const focusQuantityInput = () => {
+    quantityInputRef.current?.focus();
+    quantityInputRef.current?.select?.();
+  };
+
+  const handleNewTransaction = () => {
+    setCart([]);
+    setAppliedDiscount(null);
+    setTransactionId(null);
+    setError("");
+    focusSkuInput();
+  };
+
+  const handleVoidSelected = () => {
+    if (cart.length === 0 || selectedCartIdx == null) return;
+    handleRemove(selectedCartIdx);
+  };
+
+  const handleSetQuantityShortcut = () => {
+    if (cart.length === 0 || selectedCartIdx == null) return;
+    const current = cart[selectedCartIdx];
+    const nextQty = Number(
+      window.prompt(
+        `Set quantity for ${current.name || current.sku}:`,
+        current.quantity
+      )
+    );
+    if (!Number.isNaN(nextQty) && nextQty > 0) {
+      handleEditQuantity(selectedCartIdx, nextQty);
+    }
+  };
+
+  const handleRemoveDiscount = () => {
+    if (appliedDiscount) {
+      setAppliedDiscount(null);
+    }
+  };
+
+  const handleUnavailable = (message) => {
+    setError(message);
+    notificationRef.current?.scrollIntoView?.({ behavior: "smooth" });
+  };
+
+  useKeyboardShortcuts(
+    [
+      {
+        key: "f1",
+        description: "New Transaction",
+        action: handleNewTransaction,
+      },
+      {
+        key: "f2",
+        description: "Search Product",
+        action: () => {
+          setShowPriceCheck(true);
+        },
+      },
+      {
+        key: "f3",
+        description: "Add Manual Item",
+        action: () => {
+          focusSkuInput();
+        },
+      },
+      {
+        key: "f4",
+        description: "Void Item",
+        action: handleVoidSelected,
+        enabled: cart.length > 0,
+      },
+      {
+        key: "f5",
+        description: "Discount",
+        action: () => setShowDiscount(true),
+      },
+      {
+        key: "f6",
+        description: "Set Quantity",
+        action: handleSetQuantityShortcut,
+        enabled: cart.length > 0,
+      },
+      {
+        key: "f7",
+        description: "Checkout / Payments",
+        action: () => setShowCheckout(true),
+        enabled: cart.length > 0,
+      },
+      {
+        key: "f8",
+        description: "Scan Customer Cart",
+        action: () => setShowImportCart(true),
+      },
+      {
+        key: "f10",
+        description: "Finalize Transaction",
+        action: () => setShowCheckout(true),
+        enabled: cart.length > 0,
+      },
+      {
+        key: "f11",
+        description: "Reprint Receipt",
+        action: () => setShowReceipts(true),
+      },
+      {
+        key: "f12",
+        description: "Logout",
+        action: () => setShowLogoutConfirm(true),
+      },
+      {
+        key: "r",
+        description: "Remove Discount",
+        action: handleRemoveDiscount,
+        enabled: !!appliedDiscount,
+      },
+      {
+        key: "ctrl+l",
+        description: "Cash Ledger",
+        action: () => setShowCashLedger(true),
+      },
+      {
+        key: "escape",
+        description: "Close Open Modals",
+        action: () => {
+          if (showCheckout) setShowCheckout(false);
+          else if (showDiscount) setShowDiscount(false);
+          else if (showPriceCheck) setShowPriceCheck(false);
+          else if (showImportCart) setShowImportCart(false);
+          else if (showCashModal) setShowCashModal(false);
+          else if (showCashLedger) setShowCashLedger(false);
+          else if (showReceipts) setShowReceipts(false);
+          else if (showProfileModal) setShowProfileModal(false);
+          else if (showLogoutConfirm) setShowLogoutConfirm(false);
+        },
+        allowWhileTyping: true,
+      },
+    ],
+    [
+      cart.length,
+      selectedCartIdx,
+      showCheckout,
+      showDiscount,
+      showPriceCheck,
+      showImportCart,
+      showCashModal,
+      showCashLedger,
+      showReceipts,
+      showProfileModal,
+      showLogoutConfirm,
+    ]
+  );
+
   // show confirmation modal first, perform actual logout in confirmLogout
   const handleLogout = () => {
     setShowLogoutConfirm(true);
@@ -353,14 +533,44 @@ function CashierPOS() {
     setShowLogoutConfirm(false);
   };
 
+  // Handle keyboard events for logout confirmation
+  useEffect(() => {
+    if (!showLogoutConfirm) return;
+
+    const handleKeyDown = (e) => {
+      // Use stopPropagation to prevent other handlers from interfering
+      e.stopPropagation();
+      
+      if (e.key === 'Escape' || e.key === 'Esc') {
+        e.preventDefault();
+        handleCloseLogoutModal();
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        confirmLogout();
+      }
+    };
+
+    // Use capture phase to ensure we get the event first
+    document.addEventListener('keydown', handleKeyDown, { capture: true });
+    return () => document.removeEventListener('keydown', handleKeyDown, { capture: true });
+  }, [showLogoutConfirm]);
+
   const headerActions = (
     <div className="flex items-center gap-2">
       <button
         onClick={() => setShowReceipts(true)}
-        className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-        title="Recent Receipts (Alt+R)"
+        className="flex items-center gap-2 bg-white/80 backdrop-blur-sm p-1.5 sm:px-3 sm:py-2 rounded-lg border border-gray-200/80 hover:bg-gray-50 transition-colors group relative"
+        title="View all receipts (F11)"
       >
-        <BiReceipt className="w-5 h-5 text-gray-600" />
+        <div className="relative">
+          <BiReceipt className="w-5 h-5 text-blue-600" />
+        </div>
+        <span>
+          F11
+        </span>
+        <span className="text-sm font-medium text-gray-700 hidden sm:inline">
+          Receipts
+        </span>
       </button>
       <button
         onClick={() => setShowProfileModal(true)}
@@ -371,22 +581,28 @@ function CashierPOS() {
       </button>
       <button
         onClick={handleLogout}
-        className="p-2 rounded-lg hover:bg-red-50 transition-colors"
-        title="Logout"
+        className="flex items-center gap-2 p-1.5 sm:px-3 sm:py-2 rounded-lg hover:bg-red-50 transition-colors"
+        title="Logout (F12)"
       >
-        <svg
-          className="w-5 h-5 text-red-600"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h6a2 2 0 012 2v1"
-          />
-        </svg>
+        <div className="relative">
+          <svg
+            className="w-5 h-5 text-red-600"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h6a2 2 0 012 2v1"
+            />
+          </svg>
+        </div>
+        <span className="text-sm font-medium text-gray-700 hidden sm:inline">Logout</span>
+        <span className="bg-red-100 text-red-700 text-[11px] font-medium rounded px-1.5 py-0.5">
+          F12
+        </span>
       </button>
     </div>
   );
@@ -561,7 +777,7 @@ function CashierPOS() {
                   quantity={quantity}
                   setQuantity={setQuantity}
                   handleAddToCart={handleAddToCart}
-                  quantityInputRef={quantityInputRef}
+                quantityInputRef={quantityInputRef}
                 />
                 {error && (
                   <div className="bg-red-50 border-l-4 border-red-500 rounded-lg p-3 flex items-start gap-2 mt-3">
@@ -618,10 +834,10 @@ function CashierPOS() {
                       Discount applied: {appliedDiscount.label}
                     </span>
                     <button
-                      className="text-xs font-bold underline"
+                      className="text-xs font-bold underline flex items-center gap-1"
                       onClick={() => setAppliedDiscount(null)}
                     >
-                      Remove
+                      <span className="text-yellow-600">(R)</span> Remove
                     </button>
                   </div>
                 )}
@@ -629,7 +845,7 @@ function CashierPOS() {
                 <div className="col-span-8">
                   <div className="grid grid-cols-2 sm:grid-cols-2 gap-2 sm:gap-3">
                     <Button
-                      label="CASH LEDGER"
+                      label="CASH LEDGER (Ctrl+L)"
                       size="md"
                       className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
                       variant="secondary"
@@ -653,7 +869,7 @@ function CashierPOS() {
                       iconPosition="left"
                     />
                     <Button
-                      label="DISCOUNT"
+                      label="DISCOUNT (F5)"
                       size="md"
                       className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
                       onClick={() => setShowDiscount(true)}
@@ -677,7 +893,7 @@ function CashierPOS() {
                       iconPosition="left"
                     />
                     <Button
-                      label="PRICE CHECK"
+                      label="PRICE CHECK (F2)"
                       size="md"
                       className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
                       onClick={() => setShowPriceCheck(true)}
@@ -701,7 +917,7 @@ function CashierPOS() {
                       iconPosition="left"
                     />
                     <Button
-                      label="SCAN CUSTOMER QR"
+                      label="SCAN CUSTOMER QR (F8)"
                       size="md"
                       className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
                       onClick={() => setShowImportCart(true)}
@@ -730,7 +946,7 @@ function CashierPOS() {
                 {/* Checkout Button */}
                 <div className="col-span-4">
                   <Button
-                    label="CHECKOUT"
+                    label="CHECKOUT (F10)"
                     size="md"
                     className="w-full h-full text-sm sm:text-base font-bold"
                     variant="primary"
@@ -768,7 +984,19 @@ function CashierPOS() {
               className="absolute inset-0 bg-black/80 z-90"
               onClick={handleCloseLogoutModal}
             />
-            <div className="relative bg-white rounded-xl shadow-xl w-[92%] max-w-md z-100 p-0">
+            <div 
+              className="relative bg-white rounded-xl shadow-xl w-[92%] max-w-md z-100 p-0"
+              onKeyDown={(e) => {
+                // Prevent event from bubbling up to document
+                e.stopPropagation();
+                
+                // Handle Enter key specifically for the modal
+                if (e.key === 'Enter' && !e.isPropagationStopped()) {
+                  e.preventDefault();
+                  confirmLogout();
+                }
+              }}
+            >
               {/* Header Section */}
               <div className="bg-gradient-to-r from-red-50 via-red-50/80 to-orange-50/50 border-b border-red-100 px-6 py-5 rounded-t-2xl">
                 <div className="flex items-center gap-4">
@@ -792,7 +1020,7 @@ function CashierPOS() {
                       Confirm Logout
                     </h2>
                     <p className="text-sm text-gray-600">
-                      Are you sure you want to log out?
+                      Are you sure you want to log out? <span className="text-xs opacity-70">(Press Esc to cancel, Enter to confirm)</span>
                     </p>
                   </div>
                 </div>
@@ -809,13 +1037,14 @@ function CashierPOS() {
                 <div className="flex justify-end gap-3">
                   <button
                     onClick={handleCloseLogoutModal}
-                    className="px-5 py-2.5 rounded-lg text-sm font-semibold text-gray-700 bg-white border-2 border-gray-300 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200"
+                    className="px-5 py-2.5 rounded-lg text-sm font-semibold text-gray-700 bg-white border-2 border-gray-300 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                    autoFocus
                   >
-                    Cancel
+                    Cancel (Esc)
                   </button>
                   <button
                     onClick={confirmLogout}
-                    className="px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 shadow-md hover:shadow-lg transition-all duration-200 flex items-center gap-2"
+                    className="px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 shadow-md hover:shadow-lg transition-all duration-200 flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
                   >
                     <svg
                       className="w-5 h-5"
@@ -830,7 +1059,7 @@ function CashierPOS() {
                         d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
                       />
                     </svg>
-                    Logout
+                    Logout (Enter)
                   </button>
                 </div>
               </div>

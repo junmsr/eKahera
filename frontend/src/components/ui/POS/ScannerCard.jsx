@@ -154,11 +154,12 @@ function ScannerCard({
   // USB Barcode Scanner Keyboard Input Handler
   useEffect(() => {
     const handleKeyDown = (event) => {
-      // Only process if not in an input field and scanner is not paused
+      // Only process if not in an input field, not a function key, and scanner is not paused
       if (
         event.target.tagName === "INPUT" ||
         event.target.tagName === "TEXTAREA" ||
-        paused
+        paused ||
+        event.key.startsWith('F') && event.key.length > 1 && !isNaN(event.key.slice(1))
       ) {
         return;
       }
