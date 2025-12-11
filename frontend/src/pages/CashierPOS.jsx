@@ -50,118 +50,7 @@ function CashierPOS() {
   const user = JSON.parse(sessionStorage.getItem("user") || "{}");
   const hasFinalizedRef = React.useRef(false);
 
-  useEffect(() => {
-    const keyDownHandler = (e) => {
-      if (e.repeat) return;
-      switch (e.key) {
-        case "F4":
-          e.preventDefault();
-          setShowCashLedger(true);
-          break;
-        case "F5":
-          e.preventDefault();
-          setShowDiscount(true);
-          break;
-        case "F6":
-          e.preventDefault();
-          setShowPriceCheck(true);
-          break;
-        case "F7":
-          e.preventDefault();
-          setShowImportCart(true);
-          break;
-        case "F8":
-          e.preventDefault();
-          if (cart.length > 0) {
-            setShowCheckout(true);
-          }
-          break;
-        case "Delete":
-          e.preventDefault();
-          setCart((prev) => {
-            if (prev.length === 0) return prev;
-            const next = [...prev];
-            next.splice(selectedCartIdx ?? 0, 1);
-            return next;
-          });
-          setSelectedCartIdx((idx) => Math.max(0, idx - 1));
-          break;
-        case "ArrowDown":
-          if (cart.length > 0) {
-            e.preventDefault();
-            setSelectedCartIdx((idx) =>
-              Math.min(cart.length - 1, (idx ?? 0) + 1)
-            );
-          }
-          break;
-        case "ArrowUp":
-          if (cart.length > 0) {
-            e.preventDefault();
-            setSelectedCartIdx((idx) => Math.max(0, (idx ?? 0) - 1));
-          }
-          break;
-        case "Enter":
-          if (e.ctrlKey || e.metaKey) {
-            e.preventDefault();
-            setShowCheckout(true);
-          }
-          break;
-        case "d":
-        case "D":
-          if (e.altKey) {
-            e.preventDefault();
-            setShowDiscount(true);
-          }
-          break;
-        case "l":
-        case "L":
-          if (e.altKey) {
-            e.preventDefault();
-            setShowCashLedger(true);
-          }
-          break;
-        case "p":
-        case "P":
-          if (e.altKey) {
-            e.preventDefault();
-            setShowPriceCheck(true);
-          }
-          break;
-        case "r":
-        case "R":
-          if (e.altKey) {
-            e.preventDefault();
-            setShowReceipts(true);
-          }
-          break;
-        case "q":
-        case "Q":
-          if (e.altKey) {
-            e.preventDefault();
-            setShowImportCart(true);
-          }
-          break;
-        case "s":
-        case "S":
-          if (e.ctrlKey && e.shiftKey) {
-            e.preventDefault();
-            skuInputRef.current?.focus();
-          }
-          break;
-        case "k":
-        case "K":
-          if (e.ctrlKey && e.shiftKey) {
-            e.preventDefault();
-            quantityInputRef.current?.focus();
-          }
-          break;
-        default:
-          break;
-      }
-    };
-    window.addEventListener("keydown", keyDownHandler);
-    return () => window.removeEventListener("keydown", keyDownHandler);
-  }, [cart.length, selectedCartIdx]);
+  // Keyboard shortcuts have been removed as per request
 
   // Generate a client-side provisional transaction number when POS opens
   useEffect(() => {
@@ -740,7 +629,7 @@ function CashierPOS() {
                 <div className="col-span-8">
                   <div className="grid grid-cols-2 sm:grid-cols-2 gap-2 sm:gap-3">
                     <Button
-                      label="CASH LEDGER (F4)"
+                      label="CASH LEDGER"
                       size="md"
                       className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
                       variant="secondary"
@@ -764,7 +653,7 @@ function CashierPOS() {
                       iconPosition="left"
                     />
                     <Button
-                      label="DISCOUNT (F5)"
+                      label="DISCOUNT"
                       size="md"
                       className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
                       onClick={() => setShowDiscount(true)}
@@ -788,7 +677,7 @@ function CashierPOS() {
                       iconPosition="left"
                     />
                     <Button
-                      label="PRICE CHECK (F6)"
+                      label="PRICE CHECK"
                       size="md"
                       className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
                       onClick={() => setShowPriceCheck(true)}
@@ -812,7 +701,7 @@ function CashierPOS() {
                       iconPosition="left"
                     />
                     <Button
-                      label="SCAN CUSTOMER QR (F7)"
+                      label="SCAN CUSTOMER QR"
                       size="md"
                       className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
                       onClick={() => setShowImportCart(true)}
@@ -841,7 +730,7 @@ function CashierPOS() {
                 {/* Checkout Button */}
                 <div className="col-span-4">
                   <Button
-                    label="CHECKOUT (F8)"
+                    label="CHECKOUT"
                     size="md"
                     className="w-full h-full text-sm sm:text-base font-bold"
                     variant="primary"
@@ -869,19 +758,7 @@ function CashierPOS() {
               </div>
             </div>
           </div>
-          <div className="mt-3 bg-white/80 border border-gray-200 rounded-xl shadow-sm px-3 py-2 text-[11px] sm:text-xs text-gray-700 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sticky bottom-0">
-            <span className="font-semibold text-blue-700">Keyboard Shortcuts</span>
-            <span>Ctrl+Shift+S: Focus SKU</span>
-            <span>Ctrl+Shift+K: Focus Qty</span>
-            <span>Alt+D: Discount</span>
-            <span>Alt+P: Price Check</span>
-            <span>Alt+L: Cash Ledger</span>
-            <span>Alt+Q: Scan Customer QR</span>
-            <span>Alt+R: Recent Receipts</span>
-            <span>Ctrl+Enter: Checkout</span>
-            <span>Delete: Remove selected item</span>
-            <span>Arrow Up/Down: Move selection</span>
-          </div>
+          
         </main>
 
         {/* Modals */}

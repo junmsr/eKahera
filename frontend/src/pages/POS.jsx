@@ -48,44 +48,7 @@ function POS() {
   const hasFinalizedRef = React.useRef(false);
   const [businessName, setBusinessName] = useState("");
 
-  // Add keyboard shortcuts for buttons: F3-F8
-  useEffect(() => {
-    const keyDownHandler = (e) => {
-      if (e.repeat) return;
-      switch (e.key) {
-        case "F3":
-          e.preventDefault();
-          skuInputRef.current?.focus();
-          break;
-        case "F4":
-          e.preventDefault();
-          setShowCashLedger(true);
-          break;
-        case "F5":
-          e.preventDefault();
-          setShowDiscount(true);
-          break;
-        case "F6":
-          e.preventDefault();
-          setShowPriceCheck(true);
-          break;
-        case "F7":
-          e.preventDefault();
-          setShowImportCart(true);
-          break;
-        case "F8":
-          e.preventDefault();
-          if (cart.length > 0) {
-            setShowCheckout(true);
-          }
-          break;
-        default:
-          break;
-      }
-    };
-    window.addEventListener("keydown", keyDownHandler);
-    return () => window.removeEventListener("keydown", keyDownHandler);
-  }, [cart.length]);
+  // Keyboard shortcuts have been removed as per request
 
   // Generate a client-side provisional transaction number when POS opens
   useEffect(() => {
@@ -537,7 +500,7 @@ function POS() {
                 <div className="col-span-8">
                   <div className="grid grid-cols-2 sm:grid-cols-2 gap-2 sm:gap-3">
                     <Button
-                      label="CASH LEDGER (F4)"
+                      label="CASH LEDGER"
                       size="md"
                       className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
                       variant="secondary"
@@ -561,7 +524,7 @@ function POS() {
                       iconPosition="left"
                     />
                     <Button
-                      label={appliedDiscount ? "Edit Discount (F5)" : "Add Discount (F5)"}
+                      label={appliedDiscount ? "Edit Discount" : "Add Discount"}
                       variant={appliedDiscount ? "primary" : "secondary"}
                       onClick={() => setShowDiscount(true)}
                       icon={
@@ -582,7 +545,7 @@ function POS() {
                       className={`flex-1 ${appliedDiscount ? 'bg-green-600 hover:bg-green-700' : ''}`}
                     />
                     <Button
-                      label="PRICE CHECK (F6)"
+                      label="PRICE CHECK"
                       size="md"
                       className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
                       onClick={() => setShowPriceCheck(true)}
@@ -606,7 +569,7 @@ function POS() {
                       iconPosition="left"
                     />
                     <Button
-                      label="SCAN CUSTOMER QR (F7)"
+                      label="SCAN CUSTOMER QR"
                       size="md"
                       className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
                       onClick={() => setShowImportCart(true)}
@@ -635,7 +598,7 @@ function POS() {
                 {/* Checkout Button */}
                 <div className="col-span-4">
                   <Button
-                    label="CHECKOUT (F8)"
+                    label="CHECKOUT"
                     size="md"
                     className="w-full h-full text-sm sm:text-base font-bold"
                     variant="primary"

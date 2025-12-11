@@ -21,26 +21,7 @@ function CartTableCard({
   const [editingIdx, setEditingIdx] = useState(null);
   const [editQty, setEditQty] = useState(1);
 
-  // Keyboard shortcuts: F1 for edit, F2 for remove
-  useEffect(() => {
-    const handleKeyDown = (event) => {
-      if (event.key === "F1" && cart.length > 0) {
-        event.preventDefault();
-        const firstItemIdx = 0;
-        setEditingIdx(firstItemIdx);
-        setEditQty(cart[firstItemIdx].quantity);
-      } else if (event.key === "F2" && cart.length > 0) {
-        event.preventDefault();
-        const firstItemIdx = 0;
-        handleRemove(firstItemIdx);
-      }
-    };
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [cart, handleRemove]);
+  // Keyboard shortcuts have been removed as per request
 
   const EditIcon = () => (
     <svg
