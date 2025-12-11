@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { api, authHeaders } from "../lib/api";
-import dayjs from "dayjs"; 
-import minMax from "dayjs/plugin/minMax"; 
+import dayjs from "dayjs";
+import minMax from "dayjs/plugin/minMax";
 
 import {
   LineChart,
@@ -33,28 +33,27 @@ import DateRangeFilterModal from "../components/modals/DateRangeFilterModal";
 // Extend the minMax plugin globally for this file
 dayjs.extend(minMax);
 
-
 // Constants
 const BLUE_COLORS = ["#2563eb", "#60a5fa", "#93c5fd", "#dbeafe"]; // Blue shades
 
 const SOFT_BLUE = "#3b82f6"; // Tailwind blue-500/600 for lines/accents
 const SOFT_GREEN = "#10b981"; // Retain green for profit, or change to a blue accent if desired
 const SOFT_PURPLE = "#8b5cf6"; // Retain purple/accent for pie chart variation
-const TODAY_START = dayjs().startOf('day');
-const TODAY_END = dayjs().endOf('day');
+const TODAY_START = dayjs().startOf("day");
+const TODAY_END = dayjs().endOf("day");
 
 function VisitorsChart({ data, className = "", rangeType = "Custom" }) {
   const getChartTitle = (rangeType) => {
     switch (rangeType) {
       case "Day":
-        return "Visitors Today";
+        return "Customer's Transactions for Today";
       case "Week":
-        return "Visitors for the last 7 days";
+        return "Customer's Transactions for 7 days";
       case "Month":
-        return "Visitors this Month";
+        return "Customer's Transactions for Month";
       case "Custom":
       default:
-        return "Visitors for the selected range";
+        return "Customer's Transactions for the selected range";
     }
   };
 
@@ -103,7 +102,10 @@ function SalesPieChart({ data, className = "" }) {
     >
       <div className="h-72 w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} margin={{ top: 20, right: 20, left: 0, bottom: 5 }}>
+          <BarChart
+            data={data}
+            margin={{ top: 20, right: 20, left: 0, bottom: 5 }}
+          >
             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
             <XAxis
               dataKey="name"
@@ -151,14 +153,14 @@ export default function Dashboard() {
   const [dateRange, setDateRange] = useState({
     startDate: dayjs().startOf("month"),
     endDate: dayjs().endOf("day"),
-    rangeType: "Month", 
-  }); 
+    rangeType: "Month",
+  });
   const [loading, setLoading] = useState(false);
   const [chartData, setChartData] = useState([]);
   const [pieData, setPieData] = useState([]);
   const [lowStockProducts, setLowStockProducts] = useState([]);
   const [showProfileModal, setShowProfileModal] = useState(false);
-  const [showFilterModal, setShowFilterModal] = useState(false); 
+  const [showFilterModal, setShowFilterModal] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -288,7 +290,8 @@ export default function Dashboard() {
         const revenue = Number(overview.totalSales || 0);
         const expenses = Number(overview.totalExpenses || 0);
         const netProfit = revenue - expenses;
-        const grossMargin = revenue > 0 ? ((revenue - expenses) / revenue) * 100 : 0;
+        const grossMargin =
+          revenue > 0 ? ((revenue - expenses) / revenue) * 100 : 0;
         const totalTransactions = Number(overview.totalTransactions || 0);
         const totalItemsSold = Number(overview.totalItemsSold || 0);
         const avgTxValue = Number(
@@ -306,14 +309,29 @@ export default function Dashboard() {
           averageTransactionValue: avgTxValue,
         });
 
-        const dateRangeText = 
-            rangeType === "Day" 
-                ? finalStart.format("MMM D, YYYY")
-                : `${finalStart.format("MMM D")} - ${finalEnd.format("MMM D, YYYY")}`;
-        
-        const salesLabel = rangeType === 'Day' ? "Daily Sales" : rangeType === 'Week' ? "7-Day Sales" : rangeType === 'Month' ? "Monthly Sales" : "Total Sales";
-        const transactionsLabel = rangeType === 'Day' ? "Daily Transactions" : rangeType === 'Week' ? "7-Day Transactions" : rangeType === 'Month' ? "Monthly Transactions" : "Total Transactions";
+        const dateRangeText =
+          rangeType === "Day"
+            ? finalStart.format("MMM D, YYYY")
+            : `${finalStart.format("MMM D")} - ${finalEnd.format(
+                "MMM D, YYYY"
+              )}`;
 
+        const salesLabel =
+          rangeType === "Day"
+            ? "Daily Sales"
+            : rangeType === "Week"
+            ? "7-Day Sales"
+            : rangeType === "Month"
+            ? "Monthly Sales"
+            : "Total Sales";
+        const transactionsLabel =
+          rangeType === "Day"
+            ? "Daily Transactions"
+            : rangeType === "Week"
+            ? "7-Day Transactions"
+            : rangeType === "Month"
+            ? "Monthly Transactions"
+            : "Total Transactions";
 
         setStats([
           {
@@ -332,7 +350,9 @@ export default function Dashboard() {
           {
             label: "Top Product",
             value: topProduct,
-            subtext: `Total: ${overview.topProducts?.[0]?.total_sold || 0} sold`,
+            subtext: `Total: ${
+              overview.topProducts?.[0]?.total_sold || 0
+            } sold`,
           },
           {
             label: "Items Sold",
@@ -371,7 +391,7 @@ export default function Dashboard() {
           id: log.log_id,
           title: log.action,
           message: `${log.username} (${log.role}) did an action: ${log.action}`,
-          time: dayjs(log.date_time).format('MMM D, h:mm A'),
+          time: dayjs(log.date_time).format("MMM D, h:mm A"),
           isRead: readIds.has(log.log_id),
         }));
       setNotifications(mapped);
@@ -413,7 +433,7 @@ export default function Dashboard() {
       setUnreadCount((c) => Math.max(0, c - 1));
     }
   };
-  
+
   const handleMarkAsUnread = (id) => {
     // ... (Notification handling logic remains the same)
     const readIds = JSON.parse(
@@ -426,7 +446,7 @@ export default function Dashboard() {
     );
     setUnreadCount((c) => c + 1);
   };
-  
+
   // Export to CSV
   const exportToCSV = () => {
     // ... (Export logic remains the same)
@@ -455,7 +475,7 @@ export default function Dashboard() {
   useEffect(() => {
     fetchData();
     fetchNotifications();
-  }, [dateRange]); 
+  }, [dateRange]);
 
   // Helper function to format currency values
   const formatCurrency = (value) => {
@@ -466,7 +486,7 @@ export default function Dashboard() {
       maximumFractionDigits: 2,
     }).format(value);
   };
-  
+
   // New handler to receive selected dates from modal
   const handleDateRangeApply = (newRange) => {
     setDateRange(newRange);
@@ -474,13 +494,12 @@ export default function Dashboard() {
 
   const headerDateDisplay = useMemo(() => {
     if (!dateRange.startDate || !dateRange.endDate) return "Select Range";
-    
+
     const finalStart = dayjs.min(dateRange.startDate, dateRange.endDate);
     const finalEnd = dayjs.max(dateRange.startDate, dateRange.endDate);
-    
+
     return `${finalStart.format("MMM D")} - ${finalEnd.format("MMM D, YYYY")}`;
   }, [dateRange]);
-
 
   // Header actions - REMOVED SELECT DROPDOWN
   const headerActions = (
@@ -504,9 +523,7 @@ export default function Dashboard() {
         className="flex items-center gap-1 sm:gap-2 bg-white/80 backdrop-blur-sm hover:bg-white text-gray-700 px-1.5 sm:px-3 py-1.5 sm:py-2 rounded-lg border border-gray-200/80 text-xs sm:text-sm font-medium transition-all duration-200 outline-none cursor-pointer hover:shadow-md hover:scale-[1.02] shrink-0"
       >
         <BiCalendarAlt className="w-4 h-4 sm:w-5 sm:h-5" />
-        <span className="hidden sm:inline">
-            {headerDateDisplay}
-        </span>
+        <span className="hidden sm:inline">{headerDateDisplay}</span>
       </button>
 
       {/* Adjusted Export Button container for better mobile spacing */}
@@ -603,9 +620,7 @@ export default function Dashboard() {
           <p className="text-2xl font-bold text-gray-900">
             {formatCurrency(keyMetrics.revenue)}
           </p>
-          <p className="text-xs text-gray-500 mt-1">
-            For selected range
-          </p>
+          <p className="text-xs text-gray-500 mt-1">For selected range</p>
         </div>
         {/* Card 2: Operating Expenses */}
         <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200">
@@ -615,9 +630,7 @@ export default function Dashboard() {
           <p className="text-2xl font-bold text-gray-900">
             {formatCurrency(keyMetrics.expenses)}
           </p>
-          <p className="text-xs text-gray-500 mt-1">
-            For selected range
-          </p>
+          <p className="text-xs text-gray-500 mt-1">For selected range</p>
         </div>
         {/* Card 3: Net Profit */}
         <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200">
@@ -634,9 +647,7 @@ export default function Dashboard() {
               <span className="text-sm text-red-500 ml-1">(Loss)</span>
             )}
           </p>
-          <p className="text-xs text-gray-500 mt-1">
-            For selected range
-          </p>
+          <p className="text-xs text-gray-500 mt-1">For selected range</p>
         </div>
         {/* Card 4: Gross Margin */}
         <div className="bg-white rounded-lg p-5 border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200">
@@ -650,9 +661,7 @@ export default function Dashboard() {
           >
             {keyMetrics.grossMargin.toFixed(1)}%
           </p>
-          <p className="text-xs text-gray-500 mt-1">
-            For selected range
-          </p>
+          <p className="text-xs text-gray-500 mt-1">For selected range</p>
         </div>
       </div>
 
@@ -689,10 +698,10 @@ export default function Dashboard() {
               <div className="h-8 bg-gray-300 rounded w-1/2"></div>
             </div>
           ) : (
-            <DashboardStatsCard 
-                stats={todayHighlight}
-                formatCurrency={formatCurrency}
-                rangeType="Today" // Explicitly label this card as "Today's" stats
+            <DashboardStatsCard
+              stats={todayHighlight}
+              formatCurrency={formatCurrency}
+              rangeType="Today" // Explicitly label this card as "Today's" stats
             />
           )}
 
@@ -727,7 +736,7 @@ export default function Dashboard() {
         onClose={() => setShowProfileModal(false)}
         userData={user}
       />
-      
+
       {/* NEW DATE RANGE FILTER MODAL */}
       <DateRangeFilterModal
         isOpen={showFilterModal}
@@ -740,29 +749,29 @@ export default function Dashboard() {
 
 // LowStockList is kept as a separate component for clean code, as in the original
 function LowStockList({ lowStockProducts }) {
-    if (lowStockProducts.length === 0) {
-      return <p className="text-sm text-gray-500">No products with low stock.</p>;
-    }
-  
-    return (
-      <ul className="divide-y divide-gray-200">
-        <li className="py-2 text-sm font-semibold text-gray-600 flex justify-between">
-            <span>Product</span>
-            <span>Quantity</span>
-        </li>
-        {lowStockProducts.map((product) => (
-          <li
-            key={product.product_id}
-            className="py-3 flex justify-between items-center"
-          >
-            <span className="text-sm font-medium text-gray-800">
-              {product.product_name}
-            </span>
-            <span className="text-sm font-bold text-red-600">
-              {product.quantity_in_stock} left
-            </span>
-          </li>
-        ))}
-      </ul>
-    );
+  if (lowStockProducts.length === 0) {
+    return <p className="text-sm text-gray-500">No products with low stock.</p>;
   }
+
+  return (
+    <ul className="divide-y divide-gray-200">
+      <li className="py-2 text-sm font-semibold text-gray-600 flex justify-between">
+        <span>Product</span>
+        <span>Quantity</span>
+      </li>
+      {lowStockProducts.map((product) => (
+        <li
+          key={product.product_id}
+          className="py-3 flex justify-between items-center"
+        >
+          <span className="text-sm font-medium text-gray-800">
+            {product.product_name}
+          </span>
+          <span className="text-sm font-bold text-red-600">
+            {product.quantity_in_stock} left
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
