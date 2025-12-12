@@ -52,6 +52,7 @@ function POS() {
   const [editingCartItem, setEditingCartItem] = useState(null);
   const [editQty, setEditQty] = useState('1');
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [appliedDiscount, setAppliedDiscount] = useState(null);
   const quantityInputRef = useRef(null);
 
   // Set editing cart item and initialize quantity
@@ -71,7 +72,9 @@ function POS() {
         .replace(/[-:T.Z]/g, "")
         .slice(0, 14);
       const randPart = Math.floor(1000 + Math.random() * 9000);
-      setTransactionNumber(`T-${businessId}-${timePart}-${randPart}`);
+      setTransactionNumber(
+        `T-${businessId.toString().padStart(2, "0")}-${timePart}-${randPart}`
+      );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -272,9 +275,6 @@ function POS() {
     0
   );
 
-  // Discount state and calculation
-  const [appliedDiscount, setAppliedDiscount] = useState(null);
-  
   // Calculate total with discount
   let total = subtotal;
   if (appliedDiscount) {
@@ -479,6 +479,7 @@ function POS() {
           else if (showCashLedger) setShowCashLedger(false);
           else if (showReceipts) setShowReceipts(false);
           else if (showProfileModal) setShowProfileModal(false);
+          else if (showLogoutConfirm) setShowLogoutConfirm(false);
         },
         allowWhileTyping: true,
       },
@@ -494,8 +495,49 @@ function POS() {
       showCashLedger,
       showReceipts,
       showProfileModal,
+      showLogoutConfirm,
+      appliedDiscount,
     ]
   );
+
+  // show confirmation modal first, perform actual logout in confirmLogout
+  const handleLogout = () => {
+    setShowLogoutConfirm(true);
+  };
+
+  const confirmLogout = () => {
+    sessionStorage.removeItem("auth_token");
+    sessionStorage.removeItem("user");
+    // close modal then navigate home
+    setShowLogoutConfirm(false);
+    navigate("/");
+  };
+
+  const handleCloseLogoutModal = () => {
+    setShowLogoutConfirm(false);
+  };
+
+  // Handle keyboard events for logout confirmation
+  useEffect(() => {
+    if (!showLogoutConfirm) return;
+
+    const handleKeyDown = (e) => {
+      // Use stopPropagation to prevent other handlers from interfering
+      e.stopPropagation();
+      
+      if (e.key === 'Escape' || e.key === 'Esc') {
+        e.preventDefault();
+        handleCloseLogoutModal();
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        confirmLogout();
+      }
+    };
+
+    // Use capture phase to ensure we get the event first
+    document.addEventListener('keydown', handleKeyDown, { capture: true });
+    return () => document.removeEventListener('keydown', handleKeyDown, { capture: true });
+  }, [showLogoutConfirm]);
 
   const handleCheckout = async (paymentMethod, amountReceived = null) => {
     if (cart.length === 0) return;
@@ -543,8 +585,11 @@ function POS() {
         .replace(/[-:T.Z]/g, "")
         .slice(0, 14);
       const randPart = Math.floor(1000 + Math.random() * 9000);
-      setTransactionNumber(`T-${businessId}-${timePart}-${randPart}`);
+      setTransactionNumber(
+        `T-${businessId.toString().padStart(2, "0")}-${timePart}-${randPart}`
+      );
       setAppliedDiscount(null); // Reset discount after successful checkout
+      setTransactionId(null);
     } catch (err) {
       console.error("Checkout error:", err);
       setError("Checkout failed");
@@ -621,7 +666,7 @@ function POS() {
           <BiReceipt className="w-5 h-5 text-blue-600" />
         </div>
         <span className="text-sm font-medium text-gray-700 hidden sm:inline">
-          Receipts
+          (F11) Receipts
         </span>
       </button>
 
@@ -663,7 +708,100 @@ function POS() {
                     if (showPriceCheck) {
                       setPriceCheckSku(code);
                     } else {
-                      await addSkuToCart(code, 1);
+                      try {
+                        let scannedData;
+                        try {
+                          scannedData = JSON.parse(code);
+                        } catch (e) {
+                          scannedData = null;
+                        }
+                        if (
+                          scannedData &&
+                          scannedData.t === "cart" &&
+                          Array.isArray(scannedData.items)
+                        ) {
+                          // set transactionId from scanned data if present
+                          if (scannedData.transaction_id) {
+                            setTransactionId(scannedData.transaction_id);
+                          }
+                          // set transaction_number from scanned data if present
+                          if (scannedData.transaction_number) {
+                            setTransactionNumber(
+                              scannedData.transaction_number
+                            );
+                          }
+                          const items = scannedData.items.map((it) => ({
+                            product_id: it.p,
+                            quantity: it.q,
+                            sku: it.sku || "",
+                          }));
+                          try {
+                            const fetchedProducts = await Promise.all(
+                              items.map(async (item) => {
+                                const res = await api(
+                                  `/api/products/${item.product_id}`,
+                                  {
+                                    headers: {
+                                      Authorization: `Bearer ${token}`,
+                                    },
+                                  }
+                                );
+                                return {
+                                  product_id: item.product_id,
+                                  sku: res.sku || item.sku || "",
+                                  name: res.product_name || "",
+                                  price: Number(res.selling_price) || 0,
+                                  quantity: item.quantity,
+                                };
+                              })
+                            );
+                            setCart((prev) => {
+                              const byProductId = new Map(
+                                prev.map((i) => [i.product_id, i])
+                              );
+                              for (const it of fetchedProducts) {
+                                const existing = byProductId.get(it.product_id);
+                                if (existing) {
+                                  existing.quantity += it.quantity;
+                                } else {
+                                  byProductId.set(it.product_id, { ...it });
+                                }
+                              }
+                              return Array.from(byProductId.values());
+                            });
+                            return;
+                          } catch (err) {
+                            console.error(
+                              "Error fetching product details for scanned cart:",
+                              err
+                            );
+                            // fallback to merging raw scanned items without product details
+                            setCart((prev) => {
+                              const byProductId = new Map(
+                                prev.map((i) => [i.product_id, i])
+                              );
+                              for (const it of items) {
+                                const existing = byProductId.get(it.product_id);
+                                if (existing) {
+                                  existing.quantity += it.quantity;
+                                } else {
+                                  byProductId.set(it.product_id, {
+                                    ...it,
+                                    name: "",
+                                    price: 0,
+                                  });
+                                }
+                              }
+                              return Array.from(byProductId.values());
+                            });
+                            return;
+                          }
+                        }
+                        await addSkuToCart(code, 1);
+                      } catch (err) {
+                        console.error("Error processing scanned code:", err);
+                        await addSkuToCart(code, 1);
+                      }
                     }
                   }}
                   paused={scannerPaused}
@@ -681,6 +819,7 @@ function POS() {
                   quantity={quantity}
                   setQuantity={setQuantity}
                   handleAddToCart={handleAddToCart}
+                  quantityInputRef={quantityInputRef}
                 />
                 {error && (
                   <div className="bg-red-50 border-l-4 border-red-500 rounded-lg p-3 flex items-start gap-2 mt-3">
@@ -728,16 +867,37 @@ function POS() {
                 <CartTableCard
                   cart={cart}
                   handleRemove={handleRemove}
-                  handleEditQuantity={handleEditQuantity}
+                  handleEditQuantity={(idx, newQuantity) => {
+                    handleEditQuantity(idx, newQuantity);
+                    setEditingCartItem(null);
+                  }}
                   total={total}
-                  className="flex-1 h-full"
+                  appliedDiscount={appliedDiscount}
                   selectedIdx={selectedCartIdx}
-                  onSelectRow={setSelectedCartIdx}
+                  onSelectRow={setSelectedCartItem}
+                  editingIdx={editingCartItem}
+                  editQty={editQty}
+                  onEditQtyChange={handleEditQtyChange}
+                  onEditComplete={() => setEditingCartItem(null)}
+                  className="flex-1 h-full"
                 />
               </div>
 
               {/* Action Buttons */}
               <div className="grid grid-cols-12 gap-2 sm:gap-3 flex-shrink-0">
+                {appliedDiscount && (
+                  <div className="col-span-12 flex items-center justify-between bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-lg px-3 py-2">
+                    <span className="text-sm font-semibold">
+                      Discount applied: {appliedDiscount.label}
+                    </span>
+                    <button
+                      className="text-xs font-bold underline flex items-center gap-1"
+                      onClick={() => setAppliedDiscount(null)}
+                    >
+                      <span className="text-yellow-600">(R)</span> Remove
+                    </button>
+                  </div>
+                )}
                 {/* Grouped Buttons */}
                 <div className="col-span-8">
                   <div className="grid grid-cols-2 sm:grid-cols-2 gap-2 sm:gap-3">
@@ -878,7 +1038,7 @@ function POS() {
                 {/* Checkout Button */}
                 <div className="col-span-4">
                   <Button
-                    label="CHECKOUT"
+                    label="CHECKOUT (F10)"
                     size="md"
                     className="w-full h-full text-sm sm:text-base font-bold"
                     variant="primary"
@@ -914,6 +1074,7 @@ function POS() {
         onClose={() => setShowDiscount(false)}
         onApplyDiscount={(discount) => {
           setAppliedDiscount(discount);
+          setShowDiscount(false);
         }}
       />
       <PriceCheckModal
@@ -1022,6 +1183,94 @@ function POS() {
           setShowCashModal(false);
         }}
       />
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 z-90 flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/80 z-90"
+            onClick={handleCloseLogoutModal}
+          />
+          <div 
+            className="relative bg-white rounded-xl shadow-xl w-[92%] max-w-md z-100 p-0"
+            onKeyDown={(e) => {
+              // Prevent event from bubbling up to document
+              e.stopPropagation();
+              
+              // Handle Enter key specifically for the modal
+              if (e.key === 'Enter' && !e.isPropagationStopped()) {
+                e.preventDefault();
+                confirmLogout();
+              }
+            }}
+          >
+            {/* Header Section */}
+            <div className="bg-gradient-to-r from-red-50 via-red-50/80 to-orange-50/50 border-b border-red-100 px-6 py-5 rounded-t-2xl">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-red-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <svg
+                    className="w-6 h-6 text-white"
+                    fill="none"
+                    stroke="white"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                    />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <h2 className="text-xl font-bold text-gray-900 mb-1">
+                    Confirm Logout
+                  </h2>
+                  <p className="text-sm text-gray-600">
+                    Are you sure you want to log out? <span className="text-xs opacity-70">(Press Esc to cancel, Enter to confirm)</span>
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Content Section */}
+            <div className="p-6">
+              <p className="text-sm text-gray-700 mb-6">
+                You will be redirected to the login page and your session will
+                end.
+              </p>
+
+              {/* Action Buttons */}
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={handleCloseLogoutModal}
+                  className="px-5 py-2.5 rounded-lg text-sm font-semibold text-gray-700 bg-white border-2 border-gray-300 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                  autoFocus
+                >
+                  Cancel (Esc)
+                </button>
+                <button
+                  onClick={confirmLogout}
+                  className="px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 shadow-md hover:shadow-lg transition-all duration-200 flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                >
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                    />
+                  </svg>
+                  Logout (Enter)
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       <ProfileModal
         isOpen={showProfileModal}
         onClose={() => setShowProfileModal(false)}
@@ -1030,25 +1279,85 @@ function POS() {
       <ScanCustomerCartModal
         isOpen={showImportCart}
         onClose={() => setShowImportCart(false)}
-        onImport={(items, transactionId) => {
-          // If we have a transaction ID from the scanned cart, use it
-          if (transactionId) {
-            setTransactionId(transactionId);
-          }
-          
-          // Merge imported items into current cart
-          setCart((prev) => {
-            const bySku = new Map(prev.map((i) => [i.sku, i]));
-            for (const it of items) {
-              const existing = bySku.get(it.sku);
-              if (existing) {
-                existing.quantity += it.quantity;
-              } else {
-                bySku.set(it.sku, { ...it });
-              }
+        onImport={async (items, transactionId, completionResponse) => {
+          try {
+            // If transaction was completed (completionResponse exists), navigate to receipt
+            if (completionResponse && transactionId) {
+              setCart([]);
+              setTransactionId(null);
+              setTransactionNumber(null);
+              setError("");
+              setShowImportCart(false);
+              // Navigate to receipt page for admin
+              window.location.href = `/receipt?tn=${completionResponse.transaction_number || transactionId}`;
+              return;
             }
-            return Array.from(bySku.values());
-          });
+            
+            // Otherwise, import items (backward compatibility for old QR format)
+            if (!items || items.length === 0) {
+              setError("No items found in QR code");
+              return;
+            }
+            
+            // If we have a transaction ID from the scanned cart, use it
+            if (transactionId) {
+              setTransactionId(transactionId);
+            }
+            
+            console.log("Scanned items:", items);
+            // Fetch product details by product_id for all scanned items concurrently
+            const fetchedProducts = await Promise.all(
+              items.map(async (item) => {
+                const res = await api(`/api/products/${item.product_id}`, {
+                  headers: { Authorization: `Bearer ${token}` },
+                });
+                console.log(
+                  "Fetched product for id",
+                  item.product_id,
+                  ":",
+                  res
+                );
+                return {
+                  product_id: item.product_id,
+                  sku: res.sku || item.sku || "",
+                  name: res.product_name || "",
+                  price: Number(res.selling_price) || 0,
+                  quantity: item.quantity,
+                };
+              })
+            );
+            setCart((prev) => {
+              const byProductId = new Map(prev.map((i) => [i.product_id, i]));
+              for (const it of fetchedProducts) {
+                const existing = byProductId.get(it.product_id);
+                if (existing) {
+                  existing.quantity += it.quantity;
+                } else {
+                  byProductId.set(it.product_id, { ...it });
+                }
+              }
+              return Array.from(byProductId.values());
+            });
+          } catch (e) {
+            console.error("Error fetching products for scanned items:", e);
+            // Fallback to use raw items if fetch fails
+            setCart((prev) => {
+              const byProductId = new Map(prev.map((i) => [i.product_id, i]));
+              for (const it of items) {
+                const existing = byProductId.get(it.product_id);
+                if (existing) {
+                  existing.quantity += it.quantity;
+                } else {
+                  byProductId.set(it.product_id, {
+                    ...it,
+                    name: "",
+                    price: 0,
+                  });
+                }
+              }
+              return Array.from(byProductId.values());
+            });
+          }
         }}
       />
     </PageLayout>

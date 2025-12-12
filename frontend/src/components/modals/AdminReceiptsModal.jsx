@@ -1,12 +1,16 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import BaseModal from "./BaseModal";
 import Button from "../common/Button";
 import { api } from "../../lib/api";
+import { useKeyboardShortcuts } from "../../hooks/useKeyboardShortcuts";
 
 function AdminReceiptsModal({ isOpen, onClose }) {
   const [receipts, setReceipts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const containerRef = useRef(null);
+  const modalContentRef = useRef(null);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -29,14 +33,97 @@ function AdminReceiptsModal({ isOpen, onClose }) {
     fetchReceipts();
   }, [isOpen]);
 
-  const openReceipt = (receipt) => {
+  const openReceipt = useCallback((receipt) => {
     const url = new URL(window.location.origin + "/receipt");
     if (receipt.transaction_number)
       url.searchParams.set("tn", receipt.transaction_number);
     if (receipt.transaction_id)
       url.searchParams.set("tid", String(receipt.transaction_id));
     window.open(url.toString(), "_blank");
-  };
+  }, []);
+
+  const openReceiptByIndex = useCallback((index) => {
+    if (!receipts[index]) return;
+    openReceipt(receipts[index]);
+  }, [receipts, openReceipt]);
+
+  // Handle keyboard navigation
+  const handleKeyDown = useCallback((e) => {
+    if (!isOpen || !receipts.length) return;
+    e.preventDefault();
+
+    switch (e.key) {
+      case 'ArrowUp': {
+        setSelectedIndex(prev => {
+          const newIndex = prev <= 0 ? receipts.length - 1 : prev - 1;
+          // Use setTimeout to ensure state update is complete before scrolling
+          setTimeout(() => {
+            const items = containerRef.current?.querySelectorAll('button');
+            const selectedItem = items?.[newIndex];
+            if (selectedItem) {
+              // Scroll the item into view with smooth behavior
+              selectedItem.scrollIntoView({
+                behavior: 'smooth',
+                block: 'nearest',
+                inline: 'nearest'
+              });
+              selectedItem.focus({ preventScroll: true });
+            }
+          }, 0);
+          return newIndex;
+        });
+        break;
+      }
+      case 'ArrowDown': {
+        setSelectedIndex(prev => {
+          const newIndex = prev >= receipts.length - 1 ? 0 : prev + 1;
+          // Use setTimeout to ensure state update is complete before scrolling
+          setTimeout(() => {
+            const items = containerRef.current?.querySelectorAll('button');
+            const selectedItem = items?.[newIndex];
+            if (selectedItem) {
+              // Scroll the item into view with smooth behavior
+              selectedItem.scrollIntoView({
+                behavior: 'smooth',
+                block: 'nearest',
+                inline: 'nearest'
+              });
+              selectedItem.focus({ preventScroll: true });
+            }
+          }, 0);
+          return newIndex;
+        });
+        break;
+      }
+      case 'Enter':
+        e.preventDefault();
+        if (receipts[selectedIndex]) {
+          openReceipt(receipts[selectedIndex]);
+        }
+        break;
+      case 'Escape':
+        onClose();
+        break;
+      default:
+        break;
+    }
+  }, [isOpen, receipts, selectedIndex, onClose, openReceipt]);
+
+  // Set up keyboard shortcuts - removed as we're handling it in handleKeyDown
+
+  // Reset selected index when modal opens or receipts change
+  useEffect(() => {
+    if (isOpen) {
+      setSelectedIndex(0);
+      // Focus the container when it opens
+      setTimeout(() => {
+        const firstButton = containerRef.current?.querySelector('button');
+        if (firstButton) {
+          firstButton.focus({ preventScroll: true });
+        }
+      }, 100);
+    }
+  }, [isOpen, receipts]);
 
   return (
     <BaseModal
@@ -47,7 +134,7 @@ function AdminReceiptsModal({ isOpen, onClose }) {
       size="lg"
       footer={
         <Button
-          label="Close"
+          label="Close (Esc)"
           variant="secondary"
           onClick={onClose}
           className="w-full"
@@ -69,12 +156,23 @@ function AdminReceiptsModal({ isOpen, onClose }) {
           No transactions found.
         </div>
       )}
-      <div className="space-y-2 max-h-[60vh] overflow-y-auto">
-        {receipts.map((r) => (
+      <div 
+        ref={containerRef}
+        className="space-y-2 max-h-[60vh] overflow-y-auto outline-none"
+        onKeyDown={handleKeyDown}
+        tabIndex={0}
+      >
+        {receipts.map((r, index) => (
           <button
             key={`${r.transaction_id}-${r.transaction_number}`}
             onClick={() => openReceipt(r)}
-            className="w-full text-left border border-gray-200 rounded-xl px-3 py-2 hover:border-blue-300 hover:bg-blue-50 transition-colors"
+            className={`w-full text-left border rounded-xl px-3 py-2 transition-colors ${
+              selectedIndex === index 
+                ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200' 
+                : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50'
+            }`}
+            onFocus={() => setSelectedIndex(index)}
+            tabIndex={0}
           >
             <div className="flex justify-between items-center">
               <div>
