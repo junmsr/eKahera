@@ -44,6 +44,16 @@ function CashierPOS() {
   const touchStartXRef = useRef(null);
   const touchActiveRef = useRef(false);
   const [selectedCartIdx, setSelectedCartIdx] = useState(0);
+  const [editingCartItem, setEditingCartItem] = useState(null);
+  const [editQty, setEditQty] = useState('1');
+  
+  // Set editing cart item and initialize quantity
+  const setSelectedCartItem = (idx) => {
+    setSelectedCartIdx(idx);
+    if (idx >= 0 && idx < cart.length) {
+      setEditQty(String(cart[idx].quantity));
+    }
+  };
   const skuInputRef = useRef(null);
   const quantityInputRef = useRef(null);
 
@@ -219,20 +229,89 @@ function CashierPOS() {
     await addSkuToCart(sku, quantity);
   };
 
-  const handleRemove = (idx) => setCart(cart.filter((_, i) => i !== idx));
+  const handleRemove = (idx) => {
+    if (idx >= 0 && idx < cart.length) {
+      setCart(cart.filter((_, i) => i !== idx));
+    }
+  };
   const handleEditQuantity = (idx, qty) => {
+    const newQty = qty === '' ? 1 : Math.max(1, Number(qty) || 1);
     setCart((prev) =>
       prev.map((item, i) =>
-        i === idx ? { ...item, quantity: Math.max(1, qty) } : item
+        i === idx ? { ...item, quantity: newQty } : item
       )
     );
+    setEditQty(newQty); // Keep editQty in sync
+    setEditingCartItem(null);
+  };
+  
+  // Handle edit quantity change
+  const handleEditQtyChange = (value) => {
+    setEditQty(value);
   };
 
+  // Handle keyboard navigation for cart items
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (showDiscount || showPriceCheck || showImportCart || showCashLedger || showCheckout || showCashModal || showReceipts || showProfileModal || showLogoutConfirm) {
+        return; // Don't handle keys when modals are open
+      }
+
+      switch (e.key) {
+        case 'ArrowUp':
+          e.preventDefault();
+          setSelectedCartIdx(prev => prev > 0 ? prev - 1 : cart.length - 1);
+          break;
+        case 'ArrowDown':
+          e.preventDefault();
+          setSelectedCartIdx(prev => prev < cart.length - 1 ? prev + 1 : 0);
+          break;
+        case 'e':
+        case 'E':
+          e.preventDefault();
+          if (cart.length > 0 && selectedCartIdx >= 0 && selectedCartIdx < cart.length) {
+            setEditingCartItem(selectedCartIdx);
+            setEditQty(String(cart[selectedCartIdx].quantity));
+          }
+          break;
+        case 'd':
+        case 'D':
+          e.preventDefault();
+          if (cart.length > 0 && selectedCartIdx >= 0 && selectedCartIdx < cart.length) {
+            handleRemove(selectedCartIdx);
+            setSelectedCartIdx(prev => Math.min(prev, cart.length - 2));
+          }
+          break;
+        case 'Enter':
+          if (editingCartItem !== null) {
+            e.preventDefault();
+            handleEditQuantity(editingCartItem, editQty);
+            setEditingCartItem(null);
+          }
+          break;
+        case 'Escape':
+          if (editingCartItem !== null) {
+            e.preventDefault();
+            setEditingCartItem(null);
+          }
+          break;
+        default:
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [cart.length, selectedCartIdx, editingCartItem, editQty]);
+
+  // Reset selected index when cart changes
   useEffect(() => {
     if (cart.length === 0) {
       setSelectedCartIdx(0);
     } else {
-      setSelectedCartIdx((idx) => Math.min(idx ?? 0, cart.length - 1));
+      setSelectedCartIdx(prev => Math.min(prev, cart.length - 1));
     }
   }, [cart.length]);
 
@@ -816,12 +895,20 @@ function CashierPOS() {
                 <CartTableCard
                   cart={cart}
                   handleRemove={handleRemove}
-                  handleEditQuantity={handleEditQuantity}
+                  handleEditQuantity={(idx, newQuantity) => {
+                    const updatedCart = [...cart];
+                    updatedCart[idx].quantity = newQuantity;
+                    setCart(updatedCart);
+                    setEditingCartItem(null);
+                  }}
                   total={total}
-                  subtotal={subtotal}
                   appliedDiscount={appliedDiscount}
                   selectedIdx={selectedCartIdx}
-                  onSelectRow={setSelectedCartIdx}
+                  onSelectRow={setSelectedCartItem}
+                  editingIdx={editingCartItem}
+                  editQty={editQty}
+                  onEditQtyChange={handleEditQtyChange}
+                  onEditComplete={() => setEditingCartItem(null)}
                   className="flex-1 h-full"
                 />
               </div>

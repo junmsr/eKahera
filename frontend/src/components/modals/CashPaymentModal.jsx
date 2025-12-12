@@ -8,36 +8,9 @@ function CashPaymentModal({ isOpen, onClose, total, onConfirm }) {
   const [amountReceived, setAmountReceived] = useState("");
   const [showComplete, setShowComplete] = useState(false);
   const [completeData, setCompleteData] = useState(null);
-
-  // Keep component mounted if completion modal should be shown even when parent closes isOpen
+  
+  // Early return if not open and not showing completion modal
   if (!isOpen && !showComplete) return null;
-
-  // When the payment is completed, replace this modal with the completion modal
-  if (showComplete) {
-    return (
-      <CashPaymentCompleteModal
-        isOpen={showComplete}
-        onClose={() => {
-          setShowComplete(false);
-          if (onClose) onClose();
-        }}
-        change={completeData?.change}
-        payable={completeData?.payable}
-        onNewEntry={() => {
-          setShowComplete(false);
-          if (onClose) onClose();
-        }}
-        onReceipt={() => {
-          // Call parent confirm (which performs checkout/navigation) when user
-          // explicitly requests the receipt. This prevents immediate navigation
-          // that would close the completion modal too soon.
-          if (onConfirm && completeData?.received != null) {
-            onConfirm(Number(completeData.received));
-          }
-        }}
-      />
-    );
-  }
 
   const handleQuickAmount = (val) => setAmountReceived(val.toString());
 
@@ -55,30 +28,65 @@ function CashPaymentModal({ isOpen, onClose, total, onConfirm }) {
     setCompleteData({ change, payable: total, received });
     setShowComplete(true);
   };
+  
+  // Handle completion modal close
+  const handleCompleteClose = () => {
+    setShowComplete(false);
+    if (onClose) onClose();
+  };
+  
+  // Handle new entry from completion modal
+  const handleNewEntry = () => {
+    setShowComplete(false);
+    setAmountReceived("");
+    if (onClose) onClose();
+  };
+  
+  // Handle receipt printing from completion modal
+  const handleReceipt = () => {
+    if (onConfirm && completeData?.received != null) {
+      onConfirm(Number(completeData.received));
+    }
+  };
 
+  // Only set up keyboard shortcuts when not showing completion modal
   useKeyboardShortcuts(
     [
       {
         key: "escape",
         action: onClose,
-        enabled: isOpen,
+        enabled: isOpen && !showComplete,
         allowWhileTyping: true,
       },
       {
         key: "enter",
         action: handleProceed,
-        enabled: isOpen,
+        enabled: isOpen && !showComplete,
         allowWhileTyping: true,
       },
       {
         key: "e",
         action: handleExactAmount,
-        enabled: isOpen,
+        enabled: isOpen && !showComplete,
         allowWhileTyping: true,
       },
     ],
-    [isOpen, amountReceived, total]
+    [isOpen, amountReceived, total, showComplete]
   );
+  
+  // Render completion modal if needed
+  if (showComplete) {
+    return (
+      <CashPaymentCompleteModal
+        isOpen={showComplete}
+        onClose={handleCompleteClose}
+        change={completeData?.change}
+        payable={completeData?.payable}
+        onNewEntry={handleNewEntry}
+        onReceipt={handleReceipt}
+      />
+    );
+  }
 
   const footerContent = (
     <>

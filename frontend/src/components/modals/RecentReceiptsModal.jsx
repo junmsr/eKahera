@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import BaseModal from "./BaseModal";
 import Button from "../common/Button";
 import { api } from "../../lib/api";
@@ -8,6 +8,9 @@ function RecentReceiptsModal({ isOpen, onClose }) {
   const [receipts, setReceipts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const containerRef = useRef(null);
+  const modalContentRef = useRef(null);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -38,22 +41,115 @@ function RecentReceiptsModal({ isOpen, onClose }) {
     window.open(url.toString(), "_blank");
   };
 
-  const openReceiptByIndex = (index) => {
+  const openReceiptByIndex = useCallback((index) => {
     if (!receipts[index]) return;
     openReceipt(receipts[index]);
-  };
+  }, [receipts]);
 
-  useKeyboardShortcuts(
-    [
-      { key: "escape", action: onClose, enabled: isOpen },
-      ...Array.from({ length: Math.min(9, receipts.length) }).map((_, i) => ({
-        key: String(i + 1),
-        action: () => openReceiptByIndex(i),
-        enabled: isOpen && receipts[i],
-      })),
-    ],
-    [isOpen, receipts]
-  );
+  const handleKeyDown = useCallback((e) => {
+    if (!isOpen || !receipts.length) return;
+    e.preventDefault();
+
+    switch (e.key) {
+      case 'ArrowUp': {
+        setSelectedIndex(prev => {
+          const newIndex = prev <= 0 ? receipts.length - 1 : prev - 1;
+          // Use setTimeout to ensure state update is complete before focusing
+          setTimeout(() => {
+            const items = containerRef.current?.querySelectorAll('button');
+            if (items?.[newIndex]) {
+              items[newIndex].focus({ preventScroll: true });
+            }
+          }, 0);
+          return newIndex;
+        });
+        break;
+      }
+      case 'ArrowDown': {
+        setSelectedIndex(prev => {
+          const newIndex = prev >= receipts.length - 1 ? 0 : prev + 1;
+          // Use setTimeout to ensure state update is complete before focusing
+          setTimeout(() => {
+            const items = containerRef.current?.querySelectorAll('button');
+            if (items?.[newIndex]) {
+              items[newIndex].focus({ preventScroll: true });
+            }
+          }, 0);
+          return newIndex;
+        });
+        break;
+      }
+      case 'Enter':
+        e.preventDefault();
+        if (receipts[selectedIndex]) {
+          openReceipt(receipts[selectedIndex]);
+        }
+        break;
+      case 'Escape':
+        onClose();
+        break;
+      default:
+        break;
+    }
+  }, [isOpen, receipts, selectedIndex, onClose, openReceipt]);
+
+  // Reset selected index when modal opens or receipts change
+  useEffect(() => {
+    if (isOpen) {
+      setSelectedIndex(0);
+      // Focus the container when it opens
+      if (containerRef.current) {
+        containerRef.current.focus({ preventScroll: true });
+      }
+    }
+  }, [isOpen, receipts]);
+
+  // Scroll to selected item when it changes
+  useEffect(() => {
+    if (containerRef.current && selectedIndex >= 0) {
+      const container = containerRef.current;
+      const selectedElement = container.children[selectedIndex];
+      
+      if (selectedElement) {
+        const containerRect = container.getBoundingClientRect();
+        const elementRect = selectedElement.getBoundingClientRect();
+        
+        // Check if element is out of view
+        if (elementRect.top < containerRect.top) {
+          // Scroll up if element is above viewport
+          container.scrollBy(0, elementRect.top - containerRect.top - 10);
+        } else if (elementRect.bottom > containerRect.bottom) {
+          // Scroll down if element is below viewport
+          container.scrollBy(0, elementRect.bottom - containerRect.bottom + 10);
+        }
+      }
+    }
+  }, [selectedIndex]);
+
+  // Use direct event listeners for better reliability
+  useEffect(() => {
+    if (!isOpen) return;
+    
+    const handleKeyDownEvent = (e) => {
+      if (['ArrowUp', 'ArrowDown', 'Enter', 'Escape'].includes(e.key)) {
+        e.preventDefault();
+        handleKeyDown(e);
+      }
+    };
+
+    const container = containerRef.current;
+    if (container) {
+      container.addEventListener('keydown', handleKeyDownEvent);
+      // Focus the container when modal opens
+      container.focus({ preventScroll: true });
+      return () => {
+        container.removeEventListener('keydown', handleKeyDownEvent);
+      };
+    }
+  }, [isOpen, handleKeyDown]);
+
+  // Remove useKeyboardShortcuts to prevent duplicate event handling
+  // The direct event listener on the container is sufficient
 
   return (
     <BaseModal
@@ -62,6 +158,7 @@ function RecentReceiptsModal({ isOpen, onClose }) {
       title="Recent Receipts"
       subtitle="Latest transactions handled by you"
       size="lg"
+      contentRef={modalContentRef}
       footer={
         <Button
           label="Close (Esc)"
@@ -86,12 +183,26 @@ function RecentReceiptsModal({ isOpen, onClose }) {
           No receipts found.
         </div>
       )}
-      <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+      <div 
+        className="space-y-2 max-h-[60vh] overflow-y-auto outline-none focus:outline-none" 
+        ref={containerRef}
+        tabIndex="0"
+        role="listbox"
+        aria-label="Recent receipts"
+      >
         {receipts.map((r, idx) => (
           <button
             key={`${r.transaction_id}-${r.transaction_number}`}
             onClick={() => openReceipt(r)}
-            className="w-full text-left border border-gray-200 rounded-xl px-3 py-2 hover:border-blue-300 hover:bg-blue-50 transition-colors"
+            className={`w-full text-left border rounded-xl px-3 py-2 transition-all duration-200 ${
+              selectedIndex === idx 
+                ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200 scale-[1.01] shadow-sm' 
+                : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50'
+            }`}
+            onFocus={() => setSelectedIndex(idx)}
+            role="option"
+            aria-selected={selectedIndex === idx}
+            tabIndex="-1"
           >
             <div className="flex justify-between items-center">
               <div>
@@ -103,9 +214,6 @@ function RecentReceiptsModal({ isOpen, onClose }) {
                 </p>
               </div>
               <div className="text-right">
-                <span className="inline-block rounded bg-blue-100 text-blue-700 font-bold text-[11px] px-2 py-1 mb-1">
-                  {idx + 1 <= 9 ? `${idx + 1}` : ""}
-                </span>
                 <p className="text-sm font-bold text-blue-700">
                   ₱{Number(r.total_amount || r.total || 0).toFixed(2)}
                 </p>
@@ -124,16 +232,6 @@ function RecentReceiptsModal({ isOpen, onClose }) {
             )}
           </button>
         ))}
-      </div>
-      <div className="text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 space-y-1 mt-2">
-        <div className="flex items-center justify-between">
-          <span>Open receipt:</span>
-          <span className="font-mono bg-white px-2 py-0.5 rounded">1-9</span>
-        </div>
-        <div className="flex items-center justify-between">
-          <span>Close:</span>
-          <span className="font-mono bg-white px-2 py-0.5 rounded">Esc</span>
-        </div>
       </div>
     </BaseModal>
   );
