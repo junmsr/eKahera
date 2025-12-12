@@ -51,119 +51,104 @@ function TermsModal({ open, onClose }) {
       </h3>
       <p className="text-slate-600 mt-2">Effective Date: May 1, 2025</p>
 
-      <p className="mt-6">
-        Please read this agreement ("Terms") carefully. This document governs
-        your access to and use of the "eKahera: A Web-Based Store Management
-        Platform with Self Checkout", (the "Service").
-      </p>
-
-      <p className="mt-4">
-        The Service is an unpublished undergraduate capstone project ("Project")
-        submitted to the Bicol University College of Science by its student
-        developers.
-      </p>
-
-      <p className="mt-4">
-        By creating an account, accessing the platform, or using the Service,
-        you ("User," "You") acknowledge that you have read, understood, and
-        agree to be bound by these Terms. If you do not agree, do not access or
-        use the Service.
-      </p>
-
-      <h4 className="mt-6 font-semibold text-slate-900">1. Definitions</h4>
+      <h4 className="mt-6 font-semibold text-slate-900">1. Introduction</h4>
       <p className="mt-2">
-        <strong>"Service" or "Platform"</strong>: Refers to the eKahera
-        web-based store management and self-checkout application.
+        Welcome to eKahera ("we," "us," or "our"). eKahera is a Web-Based POS
+        and Store Management Platform with a Self-Scanning Feature designed for
+        Micro, Small, and Medium Enterprises (MSMEs) in Albay. These Terms and
+        Conditions govern your use of our web application and services.
       </p>
       <p className="mt-2">
-        <strong>"Developers"</strong>: Refers to the authors of the Project:
-        Bonaobra, Inocencio, Jazmin, Mendina, and Perez.
-      </p>
-      <p className="mt-2">
-        <strong>"MSME Admin"</strong>: A User, typically a store owner, with
-        administrative permissions to manage products, inventory, reports, and
-        staff accounts.
-      </p>
-      <p className="mt-2">
-        <strong>"Cashier"</strong>: A User, typically a store employee, with
-        permissions to process transactions using the POS interface and verify
-        Customer QR codes.
-      </p>
-      <p className="mt-2">
-        <strong>"Customer"</strong>: A User who accesses the mobile-friendly web
-        application to scan items, manage a cart, and perform self-checkout.
-      </p>
-      <p className="mt-2">
-        <strong>"Simulated Payment"</strong>: A mock payment feature used to
-        demonstrate e-wallet functionality. This feature is for testing only and
-        does not process real money.
+        By accessing or using eKahera, you agree to be bound by these terms. If
+        you disagree with any part of the terms, you may not access the service.
+        You acknowledge that this system is an undergraduate capstone project
+        presented to the Bicol University College of Science.
       </p>
 
       <h4 className="mt-6 font-semibold text-slate-900">
-        2. Nature of the Service
+        2. User Accounts and Roles
       </h4>
       <p className="mt-2">
-        <strong>Academic Project:</strong> The Service is an academic capstone
-        project. It is provided "AS IS" and "AS AVAILABLE" for demonstration,
-        evaluation, and feedback purposes. It is not a commercial-grade, fully
-        supported product.
+        Access to the system is categorized by the following user roles, each
+        with specific responsibilities:
       </p>
       <p className="mt-2">
-        <strong>Open-Source:</strong> The Service was developed as an
-        open-source system. Your license to use, modify, and distribute the
-        source code is governed by the specific open-source license accompanying
-        the Project's code repository (if any). These Terms govern your use of
-        the hosted Service, not the source code itself.
+        <strong>Admin/Store Owner:</strong> Responsible for managing inventory,
+        store settings, sales monitoring, and team management.
       </p>
       <p className="mt-2">
-        <strong>Limited Scope:</strong> The Service is designed for small retail
-        operations (like convenience stores) and does not cater to restaurants,
-        service providers, or businesses with complex logistics.
+        <strong>Super Admin:</strong> Oversees store owner applications,
+        verifies documents, and manages system-wide settings.
+      </p>
+      <p className="mt-2">
+        <strong>Cashier:</strong> Authorized to access the POS interface to
+        manage transactions and verify customer purchases via QR code scanning.
+      </p>
+      <p className="mt-2">
+        <strong>Customer:</strong> Authorized to use the responsive interface
+        for self-scanning product barcodes, managing shopping carts, and
+        generating transaction QR codes.
       </p>
 
       <h4 className="mt-6 font-semibold text-slate-900">
-        3. User Accounts and Roles
+        3. Payment and Simulations
       </h4>
       <p className="mt-2">
-        <strong>MSME Admin:</strong> By registering a store, you represent that
-        you are the owner or authorized representative of that MSME. You are
-        solely responsible for all activity under your account, including
-        managing product data, pricing, and the creation and conduct of Cashier
-        accounts.
+        <strong>Important Notice Regarding Financial Transactions:</strong>
       </p>
       <p className="mt-2">
-        <strong>Cashier:</strong> Your account is created and managed by an MSME
-        Admin. You are responsible for maintaining the confidentiality of your
-        login credentials and for all transactions you process.
+        <strong>Simulated Payments:</strong> You explicitly acknowledge that
+        eKahera currently uses simulation payments for e-wallets (e.g., GCash,
+        Maya). The system mimics the behavior of digital wallets for testing and
+        academic purposes only.
       </p>
       <p className="mt-2">
-        <strong>Customer:</strong> You do not need an account to use the
-        self-checkout feature. You are responsible for accurately scanning all
-        items using your device's camera.
+        <strong>No Real Funds:</strong> Actual API integration is limited during
+        this prototype phase. No actual financial funds are transferred,
+        processed, or stored through the application at this time.
       </p>
 
       <h4 className="mt-6 font-semibold text-slate-900">
-        4. Critical Disclaimers and Limitations
+        4. System Requirements and Connectivity
       </h4>
       <p className="mt-2">
-        The Developers provide the Service without warranties of any kind. You
-        assume all risks associated with its use.
+        <strong>Internet Connectivity:</strong> eKahera relies on stable
+        internet connectivity for cloud-based synchronization to maintain
+        consistent performance across users.
       </p>
       <p className="mt-2">
-        <strong>No Guarantee of Security:</strong> The Service includes basic
-        user authentication and role-based access control. However, you
-        acknowledge that advanced security measures such as end-to-end
-        encryption and penetration testing are beyond the current scope of this
-        Project. The Developers are not liable for any data breach, loss, or
-        unauthorized access.
+        <strong>Hardware:</strong> The system is designed to be accessible via
+        mobile and desktop browsers. External hardware (e.g., barcode scanners,
+        receipt printers) is optional, as the system utilizes device cameras for
+        scanning.
       </p>
       <p className="mt-2">
-        <strong>Payment is Simulated:</strong> You acknowledge that all e-wallet
-        payment integrations (e.g., GCash, Maya) are simulated and for
-        demonstration only. The Service cannot and does not process real
-        financial transactions. The Developers are not liable for any real funds
-        lost or financial information compromised by attempting to use this
-        feature.
+        <strong>Offline Limitations:</strong> Users acknowledge that a full
+        offline mode is not included in the current version; therefore, we are
+        not liable for disruptions caused by unstable internet connections or
+        power outages.
+      </p>
+
+      <h4 className="mt-6 font-semibold text-slate-900">
+        5. Intellectual Property
+      </h4>
+      <p className="mt-2">
+        The eKahera system, including its unique design, source code, and
+        "Self-Scanning" methodology, is the intellectual property of the
+        researchers: Aaron Stefano F. Bonaobra, Rechelle Grace C. Inocencio,
+        Dave Gabriel M. Jazmin, Daryl E. Mendina, and Junmar A. Perez, under the
+        guidance of Bicol University.
+      </p>
+
+      <h4 className="mt-6 font-semibold text-slate-900">
+        6. Limitation of Liability
+      </h4>
+      <p className="mt-2">
+        The system is provided on an "AS IS" and "AS AVAILABLE" basis for
+        academic evaluation and pilot testing. We do not warrant that the system
+        will be error-free or uninterrupted. We shall not be liable for any data
+        discrepancies or operational errors arising from the use of the
+        simulated environment.
       </p>
     </BaseModal>
   );

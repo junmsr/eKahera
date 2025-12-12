@@ -505,28 +505,6 @@ export default function GetStartedForm({
             complies with Philippine regulations.
           </p>
 
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
-            <h4 className="font-semibold text-red-800 mb-2">
-              ⚠️ REQUIRED Documents (Must Upload All 3):
-            </h4>
-            <ul className="text-sm text-red-700 space-y-1 font-medium">
-              <li>► Business Registration Certificate (DTI/SEC/CDA)</li>
-              <li>► Mayor's Permit / Business Permit</li>
-              <li>► BIR Certificate of Registration (Form 2303)</li>
-            </ul>
-          </div>
-
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-            <h4 className="font-semibold text-blue-800 mb-2">
-              Additional Documents (Optional):
-            </h4>
-            <ul className="text-sm text-blue-700 space-y-1">
-              <li>• Barangay Business Clearance</li>
-              <li>• Fire Safety Inspection Certificate (if applicable)</li>
-              <li>• Sanitary Permit (for food businesses)</li>
-            </ul>
-          </div>
-
           <div className="space-y-4">
             <DocumentUploadSection
               documents={form.documents}
@@ -544,6 +522,17 @@ export default function GetStartedForm({
 
             {/* Existing uploaded files (if resuming) */}
             <ExistingDocumentsNotice />
+          </div>
+
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+            <h4 className="font-semibold text-blue-800 mb-2">
+              Additional Documents (Optional):
+            </h4>
+            <ul className="text-sm text-blue-700 space-y-1">
+              <li>• Barangay Business Clearance</li>
+              <li>• Fire Safety Inspection Certificate (if applicable)</li>
+              <li>• Sanitary Permit (for food businesses)</li>
+            </ul>
           </div>
 
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-4">
@@ -613,8 +602,7 @@ export default function GetStartedForm({
           </div>
 
           {/* Back Button */}
-          <div className="mt-8 pt-4 border-t border-gray-200">
-          </div>
+          <div className="mt-8 pt-4 border-t border-gray-200"></div>
         </div>
       );
 

@@ -13,10 +13,9 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
+  BarChart,
+  Bar,
   ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
   Legend,
 } from "recharts";
 
@@ -42,21 +41,21 @@ const BLUE_COLORS = ["#2563eb", "#60a5fa", "#93c5fd", "#dbeafe"]; // Blue shades
 const SOFT_BLUE = "#3b82f6"; // Tailwind blue-500/600 for lines/accents
 const SOFT_GREEN = "#10b981"; // Retain green for profit
 const SOFT_PURPLE = "#8b5cf6"; // Retain purple/accent for pie chart variation
-const TODAY_START = dayjs().startOf('day');
-const TODAY_END = dayjs().endOf('day');
+const TODAY_START = dayjs().startOf("day");
+const TODAY_END = dayjs().endOf("day");
 
 function VisitorsChart({ data, className = "", rangeType = "Custom" }) {
   const getChartTitle = (rangeType) => {
     switch (rangeType) {
       case "Day":
-        return "Visitors Today";
+        return "Customer's Transactions for Today";
       case "Week":
-        return "Visitors for the last 7 days";
+        return "Customer's Transactions for 7 days";
       case "Month":
-        return "Visitors this Month";
+        return "Customer's Transactions for Month";
       case "Custom":
       default:
-        return "Visitors for the selected range";
+        return "Customer's Transactions for the selected range";
     }
   };
 
@@ -103,28 +102,23 @@ function SalesPieChart({ data, className = "" }) {
     >
       <div className="h-72 w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
-            <Pie
-              data={data}
-              dataKey="percent"
-              nameKey="name"
-              cx="50%"
-              cy="50%"
-              outerRadius={80}
-              label={(entry) =>
-                `${entry.name} (${Number(entry.percent || 0).toFixed(1)}%)`
-              }
-              fill={SOFT_PURPLE}
-            >
-              {data.map((entry, idx) => {
-                const colors = [SOFT_BLUE, SOFT_GREEN, SOFT_PURPLE];
-                return <Cell key={`cell-${idx}`} fill={colors[idx % colors.length]} />;
-              })}
-            </Pie>
-            <Legend />
+          <BarChart
+            data={data}
+            margin={{ top: 20, right: 20, left: 0, bottom: 5 }}
+          >
+            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+            <XAxis
+              dataKey="name"
+              tick={{ fill: "#374151", fontSize: 12 }}
+              interval={0}
+              angle={-20}
+              textAnchor="end"
+              height={60}
+            />
+            <YAxis tick={{ fill: "#374151", fontSize: 12 }} />
             <Tooltip
               formatter={(value, name, props) => [
-                `${Number(value).toFixed(1)}%`,
+                Number(value).toLocaleString(),
                 props?.payload?.name,
               ]}
               contentStyle={{
@@ -133,7 +127,9 @@ function SalesPieChart({ data, className = "" }) {
                 borderRadius: 8,
               }}
             />
-          </PieChart>
+            <Legend />
+            <Bar dataKey="value" fill={SOFT_BLUE} radius={[8, 8, 0, 0]} />
+          </BarChart>
         </ResponsiveContainer>
       </div>
     </ChartCard>
@@ -332,7 +328,8 @@ export default function Dashboard() {
         const revenue = Number(overview.totalSales || 0);
         const expenses = Number(overview.totalExpenses || 0);
         const netProfit = revenue - expenses;
-        const grossMargin = revenue > 0 ? ((revenue - expenses) / revenue) * 100 : 0;
+        const grossMargin =
+          revenue > 0 ? ((revenue - expenses) / revenue) * 100 : 0;
         const totalTransactions = Number(overview.totalTransactions || 0);
         const totalItemsSold = Number(overview.totalItemsSold || 0);
         const avgTxValue = Number(
@@ -350,13 +347,29 @@ export default function Dashboard() {
           averageTransactionValue: avgTxValue,
         });
 
-        const dateRangeText = 
-            rangeType === "Day" 
-                ? finalStart.format("MMM D, YYYY")
-                : `${finalStart.format("MMM D")} - ${finalEnd.format("MMM D, YYYY")}`;
-        
-        const salesLabel = rangeType === 'Day' ? "Daily Sales" : rangeType === 'Week' ? "7-Day Sales" : rangeType === 'Month' ? "Monthly Sales" : "Total Sales";
-        const transactionsLabel = rangeType === 'Day' ? "Daily Transactions" : rangeType === 'Week' ? "7-Day Transactions" : rangeType === 'Month' ? "Monthly Transactions" : "Total Transactions";
+        const dateRangeText =
+          rangeType === "Day"
+            ? finalStart.format("MMM D, YYYY")
+            : `${finalStart.format("MMM D")} - ${finalEnd.format(
+                "MMM D, YYYY"
+              )}`;
+
+        const salesLabel =
+          rangeType === "Day"
+            ? "Daily Sales"
+            : rangeType === "Week"
+            ? "7-Day Sales"
+            : rangeType === "Month"
+            ? "Monthly Sales"
+            : "Total Sales";
+        const transactionsLabel =
+          rangeType === "Day"
+            ? "Daily Transactions"
+            : rangeType === "Week"
+            ? "7-Day Transactions"
+            : rangeType === "Month"
+            ? "Monthly Transactions"
+            : "Total Transactions";
 
         setStats([
           {
@@ -375,7 +388,9 @@ export default function Dashboard() {
           {
             label: "Top Product",
             value: topProduct,
-            subtext: `Total: ${overview.topProducts?.[0]?.total_sold || 0} sold`,
+            subtext: `Total: ${
+              overview.topProducts?.[0]?.total_sold || 0
+            } sold`,
           },
           {
             label: "Items Sold",
@@ -413,7 +428,7 @@ export default function Dashboard() {
           id: log.log_id,
           title: log.action,
           message: `${log.username} (${log.role}) did an action: ${log.action}`,
-          time: dayjs(log.date_time).format('MMM D, h:mm A'),
+          time: dayjs(log.date_time).format("MMM D, h:mm A"),
           isRead: readIds.has(log.log_id),
         }));
       setNotifications(mapped);
@@ -453,7 +468,7 @@ export default function Dashboard() {
       setUnreadCount((c) => Math.max(0, c - 1));
     }
   };
-  
+
   const handleMarkAsUnread = (id) => {
     const readIds = JSON.parse(
       sessionStorage.getItem("read_notif_ids") || "[]"
@@ -964,9 +979,7 @@ export default function Dashboard() {
         className="flex items-center gap-1 sm:gap-2 bg-white/80 backdrop-blur-sm hover:bg-white text-gray-700 px-1.5 sm:px-3 py-1.5 sm:py-2 rounded-lg border border-gray-200/80 text-xs sm:text-sm font-medium transition-all duration-200 outline-none cursor-pointer hover:shadow-md hover:scale-[1.02] shrink-0"
       >
         <BiCalendarAlt className="w-4 h-4 sm:w-5 sm:h-5" />
-        <span className="hidden sm:inline">
-            {headerDateDisplay}
-        </span>
+        <span className="hidden sm:inline">{headerDateDisplay}</span>
       </button>
 
       <div className="py-2 flex justify-end gap-2">

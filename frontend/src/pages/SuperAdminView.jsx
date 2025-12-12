@@ -14,6 +14,44 @@ export default function SuperAdminView() {
   const [isDocumentViewerOpen, setIsDocumentViewerOpen] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState(null);
 
+  // Parse address similar to Profile.jsx
+  const parseAddress = (fullAddress) => {
+    if (!fullAddress)
+      return {
+        region: "N/A",
+        province: "N/A",
+        city: "N/A",
+        barangay: "N/A",
+        houseNo: "N/A",
+      };
+
+    const parts = fullAddress
+      .split(",")
+      .map((p) => p.trim())
+      .filter(Boolean);
+
+    // Remove trailing country if present
+    while (parts.length && /philippines?/i.test(parts[parts.length - 1])) {
+      parts.pop();
+    }
+
+    // Stored format (after trimming country): "<house>, <barangay>, <city>, <province>"
+    const len = parts.length;
+    const province = len >= 1 ? parts[len - 1] : "";
+    const city = len >= 2 ? parts[len - 2] : "";
+    const barangay = len >= 3 ? parts[len - 3] : "";
+    const houseOrStreet =
+      len > 3 ? parts.slice(0, len - 3).join(", ") : parts[0] || "";
+
+    return {
+      region: "N/A", // Region not stored in address, would need separate field
+      province: province || "N/A",
+      city: city || "N/A",
+      barangay: barangay || "N/A",
+      houseNo: houseOrStreet || "N/A",
+    };
+  };
+
   // minimal sample store for the demo
   const sampleStore = {
     id: "sample-1",
@@ -40,7 +78,11 @@ export default function SuperAdminView() {
       createdAt: "06/15/2020",
       lastPasswordChange: "07/01/2025 09:15 PST",
       loginAttemptsToday: 2,
-      storeAddress: "Brgy 18, Rizal St. Cabangan Legazpi City",
+      region: "Region V",
+      province: "Albay",
+      city: "Legazpi City",
+      barangay: "Brgy 18",
+      houseNo: "Rizal St. Cabangan",
       status: "Active",
       sessionTimeout: "30 minutes",
     },
@@ -51,7 +93,7 @@ export default function SuperAdminView() {
       setLoading(true);
       setError("");
       try {
-        const token = sessionStorage.getItem("auth_token"); 
+        const token = sessionStorage.getItem("auth_token");
         const res = await api(`/api/superadmin/stores/${id}`, {
           headers: token ? { Authorization: `Bearer ${token}` } : undefined,
         });
@@ -72,7 +114,7 @@ export default function SuperAdminView() {
     if (!documentId) return;
     setDownloadingId(documentId);
     try {
-      const token = sessionStorage.getItem("auth_token"); 
+      const token = sessionStorage.getItem("auth_token");
       const response = await api(
         `/documents/download/${documentId}`,
         {
@@ -112,7 +154,9 @@ export default function SuperAdminView() {
     const classes = palettes[normalized] || palettes.pending;
     const label = normalized.charAt(0).toUpperCase() + normalized.slice(1);
     return (
-      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${classes}`}>
+      <span
+        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${classes}`}
+      >
         {label}
       </span>
     );
@@ -146,12 +190,20 @@ export default function SuperAdminView() {
 
   if (!store) {
     return (
-      <Background variant="gradientBlue" pattern="dots" floatingElements overlay>
+      <Background
+        variant="gradientBlue"
+        pattern="dots"
+        floatingElements
+        overlay
+      >
         <div className="min-h-screen flex items-center justify-center p-6">
           <div className="bg-white/90 border border-gray-200 rounded-xl shadow-sm p-8 text-center max-w-md">
-            <h2 className="text-2xl font-semibold text-gray-900 mb-2">Store Unavailable</h2>
+            <h2 className="text-2xl font-semibold text-gray-900 mb-2">
+              Store Unavailable
+            </h2>
             <p className="text-gray-600 mb-4">
-              {error || "We couldn't find the store details you're looking for."}
+              {error ||
+                "We couldn't find the store details you're looking for."}
             </p>
             <button
               onClick={() => navigate("/superadmin")}
@@ -211,7 +263,11 @@ export default function SuperAdminView() {
                 </div>
               </div>
               <button
-                onClick={() => navigate("/superadmin", { state: { from: "storeManagement" } })}
+                onClick={() =>
+                  navigate("/superadmin", {
+                    state: { from: "storeManagement" },
+                  })
+                }
               >
                 <svg
                   className="w-4 h-4 flex-shrink-0"
@@ -422,7 +478,7 @@ export default function SuperAdminView() {
                 </div>
               </div>
               <div className="p-4 sm:p-5 md:p-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                   <div className="group bg-gradient-to-br from-green-50/50 to-emerald-50/30 rounded-xl p-3 sm:p-4 md:p-5 border border-green-100/50 hover:border-green-200 hover:shadow-md transition-all duration-300">
                     <div className="flex items-start gap-3 sm:gap-4">
                       <div className="w-10 h-10 sm:w-11 sm:h-11 md:w-12 md:h-12 bg-white rounded-xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform flex-shrink-0 mt-1">
@@ -449,10 +505,20 @@ export default function SuperAdminView() {
                         </p>
                         <div className="flex items-center gap-2 mt-1">
                           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                            <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2h-1V1h-2v2H8V1H6v2H5a2 2 0 00-2 2v16a2 2 0 002 2h14a2 2 0 002-2zM9 3h6v2H9V3zm0 4h6v2H9V7z" />
+                            <svg
+                              className="w-3 h-3 mr-1"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth="2"
+                                d="M19 21V5a2 2 0 00-2-2h-1V1h-2v2H8V1H6v2H5a2 2 0 00-2 2v16a2 2 0 002 2h14a2 2 0 002-2zM9 3h6v2H9V3zm0 4h6v2H9V7z"
+                              />
                             </svg>
-                            {store.business_type || 'N/A'}
+                            {store.business_type || "N/A"}
                           </span>
                         </div>
                       </div>
@@ -483,10 +549,142 @@ export default function SuperAdminView() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-0.5 sm:mb-1">
-                          Location
+                          Region
                         </p>
                         <p className="text-base sm:text-lg font-bold text-gray-900 break-words">
-                          {store.location || "N/A"}
+                          {parseAddress(store.account?.storeAddress).region}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="group bg-gradient-to-br from-green-50/50 to-green-50/30 rounded-xl p-3 sm:p-4 md:p-5 border border-green-100/50 hover:border-green-200 hover:shadow-md transition-all duration-300">
+                    <div className="flex items-center gap-3 sm:gap-4">
+                      <div className="w-10 h-10 sm:w-11 sm:h-11 md:w-12 md:h-12 bg-white rounded-xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform flex-shrink-0">
+                        <svg
+                          className="w-5 h-5 sm:w-5 sm:h-5 md:w-6 md:h-6 text-green-600"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                          />
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                          />
+                        </svg>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-0.5 sm:mb-1">
+                          Province
+                        </p>
+                        <p className="text-base sm:text-lg font-bold text-gray-900 break-words">
+                          {parseAddress(store.account?.storeAddress).province}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="group bg-gradient-to-br from-green-50/50 to-green-50/30 rounded-xl p-3 sm:p-4 md:p-5 border border-green-100/50 hover:border-green-200 hover:shadow-md transition-all duration-300">
+                    <div className="flex items-center gap-3 sm:gap-4">
+                      <div className="w-10 h-10 sm:w-11 sm:h-11 md:w-12 md:h-12 bg-white rounded-xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform flex-shrink-0">
+                        <svg
+                          className="w-5 h-5 sm:w-5 sm:h-5 md:w-6 md:h-6 text-green-600"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                          />
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                          />
+                        </svg>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-0.5 sm:mb-1">
+                          City/Municipality
+                        </p>
+                        <p className="text-base sm:text-lg font-bold text-gray-900 break-words">
+                          {parseAddress(store.account?.storeAddress).city}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="group bg-gradient-to-br from-green-50/50 to-green-50/30 rounded-xl p-3 sm:p-4 md:p-5 border border-green-100/50 hover:border-green-200 hover:shadow-md transition-all duration-300">
+                    <div className="flex items-center gap-3 sm:gap-4">
+                      <div className="w-10 h-10 sm:w-11 sm:h-11 md:w-12 md:h-12 bg-white rounded-xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform flex-shrink-0">
+                        <svg
+                          className="w-5 h-5 sm:w-5 sm:h-5 md:w-6 md:h-6 text-green-600"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                          />
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                          />
+                        </svg>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-0.5 sm:mb-1">
+                          Barangay
+                        </p>
+                        <p className="text-base sm:text-lg font-bold text-gray-900 break-words">
+                          {parseAddress(store.account?.storeAddress).barangay}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="group bg-gradient-to-br from-green-50/50 to-green-50/30 rounded-xl p-3 sm:p-4 md:p-5 border border-green-100/50 hover:border-green-200 hover:shadow-md transition-all duration-300">
+                    <div className="flex items-center gap-3 sm:gap-4">
+                      <div className="w-10 h-10 sm:w-11 sm:h-11 md:w-12 md:h-12 bg-white rounded-xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform flex-shrink-0">
+                        <svg
+                          className="w-5 h-5 sm:w-5 sm:h-5 md:w-6 md:h-6 text-green-600"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                          />
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                          />
+                        </svg>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-0.5 sm:mb-1">
+                          House No./Street Name/Landmark
+                        </p>
+                        <p className="text-base sm:text-lg font-bold text-gray-900 break-words">
+                          {parseAddress(store.account?.storeAddress).houseNo}
                         </p>
                       </div>
                     </div>
@@ -522,284 +720,6 @@ export default function SuperAdminView() {
               </div>
             </div>
           </section>
-
-          {/* Documents Section */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 md:gap-6 mb-4 sm:mb-5 md:mb-6">
-            {/* Store Documents */}
-            <section>
-              <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-sm border border-gray-200/50 overflow-hidden h-full">
-                <div className="bg-gradient-to-r from-blue-50/50 via-blue-50/30 to-blue-50/20 border-b border-gray-200/50 px-4 sm:px-5 md:px-6 py-3 sm:py-3.5 md:py-4">
-                  <div className="flex items-center gap-2 sm:gap-3">
-                    <div className="w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center shadow-sm flex-shrink-0">
-                      <svg
-                        className="w-4 h-4 sm:w-4 sm:h-4 md:w-5 md:h-5 text-white"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                        />
-                      </svg>
-                    </div>
-                    <h2 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
-                      Business Documents
-                    </h2>
-                  </div>
-                </div>
-                <div className="p-4 sm:p-5 md:p-6 space-y-2 sm:space-y-3">
-                  {(store.documents || []).map((d) => (
-                    <div
-                      key={d.documentId || d.name}
-                      className="flex items-center gap-3 md:gap-4 p-3 sm:p-3.5 md:p-4 bg-gradient-to-r from-blue-50/50 to-blue-50/30 rounded-xl border border-blue-100/50 hover:border-blue-200 transition-all duration-300 hover:shadow-md"
-                    >
-                      <div className="w-10 h-10 sm:w-11 sm:h-11 md:w-12 md:h-12 bg-white rounded-xl flex items-center justify-center shadow-sm flex-shrink-0">
-                        <svg
-                          className="w-5 h-5 sm:w-5 sm:h-5 md:w-6 md:h-6 text-blue-600"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                          />
-                        </svg>
-                      </div>
-                      <div className="flex-1 min-w-0 space-y-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <p className="text-sm sm:text-base font-semibold text-gray-900 truncate">
-                            {d.name}
-                          </p>
-                          {renderStatusPill(d.verificationStatus)}
-                        </div>
-                        <p className="text-xs text-gray-600">
-                          {d.documentType || "Document"} • Uploaded {formatDate(d.uploadedAt)}
-                        </p>
-                      </div>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => {
-                            setSelectedDocument(d);
-                            setIsDocumentViewerOpen(true);
-                          }}
-                          className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors"
-                          title="View Document"
-                        >
-                          <svg
-                            className="w-4 h-4"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                            />
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                            />
-                          </svg>
-                        </button>
-                        <a
-                          href={d.url || "#"}
-                          download
-                          className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors"
-                          title="Download Document"
-                        >
-                          <svg
-                            className="w-4 h-4"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                            />
-                          </svg>
-                        </a>
-                      </div>
-                    </div>
-                  ))}
-                  {(!store.documents || store.documents.length === 0) && (
-                    <div className="text-center py-8 sm:py-10 md:py-12 text-gray-500">
-                      <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 mx-auto mb-3 sm:mb-4 bg-gray-100 rounded-full flex items-center justify-center">
-                        <svg
-                          className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 text-gray-400"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                          />
-                        </svg>
-                      </div>
-                      <p className="text-sm sm:text-base font-medium">
-                        No documents available
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </section>
-
-            {/* Verified Documents */}
-            <section>
-              <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-sm border border-gray-200/50 overflow-hidden h-full">
-                <div className="bg-gradient-to-r from-green-50/50 via-green-50/30 to-green-50/20 border-b border-gray-200/50 px-4 sm:px-5 md:px-6 py-3 sm:py-3.5 md:py-4">
-                  <div className="flex items-center gap-2 sm:gap-3">
-                    <div className="w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center shadow-sm flex-shrink-0">
-                      <svg
-                        className="w-4 h-4 sm:w-4 sm:h-4 md:w-5 md:h-5 text-white"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                        />
-                      </svg>
-                    </div>
-                    <h2 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
-                      Verified Documents
-                    </h2>
-                  </div>
-                </div>
-                <div className="p-4 sm:p-5 md:p-6 space-y-2 sm:space-y-3">
-                  {(store.verifiedDocuments || []).map((d) => (
-                    <div
-                      key={d.documentId || d.name}
-                      className="flex items-center gap-3 md:gap-4 p-3 sm:p-3.5 md:p-4 bg-gradient-to-r from-green-50/50 to-green-50/30 rounded-xl border border-green-100/50 hover:border-green-200 transition-all duration-300 hover:shadow-md"
-                    >
-                      <div className="w-10 h-10 sm:w-11 sm:h-11 md:w-12 md:h-12 bg-white rounded-xl flex items-center justify-center shadow-sm flex-shrink-0">
-                        <svg
-                          className="w-5 h-5 sm:w-5 sm:h-5 md:w-6 md:h-6 text-green-600"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                          />
-                        </svg>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <p className="text-sm sm:text-base font-semibold text-gray-900 truncate">
-                            {d.name}
-                          </p>
-                          {renderStatusPill(d.verificationStatus || "approved")}
-                        </div>
-                        <p className="text-xs text-gray-600">
-                          {d.documentType || "Document"} • Uploaded {formatDate(d.uploadedAt)}
-                        </p>
-                      </div>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => {
-                            if (d.url && d.url !== "#") {
-                              setSelectedDocument(d);
-                              setIsDocumentViewerOpen(true);
-                            } else {
-                              window.open("#", "_blank");
-                            }
-                          }}
-                          className="p-1 text-green-600 hover:text-green-800 hover:bg-green-50 rounded transition-colors"
-                          title="View Document"
-                        >
-                          <svg
-                            className="w-4 h-4"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                            />
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                            />
-                          </svg>
-                        </button>
-                        <a
-                          href={d.url || "#"}
-                          download
-                          className="p-1 text-green-600 hover:text-green-800 hover:bg-green-50 rounded transition-colors"
-                          title="Download Document"
-                        >
-                          <svg
-                            className="w-4 h-4"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                            />
-                          </svg>
-                        </a>
-                      </div>
-                    </div>
-                  ))}
-                  {(!store.verifiedDocuments ||
-                    store.verifiedDocuments.length === 0) && (
-                    <div className="text-center py-8 sm:py-10 md:py-12 text-gray-500">
-                      <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 mx-auto mb-3 sm:mb-4 bg-gray-100 rounded-full flex items-center justify-center">
-                        <svg
-                          className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 text-gray-400"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                          />
-                        </svg>
-                      </div>
-                      <p className="text-sm sm:text-base font-medium">
-                        No verified documents
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </section>
-          </div>
 
           {/* Account Details */}
           <section className="mb-4 sm:mb-5 md:mb-6">
@@ -969,39 +889,6 @@ export default function SuperAdminView() {
                       </div>
                     </div>
                   </div>
-                  <div className="group bg-gradient-to-br from-blue-50/50 to-green-50/30 rounded-xl p-3 sm:p-4 md:p-5 border border-blue-100/50 hover:border-blue-200 hover:shadow-md transition-all duration-300 sm:col-span-2 lg:col-span-3">
-                    <div className="flex items-center gap-3 sm:gap-4">
-                      <div className="w-10 h-10 sm:w-11 sm:h-11 md:w-12 md:h-12 bg-white rounded-xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform flex-shrink-0">
-                        <svg
-                          className="w-5 h-5 sm:w-5 sm:h-5 md:w-6 md:h-6 text-blue-600"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                          />
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                          />
-                        </svg>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-0.5 sm:mb-1">
-                          Store Address
-                        </p>
-                        <p className="text-base sm:text-lg font-bold text-gray-900 break-words">
-                          {store.account?.storeAddress || "N/A"}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
                   <div className="group bg-gradient-to-br from-green-50/50 to-green-50/30 rounded-xl p-3 sm:p-4 md:p-5 border border-green-100/50 hover:border-green-200 hover:shadow-md transition-all duration-300">
                     <div className="flex items-center gap-3 sm:gap-4">
                       <div className="w-10 h-10 sm:w-11 sm:h-11 md:w-12 md:h-12 bg-white rounded-xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform flex-shrink-0">
@@ -1025,7 +912,9 @@ export default function SuperAdminView() {
                         </p>
                         <span className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs font-semibold bg-green-100 text-green-700 border border-green-200">
                           <span className="w-1.5 h-1.5 rounded-full bg-green-600"></span>
-                          {formatStatusLabel(store.account?.status || store.verificationStatus)}
+                          {formatStatusLabel(
+                            store.account?.status || store.verificationStatus
+                          )}
                         </span>
                       </div>
                     </div>
@@ -1057,6 +946,33 @@ export default function SuperAdminView() {
                       </div>
                     </div>
                   </div>
+                  <div className="group bg-gradient-to-br from-green-50/50 to-green-50/30 rounded-xl p-3 sm:p-4 md:p-5 border border-green-100/50 hover:border-green-200 hover:shadow-md transition-all duration-300">
+                    <div className="flex items-center gap-3 sm:gap-4">
+                      <div className="w-10 h-10 sm:w-11 sm:h-11 md:w-12 md:h-12 bg-white rounded-xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform flex-shrink-0">
+                        <svg
+                          className="w-5 h-5 sm:w-5 sm:h-5 md:w-6 md:h-6 text-green-600"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                          />
+                        </svg>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-0.5 sm:mb-1">
+                          Business Email
+                        </p>
+                        <p className="text-base sm:text-lg font-bold text-gray-900 break-all">
+                          {store.email || "N/A"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1083,21 +999,30 @@ export default function SuperAdminView() {
                     </svg>
                   </div>
                   <div>
-                    <h2 className="text-lg sm:text-xl font-bold text-gray-900">Verification Actions</h2>
+                    <h2 className="text-lg sm:text-xl font-bold text-gray-900">
+                      Verification Actions
+                    </h2>
                     <p className="text-sm text-gray-600">
-                      Approvals and rejections now happen inside the Document Verification tab.
+                      Approvals and rejections now happen inside the Document
+                      Verification tab.
                     </p>
                   </div>
                 </div>
                 <p className="text-sm text-gray-600">
-                  Use the <span className="font-semibold text-gray-800">Document Verification</span> tab to review uploads,
-                  update document statuses, and complete the final decision for this business. The information on this page
-                  will automatically reflect those updates.
+                  Use the{" "}
+                  <span className="font-semibold text-gray-800">
+                    Document Verification
+                  </span>{" "}
+                  tab to review uploads, update document statuses, and complete
+                  the final decision for this business. The information on this
+                  page will automatically reflect those updates.
                 </p>
                 <div className="flex flex-wrap gap-2">
                   <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 border border-blue-100 text-xs font-medium">
                     <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
-                    Current Status: {store.verificationStatus?.charAt(0).toUpperCase() + store.verificationStatus?.slice(1)}
+                    Current Status:{" "}
+                    {store.verificationStatus?.charAt(0).toUpperCase() +
+                      store.verificationStatus?.slice(1)}
                   </span>
                 </div>
               </div>

@@ -44,6 +44,8 @@ function POS() {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const skuInputRef = useRef(null);
   const [isSidebarOpen, setSidebarOpen] = useState(false);
+  const [selectedItemIdx, setSelectedItemIdx] = useState(-1);
+  const [editingIdx, setEditingIdx] = useState(null);
   const token = sessionStorage.getItem("auth_token");
   const user = JSON.parse(sessionStorage.getItem("user") || "{}");
   const hasFinalizedRef = React.useRef(false);
@@ -125,7 +127,7 @@ function POS() {
                 url.searchParams.set("tid", String(resp.transaction_id));
               if (resp?.total != null)
                 url.searchParams.set("total", String(resp.total));
-              
+
               // If in new tab, redirect opener and close this tab
               if (isNewTab && window.opener) {
                 window.opener.location.href = url.toString();
@@ -159,10 +161,9 @@ function POS() {
         }
       }
     };
-    
+
     finalizeOnlinePayment("pending_gcash_cart", "GCash");
     finalizeOnlinePayment("pending_maya_cart", "Maya");
-
   }, []);
 
   const addSkuToCart = async (skuValue, qty = 1) => {
@@ -880,6 +881,10 @@ function POS() {
                   onEditQtyChange={handleEditQtyChange}
                   onEditComplete={() => setEditingCartItem(null)}
                   className="flex-1 h-full"
+                  selectedItemIdx={selectedItemIdx}
+                  editingIdx={editingIdx}
+                  setEditingIdx={setEditingIdx}
+                  onSelectItem={setSelectedItemIdx}
                 />
               </div>
 
@@ -1129,7 +1134,7 @@ function POS() {
                   cancelUrl,
                   successUrl,
                 });
-                window.open(checkoutUrl, '_blank');
+                window.open(checkoutUrl, "_blank");
               } catch (e) {
                 setError("Failed to init GCash");
                 localStorage.removeItem("pending_gcash_cart");
@@ -1163,7 +1168,7 @@ function POS() {
                   cancelUrl,
                   successUrl,
                 });
-                window.open(checkoutUrl, '_blank');
+                window.open(checkoutUrl, "_blank");
               } catch (e) {
                 setError("Failed to init Maya");
                 localStorage.removeItem("pending_maya_cart");

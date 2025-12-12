@@ -16,7 +16,7 @@ export default function DocumentVerification({ isRefreshing }) {
   const [selectedDocument, setSelectedDocument] = useState({
     url: "",
     name: "",
-    isOpen: false
+    isOpen: false,
   });
   const [stats, setStats] = useState({
     total: 0,
@@ -111,7 +111,7 @@ export default function DocumentVerification({ isRefreshing }) {
         isOpen: true,
         title: "Success",
         message: `Document ${action} successfully`,
-        type: "success"
+        type: "success",
       });
     } catch (error) {
       console.error("Error updating document:", error);
@@ -119,7 +119,7 @@ export default function DocumentVerification({ isRefreshing }) {
         isOpen: true,
         title: "Error",
         message: "Error updating document status",
-        type: "error"
+        type: "error",
       });
     } finally {
       setActionLoading(false);
@@ -141,7 +141,7 @@ export default function DocumentVerification({ isRefreshing }) {
           }),
         }
       );
-      
+
       // Show success message
       setAlert({
         isOpen: true,
@@ -153,7 +153,7 @@ export default function DocumentVerification({ isRefreshing }) {
           setBusinessDetails(null);
           fetchPendingVerifications();
           fetchStats();
-        }
+        },
       });
     } catch (error) {
       console.error("Error completing verification:", error);
@@ -161,7 +161,7 @@ export default function DocumentVerification({ isRefreshing }) {
         isOpen: true,
         title: "Error",
         message: "Error completing verification",
-        type: "error"
+        type: "error",
       });
     } finally {
       setActionLoading(false);
@@ -195,7 +195,7 @@ export default function DocumentVerification({ isRefreshing }) {
         isOpen: true,
         title: "Error",
         message: error.message || "Error downloading document",
-        type: "error"
+        type: "error",
       });
     }
   };
@@ -216,7 +216,7 @@ export default function DocumentVerification({ isRefreshing }) {
       setSelectedDocument({
         url,
         name: fileName,
-        isOpen: true
+        isOpen: true,
       });
     } catch (error) {
       console.error("Error viewing document:", error);
@@ -224,7 +224,7 @@ export default function DocumentVerification({ isRefreshing }) {
         isOpen: true,
         title: "Error",
         message: "Error viewing document",
-        type: "error"
+        type: "error",
       });
     }
   };
@@ -243,13 +243,16 @@ export default function DocumentVerification({ isRefreshing }) {
         <div className="fixed inset-0 bg-black bg-opacity-10 flex items-center justify-center z-50">
           <Loader size="lg" />
         </div>
-       )}
+      )}
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="p-4">
           <div className="text-center">
             <div className="text-2xl font-bold text-blue-600">
-              {stats.total || (stats.pending || 0) + (stats.approved || 0) + (stats.rejected || 0)}
+              {stats.total ||
+                (stats.pending || 0) +
+                  (stats.approved || 0) +
+                  (stats.rejected || 0)}
             </div>
             <div className="text-sm text-gray-600">Total Businesses</div>
           </div>
@@ -351,20 +354,22 @@ export default function DocumentVerification({ isRefreshing }) {
           )}
         </div>
       </div>
-      
+
       {/* Document Viewer Modal */}
       <DocumentViewerModal
         isOpen={selectedDocument.isOpen}
-        onClose={() => setSelectedDocument(prev => ({ ...prev, isOpen: false }))}
+        onClose={() =>
+          setSelectedDocument((prev) => ({ ...prev, isOpen: false }))
+        }
         documentUrl={selectedDocument.url}
         documentName={selectedDocument.name}
       />
-      
+
       {/* Alert Modal */}
       <SuperadminAlertModal
         isOpen={alert.isOpen}
         onClose={() => {
-          setAlert(prev => ({ ...prev, isOpen: false }));
+          setAlert((prev) => ({ ...prev, isOpen: false }));
           if (alert.onClose) alert.onClose();
         }}
         title={alert.title}
@@ -392,7 +397,7 @@ function BusinessVerificationDetails({
     isOpen: false,
     title: "",
     message: "",
-    type: "info"
+    type: "info",
   });
 
   if (!business) {
@@ -418,7 +423,9 @@ function BusinessVerificationDetails({
 
   // Check if all documents are either approved or rejected (none pending)
   const allDocumentsReviewed = business.documents?.every(
-    (doc) => doc.verification_status === "approved" || doc.verification_status === "rejected"
+    (doc) =>
+      doc.verification_status === "approved" ||
+      doc.verification_status === "rejected"
   );
   const allDocumentsApproved = business.documents?.every(
     (doc) => doc.verification_status === "approved"
@@ -510,7 +517,10 @@ function BusinessVerificationDetails({
                     size="sm"
                     variant="outline"
                     onClick={() =>
-                      onViewDocument(document.document_id, document.document_name || document.document_type)
+                      onViewDocument(
+                        document.document_id,
+                        document.document_name || document.document_type
+                      )
                     }
                   >
                     <svg
@@ -586,7 +596,9 @@ function BusinessVerificationDetails({
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => onDocumentAction(document.document_id, "rejected")}
+                        onClick={() =>
+                          onDocumentAction(document.document_id, "rejected")
+                        }
                         disabled={actionLoading}
                       >
                         <svg
@@ -622,7 +634,9 @@ function BusinessVerificationDetails({
               onClick={() => onCompleteVerification("approved")}
               disabled={!allDocumentsReviewed || actionLoading}
               className="bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              title={!allDocumentsReviewed ? "Please review all documents first" : ""}
+              title={
+                !allDocumentsReviewed ? "Please review all documents first" : ""
+              }
             >
               Approve Business
             </Button>
@@ -631,7 +645,9 @@ function BusinessVerificationDetails({
               onClick={() => setShowRejectModal(true)}
               disabled={!allDocumentsReviewed || actionLoading}
               className="disabled:opacity-50 disabled:cursor-not-allowed"
-              title={!allDocumentsReviewed ? "Please review all documents first" : ""}
+              title={
+                !allDocumentsReviewed ? "Please review all documents first" : ""
+              }
             >
               Reject Application
             </Button>
@@ -639,7 +655,8 @@ function BusinessVerificationDetails({
 
           {!allDocumentsReviewed && (
             <p className="text-sm text-yellow-600 mt-2">
-              All documents must be reviewed (approved or rejected) before completing verification.
+              All documents must be reviewed (approved or rejected) before
+              completing verification.
             </p>
           )}
         </Card>
@@ -647,22 +664,80 @@ function BusinessVerificationDetails({
 
       {/* Reject Modal */}
       {showRejectModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold mb-4">Reject Application</h3>
+        <div className="fixed inset-0 backdrop-blur-md flex items-center justify-center z-50 transition-opacity duration-300">
+          <div className="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full mx-4 relative transform transition-all duration-300 ease-in-out scale-100">
+            {/* Close Button */}
+            <button
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors duration-200"
+              onClick={() => {
+                setShowRejectModal(false);
+                setRejectionReason("");
+              }}
+              aria-label="Close modal"
+            >
+              <svg
+                className="w-6 h-6"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+
+            {/* Title with Icon */}
+            <h3
+              className="text-xl font-semibold mb-6 flex items-center text-gray-900"
+              id="reject-modal-title"
+            >
+              <svg
+                className="w-6 h-6 text-red-500 mr-3"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
+                />
+              </svg>
+              Reject Application
+            </h3>
+
+            {/* Description */}
+            <p className="text-gray-600 mb-4 text-sm">
+              Please provide a detailed reason for rejecting this application.
+              This will help the business understand what needs to be improved.
+            </p>
+
+            {/* Textarea */}
             <textarea
               value={rejectionReason}
               onChange={(e) => setRejectionReason(e.target.value)}
               placeholder="Enter reason for rejection..."
-              className="w-full p-3 border rounded-lg resize-none h-32"
+              className="w-full p-4 border border-gray-300 rounded-lg resize-none h-32 focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all duration-200 text-gray-900 placeholder-gray-500"
+              aria-describedby="reject-reason-help"
             />
-            <div className="flex justify-end space-x-3 mt-4">
+            <p id="reject-reason-help" className="text-xs text-gray-500 mt-1">
+              Minimum 10 characters required
+            </p>
+
+            {/* Buttons */}
+            <div className="flex justify-end space-x-3 mt-6">
               <Button
                 variant="outline"
                 onClick={() => {
                   setShowRejectModal(false);
                   setRejectionReason("");
                 }}
+                className="px-6 py-2 border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors duration-200"
               >
                 Cancel
               </Button>
@@ -672,10 +747,12 @@ function BusinessVerificationDetails({
                   setShowRejectModal(false);
                   setRejectionReason("");
                 }}
-                disabled={!rejectionReason.trim()}
-                className="bg-red-600 hover:bg-red-700"
+                disabled={
+                  !rejectionReason.trim() || rejectionReason.trim().length < 10
+                }
+                className="px-6 py-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-all duration-200"
               >
-                Reject
+                Reject Application
               </Button>
             </div>
           </div>
@@ -718,7 +795,6 @@ function BusinessVerificationDetails({
           </div>
         </div>
       )}
-
     </div>
   );
 }

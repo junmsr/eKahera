@@ -266,33 +266,91 @@ const Profile = () => {
     fetchDeletionStatus();
   }, []);
 
+  const normalizeBusiness = (business) => {
+    if (!business) return null;
+
+    const parts = (business.business_address || "")
+      .split(",")
+      .map((p) => p.trim())
+      .filter(Boolean);
+
+    // Remove trailing country if present
+    while (parts.length && /philippines?/i.test(parts[parts.length - 1])) {
+      parts.pop();
+    }
+
+    // Stored format (after trimming country): "<house>, <barangay>, <city>, <province>"
+    const len = parts.length;
+    const province = len >= 1 ? parts[len - 1] : "";
+    const city = len >= 2 ? parts[len - 2] : "";
+    const barangay = len >= 3 ? parts[len - 3] : "";
+    const houseOrStreet =
+      len > 3 ? parts.slice(0, len - 3).join(", ") : parts[0] || "";
+
+    return {
+      ...business,
+      address_line: business.address_line || business.business_address || "",
+      region:
+        business.region ||
+        business.regionName ||
+        business.region_name ||
+        business.region_name ||
+        "",
+      province: business.province || business.provinceName || province || "",
+      city: business.city || business.cityName || city || "",
+      barangay: business.barangay || business.barangayName || barangay || "",
+      house_number:
+        business.house_number || business.houseNumber || houseOrStreet || "",
+    };
+  };
+
   const fetchProfileData = async () => {
     try {
       setLoading(true);
       setError("");
 
-      const token = sessionStorage.getItem("auth_token");
-      console.log("Auth token:", token ? "Present" : "Missing");
+      const token =
+        sessionStorage.getItem("auth_token") ||
+        localStorage.getItem("auth_token") ||
+        localStorage.getItem("token");
 
-      if (!token) {
-        // Fallback to localStorage if sessionStorage is empty, but warn
-        const fallbackToken = localStorage.getItem("auth_token");
-        if (!fallbackToken) {
-          throw new Error("No authentication token found");
+      // Sync token to sessionStorage so future requests stay authenticated
+      if (token && !sessionStorage.getItem("auth_token")) {
+        sessionStorage.setItem("auth_token", token);
+      }
+
+      console.log("Fetching profile data from /auth/profile");
+
+      // Fetch user profile data
+      const response = await api("/auth/profile");
+
+      const normalized = {
+        ...response,
+        business: normalizeBusiness(response.business),
+      };
+
+      // Derive region if missing using locations endpoint (province -> region)
+      if (normalized.business && !normalized.business.region) {
+        try {
+          if (!locationsCacheRef.current) {
+            const locations = await api("/location/locations");
+            locationsCacheRef.current = locations;
+          }
+          const derivedRegion = deriveRegionFromLocations(
+            locationsCacheRef.current,
+            normalized.business.province,
+            normalized.business.city
+          );
+          if (derivedRegion) {
+            normalized.business.region = derivedRegion;
+          }
+        } catch (locErr) {
+          console.warn("Failed to derive region from locations:", locErr);
         }
       }
 
-      console.log("Fetching profile data from /api/auth/profile");
-
-      // Fetch user profile data
-      const response = await api("/api/auth/profile", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      console.log("Profile data received:", response);
-      setProfileData(response);
+      console.log("Profile data received:", normalized);
+      setProfileData(normalized);
     } catch (err) {
       console.error("Failed to fetch profile data:", err);
       setError(
@@ -301,6 +359,27 @@ const Profile = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const deriveRegionFromLocations = (locationsData, provinceName, cityName) => {
+    if (!locationsData || (!provinceName && !cityName)) return "";
+    // locationsData structure: { [regionName]: { code, provinces: { [provinceName]: { ... } } } }
+    const provinceLower = (provinceName || "").toLowerCase().trim();
+    const cityLower = (cityName || "").toLowerCase().trim();
+
+    for (const [regionName, regionData] of Object.entries(locationsData)) {
+      for (const provinceKey of Object.keys(regionData.provinces || {})) {
+        const provLower = provinceKey.toLowerCase();
+        if (provinceLower && provLower === provinceLower) {
+          return regionName;
+        }
+        // Some addresses might have city stored as "Province" due to parsing issues; try matching city against province names
+        if (cityLower && provLower === cityLower) {
+          return regionName;
+        }
+      }
+    }
+    return "";
   };
 
   const formatDate = (dateString) => {
@@ -474,6 +553,7 @@ const Profile = () => {
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
         userData={profileData?.user}
+        businessData={profileData?.business}
       />
       <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
         {error && (
@@ -804,6 +884,50 @@ const Profile = () => {
 
                     <div className="group">
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                        Business Email
+                      </label>
+                      <div className="flex items-center gap-3 bg-gradient-to-r from-gray-50 to-gray-100/50 px-4 py-3 rounded-xl border border-gray-200/50 group-hover:border-green-300 transition-colors">
+                        <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <EmailIcon className="text-blue-600" />
+                        </div>
+                        <span className="text-gray-900 font-medium flex-1 truncate">
+                          {profileData?.business?.email || "N/A"}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="group">
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                        Region
+                      </label>
+                      <div className="flex items-center gap-3 bg-gradient-to-r from-gray-50 to-gray-100/50 px-4 py-3 rounded-xl border border-gray-200/50 group-hover:border-green-300 transition-colors">
+                        <div className="w-8 h-8 bg-teal-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <LocationIcon className="text-teal-600" />
+                        </div>
+                        <span className="text-gray-900 font-medium flex-1">
+                          {profileData?.business?.region || "N/A"}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="group">
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                        Province
+                      </label>
+                      <div className="flex items-center gap-3 bg-gradient-to-r from-gray-50 to-gray-100/50 px-4 py-3 rounded-xl border border-gray-200/50 group-hover:border-green-300 transition-colors">
+                        <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <LocationIcon className="text-emerald-600" />
+                        </div>
+                        <span className="text-gray-900 font-medium flex-1">
+                          {profileData?.business?.province || "N/A"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-5">
+                    <div className="group">
+                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
                         Business Type
                       </label>
                       <div className="flex items-center gap-3 bg-gradient-to-r from-gray-50 to-gray-100/50 px-4 py-3 rounded-xl border border-gray-200/50 group-hover:border-green-300 transition-colors">
@@ -830,89 +954,52 @@ const Profile = () => {
 
                     <div className="group">
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-                        Country
+                        Business Location
                       </label>
-                      <div className="flex items-center gap-3 bg-gradient-to-r from-gray-50 to-gray-100/50 px-4 py-3 rounded-xl border border-gray-200/50 group-hover:border-green-300 transition-colors">
-                        <div className="w-8 h-8 bg-teal-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                          <LocationIcon className="text-teal-600" />
+                      <div className="bg-gradient-to-r from-gray-50 to-gray-100/50 px-4 py-3 rounded-xl border border-gray-200/50">
+                        <div className="grid grid-cols-1 gap-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                              <LocationIcon className="text-blue-600" />
+                            </div>
+                            <div className="flex-1">
+                              <div className="text-xs text-gray-500 uppercase tracking-wide">
+                                City/Municipality
+                              </div>
+                              <div className="text-gray-900 font-medium">
+                                {profileData?.business?.city || "N/A"}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                              <LocationIcon className="text-indigo-600" />
+                            </div>
+                            <div className="flex-1">
+                              <div className="text-xs text-gray-500 uppercase tracking-wide">
+                                Barangay
+                              </div>
+                              <div className="text-gray-900 font-medium">
+                                {profileData?.business?.barangay || "N/A"}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-start gap-3">
+                            <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                              <LocationIcon className="text-purple-600" />
+                            </div>
+                            <div className="flex-1">
+                              <div className="text-xs text-gray-500 uppercase tracking-wide">
+                                House no./ Street Name / Landmark (optional)
+                              </div>
+                              <div className="text-gray-900 font-medium">
+                                {[profileData?.business?.house_number, profileData?.business?.business_address, profileData?.business?.landmark]
+                                  .filter(Boolean)
+                                  .join(", ") || "N/A"}
+                              </div>
+                            </div>
+                          </div>
                         </div>
-                        <span className="text-gray-900 font-medium flex-1">
-                          {profileData?.business?.country || "N/A"}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="group">
-                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-                        Business Email
-                      </label>
-                      <div className="flex items-center gap-3 bg-gradient-to-r from-gray-50 to-gray-100/50 px-4 py-3 rounded-xl border border-gray-200/50 group-hover:border-green-300 transition-colors">
-                        <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                          <EmailIcon className="text-blue-600" />
-                        </div>
-                        <span className="text-gray-900 font-medium flex-1 truncate">
-                          {profileData?.business?.email || "N/A"}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-5">
-                    <div className="group">
-                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-                        Business Address
-                      </label>
-                      <div className="flex items-start gap-3 bg-gradient-to-r from-gray-50 to-gray-100/50 px-4 py-3 rounded-xl border border-gray-200/50 group-hover:border-green-300 transition-colors">
-                        <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-                          <LocationIcon className="text-indigo-600" />
-                        </div>
-                        <span className="text-gray-900 font-medium flex-1">
-                          {profileData?.business?.business_address || "N/A"}
-                          {profileData?.business?.house_number &&
-                            `, ${profileData.business.house_number}`}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="group">
-                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-                        Mobile Number
-                      </label>
-                      <div className="flex items-center gap-3 bg-gradient-to-r from-gray-50 to-gray-100/50 px-4 py-3 rounded-xl border border-gray-200/50 group-hover:border-green-300 transition-colors">
-                        <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                          <PhoneIcon className="text-green-600" />
-                        </div>
-                        <span className="text-gray-900 font-medium flex-1">
-                          {profileData?.business?.mobile || "N/A"}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="group">
-                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-                        Business Established
-                      </label>
-                      <div className="flex items-center gap-3 bg-gradient-to-r from-gray-50 to-gray-100/50 px-4 py-3 rounded-xl border border-gray-200/50 group-hover:border-green-300 transition-colors">
-                        <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                          <CalendarIcon className="text-purple-600" />
-                        </div>
-                        <span className="text-gray-900 font-medium flex-1">
-                          {formatDate(profileData?.business?.created_at)}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="group">
-                      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-                        Last Updated
-                      </label>
-                      <div className="flex items-center gap-3 bg-gradient-to-r from-gray-50 to-gray-100/50 px-4 py-3 rounded-xl border border-gray-200/50 group-hover:border-green-300 transition-colors">
-                        <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                          <CalendarIcon className="text-orange-600" />
-                        </div>
-                        <span className="text-gray-900 font-medium flex-1">
-                          {formatDate(profileData?.business?.updated_at)}
-                        </span>
                       </div>
                     </div>
                   </div>

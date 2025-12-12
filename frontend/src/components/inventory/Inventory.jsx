@@ -3,6 +3,8 @@ import Button from "../common/Button";
 import StatsCard from "../ui/Dashboard/StatsCard";
 import Card from "../common/Card";
 
+const DEFAULT_LOW_STOCK_LEVEL = 10;
+
 // Utility function to convert array of objects to CSV
 const convertToCSV = (data) => {
   if (!data || data.length === 0) return "";
@@ -114,13 +116,17 @@ function InventoryTable({
     </svg>
   );
 
-  const getStockStatus = (quantity) => {
+  const getStockStatus = (
+    quantity,
+    lowStockLevel = DEFAULT_LOW_STOCK_LEVEL
+  ) => {
+    const threshold = Number(lowStockLevel ?? DEFAULT_LOW_STOCK_LEVEL);
     if (quantity === 0)
       return {
         label: "Out of Stock",
         color: "bg-red-100 text-red-700 border-red-200",
       };
-    if (quantity < 10)
+    if (quantity < threshold)
       return {
         label: "Low Stock",
         color: "bg-orange-100 text-orange-700 border-orange-200",
@@ -418,7 +424,10 @@ function InventoryTable({
                 </tr>
               ) : (
                 products.map((product, idx) => {
-                  const stockStatus = getStockStatus(product.quantity);
+                  const stockStatus = getStockStatus(
+                    product.quantity,
+                    product.low_stock_level
+                  );
                   return (
                     <tr
                       key={product.id}
@@ -540,7 +549,10 @@ function InventoryTable({
             </div>
           ) : (
             products.map((product, idx) => {
-              const stockStatus = getStockStatus(product.quantity);
+              const stockStatus = getStockStatus(
+                product.quantity,
+                product.low_stock_level
+              );
               return (
                 <div key={product.id} className="p-4">
                   <div className="flex justify-between items-start gap-4">
@@ -746,9 +758,10 @@ function Inventory({
     (sum, p) => sum + Number(p.selling_price || 0) * Number(p.quantity || 0),
     0
   );
-  const lowStockCount = allProducts.filter(
-    (p) => Number(p.quantity || 0) < 10
-  ).length;
+  const lowStockCount = allProducts.filter((p) => {
+    const threshold = Number(p.low_stock_level ?? DEFAULT_LOW_STOCK_LEVEL);
+    return Number(p.quantity || 0) < threshold;
+  }).length;
 
   return (
     <div

@@ -120,21 +120,26 @@ export default function DashboardBusinessReport({ dateRange }) {
           // Handle Date objects
           const d = new Date(date);
           const year = d.getFullYear();
-          const month = String(d.getMonth() + 1).padStart(2, '0');
-          const day = String(d.getDate()).padStart(2, '0');
+          const month = String(d.getMonth() + 1).padStart(2, "0");
+          const day = String(d.getDate()).padStart(2, "0");
           return `${year}-${month}-${day}`;
         };
 
-        const startDate = dateRange?.startDate ? formatDate(dateRange.startDate) : null;
-        const endDate = dateRange?.endDate ? formatDate(dateRange.endDate) : null;
+        const startDate = dateRange?.startDate
+          ? formatDate(dateRange.startDate)
+          : null;
+        const endDate = dateRange?.endDate
+          ? formatDate(dateRange.endDate)
+          : null;
 
         // Build query string for API calls
         const buildQueryString = (params) => {
           const queryParams = new URLSearchParams();
-          if (params.startDate) queryParams.append('startDate', params.startDate);
-          if (params.endDate) queryParams.append('endDate', params.endDate);
+          if (params.startDate)
+            queryParams.append("startDate", params.startDate);
+          if (params.endDate) queryParams.append("endDate", params.endDate);
           const queryString = queryParams.toString();
-          return queryString ? `?${queryString}` : '';
+          return queryString ? `?${queryString}` : "";
         };
 
         const queryParams = {};
@@ -195,40 +200,39 @@ export default function DashboardBusinessReport({ dateRange }) {
           <h3 className="text-xl font-extrabold text-blue-700 mb-5 select-none">
             Payment Methods
           </h3>
-          <div className="h-72 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={paymentMethods}
-                  dataKey="value"
-                  nameKey="name"
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={80}
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(1)}%`}
-                >
-                  {paymentMethods.map((entry, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={blueShades[index % blueShades.length]}
-                    />
-                  ))}
-                </Pie>
-                <Legend />
-                <Tooltip
-                  formatter={(value, name, props) => [
-                    `${Number(value).toFixed(1)}%`,
-                    props?.payload?.name,
-                  ]}
-                  contentStyle={{
-                    background: "#fff",
-                    borderColor: "#e5e7eb",
-                    borderRadius: 8,
-                  }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
+          <ResponsiveContainer width="100%" height={280}>
+            <PieChart margin={{ top: 20, right: 20, left: 20, bottom: 20 }}>
+              <Pie
+                data={paymentMethods}
+                cx="50%"
+                cy="50%"
+                labelLine={false}
+                label={({ name, value }) => `${name} ${value}%`}
+                outerRadius={90}
+                dataKey="value"
+              >
+                {paymentMethods.map((entry, index) => (
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={blueShades[index % blueShades.length]}
+                  />
+                ))}
+              </Pie>
+              <Tooltip
+                formatter={(value, name, props) => [
+                  `${Number(value).toFixed(0)}%`,
+                  props?.payload?.name,
+                ]}
+                contentStyle={{
+                  background: "#eff6ff",
+                  borderColor: "#3b82f6",
+                  borderRadius: 10,
+                  fontWeight: "600",
+                }}
+                labelStyle={{ fontWeight: "700", color: "#1e40af" }}
+              />
+            </PieChart>
+          </ResponsiveContainer>
         </div>
       </div>
 

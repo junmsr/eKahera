@@ -87,7 +87,7 @@ function ProductForm({
         "Baby Products",
         "Pet Supplies",
       ],
-      "Pharmacy": [
+      Pharmacy: [
         "Prescription Medicines",
         "OTC Medicines",
         "Vitamins & Supplements",
@@ -132,7 +132,7 @@ function ProductForm({
         "Fasteners (Nails, Screws, Bolts)",
         "Safety Gear",
       ],
-      "Bookstore": [
+      Bookstore: [
         "Fiction Books",
         "Non-Fiction Books",
         "Educational Books",
@@ -160,18 +160,27 @@ function ProductForm({
       Others: ["General"],
     };
 
-    const storedFromSession = (typeof window !== "undefined" && sessionStorage.getItem("business_type")) || null;
+    const storedFromSession =
+      (typeof window !== "undefined" &&
+        sessionStorage.getItem("business_type")) ||
+      null;
     let stored = businessType || storedFromSession || "Others";
     // Try to derive from logged-in `user` object if available (login stores `user` in sessionStorage)
     if (stored === "Others" && typeof window !== "undefined") {
       try {
-        const raw = sessionStorage.getItem("user") || localStorage.getItem("user");
+        const raw =
+          sessionStorage.getItem("user") || localStorage.getItem("user");
         if (raw) {
           const parsed = JSON.parse(raw);
-          const b = parsed?.business?.business_type || parsed?.business_type || null;
+          const b =
+            parsed?.business?.business_type || parsed?.business_type || null;
           if (b) {
             stored = b;
-            try { sessionStorage.setItem("business_type", b); } catch (e) { /* ignore */ }
+            try {
+              sessionStorage.setItem("business_type", b);
+            } catch (e) {
+              /* ignore */
+            }
           }
         }
       } catch (e) {
@@ -191,7 +200,13 @@ function ProductForm({
     // businessType is not known.
     if (businessType) {
       const fb = getFallbackCategories();
-      try { console.debug('ProductForm: using fallback categories for businessType=', businessType, fb); } catch (e) {}
+      try {
+        console.debug(
+          "ProductForm: using fallback categories for businessType=",
+          businessType,
+          fb
+        );
+      } catch (e) {}
       return fb;
     }
 
@@ -199,18 +214,30 @@ function ProductForm({
       const first = categories[0];
       const firstName = first && (first.name || first);
       // If categories only contains a generic value, fallback
-      if (categories.length === 1 && (firstName === "General" || firstName === "Others")) {
+      if (
+        categories.length === 1 &&
+        (firstName === "General" || firstName === "Others")
+      ) {
         const fb = getFallbackCategories();
-        try { console.debug('ProductForm: categories prop is generic, using fallback=', fb); } catch (e) {}
+        try {
+          console.debug(
+            "ProductForm: categories prop is generic, using fallback=",
+            fb
+          );
+        } catch (e) {}
         return fb;
       }
       const norm = normalizeCategories(categories);
-      try { console.debug('ProductForm: using provided categories=', norm); } catch (e) {}
+      try {
+        console.debug("ProductForm: using provided categories=", norm);
+      } catch (e) {}
       return norm;
     }
 
     const fb = getFallbackCategories();
-    try { console.debug('ProductForm: no categories provided, using fallback=', fb); } catch (e) {}
+    try {
+      console.debug("ProductForm: no categories provided, using fallback=", fb);
+    } catch (e) {}
     return fb;
   })();
   return (
@@ -294,11 +321,7 @@ function ProductForm({
         onChange={onChange}
         required
       />
-      <div
-        className={`grid grid-cols-1 ${
-          editingProduct ? "md:grid-cols-2" : "md:grid-cols-3"
-        } gap-4`}
-      >
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {!editingProduct && (
           <FormField
             label="Quantity"
@@ -310,7 +333,7 @@ function ProductForm({
           />
         )}
         <FormField
-          label="Cost Price (₱)"
+          label="Cost Price"
           name="cost_price"
           type="number"
           value={productForm.cost_price}
@@ -318,12 +341,21 @@ function ProductForm({
           required
         />
         <FormField
-          label="Selling Price (₱)"
+          label="Selling Price"
           name="selling_price"
           type="number"
           value={productForm.selling_price}
           onChange={onChange}
           required
+        />
+        <FormField
+          label="Low Stock Level"
+          name="low_stock_level"
+          type="number"
+          value={productForm.low_stock_level}
+          onChange={onChange}
+          placeholder="10"
+          min="0"
         />
       </div>
       <div className="flex justify-end gap-2 mt-4">
@@ -375,11 +407,16 @@ function Modal({
 
     const loadBusinessType = async () => {
       try {
-        let bid = (typeof window !== "undefined" && (localStorage.getItem("business_id") || sessionStorage.getItem("business_id"))) || null;
+        let bid =
+          (typeof window !== "undefined" &&
+            (localStorage.getItem("business_id") ||
+              sessionStorage.getItem("business_id"))) ||
+          null;
         // If business_id key not set, try to read from stored `user` object
         if (!bid && typeof window !== "undefined") {
           try {
-            const raw = sessionStorage.getItem('user') || localStorage.getItem('user');
+            const raw =
+              sessionStorage.getItem("user") || localStorage.getItem("user");
             if (raw) {
               const parsed = JSON.parse(raw);
               bid = parsed?.businessId || parsed?.business_id || null;
@@ -389,22 +426,27 @@ function Modal({
           }
         }
         if (!bid) {
-          console.debug('Modal: no business id available to fetch business_type');
+          console.debug(
+            "Modal: no business id available to fetch business_type"
+          );
           return;
         }
-        console.debug('Modal: loading business_type for business_id=', bid);
+        console.debug("Modal: loading business_type for business_id=", bid);
         const { data, error } = await supabase
           .from("business")
           .select("business_type")
           .eq("business_id", bid)
           .maybeSingle();
         if (error) {
-          console.debug("Could not fetch business_type:", error.message || error);
+          console.debug(
+            "Could not fetch business_type:",
+            error.message || error
+          );
           return;
         }
         const btype = data?.business_type || null;
         if (btype) {
-          console.debug('Modal: got business_type=', btype);
+          console.debug("Modal: got business_type=", btype);
           setBusinessType(btype);
           try {
             sessionStorage.setItem("business_type", btype);
