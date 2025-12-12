@@ -5,6 +5,7 @@ import Background from '../components/layout/Background';
 import Card from '../components/common/Card';
 import { api } from '../lib/api';
 import Loader from '../components/common/Loader';
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 
 const ReceiptRow = ({ label, value, isBold }) => (
 	<div className="flex justify-between items-center text-sm">
@@ -82,6 +83,49 @@ export default function Receipt() {
 		}
 	};
 
+	const handleProceed = () => {
+		// Navigate back to POS - cashier goes to cashier-pos, admin/business_owner goes to pos
+		if (fromCustomer) {
+			navigate('/customer-enter');
+		} else if (user && user.role === 'cashier') {
+			navigate('/cashier-pos');
+		} else if (user && (user.role === 'admin' || user.role === 'business_owner')) {
+			navigate('/pos');
+		} else {
+			// Default fallback
+			navigate('/pos');
+		}
+	};
+
+	// Set up keyboard shortcuts
+	useKeyboardShortcuts(
+		[
+			{
+				key: 'p',
+				action: (e) => {
+					if (!fromCustomer) {
+						e.preventDefault();
+						e.stopPropagation();
+						handlePrint();
+					}
+				},
+				enabled: !fromCustomer && !loading && details,
+				allowWhileTyping: false,
+			},
+			{
+				key: 'enter',
+				action: (e) => {
+					e.preventDefault();
+					e.stopPropagation();
+					handleProceed();
+				},
+				enabled: !loading && details,
+				allowWhileTyping: false,
+			},
+		],
+		[fromCustomer, loading, details, user]
+	);
+
 	return (
 		<Background variant="gradientBlue" pattern="dots" overlay floatingElements>
 			<div className="min-h-screen printable-area">
@@ -136,7 +180,12 @@ export default function Receipt() {
 							{/* Totals */}
 							<div className="space-y-2 border-t pt-4">
 								<ReceiptRow label={`Subtotal (${details.totalQuantity} items)`} value={`₱${details.subtotal.toFixed(2)}`} />
-								{details.discountTotal > 0 && <ReceiptRow label="Discount" value={`-₱${details.discountTotal.toFixed(2)}`} />}
+								{(details.discountTotal > 0 || details.discount) && (
+									<ReceiptRow 
+										label={details.discount?.name ? `Discount (${details.discount.name})` : "Discount"} 
+										value={`-₱${(details.discountTotal || (details.subtotal - details.total)).toFixed(2)}`} 
+									/>
+								)}
 								<ReceiptRow label="Grand Total" value={`₱${details.total.toFixed(2)}`} isBold />
 							</div>
 
@@ -169,13 +218,16 @@ export default function Receipt() {
 									Download
 								</button>
 								<button
-									onClick={() => navigate('/customer-enter')}
+									onClick={handleProceed}
 									className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition-colors duration-200 flex items-center justify-center gap-2"
 								>
 									<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
 									</svg>
-									Proceed
+									<span className="flex items-center gap-2">
+										Proceed
+										<span className="text-xs font-mono bg-white/20 px-2 py-0.5 rounded">Enter</span>
+									</span>
 								</button>
 							</>
 						) : (
@@ -187,26 +239,22 @@ export default function Receipt() {
 									<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
 									</svg>
-									Print
+									<span className="flex items-center gap-2">
+										Print
+										<span className="text-xs font-mono bg-white/20 px-2 py-0.5 rounded">P</span>
+									</span>
 								</button>
 								<button
-									onClick={() => {
-										// Navigate back to POS - cashier goes to cashier-pos, admin/business_owner goes to pos
-										if (user && user.role === 'cashier') {
-											navigate('/cashier-pos');
-										} else if (user && (user.role === 'admin' || user.role === 'business_owner')) {
-											navigate('/pos');
-										} else {
-											// Default fallback
-											navigate('/pos');
-										}
-									}}
+									onClick={handleProceed}
 									className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition-colors duration-200 flex items-center justify-center gap-2"
 								>
 									<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
 									</svg>
-									Proceed
+									<span className="flex items-center gap-2">
+										Proceed
+										<span className="text-xs font-mono bg-white/20 px-2 py-0.5 rounded">Enter</span>
+									</span>
 								</button>
 							</>
 						)}

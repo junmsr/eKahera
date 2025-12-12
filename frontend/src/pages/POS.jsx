@@ -49,8 +49,18 @@ function POS() {
   const hasFinalizedRef = React.useRef(false);
   const [businessName, setBusinessName] = useState("");
   const [selectedCartIdx, setSelectedCartIdx] = useState(0);
+  const [editingCartItem, setEditingCartItem] = useState(null);
+  const [editQty, setEditQty] = useState('1');
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const quantityInputRef = useRef(null);
 
-  // Keyboard shortcuts have been removed as per request
+  // Set editing cart item and initialize quantity
+  const setSelectedCartItem = (idx) => {
+    setSelectedCartIdx(idx);
+    if (idx >= 0 && idx < cart.length) {
+      setEditQty(String(cart[idx].quantity));
+    }
+  };
 
   // Generate a client-side provisional transaction number when POS opens
   useEffect(() => {
@@ -91,6 +101,9 @@ function POS() {
               items: parsed.items || [],
               payment_type: paymentType.toLowerCase(),
               money_received: parsed.total || null,
+              discount_id: parsed.discount_id || null,
+              discount_percentage: parsed.discount_percentage || null,
+              discount_amount: parsed.discount_amount || null,
             };
             const resp = await api("/api/sales/checkout", {
               method: "POST",
@@ -212,13 +225,14 @@ function POS() {
     await addSkuToCart(sku, quantity);
   };
 
-  const handleRemove = (idx) => setCart(cart.filter((_, i) => i !== idx));
-
-  const handleEditQuantity = async (idx, newQty) => {
-    if (newQty < 1) {
-      setError("Quantity must be at least 1");
-      return;
+  const handleRemove = (idx) => {
+    if (idx >= 0 && idx < cart.length) {
+      setCart(cart.filter((_, i) => i !== idx));
     }
+  };
+
+  const handleEditQuantity = async (idx, qty) => {
+    const newQty = qty === '' ? 1 : Math.max(1, Number(qty) || 1);
     const item = cart[idx];
     if (!item) return;
     setError("");
@@ -237,11 +251,20 @@ function POS() {
         return;
       }
       setCart((prev) =>
-        prev.map((it, i) => (i === idx ? { ...it, quantity: newQty } : it))
+        prev.map((item, i) =>
+          i === idx ? { ...item, quantity: newQty } : item
+        )
       );
+      setEditQty(newQty); // Keep editQty in sync
+      setEditingCartItem(null);
     } catch (err) {
       setError(err.message || "Failed to update quantity");
     }
+  };
+  
+  // Handle edit quantity change
+  const handleEditQtyChange = (value) => {
+    setEditQty(value);
   };
 
   const subtotal = cart.reduce(
@@ -253,19 +276,111 @@ function POS() {
   const [appliedDiscount, setAppliedDiscount] = useState(null);
   
   // Calculate total with discount
-  const total = appliedDiscount?.type === "percentage"
-    ? Math.max(0, subtotal - subtotal * (Number(appliedDiscount.value || 0) / 100))
-    : appliedDiscount?.type === "amount"
-    ? Math.max(0, subtotal - Number(appliedDiscount.value || 0))
-    : subtotal;
+  let total = subtotal;
+  if (appliedDiscount) {
+    if (appliedDiscount.type === "percentage") {
+      const discountValue = Number(appliedDiscount.value);
+      if (!isNaN(discountValue) && discountValue > 0) {
+        const discountAmount = subtotal * (discountValue / 100);
+        total = Math.max(0, subtotal - discountAmount);
+      }
+    } else if (appliedDiscount.type === "amount") {
+      const discountValue = Number(appliedDiscount.value);
+      if (!isNaN(discountValue) && discountValue > 0) {
+        total = Math.max(0, subtotal - discountValue);
+      }
+    }
+  }
 
+  // Handle keyboard navigation for cart items
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (showDiscount || showPriceCheck || showImportCart || showCashLedger || showCheckout || showCashModal || showReceipts || showProfileModal || showLogoutConfirm) {
+        return; // Don't handle keys when modals are open
+      }
+
+      switch (e.key) {
+        case 'ArrowUp':
+          e.preventDefault();
+          setSelectedCartIdx(prev => prev > 0 ? prev - 1 : cart.length - 1);
+          break;
+        case 'ArrowDown':
+          e.preventDefault();
+          setSelectedCartIdx(prev => prev < cart.length - 1 ? prev + 1 : 0);
+          break;
+        case 'e':
+        case 'E':
+          e.preventDefault();
+          if (cart.length > 0 && selectedCartIdx >= 0 && selectedCartIdx < cart.length) {
+            setEditingCartItem(selectedCartIdx);
+            setEditQty(String(cart[selectedCartIdx].quantity));
+          }
+          break;
+        case 'd':
+        case 'D':
+          e.preventDefault();
+          if (cart.length > 0 && selectedCartIdx >= 0 && selectedCartIdx < cart.length) {
+            handleRemove(selectedCartIdx);
+            setSelectedCartIdx(prev => Math.min(prev, cart.length - 2));
+          }
+          break;
+        case 'Enter':
+          if (editingCartItem !== null) {
+            e.preventDefault();
+            handleEditQuantity(editingCartItem, editQty);
+            setEditingCartItem(null);
+          }
+          break;
+        case 'Escape':
+          if (editingCartItem !== null) {
+            e.preventDefault();
+            setEditingCartItem(null);
+          }
+          break;
+        default:
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [cart.length, selectedCartIdx, editingCartItem, editQty, showDiscount, showPriceCheck, showImportCart, showCashLedger, showCheckout, showCashModal, showReceipts, showProfileModal, showLogoutConfirm]);
+
+  // Reset selected index when cart changes
   useEffect(() => {
     if (cart.length === 0) {
       setSelectedCartIdx(0);
     } else {
-      setSelectedCartIdx((idx) => Math.min(idx ?? 0, cart.length - 1));
+      setSelectedCartIdx(prev => Math.min(prev, cart.length - 1));
     }
   }, [cart.length]);
+
+  // Pause scanner when any modal is open to avoid hardware scanner/keyboard events interfering with shortcuts
+  useEffect(() => {
+    const anyModalOpen =
+      showDiscount ||
+      showPriceCheck ||
+      showImportCart ||
+      showCashLedger ||
+      showCheckout ||
+      showCashModal ||
+      showReceipts ||
+      showProfileModal ||
+      showLogoutConfirm;
+    setScannerPaused(anyModalOpen);
+  }, [
+    showDiscount,
+    showPriceCheck,
+    showImportCart,
+    showCashLedger,
+    showCheckout,
+    showCashModal,
+    showReceipts,
+    showProfileModal,
+    showLogoutConfirm,
+  ]);
 
   const focusSkuInput = () => {
     skuInputRef.current?.focus();
@@ -296,6 +411,12 @@ function POS() {
     );
     if (!Number.isNaN(nextQty) && nextQty > 0) {
       handleEditQuantity(selectedCartIdx, nextQty);
+    }
+  };
+
+  const handleRemoveDiscount = () => {
+    if (appliedDiscount) {
+      setAppliedDiscount(null);
     }
   };
 
@@ -337,11 +458,14 @@ function POS() {
       { key: "f11", action: () => setShowReceipts(true) },
       {
         key: "f12",
-        action: () => {
-          sessionStorage.removeItem("auth_token");
-          sessionStorage.removeItem("user");
-          navigate("/");
-        },
+        description: "Logout",
+        action: () => setShowLogoutConfirm(true),
+      },
+      {
+        key: "r",
+        description: "Remove Discount",
+        action: handleRemoveDiscount,
+        enabled: !!appliedDiscount,
       },
       { key: "ctrl+l", action: () => setShowCashLedger(true) },
       {
@@ -832,6 +956,9 @@ function POS() {
                       quantity: i.quantity,
                     })),
                     total,
+                    discount_id: appliedDiscount?.discount_id || null,
+                    discount_percentage: appliedDiscount?.type === 'percentage' ? Number(appliedDiscount.value) : null,
+                    discount_amount: appliedDiscount?.type === 'amount' ? Number(appliedDiscount.value) : null,
                   })
                 );
                 const { checkoutUrl } = await createGcashCheckout({
@@ -863,6 +990,9 @@ function POS() {
                       quantity: i.quantity,
                     })),
                     total,
+                    discount_id: appliedDiscount?.discount_id || null,
+                    discount_percentage: appliedDiscount?.type === 'percentage' ? Number(appliedDiscount.value) : null,
+                    discount_amount: appliedDiscount?.type === 'amount' ? Number(appliedDiscount.value) : null,
                   })
                 );
                 const { checkoutUrl } = await createMayaCheckout({

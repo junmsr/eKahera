@@ -103,6 +103,9 @@ function CashierPOS() {
                 money_received: parsed.total || null,
                 transaction_id: parsed.transactionId || null,
                 transaction_number: parsed.transactionNumber || null,
+                discount_id: parsed.discount_id || null,
+                discount_percentage: parsed.discount_percentage || null,
+                discount_amount: parsed.discount_amount || null,
               };
               const resp = await api("/api/sales/checkout", {
                 method: "POST",
@@ -344,15 +347,27 @@ function CashierPOS() {
     (sum, item) => sum + item.price * item.quantity,
     0
   );
-  const total =
-    appliedDiscount?.type === "percentage"
-      ? Math.max(
-          0,
-          subtotal - subtotal * (Number(appliedDiscount.value || 0) / 100)
-        )
-      : appliedDiscount?.type === "amount"
-      ? Math.max(0, subtotal - Number(appliedDiscount.value || 0))
-      : subtotal;
+  
+  // Calculate total with discount
+  let total = subtotal;
+  if (appliedDiscount) {
+    if (appliedDiscount.type === "percentage") {
+      const discountValue = Number(appliedDiscount.value);
+      if (!isNaN(discountValue) && discountValue > 0) {
+        const discountAmount = subtotal * (discountValue / 100);
+        total = Math.max(0, subtotal - discountAmount);
+      } else {
+        console.warn("Invalid discount value:", appliedDiscount.value, "for discount:", appliedDiscount);
+      }
+    } else if (appliedDiscount.type === "amount") {
+      const discountValue = Number(appliedDiscount.value);
+      if (!isNaN(discountValue) && discountValue > 0) {
+        total = Math.max(0, subtotal - discountValue);
+      } else {
+        console.warn("Invalid discount value:", appliedDiscount.value, "for discount:", appliedDiscount);
+      }
+    }
+  }
 
   const completeTransactionCall = async (transId) => {
     if (!transId) return;
@@ -385,13 +400,9 @@ function CashierPOS() {
         })),
         payment_type: paymentType,
         money_received: moneyReceived,
-        ...(appliedDiscount?.discount_id
-          ? { discount_id: appliedDiscount.discount_id }
-          : appliedDiscount?.type === "percentage"
-          ? { discount_percentage: Number(appliedDiscount.value) }
-          : appliedDiscount?.type === "amount"
-          ? { discount_amount: Number(appliedDiscount.value) }
-          : {}),
+        discount_id: appliedDiscount?.discount_id || null,
+        discount_percentage: appliedDiscount?.type === "percentage" ? Number(appliedDiscount.value) : null,
+        discount_amount: appliedDiscount?.type === "amount" ? Number(appliedDiscount.value) : null,
       };
       const resp = await api("/api/sales/checkout", {
         method: "POST",
@@ -1199,6 +1210,9 @@ function CashierPOS() {
                         total,
                         transactionId: transactionId,
                         transactionNumber: transactionNumber,
+                        discount_id: appliedDiscount?.discount_id || null,
+                        discount_percentage: appliedDiscount?.type === "percentage" ? Number(appliedDiscount.value) : null,
+                        discount_amount: appliedDiscount?.type === "amount" ? Number(appliedDiscount.value) : null,
                       })
                     );
                     const { checkoutUrl } = await createGcashCheckout({
@@ -1232,6 +1246,9 @@ function CashierPOS() {
                         total,
                         transactionId: transactionId,
                         transactionNumber: transactionNumber,
+                        discount_id: appliedDiscount?.discount_id || null,
+                        discount_percentage: appliedDiscount?.type === "percentage" ? Number(appliedDiscount.value) : null,
+                        discount_amount: appliedDiscount?.type === "amount" ? Number(appliedDiscount.value) : null,
                       })
                     );
                     const { checkoutUrl } = await createMayaCheckout({

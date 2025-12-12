@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import Button from "../common/Button";
 import BaseModal from "./BaseModal";
 import CashPaymentCompleteModal from "./CashPaymentCompleteModal";
@@ -8,24 +8,63 @@ function CashPaymentModal({ isOpen, onClose, total, onConfirm }) {
   const [amountReceived, setAmountReceived] = useState("");
   const [showComplete, setShowComplete] = useState(false);
   const [completeData, setCompleteData] = useState(null);
-  
-  // Early return if not open and not showing completion modal
-  if (!isOpen && !showComplete) return null;
+  const amountInputRef = useRef(null);
+  const justSetExactAmount = useRef(false);
 
-  const handleQuickAmount = (val) => setAmountReceived(val.toString());
+  const handleQuickAmount = (val) => setAmountReceived(Number(val).toString());
 
-  const handleExactAmount = () => setAmountReceived(total.toString());
+  const handleExactAmount = (e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    // Set as a number to avoid string formatting issues
+    const exactAmount = Number(total).toFixed(2);
+    setAmountReceived(exactAmount);
+    justSetExactAmount.current = true;
+    // Reset the flag after a short delay
+    setTimeout(() => {
+      justSetExactAmount.current = false;
+    }, 200);
+  };
 
-  const handleProceed = () => {
-    if (!amountReceived || Number(amountReceived) < total) {
-      alert("Amount received must be greater than or equal to total.");
+  const handleProceed = (e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    
+    // Get the current value from the input element directly (more reliable than state)
+    const inputValue = amountInputRef.current?.value || amountReceived;
+    
+    // If we just set exact amount, use the total directly
+    let amountToUse = inputValue;
+    if (justSetExactAmount.current) {
+      amountToUse = Number(total).toFixed(2);
+    }
+    
+    // Trim and parse the input value
+    const trimmedAmount = (amountToUse?.toString() || "").trim();
+    if (!trimmedAmount) {
+      alert("Please enter an amount.");
       return;
     }
-    const received = Number(amountReceived);
+    const received = Number(trimmedAmount);
+    if (isNaN(received) || received <= 0) {
+      alert("Please enter a valid amount.");
+      return;
+    }
+    // Round both values to 2 decimal places to avoid floating-point precision issues
+    const receivedRounded = Math.round(received * 100) / 100;
+    const totalRounded = Math.round(total * 100) / 100;
+    if (receivedRounded < totalRounded) {
+      alert(`Amount received (₱${receivedRounded.toFixed(2)}) must be greater than or equal to total (₱${totalRounded.toFixed(2)}).`);
+      return;
+    }
     // compute change and show completion modal; delay calling parent onConfirm
     // so cashier can view the completion screen before the app navigates
-    const change = received - total;
-    setCompleteData({ change, payable: total, received });
+    const change = Math.max(0, receivedRounded - totalRounded);
+    setCompleteData({ change, payable: totalRounded, received: receivedRounded });
     setShowComplete(true);
   };
   
@@ -50,6 +89,7 @@ function CashPaymentModal({ isOpen, onClose, total, onConfirm }) {
   };
 
   // Only set up keyboard shortcuts when not showing completion modal
+  // Hooks must be called before any early returns
   useKeyboardShortcuts(
     [
       {
@@ -60,7 +100,11 @@ function CashPaymentModal({ isOpen, onClose, total, onConfirm }) {
       },
       {
         key: "enter",
-        action: handleProceed,
+        action: (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          handleProceed(e);
+        },
         enabled: isOpen && !showComplete,
         allowWhileTyping: true,
       },
@@ -73,6 +117,9 @@ function CashPaymentModal({ isOpen, onClose, total, onConfirm }) {
     ],
     [isOpen, amountReceived, total, showComplete]
   );
+  
+  // Early return if not open and not showing completion modal
+  if (!isOpen && !showComplete) return null;
   
   // Render completion modal if needed
   if (showComplete) {
@@ -144,11 +191,19 @@ function CashPaymentModal({ isOpen, onClose, total, onConfirm }) {
           Amount Received
         </label>
         <input
+          ref={amountInputRef}
           type="number"
+          step="0.01"
           className="w-full border border-gray-300 rounded-lg px-3 py-2 text-center text-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           placeholder="₱0.00"
           value={amountReceived}
-          onChange={(e) => setAmountReceived(e.target.value)}
+          onChange={(e) => {
+            // Allow empty string or valid numbers
+            const value = e.target.value;
+            if (value === '' || /^\d*\.?\d*$/.test(value)) {
+              setAmountReceived(value);
+            }
+          }}
         />
       </div>
 

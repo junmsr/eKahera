@@ -99,9 +99,10 @@ exports.checkout = async (req, res) => {
       subtotal += itemSubtotal;
 
       // Add to transaction items
+      // Note: subtotal is a GENERATED column, so we don't insert it - it's calculated automatically
       await client.query(
-        'INSERT INTO transaction_items (transaction_id, product_id, product_quantity, price_at_sale, subtotal) VALUES ($1, $2, $3, $4, $5)',
-        [effectiveTransactionId, product_id, quantity, price, itemSubtotal]
+        'INSERT INTO transaction_items (transaction_id, product_id, product_quantity, price_at_sale) VALUES ($1, $2, $3, $4)',
+        [effectiveTransactionId, product_id, quantity, price]
       );
 
       // Update inventory
@@ -116,22 +117,64 @@ exports.checkout = async (req, res) => {
     let appliedDiscountPct = null;
     let appliedDiscountAmount = 0;
 
-    // Only apply discount if explicitly provided via percentage or amount
+    // First, try to get discount_percentage from discount_id if provided and discount_percentage is not explicitly provided
+    if (discount_id && !Number.isFinite(Number(discount_percentage)) && !Number.isFinite(Number(discount_amount))) {
+      const discRes = await client.query(
+        'SELECT discount_percentage FROM discounts WHERE discount_id = $1',
+        [discount_id]
+      );
+      if (discRes.rowCount > 0) {
+        appliedDiscountPct = Number(discRes.rows[0].discount_percentage);
+        console.log(`[Checkout] Found discount_id ${discount_id} with percentage: ${appliedDiscountPct}%`);
+      }
+    }
+
+    // Apply discount if explicitly provided via percentage or amount, or if we got it from discount_id
     if (Number.isFinite(Number(discount_percentage))) {
       appliedDiscountPct = Number(discount_percentage);
       appliedDiscountAmount = subtotal * (appliedDiscountPct / 100);
       total = subtotal - appliedDiscountAmount;
+      console.log(`[Checkout] Applied discount_percentage: ${appliedDiscountPct}%, subtotal: ${subtotal}, discount: ${appliedDiscountAmount}, total: ${total}`);
+    } else if (appliedDiscountPct != null && appliedDiscountPct > 0) {
+      // Use discount_percentage from discount_id lookup
+      appliedDiscountAmount = subtotal * (appliedDiscountPct / 100);
+      total = subtotal - appliedDiscountAmount;
+      console.log(`[Checkout] Applied discount from discount_id: ${appliedDiscountPct}%, subtotal: ${subtotal}, discount: ${appliedDiscountAmount}, total: ${total}`);
     } else if (Number.isFinite(Number(discount_amount)) && Number(discount_amount) > 0) {
       appliedDiscountAmount = Math.min(Number(discount_amount), subtotal);
       total = subtotal - appliedDiscountAmount;
       appliedDiscountPct = (appliedDiscountAmount / subtotal) * 100;
+      console.log(`[Checkout] Applied discount_amount: ${appliedDiscountAmount}, subtotal: ${subtotal}, total: ${total}`);
+    } else {
+      console.log(`[Checkout] No discount applied. subtotal: ${subtotal}, total: ${total}`);
     }
 
-    // Update transaction with final total
     // Update transaction with final total
     await client.query(
       'UPDATE transactions SET total_amount = $1, updated_at = NOW() WHERE transaction_id = $2',
       [total, effectiveTransactionId]
+    );
+    
+    // Calculate money_change for cash payments
+    // For cash: change = money_received - total (if money_received > total)
+    // For online payments (gcash, maya): change is null (exact amount paid)
+    const paymentTypeLower = (payment_type || 'cash').toString().toLowerCase();
+    const money_change = (paymentTypeLower === 'cash' && money_received) 
+      ? Math.max(0, Number(money_received) - total)
+      : null;
+    
+    // Insert payment information into transaction_payment table
+    await client.query(
+      `INSERT INTO transaction_payment (transaction_id, user_id, discount_id, payment_type, money_received, money_change)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [
+        effectiveTransactionId,
+        req.user?.userId || null,
+        discount_id || null,
+        (payment_type || 'cash').toString(),
+        money_received || null,
+        money_change
+      ]
     );
     
     // Log the discount application if any
@@ -542,8 +585,17 @@ exports.getSaleDetailsByTransactionNumber = async (req, res) => {
     );
     const business = businessRes.rows[0] || {};
 
-    // 3. No discount information available in current schema
-    const discount = {};
+    // 3. Get payment and discount information
+    const paymentRes = await client.query(
+      `SELECT tp.payment_type, tp.money_received, tp.money_change, tp.discount_id, d.discount_percentage, d.discount_name
+       FROM transaction_payment tp
+       LEFT JOIN discounts d ON tp.discount_id = d.discount_id
+       WHERE tp.transaction_id = $1
+       ORDER BY tp.transaction_payment_id DESC
+       LIMIT 1`,
+      [transaction_id]
+    );
+    const payment = paymentRes.rows[0] || {};
 
     // 4. Get transaction items
     const itemsRes = await client.query(
@@ -586,10 +638,15 @@ exports.getSaleDetailsByTransactionNumber = async (req, res) => {
         tin: business.tin || null // schema doesn't have TIN yet, but good to have
       },
       payment: {
-        method: 'cash', // Default to cash since we don't have payment method in the schema
-        amountTendered: total_amount, // Using total as amount tendered since we don't have change tracking
-        change: 0 // No change tracking in current schema
+        method: payment.payment_type || 'cash',
+        amountTendered: payment.money_received ? Number(payment.money_received) : Number(total_amount),
+        change: payment.money_change ? Number(payment.money_change) : 0
       },
+      discount: payment.discount_id ? {
+        id: payment.discount_id,
+        name: payment.discount_name || 'Discount',
+        percentage: payment.discount_percentage ? Number(payment.discount_percentage) : null
+      } : null,
       items: items.map(i => ({
         name: i.product_name,
         sku: i.sku,
@@ -627,7 +684,7 @@ exports.getRecentCashierReceipts = async (req, res) => {
           t.created_at,
           t.updated_at,
           t.status,
-          COALESCE(tp.money_received, t.total_amount) as total_amount,
+          t.total_amount,
           t.business_id,
           t.customer_user_id,
           -- Payment information
@@ -635,7 +692,7 @@ exports.getRecentCashierReceipts = async (req, res) => {
           COALESCE(tp.money_received, t.total_amount) as amount_received,
           COALESCE(tp.money_change, 0) as change_given,
           -- Format the total amount to 2 decimal places
-          to_char(COALESCE(tp.money_received, t.total_amount), 'FM999,999,999.00') as formatted_total,
+          to_char(t.total_amount, 'FM999,999,999.00') as formatted_total,
           -- Get the count of items in the transaction
           (SELECT COUNT(*) FROM transaction_items WHERE transaction_id = t.transaction_id) as item_count,
           -- Get the first product name if available

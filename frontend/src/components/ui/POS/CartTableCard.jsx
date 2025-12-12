@@ -302,21 +302,31 @@ function CartTableCard({
 
         {/* Total Footer */}
         <div className="mt-2 pt-2 border-t border-gray-200">
-          <div className="flex justify-between items-center">
-            <span className="text-sm sm:text-base font-semibold text-gray-700">
-              Total:
-            </span>
-            <span className="text-lg sm:text-xl font-extrabold text-blue-600">
-              ₱
-              {cart
-                .reduce(
-                  (sum, item, idx) =>
-                    sum +
-                    item.price * (editingIdx === idx ? editQty : item.quantity),
-                  0
-                )
-                .toFixed(2)}
-            </span>
+          <div className="flex flex-col gap-1">
+            {appliedDiscount && (
+              <div className="flex justify-between items-center text-xs text-gray-500">
+                <span>Subtotal:</span>
+                <span className="line-through">
+                  ₱
+                  {cart
+                    .reduce(
+                      (sum, item, idx) =>
+                        sum +
+                        item.price * (editingIdx === idx ? editQty : item.quantity),
+                      0
+                    )
+                    .toFixed(2)}
+                </span>
+              </div>
+            )}
+            <div className="flex justify-between items-center">
+              <span className="text-sm sm:text-base font-semibold text-gray-700">
+                Total:
+              </span>
+              <span className="text-lg sm:text-xl font-extrabold text-blue-600">
+                ₱{total.toFixed(2)}
+              </span>
+            </div>
           </div>
         </div>
       </div>
