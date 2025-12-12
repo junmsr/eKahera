@@ -28,8 +28,7 @@ import ChartCard from "../components/ui/Dashboard/ChartCard";
 import DashboardStatsCard from "../components/ui/Dashboard/DashboardStatsCard";
 import DashboardBusinessReport from "../components/ui/Dashboard/DashboardBusinessReport";
 import Button from "../components/common/Button";
-import { BiBell, BiUser, BiRefresh, BiCalendarAlt } from "react-icons/bi";
-import ProfileModal from "../components/modals/ProfileModal";
+import { BiBell, BiRefresh, BiCalendarAlt } from "react-icons/bi";
 import NotificationDropdown from "../components/common/NotificationDropdown";
 import DateRangeFilterModal from "../components/modals/DateRangeFilterModal";
 
@@ -159,7 +158,6 @@ export default function Dashboard() {
   const [chartData, setChartData] = useState([]);
   const [pieData, setPieData] = useState([]);
   const [lowStockProducts, setLowStockProducts] = useState([]);
-  const [showProfileModal, setShowProfileModal] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -1030,18 +1028,6 @@ export default function Dashboard() {
           containerRef={notificationRef}
         />
       </div>
-
-      <button
-        onClick={() => setShowProfileModal(true)}
-        className="flex items-center gap-1 sm:gap-2 bg-white/80 backdrop-blur-sm p-1 sm:p-1.5 sm:px-2 sm:py-2 rounded-lg border border-gray-200/80 hover:bg-white transition-all duration-200 hover:shadow-md hover:scale-[1.02] shrink-0"
-      >
-        <div className="w-7 h-7 sm:w-8 sm:h-8 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-full flex items-center justify-center text-sm font-medium shadow-lg">
-          {user.username?.[0]?.toUpperCase() || "A"}
-        </div>
-        <span className="text-sm font-medium text-gray-700 hidden sm:inline">
-          {user.username || "Admin"}
-        </span>
-      </button>
     </div>
   );
 
@@ -1219,11 +1205,6 @@ export default function Dashboard() {
           <DashboardBusinessReport dateRange={dateRange} />
         </div>
 
-        <ProfileModal
-          isOpen={showProfileModal}
-          onClose={() => setShowProfileModal(false)}
-          userData={user}
-        />
         
         {/* NEW DATE RANGE FILTER MODAL */}
         <DateRangeFilterModal

@@ -14,8 +14,7 @@ import CashLedgerModal from "../components/modals/CashLedgerModal";
 import CheckoutModal from "../components/modals/CheckoutModal";
 import CashPaymentModal from "../components/modals/CashPaymentModal";
 import ScanCustomerCartModal from "../components/modals/ScanCustomerCartModal";
-import ProfileModal from "../components/modals/ProfileModal";
-import { BiReceipt, BiSync, BiUser } from "react-icons/bi";
+import { BiReceipt, BiSync } from "react-icons/bi";
 import AdminReceiptsModal from "../components/modals/AdminReceiptsModal";
 import { MdClose } from "react-icons/md";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
@@ -41,7 +40,6 @@ function POS() {
   const [transactionNumber, setTransactionNumber] = useState("");
   const [transactionId, setTransactionId] = useState(null);
   const [showReceipts, setShowReceipts] = useState(false);
-  const [showProfileModal, setShowProfileModal] = useState(false);
   const skuInputRef = useRef(null);
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [selectedItemIdx, setSelectedItemIdx] = useState(-1);
@@ -296,7 +294,7 @@ function POS() {
   // Handle keyboard navigation for cart items
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (showDiscount || showPriceCheck || showImportCart || showCashLedger || showCheckout || showCashModal || showReceipts || showProfileModal || showLogoutConfirm) {
+      if (showDiscount || showPriceCheck || showImportCart || showCashLedger || showCheckout || showCashModal || showReceipts || showLogoutConfirm) {
         return; // Don't handle keys when modals are open
       }
 
@@ -347,7 +345,7 @@ function POS() {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [cart.length, selectedCartIdx, editingCartItem, editQty, showDiscount, showPriceCheck, showImportCart, showCashLedger, showCheckout, showCashModal, showReceipts, showProfileModal, showLogoutConfirm]);
+  }, [cart.length, selectedCartIdx, editingCartItem, editQty, showDiscount, showPriceCheck, showImportCart, showCashLedger, showCheckout, showCashModal, showReceipts, showLogoutConfirm]);
 
   // Reset selected index when cart changes
   useEffect(() => {
@@ -368,7 +366,6 @@ function POS() {
       showCheckout ||
       showCashModal ||
       showReceipts ||
-      showProfileModal ||
       showLogoutConfirm;
     setScannerPaused(anyModalOpen);
   }, [
@@ -379,7 +376,6 @@ function POS() {
     showCheckout,
     showCashModal,
     showReceipts,
-    showProfileModal,
     showLogoutConfirm,
   ]);
 
@@ -479,7 +475,6 @@ function POS() {
           else if (showCashModal) setShowCashModal(false);
           else if (showCashLedger) setShowCashLedger(false);
           else if (showReceipts) setShowReceipts(false);
-          else if (showProfileModal) setShowProfileModal(false);
           else if (showLogoutConfirm) setShowLogoutConfirm(false);
         },
         allowWhileTyping: true,
@@ -495,7 +490,6 @@ function POS() {
       showCashModal,
       showCashLedger,
       showReceipts,
-      showProfileModal,
       showLogoutConfirm,
       appliedDiscount,
     ]
@@ -668,19 +662,6 @@ function POS() {
         </div>
         <span className="text-sm font-medium text-gray-700 hidden sm:inline">
           (F11) Receipts
-        </span>
-      </button>
-
-      {/* Cashier Profile Button */}
-      <button
-        onClick={() => setShowProfileModal(true)}
-        className="flex items-center gap-2 bg-white/80 backdrop-blur-sm p-1.5 sm:px-3 sm:py-2 rounded-lg border border-gray-200/80"
-      >
-        <div className="w-6 h-6 sm:w-7 sm:h-7 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-full flex items-center justify-center text-sm font-medium shadow-md">
-          {user.username?.[0]?.toUpperCase() || "A"}
-        </div>
-        <span className="text-sm font-medium text-gray-700 hidden sm:inline">
-          {user.username || "Admin"}
         </span>
       </button>
     </div>
@@ -1272,15 +1253,6 @@ function POS() {
           </div>
         </div>
       )}
-      <ProfileModal
-        isOpen={showProfileModal}
-        onClose={() => setShowProfileModal(false)}
-        userData={user}
-        businessData={{
-          business_name: user?.store_name || '',
-          email: user?.email || ''
-        }}
-      />
       <ScanCustomerCartModal
         isOpen={showImportCart}
         onClose={() => setShowImportCart(false)}

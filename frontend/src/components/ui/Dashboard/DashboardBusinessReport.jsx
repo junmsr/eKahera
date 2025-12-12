@@ -89,7 +89,6 @@ const TrendIcon = ({ trend }) => {
 export default function DashboardBusinessReport({ dateRange }) {
   const [profitTrend, setProfitTrend] = useState([]);
   const [paymentMethods, setPaymentMethods] = useState([]);
-  const [productPerformance, setProductPerformance] = useState([]);
   const [keyMetrics, setKeyMetrics] = useState({});
   const [businessStats, setBusinessStats] = useState({
     cashFlow: 0,
@@ -159,14 +158,12 @@ export default function DashboardBusinessReport({ dateRange }) {
           api(`/api/stats/key-metrics${queryString}`),
           api(`/api/stats/profit-trend${queryString}`),
           api(`/api/stats/payment-methods${queryString}`),
-          api(`/api/stats/product-performance${queryString}`),
           api(`/api/stats/business-stats${queryString}`),
         ]);
 
         setKeyMetrics(keyMetricsRes || {});
         setProfitTrend(profitTrendRes || []);
         setPaymentMethods(paymentMethodsRes || []);
-        setProductPerformance(productPerformanceRes || []);
         setBusinessStats(businessStatsRes || {});
       } catch (error) {
         console.error("Error fetching business report data:", error);
@@ -236,51 +233,6 @@ export default function DashboardBusinessReport({ dateRange }) {
         </div>
       </div>
 
-      {/* Product Performance */}
-      <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-md mb-8 w-full">
-        <h3 className="text-xl font-bold text-gray-800 mb-6 select-none">
-          Product Performance
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {(() => {
-            const maxSales = Math.max(
-              ...productPerformance.map((p) => p.sales || 0)
-            );
-            return productPerformance.map((product) => {
-              const progressPercent = maxSales
-                ? Math.round((product.sales / maxSales) * 100)
-                : 0;
-              return (
-                <div
-                  key={product.name}
-                  className="bg-gray-50 rounded-lg p-4 border border-gray-150"
-                >
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="font-semibold text-gray-800 text-sm">
-                      {product.name}
-                    </span>
-                    <TrendIcon trend={product.trend} />
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
-                    <div
-                      className="bg-blue-500 h-2 rounded-full transition-all duration-300"
-                      role="progressbar"
-                      aria-valuenow={progressPercent}
-                      aria-valuemin={0}
-                      aria-valuemax={100}
-                      aria-label={`Sales progress for ${product.name}`}
-                      style={{ width: `${progressPercent}%` }}
-                    ></div>
-                  </div>
-                  <p className="text-sm text-gray-600 font-semibold">
-                    ₱{product.sales.toLocaleString()}
-                  </p>
-                </div>
-              );
-            });
-          })()}
-        </div>
-      </div>
     </section>
   );
 }
