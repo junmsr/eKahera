@@ -156,14 +156,18 @@ export default function Cashiers() {
     try {
       setModalLoading(true);
       const token = sessionStorage.getItem("auth_token");
-      await api(`/api/users/${cashierToDelete.id}`, {
+      console.log('Deleting cashier with ID:', cashierToDelete.id);
+      // The api function automatically adds /api prefix, so we don't need it here
+      await api(`/business/cashiers/${cashierToDelete.id}`, {
         method: "DELETE",
         headers: authHeaders(token),
       });
       setCashiers(cashiers.filter((c) => c.id !== cashierToDelete.id));
       setShowDeleteModal(false);
+      setApiError('');
     } catch (err) {
-      setApiError(err.message || "Failed to delete cashier");
+      console.error('Error deleting cashier:', err);
+      setApiError(err.message || "Failed to delete cashier. Please try again.");
     } finally {
       setModalLoading(false);
     }

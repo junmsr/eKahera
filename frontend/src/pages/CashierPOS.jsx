@@ -11,7 +11,7 @@ import CashLedgerModal from "../components/modals/CashLedgerModal";
 import CheckoutModal from "../components/modals/CheckoutModal";
 import CashPaymentModal from "../components/modals/CashPaymentModal";
 import ScanCustomerCartModal from "../components/modals/ScanCustomerCartModal";
-import ProfileModal from "../components/modals/ProfileModal";
+import ChangePasswordModal from "../components/modals/ChangePasswordModal";
 import RecentReceiptsModal from "../components/modals/RecentReceiptsModal";
 import { BiReceipt, BiUser } from "react-icons/bi";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
@@ -38,7 +38,7 @@ function CashierPOS() {
   const [transactionNumber, setTransactionNumber] = useState("");
   const [transactionId, setTransactionId] = useState(null);
   const [showReceipts, setShowReceipts] = useState(false);
-  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
   const notificationRef = useRef(null);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const touchStartXRef = useRef(null);
@@ -328,7 +328,7 @@ function CashierPOS() {
       showCheckout ||
       showCashModal ||
       showReceipts ||
-      showProfileModal ||
+      showChangePasswordModal ||
       showLogoutConfirm;
     setScannerPaused(anyModalOpen);
   }, [
@@ -339,7 +339,7 @@ function CashierPOS() {
     showCheckout,
     showCashModal,
     showReceipts,
-    showProfileModal,
+    showChangePasswordModal,
     showLogoutConfirm,
   ]);
 
@@ -601,7 +601,7 @@ function CashierPOS() {
       showCashModal,
       showCashLedger,
       showReceipts,
-      showProfileModal,
+      showChangePasswordModal,
       showLogoutConfirm,
     ]
   );
@@ -663,11 +663,12 @@ function CashierPOS() {
         </span>
       </button>
       <button
-        onClick={() => setShowProfileModal(true)}
-        className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-        title="Profile"
+        onClick={() => setShowChangePasswordModal(true)}
+        className="p-2 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-2"
+        title="Change Password"
       >
         <BiUser className="w-5 h-5 text-gray-600" />
+        <span className="text-sm font-medium text-gray-700 hidden sm:inline">Change Password</span>
       </button>
       <button
         onClick={handleLogout}
@@ -1353,9 +1354,9 @@ function CashierPOS() {
           isOpen={showReceipts}
           onClose={() => setShowReceipts(false)}
         />
-        <ProfileModal
-          isOpen={showProfileModal}
-          onClose={() => setShowProfileModal(false)}
+        <ChangePasswordModal
+          isOpen={showChangePasswordModal}
+          onClose={() => setShowChangePasswordModal(false)}
         />
       </div>
     </div>

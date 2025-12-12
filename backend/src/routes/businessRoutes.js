@@ -7,6 +7,7 @@ const {
   updateBusinessProfile,
   createCashier,
   listCashiers,
+  deleteCashier,
   checkDocumentStatus,
   verifyBusinessAccess,
   getBusinessPublic,
@@ -32,6 +33,7 @@ router.put('/profile', authenticate, updateBusinessProfile);
 // Admin-only cashier management (requires documents)
 router.post('/cashiers', authenticate, requireDocuments, authorize(['admin','superadmin']), createCashier);
 router.get('/cashiers', authenticate, requireDocuments, authorize(['admin','superadmin']), listCashiers);
+router.delete('/cashiers/:id', authenticate, requireDocuments, authorize(['admin','superadmin']), deleteCashier);
 
 // Document validation routes
 router.get('/document-status', authenticate, checkDocumentStatus);

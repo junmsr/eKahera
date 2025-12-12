@@ -251,6 +251,51 @@ exports.createCashier = async (req, res) => {
 };
 
 // List cashiers under current admin's business
+// Delete a cashier from the business
+exports.deleteCashier = async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { id } = req.params;
+    const businessId = req.user.businessId;
+    const userId = req.user.userId;
+
+    // Verify the cashier belongs to the admin's business
+    const cashierCheck = await client.query(
+      'SELECT user_id FROM users WHERE user_id = $1 AND business_id = $2 AND role = $3',
+      [id, businessId, 'cashier']
+    );
+
+    if (cashierCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Cashier not found or not authorized' });
+    }
+
+    // Begin transaction
+    await client.query('BEGIN');
+
+    // Delete the cashier
+    await client.query('DELETE FROM users WHERE user_id = $1', [id]);
+
+    // Log the action
+    await logAction({
+      userId: userId,
+      businessId: businessId,
+      action: 'DELETE_CASHIER',
+      details: { cashierId: id },
+      client
+    });
+
+    await client.query('COMMIT');
+    
+    res.status(200).json({ message: 'Cashier deleted successfully' });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error deleting cashier:', error);
+    res.status(500).json({ error: 'Failed to delete cashier' });
+  } finally {
+    client.release();
+  }
+};
+
 exports.listCashiers = async (req, res) => {
   try {
     // Fetch the business_id directly from the database to ensure accuracy

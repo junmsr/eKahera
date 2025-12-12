@@ -551,16 +551,8 @@ export default function InventoryPage() {
     }
   };
 
-  const handleDeleteRequest = (id) => {
-    const product = products.find((p) => String(p.id) === String(id)) || {
-      id: String(id),
-    };
-    setDeleteTarget(product);
-    setShowDeleteModal(true);
-  };
-
-  const handleDeleteProduct = async (id) => {
-    const product = products.find((p) => p.id === id);
+  const handleDeleteProduct = (id) => {
+    const product = products.find((p) => String(p.id) === String(id));
     if (product) {
       setProductToDelete(product);
       setShowDeleteModal(true);
@@ -573,19 +565,29 @@ export default function InventoryPage() {
       setLoading(true);
       setApiError("");
       const token = sessionStorage.getItem("auth_token");
-      await api(`/api/inventory/${productToDelete.id}`, {
-        method: "DELETE",
-        headers: authHeaders(token),
-      });
+      
+      // First try the new API endpoint
+      try {
+        await api(`/api/products/${productToDelete.id}`, {
+          method: "DELETE",
+          headers: authHeaders(token),
+        });
+      } catch (err) {
+        // Fallback to the old endpoint if the first one fails
+        console.log('Trying fallback delete endpoint...');
+        await api(`/api/inventory/${productToDelete.id}`, {
+          method: "DELETE",
+          headers: authHeaders(token),
+        });
+      }
 
-      // Refresh inventory list after deletion
-      setProducts((prev) =>
-        prev.filter((p) => p.id !== productToDelete.id)
-      );
+      // Update the UI by removing the deleted product
+      setProducts(prev => prev.filter(p => p.id !== productToDelete.id));
       setShowDeleteModal(false);
       setProductToDelete(null);
     } catch (err) {
-      setApiError("Failed to delete product");
+      console.error('Error deleting product:', err);
+      setApiError(err.response?.data?.error || "Failed to delete product. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -692,7 +694,7 @@ export default function InventoryPage() {
         search={search}
         onSearchChange={handleSearchChange}
         onEdit={openEditProduct}
-        onDelete={handleDeleteRequest}
+        onDelete={handleDeleteProduct}
         onAddProduct={openAddProduct}
         onStockEntry={openStockEntry}
         categories={categories}

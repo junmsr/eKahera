@@ -1276,6 +1276,10 @@ function POS() {
         isOpen={showProfileModal}
         onClose={() => setShowProfileModal(false)}
         userData={user}
+        businessData={{
+          business_name: user?.store_name || '',
+          email: user?.email || ''
+        }}
       />
       <ScanCustomerCartModal
         isOpen={showImportCart}

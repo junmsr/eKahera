@@ -534,14 +534,6 @@ const ProfileModal = ({ isOpen, onClose, userData, businessData }) => {
       subtitle={
         <div className="flex flex-col gap-2">
           <p>Cashiers can only change their password here</p>
-          <div className="mt-2 pt-2 border-t border-gray-200">
-            <p className="text-xs text-gray-500 flex items-center gap-1">
-              <span className="inline-flex items-center justify-center bg-yellow-100 text-yellow-800 text-xs font-medium px-2 py-0.5 rounded">
-                F11
-              </span>
-              <span>Recent Receipts</span>
-            </p>
-          </div>
         </div>
       }
       footer={
