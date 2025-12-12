@@ -866,26 +866,22 @@ function POS() {
               {/* CartTableCard */}
               <div className="flex-1 min-h-0 max-h-[calc(100vh-280px)]">
                 <CartTableCard
-                  cart={cart}
-                  handleRemove={handleRemove}
-                  handleEditQuantity={(idx, newQuantity) => {
-                    handleEditQuantity(idx, newQuantity);
-                    setEditingCartItem(null);
-                  }}
-                  total={total}
-                  appliedDiscount={appliedDiscount}
-                  selectedIdx={selectedCartIdx}
-                  onSelectRow={setSelectedCartItem}
-                  editingIdx={editingCartItem}
-                  editQty={editQty}
-                  onEditQtyChange={handleEditQtyChange}
-                  onEditComplete={() => setEditingCartItem(null)}
-                  className="flex-1 h-full"
-                  selectedItemIdx={selectedItemIdx}
-                  editingIdx={editingIdx}
-                  setEditingIdx={setEditingIdx}
-                  onSelectItem={setSelectedItemIdx}
-                />
+                cart={cart}
+                handleRemove={handleRemove}
+                handleEditQuantity={(idx, newQuantity) => {
+                  handleEditQuantity(idx, newQuantity);
+                  setEditingCartItem(null);
+                }}
+                total={total}
+                appliedDiscount={appliedDiscount}
+                selectedIdx={selectedCartIdx}
+                onSelectRow={setSelectedCartItem}
+                editingIdx={editingCartItem}
+                editQty={editQty}
+                onEditQtyChange={handleEditQtyChange}
+                onEditComplete={() => setEditingCartItem(null)}
+                className="flex-1 h-full"
+              />
               </div>
 
               {/* Action Buttons */}

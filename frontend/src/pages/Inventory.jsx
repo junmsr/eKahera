@@ -173,8 +173,6 @@ export default function InventoryPage() {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [productToDelete, setProductToDelete] = useState(null);
   // Load inventory and business type from API
   useEffect(() => {

@@ -3,6 +3,7 @@ import Button from "../common/Button";
 import FormField from "../common/FormField";
 import SelectDropdown from "../common/SelectDropdown";
 import BaseModal from "./BaseModal";
+import { useKeyboardShortcuts } from "../../hooks/useKeyboardShortcuts";
 import { api } from "../../lib/api";
 import {
   getRegions,
@@ -357,16 +358,21 @@ const ProfileModal = ({ isOpen, onClose, userData, businessData }) => {
     e.preventDefault();
     setLoading(true);
     setMessage("");
+    setError("");
 
-    if (!form.currentPassword || !form.newPassword || !form.confirmPassword) {
-      setError("Please fill in all password fields.");
-      return;
+    if (activeTab === "security") {
+      if (!profileData.currentPassword || !profileData.newPassword || !profileData.confirmPassword) {
+        setError("Please fill in all password fields.");
+        setLoading(false);
+        return;
+      }
+      if (profileData.newPassword !== profileData.confirmPassword) {
+        setError("New password and confirmation do not match.");
+        setLoading(false);
+        return;
+      }
     }
-    if (form.newPassword !== form.confirmPassword) {
-      setError("New password and confirmation do not match.");
-      return;
-    }
-    setLoading(true);
+
     try {
       const token = sessionStorage.getItem("auth_token");
 
@@ -444,7 +450,7 @@ const ProfileModal = ({ isOpen, onClose, userData, businessData }) => {
 
       setMessage("Profile updated successfully!");
       setTimeout(() => {
-        handleClose();
+        onClose();
         window.location.reload();
       }, 2000);
     } catch (err) {
@@ -455,36 +461,40 @@ const ProfileModal = ({ isOpen, onClose, userData, businessData }) => {
     }
   };
 
-  const handleClose = () => {
-    setProfileData({
-      first_name: userData?.first_name || "",
-      last_name: userData?.last_name || "",
-      email: userData?.email || "",
-      contact_number: userData?.contact_number || "",
-      currentPassword: "",
-      newPassword: "",
-      confirmPassword: "",
-      // Business fields
-      business_name: businessData?.business_name || "",
-      business_email: businessData?.email || "",
-      business_type: businessData?.business_type || "",
-      region: businessData?.region || "",
-      province: businessData?.province || "",
-      city: businessData?.city || "",
-      barangay: businessData?.barangay || "",
-      house_street:
-        businessData?.house_number ||
-        businessData?.business_address ||
-        businessData?.address_line ||
-        "",
-      country: businessData?.country || "Philippines",
-    });
-    setErrors({});
-    setTouched({});
-    setMessage("");
-    setError("");
-  }, [isOpen]);
+  // Reset form when modal opens/closes
+  useEffect(() => {
+    if (isOpen) {
+      setActiveTab("account");
+      setProfileData({
+        first_name: userData?.first_name || "",
+        last_name: userData?.last_name || "",
+        email: userData?.email || "",
+        contact_number: userData?.contact_number || "",
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+        business_name: businessData?.business_name || "",
+        business_email: businessData?.email || "",
+        business_type: businessData?.business_type || "",
+        region: businessData?.region || "",
+        province: businessData?.province || "",
+        city: businessData?.city || "",
+        barangay: businessData?.barangay || "",
+        house_street:
+          businessData?.house_number ||
+          businessData?.business_address ||
+          businessData?.address_line ||
+          "",
+        country: businessData?.country || "Philippines",
+      });
+      setErrors({});
+      setTouched({});
+      setMessage("");
+      setError("");
+    }
+  }, [isOpen, userData, businessData]);
 
+  // Set up keyboard shortcuts
   useKeyboardShortcuts(
     [
       {
@@ -495,12 +505,17 @@ const ProfileModal = ({ isOpen, onClose, userData, businessData }) => {
       },
       {
         key: "enter",
-        action: handleSubmit,
-        enabled: isOpen,
-        allowWhileTyping: true,
+        action: (e) => {
+          if (isOpen) {
+            e.preventDefault();
+            e.stopPropagation();
+            handleSubmit(e);
+          }
+        },
+        enabled: isOpen && activeTab !== "security",
       },
     ],
-    [isOpen, form]
+    [isOpen, onClose, handleSubmit, activeTab]
   );
 
   if (!isOpen) return null;
@@ -648,7 +663,7 @@ const ProfileModal = ({ isOpen, onClose, userData, businessData }) => {
       </div>
 
       {/* Form Content */}
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} className="space-y-6">
         {/* Account Tab */}
         {activeTab === "account" && (
           <div className="space-y-4 animate-in fade-in duration-300">
@@ -1008,8 +1023,23 @@ const ProfileModal = ({ isOpen, onClose, userData, businessData }) => {
               }
             />
           </div>
+        )}
+        <div className="flex justify-end gap-2 pt-4 border-t border-gray-100 mt-6">
+          <Button
+            label="Cancel"
+            variant="secondary"
+            onClick={onClose}
+            disabled={loading}
+            type="button"
+          />
+          <Button
+            label={loading ? "Saving..." : "Save Changes"}
+            variant="primary"
+            type="submit"
+            disabled={loading}
+          />
         </div>
-      </div>
+      </form>
     </BaseModal>
   );
 };
