@@ -8,6 +8,8 @@ function CashPaymentModal({ isOpen, onClose, total, onConfirm }) {
   const [amountReceived, setAmountReceived] = useState("");
   const [showComplete, setShowComplete] = useState(false);
   const [completeData, setCompleteData] = useState(null);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
   const amountInputRef = useRef(null);
   const justSetExactAmount = useRef(false);
 
@@ -58,7 +60,8 @@ function CashPaymentModal({ isOpen, onClose, total, onConfirm }) {
     const receivedRounded = Math.round(received * 100) / 100;
     const totalRounded = Math.round(total * 100) / 100;
     if (receivedRounded < totalRounded) {
-      alert(`Amount received (₱${receivedRounded.toFixed(2)}) must be greater than or equal to total (₱${totalRounded.toFixed(2)}).`);
+      setErrorMessage(`Amount received (₱${receivedRounded.toFixed(2)}) must be greater than or equal to total (₱${totalRounded.toFixed(2)}).`);
+      setShowErrorModal(true);
       return;
     }
     // compute change and show completion modal; delay calling parent onConfirm
@@ -88,6 +91,29 @@ function CashPaymentModal({ isOpen, onClose, total, onConfirm }) {
     }
   };
 
+  // Error modal shortcuts
+  useKeyboardShortcuts(
+    [
+      {
+        key: "escape",
+        action: () => setShowErrorModal(false),
+        enabled: showErrorModal,
+        allowWhileTyping: true,
+      },
+      {
+        key: "enter",
+        action: (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setShowErrorModal(false);
+        },
+        enabled: showErrorModal,
+        allowWhileTyping: true,
+      },
+    ],
+    [showErrorModal]
+  );
+
   // Only set up keyboard shortcuts when not showing completion modal
   // Hooks must be called before any early returns
   useKeyboardShortcuts(
@@ -95,7 +121,7 @@ function CashPaymentModal({ isOpen, onClose, total, onConfirm }) {
       {
         key: "escape",
         action: onClose,
-        enabled: isOpen && !showComplete,
+        enabled: isOpen && !showComplete && !showErrorModal,
         allowWhileTyping: true,
       },
       {
@@ -105,17 +131,17 @@ function CashPaymentModal({ isOpen, onClose, total, onConfirm }) {
           e.stopPropagation();
           handleProceed(e);
         },
-        enabled: isOpen && !showComplete,
+        enabled: isOpen && !showComplete && !showErrorModal,
         allowWhileTyping: true,
       },
       {
         key: "e",
         action: handleExactAmount,
-        enabled: isOpen && !showComplete,
+        enabled: isOpen && !showComplete && !showErrorModal,
         allowWhileTyping: true,
       },
     ],
-    [isOpen, amountReceived, total, showComplete]
+    [isOpen, amountReceived, total, showComplete, showErrorModal]
   );
   
   // Early return if not open and not showing completion modal
@@ -155,6 +181,7 @@ function CashPaymentModal({ isOpen, onClose, total, onConfirm }) {
   );
 
   return (
+    <>
     <BaseModal
       isOpen={isOpen}
       onClose={onClose}
@@ -244,6 +271,34 @@ function CashPaymentModal({ isOpen, onClose, total, onConfirm }) {
         </div>
       </div>
     </BaseModal>
+
+    {/* Error Modal */}
+    <BaseModal
+        isOpen={showErrorModal}
+        onClose={() => setShowErrorModal(false)}
+        title="Insufficient Amount"
+        size="sm"
+        headerIconBgClassName="bg-red-500"
+        icon={
+          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+          </svg>
+        }
+        footer={
+          <Button
+            label="OK (Enter)"
+            variant="primary"
+            onClick={() => setShowErrorModal(false)}
+            className="w-full bg-red-600 hover:bg-red-700"
+          />
+        }
+      >
+        <div className="text-center py-4">
+          <p className="text-gray-700 text-lg font-medium">{errorMessage}</p>
+          <p className="text-gray-500 text-sm mt-2">Please enter a valid amount.</p>
+        </div>
+      </BaseModal>
+    </>
   );
 }
 
