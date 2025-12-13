@@ -969,3 +969,105 @@ exports.updatePassword = async (req, res) => {
     return res.status(500).json({ error: 'Failed to update password' });
   }
 };
+
+/**
+ * Allow an authenticated user to update their profile information.
+ */
+exports.updateProfile = async (req, res) => {
+  const userId = req.user?.userId;
+  const { first_name, last_name, email, contact_number } = req.body || {};
+
+  if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+  // Validate that at least one field is provided
+  if (!first_name && !last_name && !email && !contact_number) {
+    return res.status(400).json({ error: 'At least one field must be provided to update' });
+  }
+
+  try {
+    // Get user info including business_id for logging
+    const userRes = await pool.query(
+      'SELECT business_id, username, email, role FROM users WHERE user_id = $1',
+      [userId]
+    );
+    if (!userRes.rowCount) return res.status(404).json({ error: 'User not found' });
+
+    const user = userRes.rows[0];
+    const businessId = user.business_id || null;
+
+    // Build update query dynamically
+    const updateFields = [];
+    const queryParams = [];
+    let paramIndex = 1;
+
+    if (first_name !== undefined) {
+      updateFields.push(`first_name = $${paramIndex++}`);
+      queryParams.push(first_name.trim());
+    }
+    if (last_name !== undefined) {
+      updateFields.push(`last_name = $${paramIndex++}`);
+      queryParams.push(last_name.trim());
+    }
+    if (email !== undefined) {
+      // Check if email is already taken by another user
+      const emailCheck = await pool.query(
+        'SELECT user_id FROM users WHERE email = $1 AND user_id != $2',
+        [email, userId]
+      );
+      if (emailCheck.rowCount > 0) {
+        return res.status(409).json({ error: 'Email is already in use by another account' });
+      }
+      updateFields.push(`email = $${paramIndex++}`);
+      queryParams.push(email.trim());
+    }
+    if (contact_number !== undefined) {
+      updateFields.push(`contact_number = $${paramIndex++}`);
+      queryParams.push(contact_number ? contact_number.trim() : null);
+    }
+
+    // Always update updated_at
+    updateFields.push(`updated_at = NOW()`);
+    queryParams.push(userId);
+
+    const updateQuery = `
+      UPDATE users
+      SET ${updateFields.join(', ')}
+      WHERE user_id = $${paramIndex}
+      RETURNING user_id, username, first_name, last_name, email, contact_number, updated_at
+    `;
+
+    const result = await pool.query(updateQuery, queryParams);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const updatedUser = result.rows[0];
+    
+    // Log the action
+    const userName = updatedUser.username || updatedUser.email || `User ${userId}`;
+    const actionMessage = `Updated profile information: ${userName}`;
+    
+    await logAction({
+      userId,
+      businessId,
+      action: actionMessage
+    });
+
+    return res.json({
+      message: 'Profile updated successfully',
+      user: {
+        user_id: updatedUser.user_id,
+        username: updatedUser.username,
+        first_name: updatedUser.first_name,
+        last_name: updatedUser.last_name,
+        email: updatedUser.email,
+        contact_number: updatedUser.contact_number,
+        updated_at: updatedUser.updated_at
+      }
+    });
+  } catch (err) {
+    console.error('Failed to update profile', err);
+    return res.status(500).json({ error: 'Failed to update profile' });
+  }
+};

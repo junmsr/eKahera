@@ -238,6 +238,16 @@ const Profile = () => {
   const [password, setPassword] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
+  const [isEditingAccount, setIsEditingAccount] = useState(false);
+  const [editFormData, setEditFormData] = useState({
+    first_name: "",
+    last_name: "",
+    email: "",
+    contact_number: "",
+  });
+  const [saveWarningOpen, setSaveWarningOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
 
   const normalizeDeletion = (del) => {
     if (!del) return { status: "none" };
@@ -501,6 +511,51 @@ const Profile = () => {
     }
   };
 
+  const handleEditAccount = () => {
+    if (profileData?.user) {
+      setEditFormData({
+        first_name: profileData.user.first_name || "",
+        last_name: profileData.user.last_name || "",
+        email: profileData.user.email || "",
+        contact_number: profileData.user.contact_number || "",
+      });
+      setIsEditingAccount(true);
+      setSaveError("");
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditingAccount(false);
+    setEditFormData({
+      first_name: "",
+      last_name: "",
+      email: "",
+      contact_number: "",
+    });
+    setSaveError("");
+  };
+
+  const handleSaveAccount = async () => {
+    setSaving(true);
+    setSaveError("");
+    try {
+      await api("/auth/update-profile", {
+        method: "PUT",
+        body: JSON.stringify(editFormData),
+      });
+      
+      // Refresh profile data
+      await fetchProfileData();
+      setIsEditingAccount(false);
+      setSaveWarningOpen(false);
+    } catch (err) {
+      console.error("Failed to update profile:", err);
+      setSaveError(err.message || "Failed to update profile. Please try again.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   // Header actions with modern styling
   const headerActions = (
     <div className="flex items-center justify-end gap-2 sm:gap-3">
@@ -564,7 +619,65 @@ const Profile = () => {
         isOpen={showChangePasswordModal}
         onClose={() => setShowChangePasswordModal(false)}
       />
-      <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+      {/* Save Warning Modal */}
+      <BaseModal
+        isOpen={saveWarningOpen}
+        onClose={() => setSaveWarningOpen(false)}
+        title="Confirm Save Changes"
+      >
+        <div className="space-y-4">
+          <div className="flex items-start gap-4">
+            <div className="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center flex-shrink-0">
+              <svg
+                className="w-6 h-6 text-yellow-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                Warning: This action cannot be undone
+              </h3>
+              <p className="text-sm text-gray-600">
+                You are about to save changes to your account information. This action cannot be undone. 
+                Are you sure you want to proceed?
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-3 justify-end pt-4 border-t border-gray-200">
+            <Button
+              onClick={() => setSaveWarningOpen(false)}
+              variant="secondary"
+              size="md"
+              disabled={saving}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveAccount}
+              variant="primary"
+              size="md"
+              disabled={saving}
+            >
+              {saving ? "Saving..." : "Yes, Save Changes"}
+            </Button>
+          </div>
+        </div>
+      </BaseModal>
+      {/* Background blur overlay when editing */}
+      {isEditingAccount && (
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40" onClick={handleCancelEdit} />
+      )}
+
+      <div className={`p-4 sm:p-6 space-y-4 sm:space-y-6 ${isEditingAccount ? 'relative z-50' : ''}`}>
         {error && (
           <Card className="bg-gradient-to-br from-red-50 to-orange-50 border-red-200/50">
             <div className="flex items-start gap-4 p-4">
@@ -637,17 +750,36 @@ const Profile = () => {
             {/* Modern Profile Header */}
             <Card className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 border-blue-200/50 overflow-hidden">
               <div className="p-6 md:p-8">
-                <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
-                  <div className="relative">
-                    <div className="w-24 h-24 md:w-32 md:h-32 bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-2xl flex items-center justify-center text-3xl md:text-4xl font-bold shadow-lg ring-4 ring-white/50">
-                      {profileData?.user?.first_name
-                        ?.charAt(0)
-                        ?.toUpperCase() || "A"}
-                    </div>
-                    <div className="absolute -bottom-1 -right-1 w-8 h-8 bg-green-500 rounded-full border-4 border-white flex items-center justify-center">
-                      <div className="w-3 h-3 bg-white rounded-full"></div>
+                <div className="flex flex-col lg:flex-row items-start lg:items-center gap-6 lg:gap-8">
+                  {/* QR Code Section */}
+                  <div className="flex-shrink-0 w-full lg:w-auto">
+                    <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-5 border border-white/50 shadow-lg hover:shadow-xl transition-all duration-300">
+                      <div className="flex flex-col items-center gap-4">
+                        <div className="relative group">
+                          <div className="absolute inset-0 bg-gradient-to-br from-blue-400 via-indigo-500 to-purple-500 rounded-2xl blur-xl opacity-30 group-hover:opacity-40 transition-opacity duration-300"></div>
+                          <div className="relative bg-white p-3 rounded-xl shadow-md">
+                            <img
+                              src={getQrCodeData(profileData).qrSrc}
+                              alt="Store Entry QR Code"
+                              className="w-[180px] h-[180px] md:w-[200px] md:h-[200px] rounded-lg"
+                            />
+                          </div>
+                        </div>
+                        <Button
+                          variant="primary"
+                          size="md"
+                          icon={<DownloadIcon />}
+                          iconPosition="left"
+                          onClick={handleDownloadQr}
+                          className="w-full min-w-[200px] shadow-md hover:shadow-lg transition-all duration-200"
+                        >
+                          Download QR Code
+                        </Button>
+                      </div>
                     </div>
                   </div>
+                  
+                  {/* Store Information Section */}
                   <div className="flex-1 min-w-0">
                     <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
                       {profileData?.business?.business_name || "Admin User"}
@@ -675,20 +807,31 @@ const Profile = () => {
             </Card>
 
             {/* Admin Information */}
-            <Card className="bg-white shadow-sm">
-              <div className="p-6 md:p-8">
-                <div className="flex items-center mb-6 pb-4 border-b border-gray-200">
-                  <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-xl flex items-center justify-center mr-3">
-                    <UserIcon />
+            <Card className={`bg-white shadow-sm ${isEditingAccount ? 'relative z-50 shadow-2xl' : ''}`}>
+              <div className="p-6 md:p-8" onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-200">
+                  <div className="flex items-center">
+                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-xl flex items-center justify-center mr-3">
+                      <UserIcon />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold text-gray-900">
+                        Account Information
+                      </h2>
+                      <p className="text-sm text-gray-500">
+                        Personal details and credentials
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h2 className="text-xl font-bold text-gray-900">
-                      Account Information
-                    </h2>
-                    <p className="text-sm text-gray-500">
-                      Personal details and credentials
-                    </p>
-                  </div>
+                  {!isEditingAccount && (
+                    <button
+                      onClick={handleEditAccount}
+                      className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                      title="Edit Account Information"
+                    >
+                      <EditIcon />
+                    </button>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -697,42 +840,87 @@ const Profile = () => {
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
                         First Name
                       </label>
-                      <div className="flex items-center gap-3 bg-gradient-to-r from-gray-50 to-gray-100/50 px-4 py-3 rounded-xl border border-gray-200/50 group-hover:border-blue-300 transition-colors">
-                        <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                          <UserIcon className="text-blue-600" />
+                      {isEditingAccount ? (
+                        <div className="flex items-center gap-3 bg-white px-4 py-3 rounded-xl border-2 border-blue-300">
+                          <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <UserIcon className="text-blue-600" />
+                          </div>
+                          <input
+                            type="text"
+                            value={editFormData.first_name}
+                            onChange={(e) => setEditFormData({ ...editFormData, first_name: e.target.value })}
+                            className="text-gray-900 font-medium flex-1 outline-none bg-transparent"
+                            placeholder="First Name"
+                          />
                         </div>
-                        <span className="text-gray-900 font-medium flex-1">
-                          {profileData?.user?.first_name || "N/A"}
-                        </span>
-                      </div>
+                      ) : (
+                        <div className="flex items-center gap-3 bg-gradient-to-r from-gray-50 to-gray-100/50 px-4 py-3 rounded-xl border border-gray-200/50 group-hover:border-blue-300 transition-colors">
+                          <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <UserIcon className="text-blue-600" />
+                          </div>
+                          <span className="text-gray-900 font-medium flex-1">
+                            {profileData?.user?.first_name || "N/A"}
+                          </span>
+                        </div>
+                      )}
                     </div>
 
                     <div className="group">
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
                         Last Name
                       </label>
-                      <div className="flex items-center gap-3 bg-gradient-to-r from-gray-50 to-gray-100/50 px-4 py-3 rounded-xl border border-gray-200/50 group-hover:border-blue-300 transition-colors">
-                        <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                          <UserIcon className="text-blue-600" />
+                      {isEditingAccount ? (
+                        <div className="flex items-center gap-3 bg-white px-4 py-3 rounded-xl border-2 border-blue-300">
+                          <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <UserIcon className="text-blue-600" />
+                          </div>
+                          <input
+                            type="text"
+                            value={editFormData.last_name}
+                            onChange={(e) => setEditFormData({ ...editFormData, last_name: e.target.value })}
+                            className="text-gray-900 font-medium flex-1 outline-none bg-transparent"
+                            placeholder="Last Name"
+                          />
                         </div>
-                        <span className="text-gray-900 font-medium flex-1">
-                          {profileData?.user?.last_name || "N/A"}
-                        </span>
-                      </div>
+                      ) : (
+                        <div className="flex items-center gap-3 bg-gradient-to-r from-gray-50 to-gray-100/50 px-4 py-3 rounded-xl border border-gray-200/50 group-hover:border-blue-300 transition-colors">
+                          <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <UserIcon className="text-blue-600" />
+                          </div>
+                          <span className="text-gray-900 font-medium flex-1">
+                            {profileData?.user?.last_name || "N/A"}
+                          </span>
+                        </div>
+                      )}
                     </div>
 
                     <div className="group">
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
                         Email Address
                       </label>
-                      <div className="flex items-center gap-3 bg-gradient-to-r from-gray-50 to-gray-100/50 px-4 py-3 rounded-xl border border-gray-200/50 group-hover:border-blue-300 transition-colors">
-                        <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                          <EmailIcon className="text-blue-600" />
+                      {isEditingAccount ? (
+                        <div className="flex items-center gap-3 bg-white px-4 py-3 rounded-xl border-2 border-blue-300">
+                          <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <EmailIcon className="text-blue-600" />
+                          </div>
+                          <input
+                            type="email"
+                            value={editFormData.email}
+                            onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
+                            className="text-gray-900 font-medium flex-1 outline-none bg-transparent"
+                            placeholder="Email Address"
+                          />
                         </div>
-                        <span className="text-gray-900 font-medium flex-1 truncate">
-                          {profileData?.user?.email || "N/A"}
-                        </span>
-                      </div>
+                      ) : (
+                        <div className="flex items-center gap-3 bg-gradient-to-r from-gray-50 to-gray-100/50 px-4 py-3 rounded-xl border border-gray-200/50 group-hover:border-blue-300 transition-colors">
+                          <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <EmailIcon className="text-blue-600" />
+                          </div>
+                          <span className="text-gray-900 font-medium flex-1 truncate">
+                            {profileData?.user?.email || "N/A"}
+                          </span>
+                        </div>
+                      )}
                     </div>
 
                     <div className="group">
@@ -767,14 +955,29 @@ const Profile = () => {
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
                         Contact Number
                       </label>
-                      <div className="flex items-center gap-3 bg-gradient-to-r from-gray-50 to-gray-100/50 px-4 py-3 rounded-xl border border-gray-200/50 group-hover:border-blue-300 transition-colors">
-                        <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                          <PhoneIcon className="text-green-600" />
+                      {isEditingAccount ? (
+                        <div className="flex items-center gap-3 bg-white px-4 py-3 rounded-xl border-2 border-blue-300">
+                          <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <PhoneIcon className="text-green-600" />
+                          </div>
+                          <input
+                            type="tel"
+                            value={editFormData.contact_number}
+                            onChange={(e) => setEditFormData({ ...editFormData, contact_number: e.target.value })}
+                            className="text-gray-900 font-medium flex-1 outline-none bg-transparent"
+                            placeholder="Contact Number"
+                          />
                         </div>
-                        <span className="text-gray-900 font-medium flex-1">
-                          {profileData?.user?.contact_number || "N/A"}
-                        </span>
-                      </div>
+                      ) : (
+                        <div className="flex items-center gap-3 bg-gradient-to-r from-gray-50 to-gray-100/50 px-4 py-3 rounded-xl border border-gray-200/50 group-hover:border-blue-300 transition-colors">
+                          <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <PhoneIcon className="text-green-600" />
+                          </div>
+                          <span className="text-gray-900 font-medium flex-1">
+                            {profileData?.user?.contact_number || "N/A"}
+                          </span>
+                        </div>
+                      )}
                     </div>
 
                     <div className="group">
@@ -807,54 +1010,33 @@ const Profile = () => {
                   </div>
                 </div>
 
-                {/* Store Entry QR for Customers (Adopted styling from new-nigga-dave) */}
-                <div className="mt-8 pt-8 border-t border-gray-200">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 text-white rounded-xl flex items-center justify-center">
-                      <QRIcon />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-bold text-gray-900">
-                        Store Entry QR Code
-                      </h3>
-                      <p className="text-sm text-gray-500">
-                        Share this QR code for customer self-checkout
-                      </p>
+                {isEditingAccount && (
+                  <div className="mt-6 pt-6 border-t border-gray-200">
+                    {saveError && (
+                      <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                        {saveError}
+                      </div>
+                    )}
+                    <div className="flex flex-wrap gap-3 justify-end">
+                      <Button
+                        onClick={handleCancelEdit}
+                        variant="secondary"
+                        size="md"
+                        disabled={saving}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={() => setSaveWarningOpen(true)}
+                        variant="primary"
+                        size="md"
+                        disabled={saving}
+                      >
+                        {saving ? "Saving..." : "Save Changes"}
+                      </Button>
                     </div>
                   </div>
-                  <div className="bg-gradient-to-br from-gray-50 to-blue-50/30 rounded-2xl p-6 border border-gray-200/50">
-                    <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
-                      <div className="relative">
-                        <div className="absolute inset-0 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-2xl blur-xl opacity-20"></div>
-                        <img
-                          src={getQrCodeData(profileData).qrSrc}
-                          alt="Store Entry QR"
-                          className="relative w-[260px] h-[260px] border-4 border-white rounded-2xl bg-white shadow-xl"
-                        />
-                      </div>
-                      <div className="flex-1 space-y-4 min-w-0">
-                        <div>
-                          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-                            QR Code URL
-                          </label>
-                          <div className="bg-white px-4 py-3 rounded-xl border border-gray-200 break-all text-sm text-gray-700 font-mono">
-                            {getQrCodeData(profileData).url}
-                          </div>
-                        </div>
-                        <Button
-                          variant="primary"
-                          size="md"
-                          icon={<DownloadIcon />}
-                          iconPosition="left"
-                          onClick={handleDownloadQr}
-                          className="w-full md:w-auto"
-                        >
-                          Download QR Code
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                )}
               </div>
             </Card>
 
