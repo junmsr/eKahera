@@ -19,6 +19,7 @@ function CartTableCard({
   editQty = 1,
   onEditQtyChange,
   onEditComplete,
+  onStartEdit,
 }) {
 
   // Handle row click to select item
@@ -262,7 +263,8 @@ function CartTableCard({
                           onClick={(e) => {
                             e.stopPropagation();
                             onSelectRow?.(idx);
-                            onEditQtyChange(item.quantity);
+                            onEditQtyChange?.(item.quantity);
+                            onStartEdit?.(idx);
                           }}
                           className={`p-1.5 rounded-md transition-all duration-200 ${selectedIdx === idx ? 'bg-blue-100 text-blue-700 border-blue-200' : 'bg-blue-50 text-blue-600 hover:bg-blue-100 border-blue-200'} border`}
                           title="Edit (E)"

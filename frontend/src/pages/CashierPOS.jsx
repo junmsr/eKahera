@@ -256,8 +256,8 @@ function CashierPOS() {
   // Handle keyboard navigation for cart items
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (showDiscount || showPriceCheck || showImportCart || showCashLedger || showCheckout || showCashModal || showReceipts || showProfileModal || showLogoutConfirm) {
-        return; // Don't handle keys when modals are open
+      if (showDiscount || showPriceCheck || showImportCart || showCashLedger || showCheckout || showCashModal || showReceipts || showChangePasswordModal || showLogoutConfirm) {
+        return; // Don't handle keys when modals are open to prevent conflicts
       }
 
       switch (e.key) {
@@ -307,7 +307,7 @@ function CashierPOS() {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [cart.length, selectedCartIdx, editingCartItem, editQty]);
+  }, [cart.length, selectedCartIdx, editingCartItem, editQty, showDiscount, showPriceCheck, showImportCart, showCashLedger, showCheckout, showCashModal, showReceipts, showChangePasswordModal, showLogoutConfirm]);
 
   // Reset selected index when cart changes
   useEffect(() => {
@@ -921,6 +921,7 @@ function CashierPOS() {
                   editQty={editQty}
                   onEditQtyChange={handleEditQtyChange}
                   onEditComplete={() => setEditingCartItem(null)}
+                  onStartEdit={(idx) => setEditingCartItem(idx)}
                   className="flex-1 h-full"
                 />
               </div>

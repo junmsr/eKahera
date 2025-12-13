@@ -861,6 +861,7 @@ function POS() {
                 editQty={editQty}
                 onEditQtyChange={handleEditQtyChange}
                 onEditComplete={() => setEditingCartItem(null)}
+                onStartEdit={(idx) => setEditingCartItem(idx)}
                 className="flex-1 h-full"
               />
               </div>
