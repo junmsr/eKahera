@@ -272,7 +272,7 @@ function CartTableCard({
                         >
                           <div className="flex items-center gap-1">
                             {(
-                              <span className="text-[10px] font-bold text-blue-700 bg-blue-100 border border-blue-200 px-1.5 py-0.5 rounded">E</span>
+                              <span className="hidden sm:inline-block text-[10px] font-bold text-blue-700 bg-blue-100 border border-blue-200 px-1.5 py-0.5 rounded">E</span>
                             )}
                             <EditIcon />
                           </div>
@@ -288,7 +288,7 @@ function CartTableCard({
                         >
                           <div className="flex items-center gap-1">
                             {(
-                              <span className="text-[10px] font-bold text-red-700 bg-red-100 border border-red-200 px-1.5 py-0.5 rounded">D</span>
+                              <span className="hidden sm:inline-block text-[10px] font-bold text-red-700 bg-red-100 border border-red-200 px-1.5 py-0.5 rounded">D</span>
                             )}
                             <DeleteIcon />
                           </div>

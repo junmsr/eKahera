@@ -19,7 +19,7 @@ import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 const ButtonLabel = ({ text, shortcut, variant = "secondary" }) => (
   <div className="flex items-center gap-2">
     <span>{text}</span>
-    <span className={`text-xs font-bold px-1.5 py-0.5 rounded border ${
+    <span className={`hidden sm:inline-block text-xs font-bold px-1.5 py-0.5 rounded border ${
       variant === "primary" 
         ? "bg-white/20 border-white/40 text-white" 
         : "bg-gray-100 border-gray-300 text-gray-600"
@@ -673,7 +673,7 @@ function CashierPOS() {
         <div className="relative">
           <BiReceipt className="w-5 h-5 text-blue-600" />
         </div>
-        <span className="bg-blue-50 text-blue-700 border border-blue-200 text-xs font-bold px-1.5 py-0.5 rounded">
+        <span className="hidden sm:inline-block bg-blue-50 text-blue-700 border border-blue-200 text-xs font-bold px-1.5 py-0.5 rounded">
           F11
         </span>
         <span className="text-sm font-medium text-gray-700 hidden sm:inline">
@@ -687,7 +687,7 @@ function CashierPOS() {
       >
         <BiUser className="w-5 h-5 text-gray-600" />
         <span className="text-sm font-medium text-gray-700 hidden sm:inline">Change Password</span>
-        <span className="bg-gray-100 text-gray-600 border border-gray-200 text-xs font-bold px-1.5 py-0.5 rounded">F9</span>
+        <span className="hidden sm:inline-block bg-gray-100 text-gray-600 border border-gray-200 text-xs font-bold px-1.5 py-0.5 rounded">F9</span>
       </button>
       <button
         onClick={handleLogout}
@@ -710,7 +710,7 @@ function CashierPOS() {
           </svg>
         </div>
         <span className="text-sm font-medium text-gray-700 hidden sm:inline">Logout</span>
-        <span className="bg-red-100 text-red-700 border border-red-200 text-[11px] font-bold rounded px-1.5 py-0.5">
+        <span className="hidden sm:inline-block bg-red-100 text-red-700 border border-red-200 text-[11px] font-bold rounded px-1.5 py-0.5">
           F12
         </span>
       </button>
