@@ -21,6 +21,7 @@ export default function Cashiers() {
   const [modalLoading, setModalLoading] = useState(false);
   const [form, setForm] = useState({
     name: "",
+    fullName: "",
     password: "",
     number: "",
     email: "",
@@ -184,7 +185,7 @@ export default function Cashiers() {
     try {
       setModalLoading(true);
       const token = sessionStorage.getItem("auth_token");
-      console.log('Deleting cashier with ID:', cashierToDelete.id);
+      console.log("Deleting cashier with ID:", cashierToDelete.id);
       // The api function automatically adds /api prefix, so we don't need it here
       await api(`/business/cashiers/${cashierToDelete.id}`, {
         method: "DELETE",
@@ -192,9 +193,9 @@ export default function Cashiers() {
       });
       setCashiers(cashiers.filter((c) => c.id !== cashierToDelete.id));
       setShowDeleteModal(false);
-      setApiError('');
+      setApiError("");
     } catch (err) {
-      console.error('Error deleting cashier:', err);
+      console.error("Error deleting cashier:", err);
       setApiError(err.message || "Failed to delete cashier. Please try again.");
     } finally {
       setModalLoading(false);
@@ -665,7 +666,11 @@ export default function Cashiers() {
               >
                 Cancel
               </Button>
-              <Button onClick={confirmDelete} variant="danger" loading={modalLoading}>
+              <Button
+                onClick={confirmDelete}
+                variant="danger"
+                loading={modalLoading}
+              >
                 Delete
               </Button>
             </div>

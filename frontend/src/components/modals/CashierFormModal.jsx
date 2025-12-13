@@ -32,7 +32,14 @@ export default function CashierFormModal({
 
   useEffect(() => {
     if (initialData) {
-      setForm({ ...initialData, password: initialData.password || "" });
+      setForm({
+        name: initialData.name || "",
+        fullName: initialData.fullName || "",
+        password: initialData.password || "",
+        number: initialData.number || "",
+        email: initialData.email || "",
+        status: initialData.status || "ACTIVE",
+      });
     } else {
       // When used for "Add", there's no initialData, so we use the default.
       setForm(defaultInitialData);
@@ -40,7 +47,13 @@ export default function CashierFormModal({
   }, [initialData]);
 
   // Reset form state when modal is closed
-  useEffect(() => { if (!isOpen) { setForm(initialData || defaultInitialData); setErrors({}); setTouched({}); } }, [isOpen, initialData]);
+  useEffect(() => {
+    if (!isOpen) {
+      setForm(defaultInitialData);
+      setErrors({});
+      setTouched({});
+    }
+  }, [isOpen, initialData]);
 
   // Validation rules
   const validateField = (name, value) => {
@@ -265,7 +278,7 @@ export default function CashierFormModal({
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Name Field */}
         <FormField
-          label="User Name"
+          label="Full Name"
           name="name"
           value={form.name}
           onChange={handleChange}
