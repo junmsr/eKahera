@@ -101,6 +101,18 @@ export async function api(path, options = {}, returnRawResponse = false) {
       throw new Error("You do not have permission to perform this action.");
     } else if (res.status === 404) {
       throw new Error("The requested resource was not found.");
+    } else if (res.status === 409) {
+      // Conflict - typically for duplicate resources (e.g., duplicate SKU)
+      try {
+        const errorJson = JSON.parse(errorText);
+        const error = new Error(errorJson?.message || errorJson?.error || "A resource with this information already exists.");
+        error.response = { status: 409, data: errorJson };
+        error.data = errorJson;
+        throw error;
+      } catch (e) {
+        if (e.response) throw e; // Re-throw if we already set response
+        throw new Error("A resource with this information already exists.");
+      }
     } else if (res.status === 500) {
       throw new Error("Server error occurred. Please try again later.");
     }
@@ -110,8 +122,12 @@ export async function api(path, options = {}, returnRawResponse = false) {
       const errorJson = JSON.parse(errorText);
       const msg =
         errorJson?.error || errorJson?.message || JSON.stringify(errorJson);
-      throw new Error(`${res.status} ${res.statusText}: ${msg}`);
+      const error = new Error(`${res.status} ${res.statusText}: ${msg}`);
+      error.response = { status: res.status, data: errorJson };
+      error.data = errorJson;
+      throw error;
     } catch (e) {
+      if (e.response) throw e; // Re-throw if we already set response
       // If the body looks like HTML (e.g. Vite/Express default page), hide raw HTML.
       const bodySnippet = /<[^>]+>/.test(errorText)
         ? "Server returned an HTML error page"

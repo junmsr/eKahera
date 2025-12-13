@@ -66,9 +66,30 @@ const createProduct = async (req, res) => {
     const createdBy = req.user?.userId || null;
     const cost_price = Number(body.cost_price ?? 0);
     const selling_price = Number(body.selling_price ?? body.price ?? 0);
-    const sku = (body.sku || `SKU-${Date.now()}`).toString();
+    const sku = (body.sku || `SKU-${Date.now()}`).toString().trim();
     const initialQuantity = Number(body.quantity ?? 0);
     const description = body.description || '';
+    const low_stock_alert = body.low_stock_level !== undefined ? Number(body.low_stock_level) : (body.low_stock_alert !== undefined ? Number(body.low_stock_alert) : 10);
+
+    // Check if SKU already exists for this business
+    const existingSkuCheck = await client.query(
+      'SELECT product_id, product_name, sku FROM products WHERE sku = $1 AND business_id = $2 LIMIT 1',
+      [sku, businessId]
+    );
+    
+    if (existingSkuCheck.rowCount > 0) {
+      await client.query('ROLLBACK');
+      const existingProduct = existingSkuCheck.rows[0];
+      return res.status(409).json({ 
+        error: 'Product with this SKU already exists',
+        message: `A product with SKU "${sku}" already exists: ${existingProduct.product_name}`,
+        existingProduct: {
+          product_id: existingProduct.product_id,
+          product_name: existingProduct.product_name,
+          sku: existingProduct.sku
+        }
+      });
+    }
 
     // Resolve category: prefer product_category_id, else create/find by category/category_name
     let categoryId = body.product_category_id ?? null;
@@ -86,8 +107,8 @@ const createProduct = async (req, res) => {
 
     // Insert product
     const prodRes = await client.query(
-      'INSERT INTO products (product_category_id, product_name, description, cost_price, selling_price, sku, created_by_user_id, business_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
-      [categoryId, product_name, description, cost_price, selling_price, sku, createdBy, businessId]
+      'INSERT INTO products (product_category_id, product_name, description, cost_price, selling_price, sku, created_by_user_id, business_id, low_stock_alert) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *',
+      [categoryId, product_name, description, cost_price, selling_price, sku, createdBy, businessId, low_stock_alert]
     );
     const product = prodRes.rows[0];
 
@@ -256,21 +277,38 @@ const addStockBySku = async (req, res) => {
 };
 
 
-async function _getLowStockProducts(businessId, threshold = 10) {
-  const result = await pool.query(
-    `SELECT p.product_id, p.product_name, i.quantity_in_stock
-     FROM products p
-     JOIN inventory i ON p.product_id = i.product_id
-     WHERE p.business_id = $1 AND i.quantity_in_stock <= $2
-     ORDER BY i.quantity_in_stock ASC`,
-    [businessId, threshold]
-  );
+async function _getLowStockProducts(businessId, threshold = null) {
+  // If threshold is provided, use it for backward compatibility
+  // Otherwise, use each product's individual low_stock_alert value
+  let query, params;
+  
+  if (threshold !== null) {
+    query = `
+      SELECT p.product_id, p.product_name, i.quantity_in_stock, p.low_stock_alert
+      FROM products p
+      JOIN inventory i ON p.product_id = i.product_id
+      WHERE p.business_id = $1 AND i.quantity_in_stock <= $2
+      ORDER BY i.quantity_in_stock ASC`;
+    params = [businessId, threshold];
+  } else {
+    query = `
+      SELECT p.product_id, p.product_name, i.quantity_in_stock, p.low_stock_alert
+      FROM products p
+      JOIN inventory i ON p.product_id = i.product_id
+      WHERE p.business_id = $1 
+        AND i.quantity_in_stock <= COALESCE(p.low_stock_alert, 10)
+      ORDER BY i.quantity_in_stock ASC`;
+    params = [businessId];
+  }
+  
+  const result = await pool.query(query, params);
   return result.rows;
 }
 
 const getLowStockProducts = async (req, res) => {
   try {
-    const threshold = req.query.threshold || 10;
+    // If threshold is provided in query, use it; otherwise use each product's low_stock_alert
+    const threshold = req.query.threshold ? Number(req.query.threshold) : null;
     const businessId = req.user?.businessId || null;
 
     if (!businessId) {
@@ -291,7 +329,8 @@ const sendLowStockAlert = async (req, res) => {
       return res.status(400).json({ error: 'Business ID is required' });
     }
 
-    const lowStockProducts = await _getLowStockProducts(businessId, 10);
+    // Use each product's individual low_stock_alert value
+    const lowStockProducts = await _getLowStockProducts(businessId, null);
 
     if (lowStockProducts.length === 0) {
       return res.json({ message: 'No low stock products to report.' });
@@ -322,7 +361,7 @@ const updateProduct = async (req, res) => {
     const userId = req.user?.userId || null;
 
     // Fetch the current product details for logging purposes
-    const currentProductResult = await client.query('SELECT product_name, sku, description, cost_price, selling_price, product_category_id FROM products WHERE product_id = $1 AND business_id = $2', [id, businessId]);
+    const currentProductResult = await client.query('SELECT product_name, sku, description, cost_price, selling_price, product_category_id, low_stock_alert FROM products WHERE product_id = $1 AND business_id = $2', [id, businessId]);
     if (currentProductResult.rowCount === 0) {
       await client.query('ROLLBACK');
       return res.status(404).json({ error: 'Product not found or you do not have permission to update it.' });
@@ -336,6 +375,7 @@ const updateProduct = async (req, res) => {
     const selling_price = body.selling_price !== undefined ? Number(body.selling_price) : currentProduct.selling_price;
     const sku = body.sku !== undefined ? (body.sku || `SKU-${Date.now()}`).toString() : currentProduct.sku;
     const description = body.description !== undefined ? body.description : currentProduct.description;
+    const low_stock_alert = body.low_stock_level !== undefined ? Number(body.low_stock_level) : (body.low_stock_alert !== undefined ? Number(body.low_stock_alert) : currentProduct.low_stock_alert ?? 10);
     let categoryId = body.product_category_id ?? currentProduct.product_category_id;
 
     const rawCategoryName = body.category ?? body.category_name ?? body.product_category_name;
@@ -378,6 +418,10 @@ const updateProduct = async (req, res) => {
       updateFields.push(`sku = $${paramCount++}`);
       updateValues.push(sku);
     }
+    if (low_stock_alert !== (currentProduct.low_stock_alert ?? 10)) {
+      updateFields.push(`low_stock_alert = $${paramCount++}`);
+      updateValues.push(low_stock_alert);
+    }
 
     if (updateFields.length === 0) {
       await client.query('ROLLBACK');
@@ -418,6 +462,9 @@ const updateProduct = async (req, res) => {
     }
     if (sku !== currentProduct.sku) {
       changes.push(`SKU from "${currentProduct.sku}" to "${updatedProduct.sku}"`);
+    }
+    if (low_stock_alert !== (currentProduct.low_stock_alert ?? 10)) {
+      changes.push(`low stock alert from "${currentProduct.low_stock_alert ?? 10}" to "${updatedProduct.low_stock_alert ?? 10}"`);
     }
     if (categoryId !== currentProduct.product_category_id) {
         // Need to fetch category names for better logging

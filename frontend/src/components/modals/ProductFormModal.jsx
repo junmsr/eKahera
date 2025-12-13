@@ -15,6 +15,7 @@ export default function ProductFormModal({
   categories,
   onSubmit,
   loading,
+  error,
 }) {
   const [scannerOpen, setScannerOpen] = useState(false);
   const [scannerPaused, setScannerPaused] = useState(false);
@@ -150,6 +151,48 @@ export default function ProductFormModal({
   const profitMargin =
     costPrice > 0 ? ((sellingPrice - costPrice) / costPrice) * 100 : 0;
 
+  // Validation function to check if all required fields are filled
+  const isFormValid = () => {
+    // Required fields for adding a product
+    const sku = (productForm.sku?.trim() || "").trim();
+    const name = (productForm.name?.trim() || "").trim();
+    const description = (productForm.description?.trim() || "").trim(); // Optional
+    const category = productForm.category || "";
+    const quantity = productForm.quantity;
+    const costPrice = Number(productForm.cost_price);
+    const sellingPrice = Number(productForm.selling_price);
+
+    // Check if all required text fields have values (description is optional)
+    if (!sku || !name || !category) {
+      return false;
+    }
+
+    // If category is "Others", customCategory is also required
+    if (category === "Others") {
+      const customCategory = (productForm.customCategory?.trim() || "").trim();
+      if (!customCategory) {
+        return false;
+      }
+    }
+
+    // For new products, quantity must be provided and >= 0
+    if (!editingProduct) {
+      const qty = Number(quantity);
+      if (quantity === "" || quantity === null || quantity === undefined || isNaN(qty) || qty < 0) {
+        return false;
+      }
+    }
+
+    // Cost price and selling price must be valid numbers > 0
+    if (isNaN(costPrice) || costPrice <= 0 || isNaN(sellingPrice) || sellingPrice <= 0) {
+      return false;
+    }
+
+    return true;
+  };
+
+  const formIsValid = isFormValid();
+
   const footerContent = (
     <div className="flex gap-3 w-full">
       <Button
@@ -163,7 +206,7 @@ export default function ProductFormModal({
         label={editingProduct ? "Update Product" : "Add Product"}
         variant="primary"
         type="submit"
-        disabled={loading}
+        disabled={loading || !formIsValid}
         className="flex-1"
         icon={!editingProduct ? <MdAdd className="w-5 h-5" /> : undefined}
         iconPosition="left"
@@ -186,6 +229,56 @@ export default function ProductFormModal({
       footer={footerContent}
       contentClassName="space-y-6"
     >
+      {error && (
+        <div className="bg-red-50 border-l-4 border-red-500 rounded-lg p-4 flex items-start gap-3 mb-4 shadow-sm">
+          <div className="flex-shrink-0">
+            <svg
+              className="w-5 h-5 text-red-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
+              />
+            </svg>
+          </div>
+          <div className="flex-1">
+            <h3 className="text-sm font-semibold text-red-800 mb-1">
+              {error.includes("already exists") || error.includes("SKU") 
+                ? "Duplicate Product" 
+                : "Error"}
+            </h3>
+            <p className="text-sm text-red-700">
+              {error}
+            </p>
+            {error.includes("already exists") && (
+              <p className="text-xs text-red-600 mt-2 italic">
+                Please use a different SKU code or update the existing product instead.
+              </p>
+            )}
+          </div>
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              if (onChange) {
+                onChange({ target: { name: 'clearError', value: '' } });
+              }
+            }}
+            className="flex-shrink-0 text-red-400 hover:text-red-600 transition-colors"
+            aria-label="Close error"
+            type="button"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      )}
       <form onSubmit={handleFormSubmit} className="space-y-6">
         {/* SKU Section */}
         <div className="bg-gradient-to-br from-blue-50/40 to-indigo-50/40 rounded-2xl p-5 border border-blue-100/50 space-y-4">
@@ -279,8 +372,7 @@ export default function ProductFormModal({
             name="description"
             value={productForm.description}
             onChange={onChange}
-            placeholder="Product description or notes"
-            required
+            placeholder="Product description or notes (optional)"
           />
           <div>
             <label className="block mb-2 text-sm font-semibold text-gray-700">

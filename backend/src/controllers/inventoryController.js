@@ -35,7 +35,8 @@ exports.getStock = async (req, res) => {
         p.cost_price,
         p.selling_price,
         COALESCE(i.quantity_in_stock, 0) as quantity,
-        p.sku
+        p.sku,
+        COALESCE(p.low_stock_alert, 10) as low_stock_level
        FROM products p
        LEFT JOIN product_categories pc ON pc.product_category_id = p.product_category_id
        LEFT JOIN inventory i ON i.product_id = p.product_id AND i.business_id = p.business_id
@@ -117,7 +118,7 @@ exports.deleteProduct = async (req, res) => {
 
 exports.updateProduct = async (req, res) => {
   const { product_id } = req.params;
-  const { product_name, cost_price, selling_price, sku, category, description } = req.body;
+  const { product_name, cost_price, selling_price, sku, category, description, low_stock_level, low_stock_alert } = req.body;
   
   const client = await pool.connect();
   try {
@@ -141,14 +142,22 @@ exports.updateProduct = async (req, res) => {
       }
     }
     
+    // Get current product to check low_stock_alert
+    const currentProductResult = await client.query(
+      'SELECT low_stock_alert FROM products WHERE product_id = $1 AND business_id = $2',
+      [product_id, req.user?.businessId || null]
+    );
+    const currentLowStockAlert = currentProductResult.rows[0]?.low_stock_alert ?? 10;
+    const newLowStockAlert = low_stock_level !== undefined ? Number(low_stock_level) : (low_stock_alert !== undefined ? Number(low_stock_alert) : currentLowStockAlert);
+    
     // Update product
     const result = await client.query(
       `UPDATE products 
        SET product_name = $1, cost_price = $2, selling_price = $3, sku = $4, 
-           product_category_id = $5, description = $6, updated_at = NOW()
-       WHERE product_id = $7 AND business_id = $8
+           product_category_id = $5, description = $6, low_stock_alert = $7, updated_at = NOW()
+       WHERE product_id = $8 AND business_id = $9
        RETURNING *`,
-      [product_name, cost_price, selling_price, sku, categoryId, description, product_id, req.user?.businessId || null]
+      [product_name, cost_price, selling_price, sku, categoryId, description, newLowStockAlert, product_id, req.user?.businessId || null]
     );
     
     if (result.rowCount === 0) {

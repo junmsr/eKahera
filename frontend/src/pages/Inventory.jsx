@@ -434,7 +434,16 @@ export default function InventoryPage() {
 
   const handleProductFormChange = (e) => {
     const { name, value } = e.target;
-    setProductForm((prev) => ({ ...prev, [name]: value }));
+    // Clear error if user explicitly clears it or starts typing in form fields
+    if (name === 'clearError') {
+      setApiError("");
+    } else if (apiError && name !== 'clearError') {
+      // Only clear error when user modifies form fields (not on initial render)
+      setApiError("");
+    }
+    if (name !== 'clearError') {
+      setProductForm((prev) => ({ ...prev, [name]: value }));
+    }
   };
 
   const handleProductSubmit = async (e) => {
@@ -510,7 +519,32 @@ export default function InventoryPage() {
       setProducts(mapped);
       setShowProductModal(false);
     } catch (err) {
-      setApiError("Failed to save product");
+      // Handle duplicate SKU error and other errors
+      let errorMessage = "Failed to save product";
+      try {
+        // Check if error has response data (from api.js)
+        const errorData = err.response?.data || err.data || {};
+        const errorStatus = err.response?.status;
+        
+        if (errorStatus === 409 || errorData.error === 'Product with this SKU already exists') {
+          // Duplicate SKU error - provide clear message
+          errorMessage = errorData.message || `A product with SKU "${productForm.sku?.trim() || 'this SKU'}" already exists. Please use a different SKU.`;
+          if (errorData.existingProduct) {
+            errorMessage = `SKU "${productForm.sku?.trim()}" is already in use by "${errorData.existingProduct.product_name}". Please use a different SKU code.`;
+          }
+        } else if (errorData.error || errorData.message) {
+          // Other API errors
+          errorMessage = errorData.message || errorData.error;
+        } else if (err.message) {
+          // Error from api.js wrapper
+          errorMessage = err.message;
+        }
+      } catch (parseErr) {
+        // If parsing fails, use error message if available
+        errorMessage = err.message || "Failed to save product";
+        console.error("Error parsing error response:", parseErr);
+      }
+      setApiError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -716,36 +750,62 @@ export default function InventoryPage() {
           setPage(1); // Reset to first page on sort
         }}
       />
-      {apiError && (
-        <div className="bg-red-50 border-l-4 border-red-500 rounded-lg p-3 flex items-start gap-2 mt-2">
-          <svg
-            className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+      {apiError && !showProductModal && (
+        <div className="bg-red-50 border-l-4 border-red-500 rounded-lg p-4 flex items-start gap-3 mt-4 shadow-sm">
+          <div className="flex-shrink-0">
+            <svg
+              className="w-5 h-5 text-red-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
+              />
+            </svg>
+          </div>
+          <div className="flex-1">
+            <h3 className="text-sm font-semibold text-red-800 mb-1">
+              {apiError.includes("already exists") || apiError.includes("SKU") 
+                ? "Duplicate Product" 
+                : "Error"}
+            </h3>
+            <p className="text-sm text-red-700">
+              {(() => {
+                try {
+                  const parsed = JSON.parse(apiError);
+                  return parsed.error || parsed.message || apiError;
+                } catch {
+                  return apiError;
+                }
+              })()}
+            </p>
+            {apiError.includes("already exists") && (
+              <p className="text-xs text-red-600 mt-2 italic">
+                Please use a different SKU code or update the existing product instead.
+              </p>
+            )}
+          </div>
+          <button
+            onClick={() => setApiError("")}
+            className="flex-shrink-0 text-red-400 hover:text-red-600 transition-colors"
+            aria-label="Close error"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
-            />
-          </svg>
-          <p className="text-sm font-medium text-red-700">
-            {(() => {
-              try {
-                const parsed = JSON.parse(apiError);
-                return parsed.error || parsed.message || apiError;
-              } catch {
-                return apiError;
-              }
-            })()}
-          </p>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
       )}
       <Modal
         isOpen={showProductModal}
-        onClose={() => setShowProductModal(false)}
+        onClose={() => {
+          setShowProductModal(false);
+          setApiError(""); // Clear error when closing modal
+        }}
         variant="product"
         title={editingProduct ? "Edit Product" : "Add New Product"}
         editingProduct={editingProduct}
@@ -754,6 +814,7 @@ export default function InventoryPage() {
         categories={categories}
         onSubmit={handleProductSubmit}
         loading={loading}
+        error={apiError}
       />
       {/* Stock Entry Modal */}
       <Modal

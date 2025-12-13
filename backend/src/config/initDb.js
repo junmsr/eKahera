@@ -91,8 +91,22 @@ async function initializeDatabase() {
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
         created_by_user_id INTEGER REFERENCES users(user_id),
         business_id INTEGER REFERENCES business(business_id),
-        description TEXT
+        description TEXT,
+        low_stock_alert INTEGER DEFAULT 10
       );
+    `);
+    
+    // Add low_stock_alert column if it doesn't exist (for existing databases)
+    await client.query(`
+      DO $$ 
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'products' AND column_name = 'low_stock_alert'
+        ) THEN
+          ALTER TABLE products ADD COLUMN low_stock_alert INTEGER DEFAULT 10;
+        END IF;
+      END $$;
     `);
 
     // Create inventory table
