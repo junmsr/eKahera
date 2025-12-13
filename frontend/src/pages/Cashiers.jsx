@@ -45,6 +45,9 @@ export default function Cashiers() {
           const fullName = [r.first_name, r.last_name].filter(Boolean).join(" ").trim();
           return {
             name: fullName || r.username || "-",
+            username: r.username || "",
+            first_name: r.first_name || "",
+            last_name: r.last_name || "",
             id: r.user_id || "-",
             number: r.contact_number || "-",
             email: r.email || "-",
@@ -133,6 +136,9 @@ export default function Cashiers() {
         const fullName = [r.first_name, r.last_name].filter(Boolean).join(" ").trim();
         return {
           name: fullName || r.username || "-",
+          username: r.username || "",
+          first_name: r.first_name || "",
+          last_name: r.last_name || "",
           id: r.user_id || "-",
           number: r.contact_number || "-",
           email: r.email || "-",
@@ -151,8 +157,13 @@ export default function Cashiers() {
   // Handle Edit Cashier
   const handleEditCashier = (cashier) => {
     const cashierToEdit = cashiers.find((c) => c.id === cashier.id);
-    // Set the cashier to edit and then show the modal in the next state update
-    setEditingCashier(cashierToEdit);
+    // Map the cashier data to include username as name for the modal
+    if (cashierToEdit) {
+      setEditingCashier({
+        ...cashierToEdit,
+        name: cashierToEdit.username || cashierToEdit.name,
+      });
+    }
     setShowEditModal(true);
   };
 

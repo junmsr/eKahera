@@ -38,7 +38,6 @@ const ProfileModal = ({ isOpen, onClose, userData, businessData }) => {
       businessData?.business_address ||
       businessData?.address_line ||
       "",
-    region: businessData?.region || "",
   });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
@@ -88,7 +87,6 @@ const ProfileModal = ({ isOpen, onClose, userData, businessData }) => {
           businessData?.business_address ||
           businessData?.address_line ||
           "",
-        region: businessData?.region || "",
       });
       setMessage("");
       setError("");
@@ -485,7 +483,6 @@ const ProfileModal = ({ isOpen, onClose, userData, businessData }) => {
           businessData?.business_address ||
           businessData?.address_line ||
           "",
-        region: businessData?.region || "",
       });
       setErrors({});
       setTouched({});
