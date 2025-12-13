@@ -5,8 +5,6 @@ import ScannerCard from "../components/ui/POS/ScannerCard";
 import { useNavigate, Link } from "react-router-dom";
 import Button from "../components/common/Button";
 
-
-
 export default function CustomerEnter() {
   const [paused, setPaused] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
@@ -29,13 +27,19 @@ export default function CustomerEnter() {
         // Set business ID and generate a transaction number for this session
         localStorage.setItem("business_id", String(bid));
         // Clear old transaction data
-        localStorage.removeItem('provisionalTransactionNumber');
-        localStorage.removeItem('customerCart');
+        localStorage.removeItem("provisionalTransactionNumber");
+        localStorage.removeItem("customerCart");
         // Generate and save new transaction number
-        const timePart = new Date().toISOString().replace(/[-:T.Z]/g, '').slice(0, 14);
+        const timePart = new Date()
+          .toISOString()
+          .replace(/[-:T.Z]/g, "")
+          .slice(0, 14);
         const randPart = Math.floor(1000 + Math.random() * 9000);
-        const transactionNumber = `T-${String(bid).padStart(2, '0')}-${timePart}-${randPart}`;
-        localStorage.setItem('provisionalTransactionNumber', transactionNumber);
+        const transactionNumber = `T-${String(bid).padStart(
+          2,
+          "0"
+        )}-${timePart}-${randPart}`;
+        localStorage.setItem("provisionalTransactionNumber", transactionNumber);
 
         // New: Call backend /public/enter-store to create user
         try {
@@ -48,22 +52,24 @@ export default function CustomerEnter() {
           });
 
           if (!response.ok) {
-            const errorData = await response.json().catch(() => ({ error: 'Failed to create customer' }));
-            console.error('Failed to create customer user:', errorData);
+            const errorData = await response
+              .json()
+              .catch(() => ({ error: "Failed to create customer" }));
+            console.error("Failed to create customer user:", errorData);
             // Don't block navigation, but log the error
           } else {
             const data = await response.json();
             // Store user_id and username in localStorage for use later
             if (data.user_id) {
               localStorage.setItem("customer_user_id", String(data.user_id));
-              console.log('Customer user created:', data.user_id);
+              console.log("Customer user created:", data.user_id);
             }
             if (data.username) {
               localStorage.setItem("customer_username", data.username);
             }
           }
         } catch (err) {
-          console.error('Error creating customer user:', err);
+          console.error("Error creating customer user:", err);
           // Don't block navigation, but log the error
         }
 
@@ -222,9 +228,46 @@ export default function CustomerEnter() {
             </motion.div>
           </motion.div>
 
+          {/* Info Section */}
+          <motion.div className="" variants={itemVariants}>
+            <div className="bg-gradient-to-r from-blue-50/80 via-indigo-50/60 to-purple-50/80 backdrop-blur-md rounded-2xl border border-blue-200/40 p-6 sm:p-8">
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0">
+                  <motion.div
+                    className="flex items-center justify-center h-12 w-12 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-lg"
+                    animate={{ scale: [1, 1.1, 1] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                  >
+                    <svg
+                      className="w-6 h-6"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                  </motion.div>
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-gray-900 mb-1">
+                    Need Help?
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    Make sure your device has camera permissions enabled. The QR
+                    code is typically displayed at the store entrance.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+
           {/* Main Content Grid */}
           <div className="grid gap-6 lg:grid-cols-2 items-center">
-
             {/* Right: Scanner Card */}
             <motion.div
               className="flex items-center justify-center relative w-full"
@@ -293,11 +336,19 @@ export default function CustomerEnter() {
                         transition={{ type: "spring", stiffness: 200 }}
                       >
                         <div className="flex flex-col items-center gap-4">
-                          <motion.div
-                            className="w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center bg-red-100 rounded-full"
-                          >
-                            <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          <motion.div className="w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center bg-red-100 rounded-full">
+                            <svg
+                              className="w-8 h-8 text-red-500"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M6 18L18 6M6 6l12 12"
+                              />
                             </svg>
                           </motion.div>
                           <div className="text-center">
@@ -415,44 +466,6 @@ export default function CustomerEnter() {
               </motion.div>
             </motion.div>
           </div>
-
-          {/* Bottom Info Section */}
-          <motion.div className="mt-4 sm:mt-8" variants={itemVariants}>
-            <div className="bg-gradient-to-r from-blue-50/80 via-indigo-50/60 to-purple-50/80 backdrop-blur-md rounded-2xl border border-blue-200/40 p-6 sm:p-8">
-              <div className="flex items-start gap-4">
-                <div className="flex-shrink-0">
-                  <motion.div
-                    className="flex items-center justify-center h-12 w-12 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-lg"
-                    animate={{ scale: [1, 1.1, 1] }}
-                    transition={{ duration: 2, repeat: Infinity }}
-                  >
-                    <svg
-                      className="w-6 h-6"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                  </motion.div>
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold text-gray-900 mb-1">
-                    Need Help?
-                  </h3>
-                  <p className="text-sm text-gray-600">
-                    Make sure your device has camera permissions enabled. The QR
-                    code is typically displayed at the store entrance.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </motion.div>
         </div>
       </motion.div>
     </Background>
