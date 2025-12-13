@@ -69,7 +69,7 @@ export async function api(path, options = {}, returnRawResponse = false) {
 
     // Provide user-friendly error messages for common status codes
     if (res.status === 400) {
-      // Handle specific 400 errors like OTP validation
+      // Handle specific 400 errors like OTP validation and password errors
       try {
         const errorJson = JSON.parse(errorText);
         if (errorJson.error && errorJson.error.includes("Invalid OTP")) {
@@ -78,8 +78,19 @@ export async function api(path, options = {}, returnRawResponse = false) {
             `Invalid verification code. ${attemptsLeft} attempts remaining.`
           );
         }
+        // Preserve password-related error messages
+        if (errorJson.error && (
+          errorJson.error.toLowerCase().includes("password") ||
+          errorJson.error.toLowerCase().includes("current password")
+        )) {
+          const error = new Error(errorJson.error);
+          error.response = { status: 400, data: errorJson };
+          error.data = errorJson;
+          throw error;
+        }
       } catch (e) {
-        // If parsing fails or it's not an OTP error, continue to general 400 handling
+        // If parsing fails or it's not a handled error, continue to general 400 handling
+        if (e.response) throw e; // Re-throw if we already set response (password errors)
       }
       throw new Error(
         "Invalid request. Please check your input and try again."

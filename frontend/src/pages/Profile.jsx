@@ -7,6 +7,7 @@ import { api } from "../lib/api";
 import Button from "../components/common/Button";
 import ProfileModal from "../components/modals/ProfileModal";
 import BaseModal from "../components/modals/BaseModal";
+import ChangePasswordModal from "../components/modals/ChangePasswordModal";
 
 // Icon Components
 const UserIcon = (props) => (
@@ -236,6 +237,7 @@ const Profile = () => {
   const [downloadLoading, setDownloadLoading] = useState(false);
   const [password, setPassword] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
 
   const normalizeDeletion = (del) => {
     if (!del) return { status: "none" };
@@ -513,14 +515,14 @@ const Profile = () => {
         <span>Refresh</span>
       </Button>
       <Button
-        variant="primary"
+        onClick={() => setShowChangePasswordModal(true)}
+        variant="secondary"
         size="sm"
-        icon={<EditIcon />}
+        icon={<LockIcon />}
         iconPosition="left"
-        onClick={() => setIsEditModalOpen(true)}
         className="whitespace-nowrap [&>span]:hidden sm:[&>span]:inline"
       >
-        <span>Edit Profile</span>
+        <span>Change Password</span>
       </Button>
     </div>
   );
@@ -557,6 +559,10 @@ const Profile = () => {
         onClose={() => setIsEditModalOpen(false)}
         userData={profileData?.user}
         businessData={profileData?.business}
+      />
+      <ChangePasswordModal
+        isOpen={showChangePasswordModal}
+        onClose={() => setShowChangePasswordModal(false)}
       />
       <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
         {error && (

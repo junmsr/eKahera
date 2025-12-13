@@ -43,6 +43,31 @@ const LogsPage = () => {
     }
   }, [dateRange]);
 
+  // Format timestamp with month names instead of numbers
+  const formatTimestamp = (dateString) => {
+    if (!dateString) return "Invalid date";
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return "Invalid date";
+    
+    const monthNames = [
+      "January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December"
+    ];
+    
+    const month = monthNames[date.getMonth()];
+    const day = date.getDate();
+    const year = date.getFullYear();
+    const hours = date.getHours();
+    const minutes = date.getMinutes();
+    const seconds = date.getSeconds();
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    const displayHours = hours % 12 || 12;
+    const displayMinutes = minutes.toString().padStart(2, '0');
+    const displaySeconds = seconds.toString().padStart(2, '0');
+    
+    return `${month} ${day}, ${year} ${displayHours}:${displayMinutes}:${displaySeconds} ${ampm}`;
+  };
+
   const fetchLogs = async () => {
     try {
       setLoading(true);
@@ -67,9 +92,7 @@ const LogsPage = () => {
         userId: l.user_id,
         username: l.username || "",
         action: l.action || `Action by ${l.username || l.user_id}`,
-        time: l.date_time
-          ? new Date(l.date_time).toLocaleString()
-          : "Invalid date",
+        time: formatTimestamp(l.date_time),
         dateTime: l.date_time,
         role: (l.role === "business_owner"
           ? "admin"
@@ -133,6 +156,7 @@ const LogsPage = () => {
       });
     }
 
+    // Sort based on sortOrder: "desc" = newest first, "asc" = oldest first
     filtered.sort((a, b) => {
       const dateA = new Date(a.dateTime);
       const dateB = new Date(b.dateTime);
@@ -144,11 +168,19 @@ const LogsPage = () => {
 
   const exportToCSV = () => {
     try {
+      // Export only the filtered logs (which already respect date range, role filter, and search query)
+      const logsToExport = filteredLogs;
+      
+      if (logsToExport.length === 0) {
+        setError("No logs to export for the selected date range");
+        return;
+      }
+
       const headers = ["Customer ID", "Customer Name", "Role", "Action", "Time"];
 
       const csvRows = [
         headers.join(","),
-        ...filteredLogs.map((log) => {
+        ...logsToExport.map((log) => {
           const row = [
             log.userId || log.id || "",
             `"${(log.username || "").replace(/"/g, '""')}"`,
@@ -162,14 +194,19 @@ const LogsPage = () => {
 
       const csvContent = csvRows.join("\n");
 
+      // Generate filename with date range if available
+      let filename = `logs_export_${new Date().toISOString().split("T")[0]}`;
+      if (dateRange.startDate && dateRange.endDate) {
+        const startStr = dayjs(dateRange.startDate).format('YYYY-MM-DD');
+        const endStr = dayjs(dateRange.endDate).format('YYYY-MM-DD');
+        filename = `logs_export_${startStr}_to_${endStr}`;
+      }
+
       const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
       const link = document.createElement("a");
       const url = URL.createObjectURL(blob);
       link.setAttribute("href", url);
-      link.setAttribute(
-        "download",
-        `logs_export_${new Date().toISOString().split("T")[0]}.csv`
-      );
+      link.setAttribute("download", `${filename}.csv`);
       link.style.visibility = "hidden";
       document.body.appendChild(link);
       link.click();

@@ -935,17 +935,39 @@ exports.updatePassword = async (req, res) => {
   }
 
   try {
-    const userRes = await pool.query('SELECT password_hash FROM users WHERE user_id = $1', [userId]);
+    // Get user info including business_id for logging
+    const userRes = await pool.query(
+      'SELECT password_hash, business_id, username, email, role FROM users WHERE user_id = $1',
+      [userId]
+    );
     if (!userRes.rowCount) return res.status(404).json({ error: 'User not found' });
 
-    const matches = await bcrypt.compare(currentPassword, userRes.rows[0].password_hash);
+    const user = userRes.rows[0];
+    const matches = await bcrypt.compare(currentPassword, user.password_hash);
     if (!matches) {
       return res.status(400).json({ error: 'Current password is incorrect' });
     }
 
     const hashed = await bcrypt.hash(newPassword, 12);
     await pool.query('UPDATE users SET password_hash = $1, updated_at = NOW() WHERE user_id = $2', [hashed, userId]);
-    logAction({ userId, action: 'PASSWORD_CHANGE', metadata: { userId } });
+    
+    // Log the password change action with business_id if available
+    const businessId = user.business_id || null;
+    const userRole = user.role || 'user';
+    const userName = user.username || user.email || `User ${userId}`;
+    const actionMessage = `${userRole === 'cashier' ? 'Cashier' : userRole === 'admin' ? 'Admin' : 'User'} "${userName}" changed password`;
+    
+    // Debug: Log user info to verify business_id is present
+    console.log(`[Password Change] User ${userId} (${userRole}): business_id = ${businessId}, username = ${userName}`);
+    
+    // Log the action - will skip if businessId is null (for superadmins)
+    // Using await to ensure the log is written before response is sent
+    await logAction({
+      userId,
+      businessId,
+      action: actionMessage
+    });
+    
     return res.json({ message: 'Password updated successfully' });
   } catch (err) {
     console.error('Failed to update password', err);

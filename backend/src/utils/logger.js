@@ -8,12 +8,20 @@ const logAction = async ({ userId, businessId, action }) => {
     return;
   }
   try {
-    await pool.query(
-      'INSERT INTO logs (user_id, business_id, action) VALUES ($1, $2, $3)',
+    const result = await pool.query(
+      'INSERT INTO logs (user_id, business_id, action) VALUES ($1, $2, $3) RETURNING log_id',
       [userId, businessId, action]
     );
+    console.log(`Successfully logged action: "${action}" for userId ${userId}, businessId ${businessId}, log_id: ${result.rows[0]?.log_id}`);
   } catch (error) {
     console.error('Failed to log action:', error);
+    console.error('Error details:', {
+      userId,
+      businessId,
+      action,
+      errorMessage: error.message,
+      errorStack: error.stack
+    });
   }
 };
 
