@@ -24,6 +24,12 @@ export default function DocumentVerification({ isRefreshing }) {
     approved: 0,
     rejected: 0,
   });
+  const [alert, setAlert] = useState({
+    isOpen: false,
+    title: "",
+    message: "",
+    type: "info",
+  });
 
   useEffect(() => {
     fetchPendingVerifications();
@@ -390,6 +396,7 @@ function BusinessVerificationDetails({
   actionLoading,
 }) {
   const [rejectionReason, setRejectionReason] = useState("");
+  const [resubmissionNotes, setResubmissionNotes] = useState("");
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [showRepassModal, setShowRepassModal] = useState(false);
   const [isViewerOpen, setIsViewerOpen] = useState(false);
@@ -470,8 +477,7 @@ function BusinessVerificationDetails({
             </label>
             <p className="text-gray-900">
               {business.business_address}
-              {business.house_number && `, ${business.house_number}`},{" "}
-              {business.country}
+              {business.region && `, ${business.region}`}
             </p>
           </div>
         </div>

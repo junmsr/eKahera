@@ -38,7 +38,7 @@ const ProfileModal = ({ isOpen, onClose, userData, businessData }) => {
       businessData?.business_address ||
       businessData?.address_line ||
       "",
-    country: businessData?.country || "Philippines",
+    region: businessData?.region || "",
   });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
@@ -88,7 +88,7 @@ const ProfileModal = ({ isOpen, onClose, userData, businessData }) => {
           businessData?.business_address ||
           businessData?.address_line ||
           "",
-        country: businessData?.country || "Philippines",
+        region: businessData?.region || "",
       });
       setMessage("");
       setError("");
@@ -429,12 +429,12 @@ const ProfileModal = ({ isOpen, onClose, userData, businessData }) => {
             cityLabel,
             provinceLabel,
             regionLabel,
-            profileData.country || "Philippines",
+            profileData.region || "",
           ]
             .filter(Boolean)
             .join(", "),
           houseNumber: profileData.house_street || undefined,
-          country: profileData.country || "Philippines",
+          region: profileData.region || "",
           business_email: profileData.business_email || undefined,
         };
 
@@ -485,7 +485,7 @@ const ProfileModal = ({ isOpen, onClose, userData, businessData }) => {
           businessData?.business_address ||
           businessData?.address_line ||
           "",
-        country: businessData?.country || "Philippines",
+        region: businessData?.region || "",
       });
       setErrors({});
       setTouched({});

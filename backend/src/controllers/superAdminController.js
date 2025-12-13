@@ -20,7 +20,7 @@ exports.getAllStores = async (req, res) => {
         b.business_name as name,
         b.email,
         b.business_type,
-        b.country,
+        b.region,
         b.business_address,
         b.house_number,
         b.mobile,
@@ -41,7 +41,7 @@ exports.getAllStores = async (req, res) => {
         LIMIT 1
       ) sdr ON TRUE
       GROUP BY b.business_id, b.business_name, b.email, b.business_type,
-               b.country, b.business_address, b.house_number, b.mobile,
+               b.region, b.business_address, b.house_number, b.mobile,
                b.created_at, b.updated_at, b.verification_status,
                sdr.status, sdr.scheduled_for, sdr.requested_at
       ORDER BY b.created_at DESC
@@ -63,11 +63,11 @@ exports.getStoreById = async (req, res) => {
     const businessResult = await pool.query(`
       SELECT 
         business_id as id,
+        business_name,
         business_name as name,
-        business_name as storeName,
         email,
         business_type,
-        country,
+        region,
         business_address as location,
         house_number,
         mobile as phone,
@@ -88,6 +88,7 @@ exports.getStoreById = async (req, res) => {
     // Get business owner details
     const ownerResult = await pool.query(`
       SELECT 
+        user_id,
         username,
         first_name,
         last_name,
@@ -120,12 +121,54 @@ exports.getStoreById = async (req, res) => {
     const fullAddress = [
       business.house_number,
       business.location,
-      business.country,
+      business.region,
     ]
       .filter(Boolean)
       .join(", ");
 
     const deletionInfo = await getLatestDeletionRequest(id);
+
+    // Get owner user_id for filtering logs
+    const ownerUserId = owner?.user_id || null;
+    
+    // Get last login (most recent "Login" action for the owner/admin specifically)
+    let lastLogin = null;
+    if (ownerUserId) {
+      const lastLoginResult = await pool.query(
+        `SELECT date_time 
+         FROM logs 
+         WHERE business_id = $1 AND user_id = $2 AND action = 'Login'
+         ORDER BY date_time DESC 
+         LIMIT 1`,
+        [id, ownerUserId]
+      );
+      lastLogin = lastLoginResult.rows[0]?.date_time || null;
+    }
+
+    // Get last password change (most recent action ending with "changed password" for the owner/admin)
+    // Use both business_id and user_id to ensure we get the password change for the correct user
+    // The action format is: 'Admin "username" changed password' or 'User "username" changed password' or 'Cashier "username" changed password'
+    // We require it to end with "changed password" (not just contain it) to avoid false matches
+    let lastPasswordChange = null;
+    if (ownerUserId) {
+      const lastPasswordChangeResult = await pool.query(
+        `SELECT date_time, action
+         FROM logs 
+         WHERE business_id = $1 
+         AND user_id = $2 
+         AND action ILIKE '%changed password'
+         ORDER BY date_time DESC 
+         LIMIT 1`,
+        [id, ownerUserId]
+      );
+      // Double-check that it actually ends with "changed password" to avoid false matches
+      if (lastPasswordChangeResult.rows.length > 0) {
+        const actionText = (lastPasswordChangeResult.rows[0].action || '').trim();
+        if (actionText.toLowerCase().endsWith('changed password')) {
+          lastPasswordChange = lastPasswordChangeResult.rows[0].date_time;
+        }
+      }
+    }
 
     // Get documents for this business
     const documentsResult = await pool.query(
@@ -160,9 +203,12 @@ exports.getStoreById = async (req, res) => {
       lastName: owner?.last_name || owner?.username?.split(' ').slice(1).join(' ') || '',
       email: business.email,
       phone: business.phone,
-      storeName: business.storeName,
+      storeName: business.business_name,
       business_type: business.business_type,
+      region: business.region,
       location: fullAddress,
+      business_address: business.location,
+      house_number: business.house_number,
       established: business.established?.toString(),
       verificationStatus: normalizeStatus(business.verification_status) || 'pending',
       documents: formattedDocuments,
@@ -177,13 +223,11 @@ exports.getStoreById = async (req, res) => {
       account: {
         username: owner?.username || 'N/A',
         passwordHint: '******** (Secure)',
-        lastLogin: 'N/A',
+        lastLogin: lastLogin,
         createdAt: business.created_at,
-        lastPasswordChange: 'N/A',
-        loginAttemptsToday: 0,
+        lastPasswordChange: lastPasswordChange,
         storeAddress: fullAddress,
-        status: normalizeStatus(business.verification_status || 'pending'),
-        sessionTimeout: '30 minutes'
+        status: normalizeStatus(business.verification_status || 'pending')
       },
       users: usersResult.rows,
       totalUsers: usersResult.rows.length

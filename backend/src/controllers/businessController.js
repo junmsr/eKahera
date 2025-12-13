@@ -378,7 +378,7 @@ exports.registerBusiness = async (req, res) => {
     email: req.body.email,
     businessName: req.body.businessName,
     businessType: req.body.businessType,
-    country: req.body.country,
+    region: req.body.region,
     province: req.body.province,
     city: req.body.city,
     barangay: req.body.barangay,
@@ -392,11 +392,11 @@ exports.registerBusiness = async (req, res) => {
     username,
     businessName,
     businessType,
-    country,
+    region,
+    regionName,
     province,
     city,
     barangay,
-    regionName,
     provinceName,
     cityName,
     barangayName,
@@ -406,7 +406,7 @@ exports.registerBusiness = async (req, res) => {
   } = req.body;
 
   // Validate required fields
-  if (!email || !username || !businessName || !businessType || !country || !province || !city || !barangay || !houseNumber || !mobile || !password) {
+  if (!email || !username || !businessName || !businessType || !region || !province || !city || !barangay || !houseNumber || !mobile || !password) {
     return res.status(400).json({ 
       error: 'All required fields must be provided' 
     });
@@ -458,16 +458,16 @@ exports.registerBusiness = async (req, res) => {
     const userId = userResult.rows[0].user_id;
 
     // Create business profile - combine address components into business_address
-    const businessAddress = `${houseNumber}, ${barangayName}, ${cityName}, ${provinceName}, Philippines`;
+    const businessAddress = `${houseNumber}, ${barangayName}, ${cityName}, ${provinceName}`;
     const businessResult = await client.query(`
       INSERT INTO business (
-        business_name, business_type, country, 
+        business_name, business_type, region, 
         business_address, house_number, mobile, email, 
         created_at, updated_at
       )
       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
       RETURNING business_id, business_name
-    `, [businessName, businessType, 'Philippines', businessAddress, houseNumber, mobile, email]);
+    `, [businessName, businessType, regionName || region, businessAddress, houseNumber, mobile, email]);
 
     // Update user with business_id (users table has business_id column per ekahera.sql)
     await client.query('UPDATE users SET business_id = $1 WHERE user_id = $2', [businessResult.rows[0].business_id, userId]);
@@ -655,7 +655,7 @@ exports.getBusinessProfile = async (req, res) => {
         business_id,
         business_name,
         business_type,
-        country,
+        region,
         business_address,
         house_number,
         mobile,
@@ -696,7 +696,7 @@ exports.updateBusinessProfile = async (req, res) => {
   const {
     businessName,
     businessType,
-    country,
+    region,
     businessAddress,
     houseNumber,
     mobile
@@ -723,14 +723,14 @@ exports.updateBusinessProfile = async (req, res) => {
       SET
         business_name = COALESCE($1, business_name),
         business_type = COALESCE($2, business_type),
-        country = COALESCE($3, country),
+        region = COALESCE($3, region),
         business_address = COALESCE($4, business_address),
         house_number = COALESCE($5, house_number),
         mobile = COALESCE($6, mobile),
         updated_at = NOW()
       WHERE business_id = $7
       RETURNING *
-    `, [businessName, businessType, country, businessAddress, houseNumber, mobile, businessId]);
+    `, [businessName, businessType, region, businessAddress, houseNumber, mobile, businessId]);
 
     if (result.rows.length === 0) {
       return res.status(404).json({
@@ -916,11 +916,11 @@ exports.registerBusinessWithDocuments = [
       username,
       businessName,
       businessType,
-      country,
+      region,
+      regionName,
       province,
       city,
       barangay,
-      regionName,
       provinceName,
       cityName,
       barangayName,
@@ -933,7 +933,7 @@ exports.registerBusinessWithDocuments = [
     const files = req.files;
 
     // Validate required fields
-    if (!email || !username || !businessName || !businessType || !country || !province || !city || !barangay || !houseNumber || !mobile || !password) {
+    if (!email || !username || !businessName || !businessType || !region || !province || !city || !barangay || !houseNumber || !mobile || !password) {
       return res.status(400).json({
         error: 'All required fields must be provided'
       });
@@ -1007,16 +1007,17 @@ exports.registerBusinessWithDocuments = [
       const userId = userResult.rows[0].user_id;
 
       // Create business profile - combine address components into business_address
-      const businessAddress = `${barangayName}, ${cityName}, ${provinceName}`;
+      // Format: houseNumber, barangayName, cityName, provinceName
+      const businessAddress = `${houseNumber}, ${barangayName}, ${cityName}, ${provinceName}`;
       const businessResult = await client.query(`
         INSERT INTO business (
-          business_name, business_type, country,
+          business_name, business_type, region,
           business_address, house_number, mobile, email,
           created_at, updated_at
         )
         VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
         RETURNING business_id, business_name
-      `, [businessName, businessType, country, businessAddress, houseNumber, mobile, email]);
+      `, [businessName, businessType, regionName || region, businessAddress, houseNumber, mobile, email]);
 
       const business = businessResult.rows[0];
       const businessId = business.business_id;
@@ -1106,7 +1107,7 @@ exports.registerBusinessWithDocuments = [
         business_name: businessName,
         business_id: businessId,
         created_at: new Date().toISOString(),
-        business_address: `${houseNumber || ''} ${barangayName || ''} ${cityName || ''} ${provinceName || ''}`.trim(),
+        business_address: `${houseNumber || ''}, ${barangayName || ''}, ${cityName || ''}, ${provinceName || ''}`.trim(),
         mobile: mobile,
         business_type: businessType
       };
@@ -1130,7 +1131,7 @@ exports.registerBusinessWithDocuments = [
         email: email,
         business_name: businessName,
         created_at: new Date().toISOString(),
-        business_address: `${houseNumber || ''} ${barangayName || ''} ${cityName || ''} ${provinceName || ''}`.trim(),
+        business_address: `${houseNumber || ''}, ${barangayName || ''}, ${cityName || ''}, ${provinceName || ''}`.trim(),
         mobile: mobile,
         business_type: businessType
       };

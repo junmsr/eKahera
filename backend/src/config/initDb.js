@@ -33,7 +33,7 @@ async function initializeDatabase() {
         business_id SERIAL PRIMARY KEY,
         business_name VARCHAR(255) NOT NULL,
         business_type VARCHAR(100) NOT NULL,
-        country VARCHAR(100) NOT NULL,
+        region VARCHAR(100) NOT NULL,
         business_address TEXT NOT NULL,
         house_number VARCHAR(50),
         mobile VARCHAR(20) NOT NULL,
@@ -47,6 +47,22 @@ async function initializeDatabase() {
         verification_rejection_reason TEXT,
         verification_resubmission_notes TEXT
       );
+    `);
+
+    // Migrate existing country column to region if it exists
+    await client.query(`
+      DO $$ 
+      BEGIN
+        IF EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'business' AND column_name = 'country'
+        ) AND NOT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'business' AND column_name = 'region'
+        ) THEN
+          ALTER TABLE business RENAME COLUMN country TO region;
+        END IF;
+      END $$;
     `);
 
     // Create users table
@@ -341,10 +357,10 @@ async function seedSampleData() {
 
     // Create sample business
     const businessRes = await pool.query(
-      `INSERT INTO business (business_name, business_type, country, business_address, house_number, mobile, email, verification_status)
+      `INSERT INTO business (business_name, business_type, region, business_address, house_number, mobile, email, verification_status)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING business_id`,
-      ['Sample Store', 'Retail', 'Philippines', '123 Main St, Manila', '123', '+639123456789', 'sample@store.com', 'approved']
+      ['Sample Store', 'Retail', 'NCR', '123 Main St, Manila', '123', '+639123456789', 'sample@store.com', 'approved']
     );
     const businessId = businessRes.rows[0].business_id;
 

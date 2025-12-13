@@ -338,12 +338,11 @@ export default function useGetStarted() {
           ? form.customBusinessType
           : form.businessType
       );
-      formData.append("country", "Philippines");
-      formData.append("countryName", "Philippines");
+      formData.append("region", form.region);
+      formData.append("regionName", form.regionName);
       formData.append("province", form.province);
       formData.append("city", form.city);
       formData.append("barangay", form.barangay);
-      formData.append("regionName", form.regionName);
       formData.append("provinceName", form.provinceName);
       formData.append("cityName", form.cityName);
       formData.append("barangayName", form.barangayName);

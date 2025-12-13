@@ -247,7 +247,7 @@ const sendNewApplicationNotification = async (businessData, superAdminEmails) =>
         <p><strong>Email:</strong> ${businessData.email || 'N/A'}</p>
         ${businessData.contact_number ? `<p><strong>Contact Number:</strong> ${businessData.contact_number}</p>` : ''}
         ${businessData.mobile ? `<p><strong>Mobile:</strong> ${businessData.mobile}</p>` : ''}
-        ${businessData.business_address ? `<p><strong>Address:</strong> ${businessData.business_address}${businessData.country ? `, ${businessData.country}` : ''}</p>` : ''}
+        ${businessData.business_address ? `<p><strong>Address:</strong> ${businessData.business_address}${businessData.region ? `, ${businessData.region}` : ''}</p>` : ''}
         <p><strong>Application Date:</strong> ${new Date(businessData.created_at || new Date()).toLocaleString('en-PH', { timeZone: 'Asia/Manila' })}</p>
       </div>
       

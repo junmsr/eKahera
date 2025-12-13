@@ -166,7 +166,7 @@ class BusinessVerification {
   static async getBusinessWithDocuments(businessId) {
     const businessQuery = `
       SELECT b.business_id, b.business_name, b.email as business_email, b.business_type,
-             b.business_address, b.house_number, b.mobile, b.country,
+             b.business_address, b.house_number, b.mobile, b.region,
              b.created_at as business_created_at, b.verification_status,
              b.verification_submitted_at, b.verification_reviewed_at,
              b.verification_reviewed_by, b.verification_rejection_reason,

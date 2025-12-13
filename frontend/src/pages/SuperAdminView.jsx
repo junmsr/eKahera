@@ -13,44 +13,47 @@ export default function SuperAdminView() {
   const [actionLoading, setActionLoading] = useState(false);
   const [isDocumentViewerOpen, setIsDocumentViewerOpen] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState(null);
+  const [downloadingId, setDownloadingId] = useState(null);
 
-  // Parse address similar to Profile.jsx
-  const parseAddress = (fullAddress) => {
-    if (!fullAddress)
+  // Parse address - business_address format is typically: "barangay, city, province"
+  const parseAddress = () => {
+    if (!store) {
       return {
-        region: "N/A",
         province: "N/A",
         city: "N/A",
         barangay: "N/A",
         houseNo: "N/A",
       };
-
-    const parts = fullAddress
-      .split(",")
-      .map((p) => p.trim())
-      .filter(Boolean);
-
-    // Remove trailing country if present
-    while (parts.length && /philippines?/i.test(parts[parts.length - 1])) {
-      parts.pop();
     }
 
-    // Stored format (after trimming country): "<house>, <barangay>, <city>, <province>"
-    const len = parts.length;
-    const province = len >= 1 ? parts[len - 1] : "";
-    const city = len >= 2 ? parts[len - 2] : "";
-    const barangay = len >= 3 ? parts[len - 3] : "";
-    const houseOrStreet =
-      len > 3 ? parts.slice(0, len - 3).join(", ") : parts[0] || "";
+    // Use house_number directly if available
+    const houseNo = store.house_number || "N/A";
+
+    // Parse business_address which is "barangay, city, province"
+    let province = "N/A";
+    let city = "N/A";
+    let barangay = "N/A";
+
+    if (store.business_address) {
+      const parts = store.business_address
+        .split(",")
+        .map((p) => p.trim())
+        .filter(Boolean);
+
+      if (parts.length >= 1) province = parts[parts.length - 1];
+      if (parts.length >= 2) city = parts[parts.length - 2];
+      if (parts.length >= 3) barangay = parts[parts.length - 3];
+    }
 
     return {
-      region: "N/A", // Region not stored in address, would need separate field
       province: province || "N/A",
       city: city || "N/A",
       barangay: barangay || "N/A",
-      houseNo: houseOrStreet || "N/A",
+      houseNo: houseNo || "N/A",
     };
   };
+
+  const addressParts = parseAddress();
 
   // minimal sample store for the demo
   const sampleStore = {
@@ -142,6 +145,24 @@ export default function SuperAdminView() {
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
     return new Date(dateString).toLocaleString();
+  };
+
+  const formatDateWithMonthName = (dateString) => {
+    if (!dateString) return "0";
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return "0";
+      const months = [
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
+      ];
+      const day = date.getDate();
+      const month = months[date.getMonth()];
+      const year = date.getFullYear();
+      return `${month} ${day}, ${year}`;
+    } catch (error) {
+      return "0";
+    }
   };
 
   const renderStatusPill = (status) => {
@@ -268,6 +289,7 @@ export default function SuperAdminView() {
                     state: { from: "storeManagement" },
                   })
                 }
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-colors shadow-sm hover:shadow-md"
               >
                 <svg
                   className="w-4 h-4 flex-shrink-0"
@@ -501,7 +523,7 @@ export default function SuperAdminView() {
                           Store Name
                         </p>
                         <p className="text-base sm:text-lg font-bold text-gray-900 break-words mb-2">
-                          {store.storeName || store.name || "N/A"}
+                          {store.storeName || "N/A"}
                         </p>
                         <div className="flex items-center gap-2 mt-1">
                           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
@@ -552,7 +574,7 @@ export default function SuperAdminView() {
                           Region
                         </p>
                         <p className="text-base sm:text-lg font-bold text-gray-900 break-words">
-                          {parseAddress(store.account?.storeAddress).region}
+                          {store.region || "N/A"}
                         </p>
                       </div>
                     </div>
@@ -585,7 +607,7 @@ export default function SuperAdminView() {
                           Province
                         </p>
                         <p className="text-base sm:text-lg font-bold text-gray-900 break-words">
-                          {parseAddress(store.account?.storeAddress).province}
+                          {addressParts.province}
                         </p>
                       </div>
                     </div>
@@ -618,7 +640,7 @@ export default function SuperAdminView() {
                           City/Municipality
                         </p>
                         <p className="text-base sm:text-lg font-bold text-gray-900 break-words">
-                          {parseAddress(store.account?.storeAddress).city}
+                          {addressParts.city}
                         </p>
                       </div>
                     </div>
@@ -651,7 +673,7 @@ export default function SuperAdminView() {
                           Barangay
                         </p>
                         <p className="text-base sm:text-lg font-bold text-gray-900 break-words">
-                          {parseAddress(store.account?.storeAddress).barangay}
+                          {addressParts.barangay}
                         </p>
                       </div>
                     </div>
@@ -684,7 +706,7 @@ export default function SuperAdminView() {
                           House No./Street Name/Landmark
                         </p>
                         <p className="text-base sm:text-lg font-bold text-gray-900 break-words">
-                          {parseAddress(store.account?.storeAddress).houseNo}
+                          {addressParts.houseNo}
                         </p>
                       </div>
                     </div>
@@ -803,7 +825,7 @@ export default function SuperAdminView() {
                           Last Login
                         </p>
                         <p className="text-base sm:text-lg font-bold text-gray-900 break-words">
-                          {store.account?.lastLogin || "N/A"}
+                          {store.account?.lastLogin ? formatDateWithMonthName(store.account.lastLogin) : "0"}
                         </p>
                       </div>
                     </div>
@@ -830,7 +852,7 @@ export default function SuperAdminView() {
                           Created
                         </p>
                         <p className="text-base sm:text-lg font-bold text-gray-900 break-words">
-                          {store.account?.createdAt || "N/A"}
+                          {formatDateWithMonthName(store.account?.createdAt)}
                         </p>
                       </div>
                     </div>
@@ -857,34 +879,7 @@ export default function SuperAdminView() {
                           Password Changed
                         </p>
                         <p className="text-base sm:text-lg font-bold text-gray-900 break-words">
-                          {store.account?.lastPasswordChange || "N/A"}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="group bg-gradient-to-br from-green-50/50 to-green-50/30 rounded-xl p-3 sm:p-4 md:p-5 border border-green-100/50 hover:border-green-200 hover:shadow-md transition-all duration-300">
-                    <div className="flex items-center gap-3 sm:gap-4">
-                      <div className="w-10 h-10 sm:w-11 sm:h-11 md:w-12 md:h-12 bg-white rounded-xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform flex-shrink-0">
-                        <svg
-                          className="w-5 h-5 sm:w-5 sm:h-5 md:w-6 md:h-6 text-green-600"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                          />
-                        </svg>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-0.5 sm:mb-1">
-                          Login Attempts
-                        </p>
-                        <p className="text-base sm:text-lg font-bold text-gray-900 break-words">
-                          {store.account?.loginAttemptsToday ?? "N/A"}
+                          {store.account?.lastPasswordChange ? formatDateWithMonthName(store.account.lastPasswordChange) : "0"}
                         </p>
                       </div>
                     </div>
@@ -916,33 +911,6 @@ export default function SuperAdminView() {
                             store.account?.status || store.verificationStatus
                           )}
                         </span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="group bg-gradient-to-br from-blue-50/50 to-blue-50/30 rounded-xl p-3 sm:p-4 md:p-5 border border-blue-100/50 hover:border-blue-200 hover:shadow-md transition-all duration-300">
-                    <div className="flex items-center gap-3 sm:gap-4">
-                      <div className="w-10 h-10 sm:w-11 sm:h-11 md:w-12 md:h-12 bg-white rounded-xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform flex-shrink-0">
-                        <svg
-                          className="w-5 h-5 sm:w-5 sm:h-5 md:w-6 md:h-6 text-blue-600"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                          />
-                        </svg>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-0.5 sm:mb-1">
-                          Session Timeout
-                        </p>
-                        <p className="text-base sm:text-lg font-bold text-gray-900 break-words">
-                          {store.account?.sessionTimeout || "N/A"}
-                        </p>
                       </div>
                     </div>
                   </div>

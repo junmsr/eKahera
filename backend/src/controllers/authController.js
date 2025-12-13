@@ -816,7 +816,7 @@ exports.getProfile = async (req, res) => {
       );
       // Get business details
       const businessResult = await pool.query(
-        `SELECT business_id, business_name, business_type, country,
+        `SELECT business_id, business_name, business_type, region,
                 business_address, house_number, mobile, email,
                 created_at, updated_at
          FROM business 
@@ -855,18 +855,13 @@ exports.getProfile = async (req, res) => {
             business_id: businessData.business_id,
             business_name: businessData.business_name,
             business_type: businessData.business_type,
-            country: businessData.country,
+            region: businessData.region,
             business_address: businessData.business_address,
             address_line: parsedAddress.address_line,
             house_number:
               businessData.house_number || parsedAddress.houseOrStreet || null,
             mobile: businessData.mobile,
             email: businessData.email,
-            region:
-              businessData.region ||
-              businessData.region_name ||
-              businessData.regionName ||
-              null,
             province:
               businessData.province ||
               businessData.province_name ||
