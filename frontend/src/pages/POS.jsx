@@ -19,6 +19,19 @@ import AdminReceiptsModal from "../components/modals/AdminReceiptsModal";
 import { MdClose } from "react-icons/md";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 
+const ButtonLabel = ({ text, shortcut, variant = "secondary" }) => (
+  <div className="flex items-center gap-2">
+    <span>{text}</span>
+    <span className={`text-xs font-bold px-1.5 py-0.5 rounded border ${
+      variant === "primary" 
+        ? "bg-white/20 border-white/40 text-white" 
+        : "bg-gray-100 border-gray-300 text-gray-600"
+    }`}>
+      {shortcut}
+    </span>
+  </div>
+);
+
 function POS() {
   const navigate = useNavigate();
 
@@ -655,13 +668,16 @@ function POS() {
       <button
         onClick={() => setShowReceipts(true)}
         className="flex items-center gap-2 bg-white/80 backdrop-blur-sm p-1.5 sm:px-3 sm:py-2 rounded-lg border border-gray-200/80 hover:bg-gray-50 transition-colors"
-        title="View all receipts"
+        title="View all receipts (F11)"
       >
         <div className="relative">
           <BiReceipt className="w-5 h-5 text-blue-600" />
         </div>
+        <span className="bg-blue-50 text-blue-700 border border-blue-200 text-xs font-bold px-1.5 py-0.5 rounded">
+          F11
+        </span>
         <span className="text-sm font-medium text-gray-700 hidden sm:inline">
-          (F11) Receipts
+          Receipts
         </span>
       </button>
     </div>
@@ -885,7 +901,7 @@ function POS() {
                 <div className="col-span-8">
                   <div className="grid grid-cols-2 sm:grid-cols-2 gap-2 sm:gap-3">
                     <Button
-                      label="CASH LEDGER (Ctrl+L)"
+                      label={<ButtonLabel text="CASH LEDGER" shortcut="Ctrl+L" />}
                       size="md"
                       className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
                       variant="secondary"
@@ -912,8 +928,8 @@ function POS() {
                       <Button
                         label={
                           appliedDiscount
-                            ? `REMOVE ${appliedDiscount.label || 'DISCOUNT'}`
-                            : "ADD DISCOUNT (F5)"
+                            ? <ButtonLabel text={`REMOVE ${appliedDiscount.label || 'DISCOUNT'}`} shortcut="R" variant="primary" />
+                            : <ButtonLabel text="ADD DISCOUNT" shortcut="F5" />
                         }
                         variant={appliedDiscount ? "danger" : "secondary"}
                         onClick={() => {
@@ -968,7 +984,7 @@ function POS() {
                       )}
                     </div>
                     <Button
-                      label="PRICE CHECK (F2)"
+                      label={<ButtonLabel text="PRICE CHECK" shortcut="F2" />}
                       size="md"
                       className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
                       onClick={() => setShowPriceCheck(true)}
@@ -992,7 +1008,7 @@ function POS() {
                       iconPosition="left"
                     />
                     <Button
-                      label="SCAN CUSTOMER QR (F8)"
+                      label={<ButtonLabel text="SCAN CUSTOMER QR" shortcut="F8" />}
                       size="md"
                       className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
                       onClick={() => setShowImportCart(true)}
@@ -1021,7 +1037,7 @@ function POS() {
                 {/* Checkout Button */}
                 <div className="col-span-4">
                   <Button
-                    label="CHECKOUT (F10)"
+                    label={<ButtonLabel text="CHECKOUT" shortcut="F10" variant="primary" />}
                     size="md"
                     className="w-full h-full text-sm sm:text-base font-bold"
                     variant="primary"

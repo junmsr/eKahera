@@ -16,6 +16,19 @@ import RecentReceiptsModal from "../components/modals/RecentReceiptsModal";
 import { BiReceipt, BiUser } from "react-icons/bi";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 
+const ButtonLabel = ({ text, shortcut, variant = "secondary" }) => (
+  <div className="flex items-center gap-2">
+    <span>{text}</span>
+    <span className={`text-xs font-bold px-1.5 py-0.5 rounded border ${
+      variant === "primary" 
+        ? "bg-white/20 border-white/40 text-white" 
+        : "bg-gray-100 border-gray-300 text-gray-600"
+    }`}>
+      {shortcut}
+    </span>
+  </div>
+);
+
 function CashierPOS() {
   const navigate = useNavigate();
 
@@ -548,6 +561,11 @@ function CashierPOS() {
         action: () => setShowImportCart(true),
       },
       {
+        key: "f9",
+        description: "Change Password",
+        action: () => setShowChangePasswordModal(true),
+      },
+      {
         key: "f10",
         description: "Finalize Transaction",
         action: () => setShowCheckout(true),
@@ -655,7 +673,7 @@ function CashierPOS() {
         <div className="relative">
           <BiReceipt className="w-5 h-5 text-blue-600" />
         </div>
-        <span>
+        <span className="bg-blue-50 text-blue-700 border border-blue-200 text-xs font-bold px-1.5 py-0.5 rounded">
           F11
         </span>
         <span className="text-sm font-medium text-gray-700 hidden sm:inline">
@@ -665,10 +683,11 @@ function CashierPOS() {
       <button
         onClick={() => setShowChangePasswordModal(true)}
         className="p-2 rounded-lg hover:bg-gray-100 transition-colors flex items-center gap-2"
-        title="Change Password"
+        title="Change Password (F9)"
       >
         <BiUser className="w-5 h-5 text-gray-600" />
         <span className="text-sm font-medium text-gray-700 hidden sm:inline">Change Password</span>
+        <span className="bg-gray-100 text-gray-600 border border-gray-200 text-xs font-bold px-1.5 py-0.5 rounded">F9</span>
       </button>
       <button
         onClick={handleLogout}
@@ -691,7 +710,7 @@ function CashierPOS() {
           </svg>
         </div>
         <span className="text-sm font-medium text-gray-700 hidden sm:inline">Logout</span>
-        <span className="bg-red-100 text-red-700 text-[11px] font-medium rounded px-1.5 py-0.5">
+        <span className="bg-red-100 text-red-700 border border-red-200 text-[11px] font-bold rounded px-1.5 py-0.5">
           F12
         </span>
       </button>
@@ -945,7 +964,7 @@ function CashierPOS() {
                 <div className="col-span-8">
                   <div className="grid grid-cols-2 sm:grid-cols-2 gap-2 sm:gap-3">
                     <Button
-                      label="CASH LEDGER (Ctrl+L)"
+                      label={<ButtonLabel text="CASH LEDGER" shortcut="Ctrl+L" />}
                       size="md"
                       className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
                       variant="secondary"
@@ -969,7 +988,7 @@ function CashierPOS() {
                       iconPosition="left"
                     />
                     <Button
-                      label="DISCOUNT (F5)"
+                      label={<ButtonLabel text="DISCOUNT" shortcut="F5" />}
                       size="md"
                       className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
                       onClick={() => setShowDiscount(true)}
@@ -993,7 +1012,7 @@ function CashierPOS() {
                       iconPosition="left"
                     />
                     <Button
-                      label="PRICE CHECK (F2)"
+                      label={<ButtonLabel text="PRICE CHECK" shortcut="F2" />}
                       size="md"
                       className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
                       onClick={() => setShowPriceCheck(true)}
@@ -1017,7 +1036,7 @@ function CashierPOS() {
                       iconPosition="left"
                     />
                     <Button
-                      label="SCAN CUSTOMER QR (F8)"
+                      label={<ButtonLabel text="SCAN CUSTOMER QR" shortcut="F8" />}
                       size="md"
                       className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
                       onClick={() => setShowImportCart(true)}
@@ -1046,7 +1065,7 @@ function CashierPOS() {
                 {/* Checkout Button */}
                 <div className="col-span-4">
                   <Button
-                    label="CHECKOUT (F10)"
+                    label={<ButtonLabel text="CHECKOUT" shortcut="F10" variant="primary" />}
                     size="md"
                     className="w-full h-full text-sm sm:text-base font-bold"
                     variant="primary"
