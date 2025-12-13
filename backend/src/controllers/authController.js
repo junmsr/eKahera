@@ -833,7 +833,7 @@ exports.getProfile = async (req, res) => {
         // Get all users associated with this business
         const usersResult = await pool.query(
           `SELECT u.user_id, u.username, u.email, u.role, u.contact_number,
-                  u.created_at, ut.user_type_name
+                  u.created_at, u.first_name, u.last_name, ut.user_type_name
            FROM users u
            LEFT JOIN user_type ut ON ut.user_type_id = u.user_type_id
            WHERE u.business_id = $1

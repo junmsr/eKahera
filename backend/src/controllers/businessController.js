@@ -184,10 +184,31 @@ exports.createCashier = async (req, res) => {
       return res.status(400).json({ error: 'Admin is not associated with a business' });
     }
 
-    const { username, password, contact_number, email } = req.body;
+    const { username, password, contact_number, email, first_name, last_name } = req.body;
     if (!username || !password) {
       return res.status(400).json({ error: 'username and password are required' });
     }
+
+    // Validate first_name and last_name are provided
+    if (!first_name || !first_name.trim()) {
+      return res.status(400).json({ error: 'first_name is required' });
+    }
+    if (!last_name || !last_name.trim()) {
+      return res.status(400).json({ error: 'last_name is required' });
+    }
+
+    // Trim first_name and last_name
+    const trimmedFirstName = first_name.trim();
+    const trimmedLastName = last_name.trim();
+    
+    console.log('Creating cashier - received:', { 
+      username, 
+      first_name: req.body.first_name, 
+      last_name: req.body.last_name,
+      first_name_type: typeof req.body.first_name,
+      last_name_type: typeof req.body.last_name
+    });
+    console.log('Creating cashier - processed:', { trimmedFirstName, trimmedLastName });
 
     // Get a client from the pool for transaction with timeout and retry
     client = await retryDbOperation(async () => {
@@ -217,16 +238,18 @@ exports.createCashier = async (req, res) => {
     // Insert cashier with retry
     const ins = await retryDbOperation(async () =>
       await client.query(
-        `INSERT INTO users (username, email, password_hash, contact_number, user_type_id, role, business_id, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, $5, 'cashier', $6, NOW(), NOW())
-         RETURNING user_id, username, business_id`,
-        [username, email || null, passwordHash, contact_number || null, cashierTypeId, adminBusinessId]
+        `INSERT INTO users (username, email, password_hash, contact_number, user_type_id, role, business_id, first_name, last_name, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, 'cashier', $6, $7, $8, NOW(), NOW())
+         RETURNING user_id, username, business_id, first_name, last_name`,
+        [username, email || null, passwordHash, contact_number || null, cashierTypeId, adminBusinessId, trimmedFirstName, trimmedLastName]
       )
     );
 
     client.release();
 
     const newCashier = ins.rows[0];
+    console.log('Created cashier result:', newCashier);
+    
     logAction({
       userId: adminUserId,
       businessId: adminBusinessId,
@@ -235,7 +258,13 @@ exports.createCashier = async (req, res) => {
 
     res.status(201).json({
       message: 'Cashier created',
-      cashier: newCashier,
+      cashier: {
+        user_id: newCashier.user_id,
+        username: newCashier.username,
+        business_id: newCashier.business_id,
+        first_name: newCashier.first_name,
+        last_name: newCashier.last_name,
+      },
     });
   } catch (err) {
     if (client) {
@@ -314,7 +343,7 @@ exports.listCashiers = async (req, res) => {
     }
 
     const rows = await pool.query(
-      `SELECT u.user_id, u.username, u.email, u.contact_number, u.created_at
+      `SELECT u.user_id, u.username, u.email, u.contact_number, u.created_at, u.first_name, u.last_name
        FROM users u
        LEFT JOIN user_type ut ON ut.user_type_id = u.user_type_id
        WHERE u.business_id = $1 AND (lower(ut.user_type_name) = 'cashier' OR lower(u.role) = 'cashier')

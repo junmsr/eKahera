@@ -18,6 +18,8 @@ export default function CashierFormModal({
 }) {
   const defaultInitialData = {
     name: "",
+    first_name: "",
+    last_name: "",
     password: "",
     number: "",
     email: "",
@@ -55,6 +57,26 @@ export default function CashierFormModal({
         }
         break;
 
+      case "first_name":
+        if (!value.trim()) {
+          newErrors.first_name = "First name is required";
+        } else if (value.trim().length < 2) {
+          newErrors.first_name = "First name must be at least 2 characters";
+        } else {
+          delete newErrors.first_name;
+        }
+        break;
+
+      case "last_name":
+        if (!value.trim()) {
+          newErrors.last_name = "Last name is required";
+        } else if (value.trim().length < 2) {
+          newErrors.last_name = "Last name must be at least 2 characters";
+        } else {
+          delete newErrors.last_name;
+        }
+        break;
+
       case "password":
         if (!value) {
           newErrors.password = "Password is required";
@@ -76,9 +98,7 @@ export default function CashierFormModal({
         break;
 
       case "email":
-        if (!value.trim()) {
-          newErrors.email = "Email is required";
-        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())) {
+        if (value.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())) {
           newErrors.email = "Please enter a valid email";
         } else {
           delete newErrors.email;
@@ -109,15 +129,71 @@ export default function CashierFormModal({
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Validate all fields
+    // Validate all fields and compute errors synchronously
+    const newErrors = {};
     Object.keys(form).forEach((key) => {
       if (key !== "status") {
-        validateField(key, form[key]);
+        const value = form[key];
+        switch (key) {
+          case "name":
+            if (!value.trim()) {
+              newErrors.name = "Name is required";
+            } else if (value.trim().length < 2) {
+              newErrors.name = "Name must be at least 2 characters";
+            }
+            break;
+          case "first_name":
+            if (!value.trim()) {
+              newErrors.first_name = "First name is required";
+            } else if (value.trim().length < 2) {
+              newErrors.first_name = "First name must be at least 2 characters";
+            }
+            break;
+          case "last_name":
+            if (!value.trim()) {
+              newErrors.last_name = "Last name is required";
+            } else if (value.trim().length < 2) {
+              newErrors.last_name = "Last name must be at least 2 characters";
+            }
+            break;
+          case "password":
+            if (!value) {
+              newErrors.password = "Password is required";
+            } else if (value.length < 6) {
+              newErrors.password = "Password must be at least 6 characters";
+            }
+            break;
+          case "number":
+            if (!value.trim()) {
+              newErrors.number = "Phone number is required";
+            } else if (value.trim().length < 7) {
+              newErrors.number = "Phone number must be at least 7 digits";
+            }
+            break;
+          case "email":
+            if (value.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())) {
+              newErrors.email = "Please enter a valid email";
+            }
+            break;
+          default:
+            break;
+        }
       }
     });
 
+    // Update errors state
+    setErrors(newErrors);
+    setTouched({
+      name: true,
+      first_name: true,
+      last_name: true,
+      password: true,
+      number: true,
+      email: true,
+    });
+
     // Check if form is valid
-    const hasErrors = Object.keys(errors).length > 0;
+    const hasErrors = Object.keys(newErrors).length > 0;
     if (!hasErrors) {
       await onSubmit(form);
       handleClose();
@@ -136,9 +212,10 @@ export default function CashierFormModal({
   const isFormValid =
     Object.keys(errors).length === 0 &&
     form.name.trim() &&
+    form.first_name.trim() &&
+    form.last_name.trim() &&
     form.password &&
-    form.number.trim() &&
-    form.email.trim();
+    form.number.trim();
 
   const footerContent = (
     <>
@@ -198,6 +275,30 @@ export default function CashierFormModal({
           required
         />
 
+        {/* First Name Field */}
+        <FormField
+          label="First Name"
+          name="first_name"
+          value={form.first_name}
+          onChange={handleChange}
+          onBlur={handleBlur}
+          placeholder="Enter first name"
+          error={touched.first_name && errors.first_name ? errors.first_name : null}
+          required
+        />
+
+        {/* Last Name Field */}
+        <FormField
+          label="Last Name"
+          name="last_name"
+          value={form.last_name}
+          onChange={handleChange}
+          onBlur={handleBlur}
+          placeholder="Enter last name"
+          error={touched.last_name && errors.last_name ? errors.last_name : null}
+          required
+        />
+
         {/* Password Field */}
         <FormField
           label="Password"
@@ -231,9 +332,8 @@ export default function CashierFormModal({
           value={form.email}
           onChange={handleChange}
           onBlur={handleBlur}
-          placeholder="Enter email address"
+          placeholder="Enter email address (optional)"
           error={touched.email && errors.email ? errors.email : null}
-          required
         />
 
         {/* Status Field */}

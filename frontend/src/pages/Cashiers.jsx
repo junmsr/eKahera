@@ -40,13 +40,16 @@ export default function Cashiers() {
         const list = await api("/api/business/cashiers", {
           headers: authHeaders(token),
         });
-        const mapped = (list || []).map((r) => ({
-          name: r.username || "-",
-          id: r.user_id || "-",
-          number: r.contact_number || "-",
-          email: r.email || "-",
-          status: "ACTIVE",
-        }));
+        const mapped = (list || []).map((r) => {
+          const fullName = [r.first_name, r.last_name].filter(Boolean).join(" ").trim();
+          return {
+            name: fullName || r.username || "-",
+            id: r.user_id || "-",
+            number: r.contact_number || "-",
+            email: r.email || "-",
+            status: r.status || "ACTIVE",
+          };
+        });
         setCashiers(mapped);
       } catch (err) {
         setApiError(err.message || "Failed to load cashiers");
@@ -88,28 +91,53 @@ export default function Cashiers() {
     try {
       setModalLoading(true);
       setApiError("");
+      
+      // Ensure first_name and last_name are present and not empty
+      const firstName = (formData.first_name || "").trim();
+      const lastName = (formData.last_name || "").trim();
+      
+      if (!firstName) {
+        setApiError("First name is required");
+        setModalLoading(false);
+        return;
+      }
+      if (!lastName) {
+        setApiError("Last name is required");
+        setModalLoading(false);
+        return;
+      }
+      
       const token = sessionStorage.getItem("auth_token");
+      const requestBody = {
+        username: (formData.name || "").trim(),
+        first_name: firstName,
+        last_name: lastName,
+        password: (formData.password || "").trim(),
+        contact_number: (formData.number || "").trim() || null,
+        email: (formData.email || "").trim() || null,
+      };
+      
+      console.log("Sending cashier data:", requestBody);
+      
       await api("/api/business/cashiers", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...authHeaders(token) },
-        body: JSON.stringify({
-          username: (formData.name || "").trim(),
-          password: (formData.password || "").trim(),
-          contact_number: (formData.number || "").trim() || null,
-          email: (formData.email || "").trim() || null,
-        }),
+        body: JSON.stringify(requestBody),
       });
       // refresh list
       const list = await api("/api/business/cashiers", {
         headers: authHeaders(token),
       });
-      const mapped = (list || []).map((r) => ({
-        name: r.username || "-",
-        id: r.user_id || "-",
-        number: r.contact_number || "-",
-        email: r.email || "-",
-        status: "ACTIVE",
-      }));
+      const mapped = (list || []).map((r) => {
+        const fullName = [r.first_name, r.last_name].filter(Boolean).join(" ").trim();
+        return {
+          name: fullName || r.username || "-",
+          id: r.user_id || "-",
+          number: r.contact_number || "-",
+          email: r.email || "-",
+          status: r.status || "ACTIVE",
+        };
+      });
       setCashiers(mapped);
       setShowAddModal(false);
     } catch (err) {
