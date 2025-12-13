@@ -1340,6 +1340,26 @@ exports.requestStoreDeletion = async (req, res) => {
       return res.status(400).json({ error: 'Business not found for user' });
     }
 
+    const { password } = req.body;
+    if (!password) {
+      return res.status(400).json({ error: 'Password is required to confirm deletion' });
+    }
+
+    // Verify user's password before proceeding
+    const userResult = await pool.query(
+      'SELECT password_hash FROM users WHERE user_id = $1',
+      [req.user?.userId]
+    );
+
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, userResult.rows[0].password_hash);
+    if (!isPasswordValid) {
+      return res.status(401).json({ error: 'The password you entered is incorrect. Please try again.' });
+    }
+
     const { request, alreadyExists } = await createDeletionRequest({
       businessId,
       userId: req.user?.userId,

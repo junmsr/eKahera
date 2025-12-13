@@ -234,7 +234,6 @@ const Profile = () => {
   const [deleteError, setDeleteError] = useState("");
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [downloadLoading, setDownloadLoading] = useState(false);
-  const [confirmText, setConfirmText] = useState("");
   const [password, setPassword] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -424,10 +423,6 @@ const Profile = () => {
   const handleRequestDeletion = async () => {
     setDeleteError("");
     setDeleteMessage("");
-    if (confirmText.trim().toLowerCase() !== "delete") {
-      setDeleteError('Type "DELETE" to confirm.');
-      return;
-    }
     if (!password) {
       setDeleteError('Please enter your password to confirm deletion.');
       return;
@@ -444,7 +439,6 @@ const Profile = () => {
       );
       setShowDeleteConfirm(false);
       setPassword("");
-      setConfirmText("");
     } catch (e) {
       setDeleteError(
         e?.message || "Could not request deletion. Please check your password and try again."
@@ -465,7 +459,6 @@ const Profile = () => {
       const normalized = normalizeDeletion(res?.deletion);
       setDeleteState(normalized);
       setDeleteMessage("");
-      setConfirmText("");
     } catch (e) {
       setDeleteError(
         e?.message || "Could not cancel deletion. Please try again."
@@ -1220,53 +1213,36 @@ const Profile = () => {
                         <div className="space-y-4">
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Type "DELETE" to confirm
+                              Enter your password to confirm
                             </label>
                             <input
-                              type="text"
+                              type="password"
                               className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                              placeholder="DELETE"
-                              value={confirmText}
-                              onChange={(e) => setConfirmText(e.target.value)}
+                              placeholder="Your account password"
+                              value={password}
+                              onChange={(e) => setPassword(e.target.value)}
+                              disabled={deleteLoading}
                             />
                           </div>
                           <div className="flex flex-wrap gap-3">
-                            <div className="space-y-4 w-full">
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                  Enter your password to confirm
-                                </label>
-                                <input
-                                  type="password"
-                                  className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                                  placeholder="Your account password"
-                                  value={password}
-                                  onChange={(e) => setPassword(e.target.value)}
-                                  disabled={deleteLoading}
-                                />
-                              </div>
-                              <div className="flex flex-wrap gap-3">
-                                <Button
-                                  label="Cancel"
-                                  variant="secondary"
-                                  onClick={() => {
-                                    setShowDeleteConfirm(false);
-                                    setConfirmText("");
-                                    setPassword("");
-                                    setDeleteError("");
-                                  }}
-                                  disabled={deleteLoading}
-                                />
+                            <Button
+                              label="Cancel"
+                              variant="secondary"
+                              onClick={() => {
+                                setShowDeleteConfirm(false);
+                                setPassword("");
+                                setDeleteError("");
+                              }}
+                              disabled={deleteLoading}
+                            />
                             <Button
                               label={
                                 deleteLoading ? "Processing..." : "Confirm Deletion"
                               }
                               variant="danger"
                               onClick={handleRequestDeletion}
-                              disabled={deleteLoading || confirmText.trim().toLowerCase() !== "delete" || !password}
+                              disabled={deleteLoading || !password}
                             />
-                          </div>
-                        </div>
                           </div>
                         </div>
                       )}

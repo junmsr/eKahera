@@ -199,7 +199,7 @@ function SuperAdmin() {
       setDeleteModal({ isOpen: false, store: null });
       setError("");
     } catch (err) {
-      setDeleteError("Unknown error");
+      setDeleteError("Failed to delete store. Please check your password and try again.");
     } finally {
       setDeleteLoading(false);
     }

@@ -85,7 +85,18 @@ export async function api(path, options = {}, returnRawResponse = false) {
         "Invalid request. Please check your input and try again."
       );
     } else if (res.status === 401) {
-      throw new Error("Your session has expired. Please log in again.");
+      // Try to extract specific error message (e.g., password validation errors)
+      let specificError = null;
+      try {
+        const errorJson = JSON.parse(errorText);
+        if (errorJson.error) {
+          specificError = errorJson.error;
+        }
+      } catch (e) {
+        // JSON parsing failed, will use generic message
+      }
+      // Use specific error if found, otherwise use generic message
+      throw new Error(specificError || "Your session has expired. Please log in again.");
     } else if (res.status === 403) {
       throw new Error("You do not have permission to perform this action.");
     } else if (res.status === 404) {
