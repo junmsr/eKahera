@@ -696,7 +696,9 @@ exports.updateBusinessProfile = async (req, res) => {
   const {
     businessName,
     businessType,
+    email,
     region,
+    province,
     businessAddress,
     houseNumber,
     mobile
@@ -718,19 +720,53 @@ exports.updateBusinessProfile = async (req, res) => {
       return res.status(400).json({ error: 'User is not associated with a business' });
     }
 
-    const result = await pool.query(`
+    // Build update query dynamically - only update business_address if it's provided
+    const updateFields = [];
+    const queryParams = [];
+    let paramIndex = 1;
+
+    if (businessName !== undefined) {
+      updateFields.push(`business_name = $${paramIndex++}`);
+      queryParams.push(businessName);
+    }
+    if (businessType !== undefined) {
+      updateFields.push(`business_type = $${paramIndex++}`);
+      queryParams.push(businessType);
+    }
+    if (email !== undefined) {
+      updateFields.push(`email = $${paramIndex++}`);
+      queryParams.push(email);
+    }
+    if (region !== undefined) {
+      updateFields.push(`region = $${paramIndex++}`);
+      queryParams.push(region);
+    }
+    // Only update business_address if it's explicitly provided (when location fields change)
+    if (businessAddress !== undefined) {
+      updateFields.push(`business_address = $${paramIndex++}`);
+      queryParams.push(businessAddress);
+    }
+    if (houseNumber !== undefined) {
+      updateFields.push(`house_number = $${paramIndex++}`);
+      queryParams.push(houseNumber);
+    }
+    if (mobile !== undefined) {
+      updateFields.push(`mobile = $${paramIndex++}`);
+      queryParams.push(mobile);
+    }
+
+    // Always update updated_at
+    updateFields.push(`updated_at = NOW()`);
+    queryParams.push(businessId);
+
+    const updateQuery = `
       UPDATE business
-      SET
-        business_name = COALESCE($1, business_name),
-        business_type = COALESCE($2, business_type),
-        region = COALESCE($3, region),
-        business_address = COALESCE($4, business_address),
-        house_number = COALESCE($5, house_number),
-        mobile = COALESCE($6, mobile),
-        updated_at = NOW()
-      WHERE business_id = $7
+      SET ${updateFields.join(', ')}
+      WHERE business_id = $${paramIndex}
       RETURNING *
-    `, [businessName, businessType, region, businessAddress, houseNumber, mobile, businessId]);
+    `;
+
+    const result = await pool.query(updateQuery, queryParams);
 
     if (result.rows.length === 0) {
       return res.status(404).json({

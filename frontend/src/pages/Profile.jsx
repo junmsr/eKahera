@@ -248,6 +248,20 @@ const Profile = () => {
   const [saveWarningOpen, setSaveWarningOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
+  const [isEditingStore, setIsEditingStore] = useState(false);
+  const [editStoreFormData, setEditStoreFormData] = useState({
+    business_name: "",
+    business_type: "",
+    email: "",
+    region: "",
+    province: "",
+    city: "",
+    barangay: "",
+    house_number: "",
+  });
+  const [saveStoreWarningOpen, setSaveStoreWarningOpen] = useState(false);
+  const [savingStore, setSavingStore] = useState(false);
+  const [saveStoreError, setSaveStoreError] = useState("");
 
   const normalizeDeletion = (del) => {
     if (!del) return { status: "none" };
@@ -556,6 +570,93 @@ const Profile = () => {
     }
   };
 
+  const handleEditStore = () => {
+    if (profileData?.business) {
+      setEditStoreFormData({
+        business_name: profileData.business.business_name || "",
+        business_type: profileData.business.business_type || "",
+        email: profileData.business.email || "",
+        region: profileData.business.region || "",
+        province: profileData.business.province || "",
+        city: profileData.business.city || "",
+        barangay: profileData.business.barangay || "",
+        house_number: profileData.business.house_number || "",
+      });
+      setIsEditingStore(true);
+      setSaveStoreError("");
+    }
+  };
+
+  const handleCancelEditStore = () => {
+    setIsEditingStore(false);
+    setEditStoreFormData({
+      business_name: "",
+      business_type: "",
+      email: "",
+      region: "",
+      province: "",
+      city: "",
+      barangay: "",
+      house_number: "",
+    });
+    setSaveStoreError("");
+  };
+
+  const handleSaveStore = async () => {
+    setSavingStore(true);
+    setSaveStoreError("");
+    try {
+      // Check if location fields have changed
+      const locationChanged = 
+        editStoreFormData.house_number !== (profileData?.business?.house_number || "") ||
+        editStoreFormData.barangay !== (profileData?.business?.barangay || "") ||
+        editStoreFormData.city !== (profileData?.business?.city || "") ||
+        editStoreFormData.province !== (profileData?.business?.province || "");
+
+      // Only construct and send businessAddress if location fields changed
+      let businessAddress = undefined;
+      if (locationChanged) {
+        // Construct business address from location fields (without region)
+        // Format: house_number, barangay, city, province
+        const addressParts = [
+          editStoreFormData.house_number,
+          editStoreFormData.barangay,
+          editStoreFormData.city,
+          editStoreFormData.province,
+        ].filter(Boolean);
+        businessAddress = addressParts.join(", ");
+      }
+
+      const updateData = {
+        businessName: editStoreFormData.business_name,
+        businessType: editStoreFormData.business_type,
+        email: editStoreFormData.email,
+        region: editStoreFormData.region,
+        houseNumber: editStoreFormData.house_number,
+      };
+
+      // Only include businessAddress if location fields changed
+      if (businessAddress !== undefined) {
+        updateData.businessAddress = businessAddress;
+      }
+
+      await api("/api/business/profile", {
+        method: "PUT",
+        body: JSON.stringify(updateData),
+      });
+      
+      // Refresh profile data
+      await fetchProfileData();
+      setIsEditingStore(false);
+      setSaveStoreWarningOpen(false);
+    } catch (err) {
+      console.error("Failed to update store profile:", err);
+      setSaveStoreError(err.message || "Failed to update store profile. Please try again.");
+    } finally {
+      setSavingStore(false);
+    }
+  };
+
   // Header actions with modern styling
   const headerActions = (
     <div className="flex items-center justify-end gap-2 sm:gap-3">
@@ -619,7 +720,7 @@ const Profile = () => {
         isOpen={showChangePasswordModal}
         onClose={() => setShowChangePasswordModal(false)}
       />
-      {/* Save Warning Modal */}
+      {/* Save Warning Modal for Account */}
       <BaseModal
         isOpen={saveWarningOpen}
         onClose={() => setSaveWarningOpen(false)}
@@ -672,12 +773,72 @@ const Profile = () => {
           </div>
         </div>
       </BaseModal>
+
+      {/* Save Warning Modal for Store */}
+      <BaseModal
+        isOpen={saveStoreWarningOpen}
+        onClose={() => setSaveStoreWarningOpen(false)}
+        title="Confirm Save Changes"
+      >
+        <div className="space-y-4">
+          <div className="flex items-start gap-4">
+            <div className="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center flex-shrink-0">
+              <svg
+                className="w-6 h-6 text-yellow-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                Warning: This action cannot be undone
+              </h3>
+              <p className="text-sm text-gray-600">
+                You are about to save changes to your store information. This action cannot be undone. 
+                Are you sure you want to proceed?
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-3 justify-end pt-4 border-t border-gray-200">
+            <Button
+              onClick={() => setSaveStoreWarningOpen(false)}
+              variant="secondary"
+              size="md"
+              disabled={savingStore}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveStore}
+              variant="primary"
+              size="md"
+              disabled={savingStore}
+            >
+              {savingStore ? "Saving..." : "Yes, Save Changes"}
+            </Button>
+          </div>
+        </div>
+      </BaseModal>
       {/* Background blur overlay when editing */}
-      {isEditingAccount && (
-        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40" onClick={handleCancelEdit} />
+      {(isEditingAccount || isEditingStore) && (
+        <div 
+          className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40" 
+          onClick={() => {
+            if (isEditingAccount) handleCancelEdit();
+            if (isEditingStore) handleCancelEditStore();
+          }} 
+        />
       )}
 
-      <div className={`p-4 sm:p-6 space-y-4 sm:space-y-6 ${isEditingAccount ? 'relative z-50' : ''}`}>
+      <div className={`p-4 sm:p-6 space-y-4 sm:space-y-6 ${(isEditingAccount || isEditingStore) ? 'relative z-50' : ''}`}>
         {error && (
           <Card className="bg-gradient-to-br from-red-50 to-orange-50 border-red-200/50">
             <div className="flex items-start gap-4 p-4">
@@ -1041,20 +1202,31 @@ const Profile = () => {
             </Card>
 
             {/* Store Information */}
-            <Card className="bg-white shadow-sm">
-              <div className="p-6 md:p-8">
-                <div className="flex items-center mb-6 pb-4 border-b border-gray-200">
-                  <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 text-white rounded-xl flex items-center justify-center mr-3">
-                    <StoreIcon />
+            <Card className={`bg-white shadow-sm ${isEditingStore ? 'relative z-50 shadow-2xl' : ''}`}>
+              <div className="p-6 md:p-8" onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-200">
+                  <div className="flex items-center">
+                    <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 text-white rounded-xl flex items-center justify-center mr-3">
+                      <StoreIcon />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold text-gray-900">
+                        Store Information
+                      </h2>
+                      <p className="text-sm text-gray-500">
+                        Business details and credentials
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h2 className="text-xl font-bold text-gray-900">
-                      Store Information
-                    </h2>
-                    <p className="text-sm text-gray-500">
-                      Business details and credentials
-                    </p>
-                  </div>
+                  {!isEditingStore && (
+                    <button
+                      onClick={handleEditStore}
+                      className="p-2 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                      title="Edit Store Information"
+                    >
+                      <EditIcon />
+                    </button>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1063,56 +1235,116 @@ const Profile = () => {
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
                         Business Name
                       </label>
-                      <div className="flex items-center gap-3 bg-gradient-to-r from-gray-50 to-gray-100/50 px-4 py-3 rounded-xl border border-gray-200/50 group-hover:border-green-300 transition-colors">
-                        <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                          <StoreIcon className="text-green-600" />
+                      {isEditingStore ? (
+                        <div className="flex items-center gap-3 bg-white px-4 py-3 rounded-xl border-2 border-green-300">
+                          <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <StoreIcon className="text-green-600" />
+                          </div>
+                          <input
+                            type="text"
+                            value={editStoreFormData.business_name}
+                            onChange={(e) => setEditStoreFormData({ ...editStoreFormData, business_name: e.target.value })}
+                            className="text-gray-900 font-medium flex-1 outline-none bg-transparent"
+                            placeholder="Business Name"
+                          />
                         </div>
-                        <span className="text-gray-900 font-medium flex-1">
-                          {profileData?.business?.business_name || "N/A"}
-                        </span>
-                      </div>
+                      ) : (
+                        <div className="flex items-center gap-3 bg-gradient-to-r from-gray-50 to-gray-100/50 px-4 py-3 rounded-xl border border-gray-200/50 group-hover:border-green-300 transition-colors">
+                          <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <StoreIcon className="text-green-600" />
+                          </div>
+                          <span className="text-gray-900 font-medium flex-1">
+                            {profileData?.business?.business_name || "N/A"}
+                          </span>
+                        </div>
+                      )}
                     </div>
 
                     <div className="group">
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
                         Business Email
                       </label>
-                      <div className="flex items-center gap-3 bg-gradient-to-r from-gray-50 to-gray-100/50 px-4 py-3 rounded-xl border border-gray-200/50 group-hover:border-green-300 transition-colors">
-                        <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                          <EmailIcon className="text-blue-600" />
+                      {isEditingStore ? (
+                        <div className="flex items-center gap-3 bg-white px-4 py-3 rounded-xl border-2 border-green-300">
+                          <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <EmailIcon className="text-blue-600" />
+                          </div>
+                          <input
+                            type="email"
+                            value={editStoreFormData.email}
+                            onChange={(e) => setEditStoreFormData({ ...editStoreFormData, email: e.target.value })}
+                            className="text-gray-900 font-medium flex-1 outline-none bg-transparent"
+                            placeholder="Business Email"
+                          />
                         </div>
-                        <span className="text-gray-900 font-medium flex-1 truncate">
-                          {profileData?.business?.email || "N/A"}
-                        </span>
-                      </div>
+                      ) : (
+                        <div className="flex items-center gap-3 bg-gradient-to-r from-gray-50 to-gray-100/50 px-4 py-3 rounded-xl border border-gray-200/50 group-hover:border-green-300 transition-colors">
+                          <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <EmailIcon className="text-blue-600" />
+                          </div>
+                          <span className="text-gray-900 font-medium flex-1 truncate">
+                            {profileData?.business?.email || "N/A"}
+                          </span>
+                        </div>
+                      )}
                     </div>
 
                     <div className="group">
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
                         Region
                       </label>
-                      <div className="flex items-center gap-3 bg-gradient-to-r from-gray-50 to-gray-100/50 px-4 py-3 rounded-xl border border-gray-200/50 group-hover:border-green-300 transition-colors">
-                        <div className="w-8 h-8 bg-teal-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                          <LocationIcon className="text-teal-600" />
+                      {isEditingStore ? (
+                        <div className="flex items-center gap-3 bg-white px-4 py-3 rounded-xl border-2 border-green-300">
+                          <div className="w-8 h-8 bg-teal-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <LocationIcon className="text-teal-600" />
+                          </div>
+                          <input
+                            type="text"
+                            value={editStoreFormData.region}
+                            onChange={(e) => setEditStoreFormData({ ...editStoreFormData, region: e.target.value })}
+                            className="text-gray-900 font-medium flex-1 outline-none bg-transparent"
+                            placeholder="Region"
+                          />
                         </div>
-                        <span className="text-gray-900 font-medium flex-1">
-                          {profileData?.business?.region || "N/A"}
-                        </span>
-                      </div>
+                      ) : (
+                        <div className="flex items-center gap-3 bg-gradient-to-r from-gray-50 to-gray-100/50 px-4 py-3 rounded-xl border border-gray-200/50 group-hover:border-green-300 transition-colors">
+                          <div className="w-8 h-8 bg-teal-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <LocationIcon className="text-teal-600" />
+                          </div>
+                          <span className="text-gray-900 font-medium flex-1">
+                            {profileData?.business?.region || "N/A"}
+                          </span>
+                        </div>
+                      )}
                     </div>
 
                     <div className="group">
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
                         Province
                       </label>
-                      <div className="flex items-center gap-3 bg-gradient-to-r from-gray-50 to-gray-100/50 px-4 py-3 rounded-xl border border-gray-200/50 group-hover:border-green-300 transition-colors">
-                        <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                          <LocationIcon className="text-emerald-600" />
+                      {isEditingStore ? (
+                        <div className="flex items-center gap-3 bg-white px-4 py-3 rounded-xl border-2 border-green-300">
+                          <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <LocationIcon className="text-emerald-600" />
+                          </div>
+                          <input
+                            type="text"
+                            value={editStoreFormData.province}
+                            onChange={(e) => setEditStoreFormData({ ...editStoreFormData, province: e.target.value })}
+                            className="text-gray-900 font-medium flex-1 outline-none bg-transparent"
+                            placeholder="Province"
+                          />
                         </div>
-                        <span className="text-gray-900 font-medium flex-1">
-                          {profileData?.business?.province || "N/A"}
-                        </span>
-                      </div>
+                      ) : (
+                        <div className="flex items-center gap-3 bg-gradient-to-r from-gray-50 to-gray-100/50 px-4 py-3 rounded-xl border border-gray-200/50 group-hover:border-green-300 transition-colors">
+                          <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <LocationIcon className="text-emerald-600" />
+                          </div>
+                          <span className="text-gray-900 font-medium flex-1">
+                            {profileData?.business?.province || "N/A"}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -1121,7 +1353,7 @@ const Profile = () => {
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
                         Business Type
                       </label>
-                      <div className="flex items-center gap-3 bg-gradient-to-r from-gray-50 to-gray-100/50 px-4 py-3 rounded-xl border border-gray-200/50 group-hover:border-green-300 transition-colors">
+                      <div className="flex items-center gap-3 bg-gradient-to-r from-gray-50 to-gray-100/50 px-4 py-3 rounded-xl border border-gray-200/50">
                         <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center flex-shrink-0">
                           <svg
                             className="w-5 h-5 text-emerald-600"
@@ -1147,54 +1379,138 @@ const Profile = () => {
                       <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
                         Business Location
                       </label>
-                      <div className="bg-gradient-to-r from-gray-50 to-gray-100/50 px-4 py-3 rounded-xl border border-gray-200/50">
-                        <div className="grid grid-cols-1 gap-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                              <LocationIcon className="text-blue-600" />
-                            </div>
-                            <div className="flex-1">
-                              <div className="text-xs text-gray-500 uppercase tracking-wide">
-                                City/Municipality
+                      {isEditingStore ? (
+                        <div className="bg-white px-4 py-3 rounded-xl border-2 border-green-300">
+                          <div className="grid grid-cols-1 gap-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <LocationIcon className="text-blue-600" />
                               </div>
-                              <div className="text-gray-900 font-medium">
-                                {profileData?.business?.city || "N/A"}
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                              <LocationIcon className="text-indigo-600" />
-                            </div>
-                            <div className="flex-1">
-                              <div className="text-xs text-gray-500 uppercase tracking-wide">
-                                Barangay
-                              </div>
-                              <div className="text-gray-900 font-medium">
-                                {profileData?.business?.barangay || "N/A"}
+                              <div className="flex-1">
+                                <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">
+                                  City/Municipality
+                                </div>
+                                <input
+                                  type="text"
+                                  value={editStoreFormData.city}
+                                  onChange={(e) => setEditStoreFormData({ ...editStoreFormData, city: e.target.value })}
+                                  className="text-gray-900 font-medium w-full outline-none bg-transparent border-b border-gray-300 focus:border-green-500"
+                                  placeholder="City/Municipality"
+                                />
                               </div>
                             </div>
-                          </div>
-                          <div className="flex items-start gap-3">
-                            <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-                              <LocationIcon className="text-purple-600" />
-                            </div>
-                            <div className="flex-1">
-                              <div className="text-xs text-gray-500 uppercase tracking-wide">
-                                House no./ Street Name / Landmark (optional)
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <LocationIcon className="text-indigo-600" />
                               </div>
-                              <div className="text-gray-900 font-medium">
-                                {[profileData?.business?.house_number, profileData?.business?.business_address, profileData?.business?.landmark]
-                                  .filter(Boolean)
-                                  .join(", ") || "N/A"}
+                              <div className="flex-1">
+                                <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">
+                                  Barangay
+                                </div>
+                                <input
+                                  type="text"
+                                  value={editStoreFormData.barangay}
+                                  onChange={(e) => setEditStoreFormData({ ...editStoreFormData, barangay: e.target.value })}
+                                  className="text-gray-900 font-medium w-full outline-none bg-transparent border-b border-gray-300 focus:border-green-500"
+                                  placeholder="Barangay"
+                                />
+                              </div>
+                            </div>
+                            <div className="flex items-start gap-3">
+                              <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                                <LocationIcon className="text-purple-600" />
+                              </div>
+                              <div className="flex-1">
+                                <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">
+                                  House no./ Street Name / Landmark (optional)
+                                </div>
+                                <input
+                                  type="text"
+                                  value={editStoreFormData.house_number}
+                                  onChange={(e) => setEditStoreFormData({ ...editStoreFormData, house_number: e.target.value })}
+                                  className="text-gray-900 font-medium w-full outline-none bg-transparent border-b border-gray-300 focus:border-green-500"
+                                  placeholder="House no./ Street Name / Landmark"
+                                />
                               </div>
                             </div>
                           </div>
                         </div>
-                      </div>
+                      ) : (
+                        <div className="bg-gradient-to-r from-gray-50 to-gray-100/50 px-4 py-3 rounded-xl border border-gray-200/50">
+                          <div className="grid grid-cols-1 gap-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <LocationIcon className="text-blue-600" />
+                              </div>
+                              <div className="flex-1">
+                                <div className="text-xs text-gray-500 uppercase tracking-wide">
+                                  City/Municipality
+                                </div>
+                                <div className="text-gray-900 font-medium">
+                                  {profileData?.business?.city || "N/A"}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <LocationIcon className="text-indigo-600" />
+                              </div>
+                              <div className="flex-1">
+                                <div className="text-xs text-gray-500 uppercase tracking-wide">
+                                  Barangay
+                                </div>
+                                <div className="text-gray-900 font-medium">
+                                  {profileData?.business?.barangay || "N/A"}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex items-start gap-3">
+                              <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                                <LocationIcon className="text-purple-600" />
+                              </div>
+                              <div className="flex-1">
+                                <div className="text-xs text-gray-500 uppercase tracking-wide">
+                                  House no./ Street Name / Landmark (optional)
+                                </div>
+                                <div className="text-gray-900 font-medium">
+                                  {profileData?.business?.house_number || "N/A"}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
+
+                {isEditingStore && (
+                  <div className="mt-6 pt-6 border-t border-gray-200">
+                    {saveStoreError && (
+                      <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                        {saveStoreError}
+                      </div>
+                    )}
+                    <div className="flex flex-wrap gap-3 justify-end">
+                      <Button
+                        onClick={handleCancelEditStore}
+                        variant="secondary"
+                        size="md"
+                        disabled={savingStore}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={() => setSaveStoreWarningOpen(true)}
+                        variant="primary"
+                        size="md"
+                        disabled={savingStore}
+                      >
+                        {savingStore ? "Saving..." : "Save Changes"}
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             </Card>
 
