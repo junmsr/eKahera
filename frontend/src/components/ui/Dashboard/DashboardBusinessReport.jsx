@@ -6,8 +6,8 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  LineChart,
-  Line,
+  BarChart,
+  Bar,
   PieChart,
   Pie,
   Cell,
@@ -18,17 +18,7 @@ import ChartCard from "./ChartCard";
 // ProfitTrendChart component that matches VisitorsChart structure
 function ProfitTrendChart({ data, className = "", rangeType = "Custom" }) {
   const getChartTitle = (rangeType) => {
-    switch (rangeType) {
-      case "Day":
-        return "Profit Today";
-      case "Week":
-        return "7-Day Profit Trend";
-      case "Month":
-        return "Monthly Profit Trend";
-      case "Custom":
-      default:
-        return "Profit Trend";
-    }
+    return "Top 10 Products by Sales Volume";
   };
 
   return (
@@ -38,15 +28,22 @@ function ProfitTrendChart({ data, className = "", rangeType = "Custom" }) {
     >
       <div className="h-72 w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart
+          <BarChart
+            layout="vertical"
             data={data}
-            margin={{ top: 20, right: 20, left: 0, bottom: 5 }}
+            margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
           >
             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-            <XAxis dataKey="name" tick={{ fill: "#374151", fontSize: 14 }} />
-            <YAxis 
+            <XAxis
+              type="number"
               tick={{ fill: "#374151", fontSize: 14 }}
-              tickFormatter={(value) => `₱${value.toLocaleString()}`}
+              tickFormatter={(value) => value.toLocaleString()}
+            />
+            <YAxis
+              dataKey="name"
+              type="category"
+              tick={{ fill: "#374151", fontSize: 14 }}
+              width={100}
             />
             <Tooltip
               contentStyle={{
@@ -54,24 +51,10 @@ function ProfitTrendChart({ data, className = "", rangeType = "Custom" }) {
                 borderColor: "#e5e7eb",
                 borderRadius: 8,
               }}
-              formatter={(value) => [
-                new Intl.NumberFormat('en-PH', {
-                  style: 'currency',
-                  currency: 'PHP',
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2
-                }).format(value),
-                'Profit'
-              ]}
+              formatter={(value) => [`${Number(value).toLocaleString()} sold`, "Volume"]}
             />
-            <Line
-              type="monotone"
-              dataKey="value"
-              stroke="#3b82f6"
-              strokeWidth={3}
-              dot={{ r: 5, fill: "#3b82f6" }}
-            />
-          </LineChart>
+            <Bar dataKey="value" fill="#3b82f6" radius={[0, 4, 4, 0]} />
+          </BarChart>
         </ResponsiveContainer>
       </div>
     </ChartCard>
@@ -87,14 +70,8 @@ const TrendIcon = ({ trend }) => {
 };
 
 export default function DashboardBusinessReport({ dateRange }) {
-  const [profitTrend, setProfitTrend] = useState([]);
+  const [chartData, setChartData] = useState([]);
   const [paymentMethods, setPaymentMethods] = useState([]);
-  const [keyMetrics, setKeyMetrics] = useState({});
-  const [businessStats, setBusinessStats] = useState({
-    cashFlow: 0,
-    operatingCosts: 0,
-    profitGrowth: 0,
-  });
 
   const blueShades = [
     "#3b82f6",
@@ -149,22 +126,15 @@ export default function DashboardBusinessReport({ dateRange }) {
         const queryString = buildQueryString(queryParams);
 
         const [
-          keyMetricsRes,
-          profitTrendRes,
+          overviewRes,
           paymentMethodsRes,
-          productPerformanceRes,
-          businessStatsRes,
         ] = await Promise.all([
-          api(`/api/stats/key-metrics${queryString}`),
-          api(`/api/stats/profit-trend${queryString}`),
+          api(`/api/dashboard/overview${queryString}`),
           api(`/api/stats/payment-methods${queryString}`),
-          api(`/api/stats/business-stats${queryString}`),
         ]);
 
-        setKeyMetrics(keyMetricsRes || {});
-        setProfitTrend(profitTrendRes || []);
+        setChartData(overviewRes?.topProducts || []);
         setPaymentMethods(paymentMethodsRes || []);
-        setBusinessStats(businessStatsRes || {});
       } catch (error) {
         console.error("Error fetching business report data:", error);
       }
@@ -174,12 +144,12 @@ export default function DashboardBusinessReport({ dateRange }) {
   }, [dateRange]);
 
   // Format the profit trend data to match the expected format
-  const formatProfitData = (data) => {
+  const formatChartData = (data) => {
     if (!data || !Array.isArray(data)) return [];
     
-    return data.map(item => ({
-      name: item.month || item.date || item.name,
-      value: Number(item.profit || item.value || 0)
+    return data.slice(0, 10).map(item => ({
+      name: item.product_name || item.name,
+      value: Number(item.total_sold || 0)
     }));
   };
 
@@ -188,7 +158,7 @@ export default function DashboardBusinessReport({ dateRange }) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8 w-full min-h-[350px]">
         {/* Profit Trends Chart */}
         <ProfitTrendChart 
-          data={formatProfitData(profitTrend)} 
+          data={formatChartData(chartData)} 
           rangeType={dateRange?.rangeType} 
         />
 
