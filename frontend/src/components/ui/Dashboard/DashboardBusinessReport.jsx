@@ -18,7 +18,7 @@ import ChartCard from "./ChartCard";
 // ProfitTrendChart component that matches VisitorsChart structure
 function ProfitTrendChart({ data, className = "", rangeType = "Custom" }) {
   const getChartTitle = (rangeType) => {
-    return "Top 10 Products by Sales Volume";
+    return "Top 5 Products by Sales Volume";
   };
 
   return (
@@ -147,7 +147,7 @@ export default function DashboardBusinessReport({ dateRange }) {
   const formatChartData = (data) => {
     if (!data || !Array.isArray(data)) return [];
     
-    return data.slice(0, 10).map(item => ({
+    return data.slice(0, 5).map(item => ({
       name: item.product_name || item.name,
       value: Number(item.total_sold || 0)
     }));
