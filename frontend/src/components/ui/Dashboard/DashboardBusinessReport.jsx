@@ -36,13 +36,13 @@ function ProfitTrendChart({ data, className = "", rangeType = "Custom" }) {
             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
             <XAxis
               type="number"
-              tick={{ fill: "#374151", fontSize: 14 }}
+              tick={{ fill: "#374151", fontSize: 10 }}
               tickFormatter={(value) => value.toLocaleString()}
             />
             <YAxis
               dataKey="name"
               type="category"
-              tick={{ fill: "#374151", fontSize: 14 }}
+              tick={{ fill: "#374151", fontSize: 10 }}
               width={100}
             />
             <Tooltip

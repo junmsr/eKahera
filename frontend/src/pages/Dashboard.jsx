@@ -70,8 +70,8 @@ function VisitorsChart({ data, className = "", rangeType = "Custom" }) {
             margin={{ top: 20, right: 20, left: 0, bottom: 5 }}
           >
             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-            <XAxis dataKey="name" tick={{ fill: "#374151", fontSize: 14 }} />
-            <YAxis tick={{ fill: "#374151", fontSize: 14 }} />
+            <XAxis dataKey="name" tick={{ fill: "#374151", fontSize: 10 }} />
+            <YAxis tick={{ fill: "#374151", fontSize: 10 }} />
             <Tooltip
               contentStyle={{
                 background: "#fff",
