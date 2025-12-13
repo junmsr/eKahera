@@ -18,6 +18,7 @@ export default function CashierFormModal({
 }) {
   const defaultInitialData = {
     name: "",
+    fullName: "",
     password: "",
     number: "",
     email: "",
@@ -30,7 +31,14 @@ export default function CashierFormModal({
 
   useEffect(() => {
     if (initialData) {
-      setForm({ ...initialData, password: initialData.password || "" });
+      setForm({
+        name: initialData.name || "",
+        fullName: initialData.fullName || "",
+        password: initialData.password || "",
+        number: initialData.number || "",
+        email: initialData.email || "",
+        status: initialData.status || "ACTIVE",
+      });
     } else {
       // When used for "Add", there's no initialData, so we use the default.
       setForm(defaultInitialData);
@@ -38,7 +46,13 @@ export default function CashierFormModal({
   }, [initialData]);
 
   // Reset form state when modal is closed
-  useEffect(() => { if (!isOpen) { setForm(initialData || defaultInitialData); setErrors({}); setTouched({}); } }, [isOpen, initialData]);
+  useEffect(() => {
+    if (!isOpen) {
+      setForm(defaultInitialData);
+      setErrors({});
+      setTouched({});
+    }
+  }, [isOpen, initialData]);
 
   // Validation rules
   const validateField = (name, value) => {
@@ -52,6 +66,16 @@ export default function CashierFormModal({
           newErrors.name = "Name must be at least 2 characters";
         } else {
           delete newErrors.name;
+        }
+        break;
+
+      case "fullName":
+        if (!value.trim()) {
+          newErrors.fullName = "Full Name is required";
+        } else if (value.trim().length < 2) {
+          newErrors.fullName = "Full Name must be at least 2 characters";
+        } else {
+          delete newErrors.fullName;
         }
         break;
 
@@ -136,6 +160,7 @@ export default function CashierFormModal({
   const isFormValid =
     Object.keys(errors).length === 0 &&
     form.name.trim() &&
+    form.fullName.trim() &&
     form.password &&
     form.number.trim() &&
     form.email.trim();
@@ -188,13 +213,25 @@ export default function CashierFormModal({
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Name Field */}
         <FormField
-          label="User Name"
+          label="Full Name"
           name="name"
           value={form.name}
           onChange={handleChange}
           onBlur={handleBlur}
           placeholder="Enter cashier name"
           error={touched.name && errors.name ? errors.name : null}
+          required
+        />
+
+        {/* Full Name Field */}
+        <FormField
+          label="Full Name"
+          name="fullName"
+          value={form.fullName}
+          onChange={handleChange}
+          onBlur={handleBlur}
+          placeholder="Enter full name"
+          error={touched.fullName && errors.fullName ? errors.fullName : null}
           required
         />
 
