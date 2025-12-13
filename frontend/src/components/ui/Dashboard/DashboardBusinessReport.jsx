@@ -6,8 +6,8 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  LineChart,
-  Line,
+  BarChart,
+  Bar,
   PieChart,
   Pie,
   Cell,
@@ -38,15 +38,22 @@ function ProfitTrendChart({ data, className = "", rangeType = "Custom" }) {
     >
       <div className="h-72 w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart
+          <BarChart
+            layout="vertical"
             data={data}
-            margin={{ top: 20, right: 20, left: 0, bottom: 5 }}
+            margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
           >
             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-            <XAxis dataKey="name" tick={{ fill: "#374151", fontSize: 14 }} />
-            <YAxis 
+            <XAxis
+              type="number"
               tick={{ fill: "#374151", fontSize: 14 }}
               tickFormatter={(value) => `₱${value.toLocaleString()}`}
+            />
+            <YAxis
+              dataKey="name"
+              type="category"
+              tick={{ fill: "#374151", fontSize: 14 }}
+              width={80}
             />
             <Tooltip
               contentStyle={{
@@ -55,23 +62,17 @@ function ProfitTrendChart({ data, className = "", rangeType = "Custom" }) {
                 borderRadius: 8,
               }}
               formatter={(value) => [
-                new Intl.NumberFormat('en-PH', {
-                  style: 'currency',
-                  currency: 'PHP',
+                new Intl.NumberFormat("en-PH", {
+                  style: "currency",
+                  currency: "PHP",
                   minimumFractionDigits: 2,
-                  maximumFractionDigits: 2
+                  maximumFractionDigits: 2,
                 }).format(value),
-                'Profit'
+                "Profit",
               ]}
             />
-            <Line
-              type="monotone"
-              dataKey="value"
-              stroke="#3b82f6"
-              strokeWidth={3}
-              dot={{ r: 5, fill: "#3b82f6" }}
-            />
-          </LineChart>
+            <Bar dataKey="value" fill="#3b82f6" radius={[0, 4, 4, 0]} />
+          </BarChart>
         </ResponsiveContainer>
       </div>
     </ChartCard>
