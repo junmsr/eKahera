@@ -12,6 +12,56 @@ const initialProducts = [];
 const initialCategories = [];
 const DEFAULT_LOW_STOCK_LEVEL = 10;
 
+// Utility function to convert array of objects to CSV
+const convertToCSV = (data) => {
+  if (!data || data.length === 0) return "";
+
+  const headers = [
+    "Name",
+    "SKU",
+    "Category",
+    "Description",
+    "Cost Price",
+    "Selling Price",
+    "Stock",
+  ];
+  const csvRows = [];
+
+  // Add headers
+  csvRows.push(headers.join(","));
+
+  // Add data rows
+  data.forEach((item) => {
+    const row = [
+      `"${item.name || ""}"`,
+      `"${item.sku || ""}"`,
+      `"${item.category || ""}"`,
+      `"${item.description || ""}"`,
+      item.cost_price || 0,
+      item.selling_price || 0,
+      item.quantity || 0,
+    ];
+    csvRows.push(row.join(","));
+  });
+
+  return csvRows.join("\n");
+};
+
+// Utility function to download CSV
+const downloadCSV = (csv, filename) => {
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const link = document.createElement("a");
+  if (link.download !== undefined) {
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", filename);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+};
+
 // Function to get predefined categories based on business type
 function getCategoriesByBusinessType(businessType) {
   const categoryMap = {
@@ -643,7 +693,7 @@ export default function InventoryPage() {
   };
 
   const handleExport = () => {
-    const csv = convertToCSV(allProducts);
+    const csv = convertToCSV(filteredProducts);
     const timestamp = new Date().toISOString().split("T")[0];
     const filename = `inventory_export_${timestamp}.csv`;
     downloadCSV(csv, filename);
