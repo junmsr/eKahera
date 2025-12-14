@@ -1,8 +1,9 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import Card from "../../common/Card";
 import FormField from "../../common/FormField";
 import Input from "../../common/Input";
 import Button from "../../common/Button";
+import { useBarcodeScanner } from "../../../hooks/useBarcodeScanner";
 
 /**
  * SKU Form Card Component
@@ -21,6 +22,18 @@ export default React.forwardRef(
     },
     ref
   ) => {
+    // Handle hardware barcode scanner input - auto-submit when scanner sends Enter quickly
+    useBarcodeScanner((scannedCode) => {
+      if (scannedCode && scannedCode.trim()) {
+        // Set the SKU and immediately add to cart
+        setSku(scannedCode.trim());
+        // Use a small delay to ensure state update, then add to cart
+        setTimeout(() => {
+          handleAddToCart();
+        }, 100);
+      }
+    }, { inputSelector: 'input[name="sku"]' });
+
     return (
       <Card
         className={`flex-shrink-0 bg-white/80 backdrop-blur-md border border-white/60 shadow-xl hover:shadow-2xl transition-all duration-300 ${className}`}
@@ -68,6 +81,22 @@ export default React.forwardRef(
                       handleAddToCart();
                     }
                   }}
+                  onKeyDown={(e) => {
+                    // Handle hardware barcode scanner input
+                    // Barcode scanners typically send data very quickly
+                    // If Enter is pressed quickly after typing, it's likely a scanner
+                    if (e.key === "Enter" && sku.trim()) {
+                      e.preventDefault();
+                      handleAddToCart();
+                    }
+                  }}
+                  onInput={(e) => {
+                    // Auto-submit when barcode scanner sends data
+                    // Hardware scanners typically append Enter key automatically
+                    // This will be handled by onKeyPress/onKeyDown
+                  }}
+                  autoComplete="off"
+                  autoFocus={false}
                   placeholder="Scan or enter SKU code (Press ` to focus)"
                   className="w-full pl-3 pr-3 py-2 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 placeholder-gray-400 font-medium"
                 />

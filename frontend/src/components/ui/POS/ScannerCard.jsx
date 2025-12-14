@@ -176,12 +176,31 @@ function ScannerCard({
                 constraints={{
                   facingMode,
                   // Optimized constraints for better barcode scanning
-                  // Lower requirements for better device compatibility
-                  width: { ideal: 1280, min: 320 },
-                  height: { ideal: 720, min: 240 },
-                  frameRate: { ideal: 24, min: 10 },
+                  // Higher resolution for better barcode detection
+                  width: { ideal: 1920, min: 640 },
+                  height: { ideal: 1080, min: 480 },
+                  frameRate: { ideal: 30, min: 15 },
                 }}
                 torch={torchEnabled}
+                // Enable barcode detection formats - support common product barcodes
+                formats={[
+                  "qr_code", 
+                  "ean_13", 
+                  "ean_8", 
+                  "code_128", 
+                  "code_39", 
+                  "upc_a", 
+                  "upc_e", 
+                  "codabar", 
+                  "itf",
+                  "code_93",
+                  "databar",
+                  "databar_expanded"
+                ]}
+                // Lower scan delay for faster detection (100ms = 10 scans per second)
+                scanDelay={100}
+                // Allow multiple scans of the same code
+                allowMultiple={false}
                 styles={{
                   container: {
                     width: "100%",
