@@ -37,6 +37,7 @@ function GetStartedLayout({
       // Account Info step
       return (
         form.email &&
+        /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email) &&
         form.firstName &&
         form.fullName &&
         form.username &&
@@ -54,7 +55,8 @@ function GetStartedLayout({
       // Business Details step
       return (
         form.businessName &&
-        (form.useAdminEmail || form.businessEmail) &&
+        (form.useAdminEmail ||
+          (form.businessEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.businessEmail))) &&
         form.businessType &&
         (form.businessType !== 'Others' || form.customBusinessType) &&
         form.region &&

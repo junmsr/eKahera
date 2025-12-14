@@ -99,6 +99,7 @@ export default function GetStartedForm({
                 placeholder="Enter your email address"
                 type="email"
                 error={errors.email}
+                pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$"
               />
             </div>
 
@@ -423,6 +424,7 @@ export default function GetStartedForm({
                     placeholder="Enter business email"
                     type="email"
                     error={errors.businessEmail}
+                    pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$"
                   />
                 )}
               </div>
