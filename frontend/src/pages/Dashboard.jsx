@@ -183,9 +183,33 @@ export default function Dashboard() {
   const keyMetricsRef = useRef(null);
   const businessReportRef = useRef(null);
 
+  // Optimized timer: only update when page is visible and reduce frequency to every 10 seconds
   useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(dayjs()), 1000);
-    return () => clearInterval(timer);
+    let timer;
+    const updateTime = () => {
+      if (document.visibilityState === 'visible') {
+        setCurrentTime(dayjs());
+      }
+    };
+    
+    // Update immediately
+    updateTime();
+    
+    // Update every 10 seconds (instead of every second) and only when visible
+    timer = setInterval(updateTime, 10000);
+    
+    // Also update when page becomes visible
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        updateTime();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, []);
 
   // Helper function to detect modern CSS color functions

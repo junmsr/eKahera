@@ -751,68 +751,81 @@ exports.getRecentBusinessReceipts = async (req, res) => {
   if (!businessId) return res.status(400).json({ error: 'Business ID is required' });
 
   try {
+    // Optimized query using CTEs and window functions to avoid N+1 subqueries
     const result = await pool.query(
       `
+        WITH ranked_payments AS (
+          SELECT 
+            transaction_id,
+            payment_type,
+            money_received,
+            money_change,
+            ROW_NUMBER() OVER (
+              PARTITION BY transaction_id 
+              ORDER BY 
+                CASE WHEN payment_type = 'cash' THEN 0 ELSE 1 END,
+                transaction_payment_id DESC
+            ) as rn
+          FROM transaction_payment
+        ),
+        payment_data AS (
+          SELECT 
+            transaction_id,
+            payment_type,
+            money_received,
+            money_change
+          FROM ranked_payments
+          WHERE rn = 1
+        ),
+        item_counts AS (
+          SELECT 
+            transaction_id,
+            COUNT(*) as item_count
+          FROM transaction_items
+          GROUP BY transaction_id
+        ),
+        first_products AS (
+          SELECT DISTINCT ON (ti.transaction_id)
+            ti.transaction_id,
+            p.product_name as first_product_name
+          FROM transaction_items ti
+          LEFT JOIN products p ON p.product_id = ti.product_id
+          ORDER BY ti.transaction_id, ti.transaction_item_id
+        ),
+        discount_info AS (
+          SELECT DISTINCT
+            transaction_id
+          FROM transaction_payment
+          WHERE discount_id IS NOT NULL
+        )
         SELECT
-        t.transaction_id,
-        t.transaction_number,
-        t.created_at,
-        t.updated_at,
-        t.status,
-        t.total_amount::numeric,
-        t.business_id,
-        t.cashier_user_id,
-        u.username as cashier_name,
-        -- Payment information
-        COALESCE((
-          SELECT payment_type 
-          FROM transaction_payment 
-          WHERE transaction_id = t.transaction_id 
-          ORDER BY 
-            CASE WHEN payment_type = 'cash' THEN 0 ELSE 1 END,  -- Prefer 'cash' payments
-            transaction_payment_id DESC 
-          LIMIT 1
-        ), 'cash') as payment_type,
-        COALESCE((
-          SELECT money_received 
-          FROM transaction_payment 
-          WHERE transaction_id = t.transaction_id 
-          ORDER BY 
-            CASE WHEN payment_type = 'cash' THEN 0 ELSE 1 END,  -- Prefer 'cash' payments
-            transaction_payment_id DESC 
-          LIMIT 1
-        ), t.total_amount)::numeric as amount_received,
-        COALESCE((
-          SELECT money_change 
-          FROM transaction_payment 
-          WHERE transaction_id = t.transaction_id 
-          ORDER BY 
-            CASE WHEN payment_type = 'cash' THEN 0 ELSE 1 END,  -- Prefer 'cash' payments
-            transaction_payment_id DESC 
-          LIMIT 1
-        ), 0)::numeric as change_given,
-        -- Rest of the query remains the same...
-        CASE WHEN EXISTS (
-          SELECT 1 
-          FROM transaction_payment 
-          WHERE transaction_id = t.transaction_id 
-          AND discount_id IS NOT NULL
-        ) THEN 'Discount Applied' ELSE 'No discount' END as discount_info,
-        0 as discount_percentage,
-        0 as discount_amount,
-        (SELECT COUNT(*) FROM transaction_items WHERE transaction_id = t.transaction_id) as item_count,
-        (SELECT p.product_name 
-        FROM transaction_items ti 
-        LEFT JOIN products p ON p.product_id = ti.product_id 
-        WHERE ti.transaction_id = t.transaction_id 
-        ORDER BY ti.transaction_item_id
-        LIMIT 1) as first_product_name
-      FROM transactions t
-      LEFT JOIN users u ON t.cashier_user_id = u.user_id
-      WHERE t.business_id = $1
-        AND t.status = 'completed'
-      ORDER BY t.updated_at DESC NULLS LAST, t.created_at DESC NULLS LAST
-      LIMIT 50
+          t.transaction_id,
+          t.transaction_number,
+          t.created_at,
+          t.updated_at,
+          t.status,
+          t.total_amount::numeric,
+          t.business_id,
+          t.cashier_user_id,
+          u.username as cashier_name,
+          COALESCE(pd.payment_type, 'cash') as payment_type,
+          COALESCE(pd.money_received, t.total_amount)::numeric as amount_received,
+          COALESCE(pd.money_change, 0)::numeric as change_given,
+          CASE WHEN di.transaction_id IS NOT NULL THEN 'Discount Applied' ELSE 'No discount' END as discount_info,
+          0 as discount_percentage,
+          0 as discount_amount,
+          COALESCE(ic.item_count, 0) as item_count,
+          fp.first_product_name
+        FROM transactions t
+        LEFT JOIN users u ON t.cashier_user_id = u.user_id
+        LEFT JOIN payment_data pd ON pd.transaction_id = t.transaction_id
+        LEFT JOIN item_counts ic ON ic.transaction_id = t.transaction_id
+        LEFT JOIN first_products fp ON fp.transaction_id = t.transaction_id
+        LEFT JOIN discount_info di ON di.transaction_id = t.transaction_id
+        WHERE t.business_id = $1
+          AND t.status = 'completed'
+        ORDER BY t.updated_at DESC NULLS LAST, t.created_at DESC NULLS LAST
+        LIMIT 50
       `,
       [businessId]
     );

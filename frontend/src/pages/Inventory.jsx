@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import PageLayout from "../components/layout/PageLayout";
 import NavAdmin from "../components/layout/Nav-Admin";
 import Inventory from "../components/inventory/Inventory";
@@ -7,6 +7,7 @@ import Button from "../components/common/Button";
 
 import ProductFormModal from "../components/modals/ProductFormModal";
 import { api, authHeaders } from "../lib/api";
+import { useDebounce } from "../hooks/useDebounce";
 
 const initialProducts = [];
 const initialCategories = [];
@@ -206,6 +207,7 @@ export default function InventoryPage() {
   const [stockForm, setStockForm] = useState({ sku: "", quantity: "" });
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 400);
   const [entriesPerPage, setEntriesPerPage] = useState(10);
   const [page, setPage] = useState(1);
   const [apiError, setApiError] = useState("");
@@ -245,13 +247,17 @@ export default function InventoryPage() {
           }))
         );
 
-        // Fetch inventory
+        // Fetch inventory with pagination support
         const data = await api("/api/inventory", {
           headers: authHeaders(token),
+          params: { limit: 1000, offset: 0 }, // Fetch all for now, can be optimized later
         });
 
+        // Handle both old array format and new paginated format
+        const productsData = data?.products || data || [];
+
         // Map backend rows to UI shape with correct column mapping
-        const mapped = (data || []).map((row) => ({
+        const mapped = (productsData || []).map((row) => ({
           id: String(row.id || ""),
           name: row.name || "-",
           category: row.category || "-",
@@ -368,13 +374,13 @@ export default function InventoryPage() {
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [stockFilter, setStockFilter] = useState(null);
 
-  // Filtering, sorting and pagination
+  // Filtering, sorting and pagination - use debounced search
   const filteredProducts = useMemo(() => {
     let filtered = products.filter(
       (p) =>
-        p.name.toLowerCase().includes(search.toLowerCase()) ||
-        p.category.toLowerCase().includes(search.toLowerCase()) ||
-        p.description.toLowerCase().includes(search.toLowerCase())
+        p.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        p.category.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        p.description.toLowerCase().includes(debouncedSearch.toLowerCase())
     );
 
     // Apply category filter
@@ -429,7 +435,7 @@ export default function InventoryPage() {
     });
 
     return filtered;
-  }, [products, search, selectedCategory, stockFilter, sortBy, sortOrder]);
+  }, [products, debouncedSearch, selectedCategory, stockFilter, sortBy, sortOrder]);
 
   const totalPages = Math.ceil(filteredProducts.length / entriesPerPage) || 1;
   const paginatedProducts = filteredProducts.slice(
@@ -437,8 +443,8 @@ export default function InventoryPage() {
     page * entriesPerPage
   );
 
-  // Handlers
-  const openAddProduct = () => {
+  // Handlers - memoized with useCallback
+  const openAddProduct = useCallback(() => {
     setEditingProduct(null);
     setProductForm({
       sku: "",
@@ -452,9 +458,9 @@ export default function InventoryPage() {
       low_stock_level: DEFAULT_LOW_STOCK_LEVEL,
     });
     setShowProductModal(true);
-  };
+  }, []);
 
-  const openEditProduct = (product) => {
+  const openEditProduct = useCallback((product) => {
     setEditingProduct(product);
     setProductForm({
       ...product,
@@ -464,14 +470,14 @@ export default function InventoryPage() {
           : DEFAULT_LOW_STOCK_LEVEL,
     });
     setShowProductModal(true);
-  };
+  }, []);
 
-  const openStockEntry = (product) => {
+  const openStockEntry = useCallback((product) => {
     setStockForm({ sku: product?.sku || "", quantity: "" });
     setShowStockModal(true);
-  };
+  }, []);
 
-  const handleProductFormChange = (e) => {
+  const handleProductFormChange = useCallback((e) => {
     const { name, value } = e.target;
     // Clear error if user explicitly clears it or starts typing in form fields
     if (name === 'clearError') {
@@ -483,9 +489,9 @@ export default function InventoryPage() {
     if (name !== 'clearError') {
       setProductForm((prev) => ({ ...prev, [name]: value }));
     }
-  };
+  }, []);
 
-  const handleProductSubmit = async (e) => {
+  const handleProductSubmit = useCallback(async (e) => {
     e.preventDefault();
     try {
       setLoading(true);
@@ -543,8 +549,12 @@ export default function InventoryPage() {
       }
 
       // Refresh inventory list after creation/update
-      const data = await api("/api/inventory", { headers: authHeaders(token) });
-      const mapped = (data || []).map((row) => ({
+      const data = await api("/api/inventory", { 
+        headers: authHeaders(token),
+        params: { limit: 1000, offset: 0 }
+      });
+      const productsData = data?.products || data || [];
+      const mapped = (productsData || []).map((row) => ({
         id: String(row.id || ""),
         name: row.name || "-",
         category: row.category || "-",
@@ -587,9 +597,9 @@ export default function InventoryPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [editingProduct, productForm]);
 
-  const handleStockSubmit = async (e) => {
+  const handleStockSubmit = useCallback(async (e) => {
     e.preventDefault();
     try {
       setLoading(true);
@@ -603,8 +613,12 @@ export default function InventoryPage() {
           quantity: Number(stockForm.quantity),
         }),
       });
-      const data = await api("/api/inventory", { headers: authHeaders(token) });
-      const mapped = (data || []).map((row) => ({
+      const data = await api("/api/inventory", { 
+        headers: authHeaders(token),
+        params: { limit: 1000, offset: 0 }
+      });
+      const productsData = data?.products || data || [];
+      const mapped = (productsData || []).map((row) => ({
         id: String(row.id || ""),
         name: row.name || "-",
         category: row.category || "-",
@@ -622,17 +636,17 @@ export default function InventoryPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [stockForm]);
 
-  const handleDeleteProduct = (id) => {
+  const handleDeleteProduct = useCallback((id) => {
     const product = products.find((p) => String(p.id) === String(id));
     if (product) {
       setProductToDelete(product);
       setShowDeleteModal(true);
     }
-  };
+  }, [products]);
 
-  const confirmDeleteProduct = async () => {
+  const confirmDeleteProduct = useCallback(async () => {
     if (!productToDelete) return;
     try {
       setLoading(true);
@@ -664,29 +678,29 @@ export default function InventoryPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [productToDelete]);
 
-  const handlePageChange = (newPage) => {
+  const handlePageChange = useCallback((newPage) => {
     if (newPage < 1 || newPage > totalPages) return;
     setPage(newPage);
-  };
+  }, [totalPages]);
 
-  const handleEntriesChange = (e) => {
+  const handleEntriesChange = useCallback((e) => {
     setEntriesPerPage(Number(e.target.value));
     setPage(1);
-  };
+  }, []);
 
-  const handleSearchChange = (e) => {
+  const handleSearchChange = useCallback((e) => {
     setSearch(e.target.value);
     setPage(1);
-  };
+  }, []);
 
-  const handleExport = () => {
+  const handleExport = useCallback(() => {
     const csv = convertToCSV(filteredProducts);
     const timestamp = new Date().toISOString().split("T")[0];
     const filename = `inventory_export_${timestamp}.csv`;
     downloadCSV(csv, filename);
-  };
+  }, [filteredProducts]);
 
   const headerActions = (
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 sm:gap-4 mb-4 sm:mb-0 w-full">

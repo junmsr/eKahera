@@ -54,7 +54,7 @@ const config = {
   SUPABASE_SECRET_ACCESS_KEY: process.env.SUPABASE_SECRET_ACCESS_KEY,
 };
 
-const { corsOptions, apiLimiter, securityHeaders, compressionOptions } = require('./config/serverConfig');
+const { corsOptions, apiLimiter, securityHeaders } = require('./config/serverConfig');
 
 // Import routes
 const productRoutes = require('./routes/productRoutes');

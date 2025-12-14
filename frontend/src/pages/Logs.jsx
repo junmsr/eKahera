@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState, useRef } from "react";
+import { useDebounce } from "../hooks/useDebounce";
 import NavAdmin from "../components/layout/Nav-Admin";
 import { BiRefresh, BiCalendarAlt } from "react-icons/bi";
 import PageLayout from "../components/layout/PageLayout";
@@ -11,6 +12,7 @@ const LogsPage = () => {
   const [logs, setLogs] = useState([]);
   const [error, setError] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearchQuery = useDebounce(searchQuery, 400);
   const [loading, setLoading] = useState(false);
   const [clearing, setClearing] = useState(false);
   const [dateRange, setDateRange] = useState({
@@ -136,8 +138,8 @@ const LogsPage = () => {
       });
     }
 
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
+    if (debouncedSearchQuery) {
+      const query = debouncedSearchQuery.toLowerCase();
       filtered = filtered.filter(
         (l) =>
           (l.action || "").toLowerCase().includes(query) ||
@@ -164,7 +166,7 @@ const LogsPage = () => {
     });
 
     return filtered;
-  }, [logs, roleFilter, searchQuery, sortOrder, dateRange]);
+  }, [logs, roleFilter, debouncedSearchQuery, sortOrder, dateRange]);
 
   const exportToCSV = () => {
     try {

@@ -5,6 +5,7 @@ exports.getStock = async (req, res) => {
   try {
     const params = [];
     let where = '';
+    let paramIndex = 1;
 
     const role = (req.user?.role || '').toLowerCase();
     const userBusinessId = req.user?.businessId || null;
@@ -15,17 +16,37 @@ exports.getStock = async (req, res) => {
       if (queryBusinessId) {
         params.push(queryBusinessId);
         where = 'WHERE p.business_id = $1';
+        paramIndex = 2;
       } else {
-        return res.json([]);
+        return res.json({ products: [], total: 0, page: 1, limit: 50, totalPages: 0 });
       }
     } else {
       // Admin/Cashier must be business-scoped; if missing, return empty
       if (!userBusinessId) {
-        return res.json([]);
+        return res.json({ products: [], total: 0, page: 1, limit: 50, totalPages: 0 });
       }
       params.push(userBusinessId);
       where = 'WHERE p.business_id = $1';
+      paramIndex = 2;
     }
+
+    // Pagination parameters
+    const limit = Math.min(1000, Math.max(1, Number(req.query?.limit) || 50));
+    const offset = Math.max(0, Number(req.query?.offset) || 0);
+    const page = Math.floor(offset / limit) + 1;
+
+    // Get total count
+    const countResult = await pool.query(
+      `SELECT COUNT(*) as total
+       FROM products p
+       ${where}`,
+      params.slice(0, paramIndex - 1)
+    );
+    const total = parseInt(countResult.rows[0].total, 10);
+    const totalPages = Math.ceil(total / limit);
+
+    // Get paginated results
+    params.push(limit, offset);
     const result = await pool.query(
       `SELECT 
         p.product_id as id,
@@ -41,10 +62,19 @@ exports.getStock = async (req, res) => {
        LEFT JOIN product_categories pc ON pc.product_category_id = p.product_category_id
        LEFT JOIN inventory i ON i.product_id = p.product_id AND i.business_id = p.business_id
        ${where}
-       ORDER BY p.product_name`,
+       ORDER BY p.product_name
+       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
       params
     );
-    res.json(result.rows);
+
+    res.json({
+      products: result.rows,
+      total,
+      page,
+      limit,
+      totalPages,
+      hasMore: offset + result.rows.length < total
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

@@ -173,28 +173,8 @@ export default function DashboardBusinessReport({ dateRange }) {
                 data={paymentMethods}
                 cx="50%"
                 cy="50%"
-                labelLine={true}
-                label={({ name, value, cx, cy, midAngle, innerRadius, outerRadius }) => {
-                  const RADIAN = Math.PI / 180;
-                  const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-                  const x = cx + radius * Math.cos(-midAngle * RADIAN);
-                  const y = cy + radius * Math.sin(-midAngle * RADIAN);
-                  
-                  return (
-                    <text
-                      x={x}
-                      y={y}
-                      fill="white"
-                      textAnchor={x > cx ? 'start' : 'end'}
-                      dominantBaseline="central"
-                      fontSize={12}
-                      fontWeight="bold"
-                      style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.5)' }}
-                    >
-                      {`${name}: ${value}%`}
-                    </text>
-                  );
-                }}
+                labelLine={false}
+                label={false}
                 outerRadius={90}
                 dataKey="value"
               >
