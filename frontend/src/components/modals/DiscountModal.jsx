@@ -566,7 +566,6 @@ function DiscountModal({ isOpen, onClose, onApplyDiscount }) {
       <div className="space-y-4">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-medium">Select Discount</h3>
-          <span className="text-sm text-gray-500">Press 1-9 or ↑/↓, Enter to apply</span>
         </div>
         <div className="grid grid-cols-3 gap-2 mb-4 max-h-64 overflow-y-auto">
           {discounts.map((d, idx) => (
@@ -581,11 +580,6 @@ function DiscountModal({ isOpen, onClose, onApplyDiscount }) {
             >
               <div className="font-medium">{d.label}</div>
               <div className="text-sm text-gray-500">{d.value}%</div>
-              {selectedIdx === idx && (
-                <div className="absolute bottom-1 right-1 text-xs text-blue-500">
-                  Press Enter to apply
-                </div>
-              )}
             </button>
           ))}
         </div>
