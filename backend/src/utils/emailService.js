@@ -254,7 +254,7 @@ const sendNewApplicationNotification = async (businessData, superAdminEmails) =>
       <p>Please log in to the SuperAdmin panel to review the submitted documents and verify the business at your earliest convenience.</p>
       
       <div style="text-align: center; margin: 30px 0;">
-        <a href="${process.env.FRONTEND_URL || 'https://www.ekahera.online'}/superadmin/dashboard" 
+        <a href="${process.env.FRONTEND_URL || 'https://www.ekahera.online'}" 
            style="background: linear-gradient(90deg, #2563eb, #4f46e5); color: white; padding: 12px 28px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 500; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);">
           Review Application
         </a>
@@ -374,7 +374,7 @@ const sendVerificationRejectionEmail = async (businessData, documents, rejection
   }
 
   try {
-    const subject = '🔄 Action Required: Update Your eKahera Application';
+    const subject = 'Application Not Approved - eKahera';
     const htmlContent = getRejectionEmailTemplate(
       businessData.business_name, 
       documents,
@@ -611,12 +611,6 @@ const sendApplicationSubmittedNotification = async (businessData) => {
         </ul>
       </div>
       
-      <div style="background-color: #fef3c7; border: 1px solid #f59e0b; padding: 15px; border-radius: 6px; margin: 20px 0;">
-        <p style="color: #92400e; margin: 0; font-size: 14px;">
-          <strong>Important:</strong> Please wait 1-3 business days for verification. You will be notified via email once the process is complete.
-        </p>
-      </div>
-      
       <p>In the meantime, please ensure you have access to this email address as we'll send all updates here.</p>
       
       <p style="color: #6b7280; font-size: 14px;">
@@ -654,11 +648,17 @@ const sendApplicationSubmittedNotification = async (businessData) => {
   }
 };
 
-const sendLowStockEmail = async (recipientEmail, lowStockProducts) => {
+const sendLowStockEmail = async (recipientEmail, lowStockProducts, businessId = null, userId = null) => {
   if (!resend) {
     console.error('Email sending is disabled. Cannot send low stock alert.');
     return false;
   }
+  
+  if (!lowStockProducts || lowStockProducts.length === 0) {
+    console.error('No low stock products provided.');
+    return false;
+  }
+  
   const subject = 'Low Stock Alert - eKahera';
   const productList = lowStockProducts.map(p => `<li>${p.product_name} (Stock: ${p.quantity_in_stock})</li>`).join('');
   const message = `
@@ -673,13 +673,19 @@ const sendLowStockEmail = async (recipientEmail, lowStockProducts) => {
   `;
 
   try {
-    await resend.emails.send({
+    const { data, error } = await resend.emails.send({
       from: 'eKahera <noreply@ekahera.online>',
       to: recipientEmail,
       subject: subject,
       html: message,
     });
-    await logEmailNotification(recipientEmail, subject, message, 'low_stock_alert');
+
+    if (error) {
+      console.error('Error sending low stock alert:', error);
+      return false;
+    }
+
+    await logEmailNotification(recipientEmail, subject, message, 'low_stock_alert', businessId, userId);
     console.log('Low stock alert sent to:', recipientEmail);
     return true;
   } catch (error) {
@@ -798,6 +804,80 @@ const sendPasswordResetOTP = async (recipientEmail, otp) => {
   }
 };
 
+const sendContactFormEmail = async (contactData) => {
+  if (!resend) {
+    console.error('Email sending is disabled. Cannot send contact form email.');
+    return false;
+  }
+
+  const { name, email, message } = contactData;
+
+  if (!name || !email || !message) {
+    console.error('Missing required contact form fields.');
+    return false;
+  }
+
+  const subject = `Contact Form Submission from ${name} - eKahera`;
+  const htmlMessage = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <div style="text-align: center; margin-bottom: 20px;">
+        <h1 style="color: #2563eb; margin-bottom: 5px;">eKahera</h1>
+        <div style="height: 3px; background: linear-gradient(90deg, #2563eb, #7c3aed); margin: 10px 0;"></div>
+      </div>
+      
+      <h2 style="color: #1e40af; margin-top: 30px;">New Contact Form Submission</h2>
+      
+      <p>Hello eKahera Team,</p>
+      
+      <p>You have received a new message through the contact form:</p>
+      
+      <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #2563eb;">
+        <p><strong>Name:</strong> ${name}</p>
+        <p><strong>Email:</strong> ${email}</p>
+        <p><strong>Message:</strong></p>
+        <div style="background-color: white; padding: 15px; border-radius: 4px; margin-top: 10px; white-space: pre-wrap;">${message}</div>
+      </div>
+      
+      <p style="margin-top: 30px;">Please respond to this inquiry at your earliest convenience.</p>
+      
+      <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e2e8f0; color: #6b7280; font-size: 14px;">
+        <p>This is an automated notification from eKahera contact form.</p>
+      </div>
+      
+      <div style="margin-top: 30px; text-align: center; color: #9ca3af; font-size: 12px;">
+        <p>© ${new Date().getFullYear()} eKahera. All rights reserved.</p>
+      </div>
+    </div>
+  `;
+
+  try {
+    const { data, error } = await resend.emails.send({
+      from: 'eKahera Contact Form <noreply@ekahera.online>',
+      to: 'ekahera.business@gmail.com',
+      replyTo: email,
+      subject: subject,
+      html: htmlMessage,
+    });
+
+    if (error) {
+      console.error('Error sending contact form email:', error);
+      return false;
+    }
+
+    await logEmailNotification('ekahera.business@gmail.com', subject, htmlMessage, 'contact_form', null, null);
+    console.log('Contact form email sent successfully from:', email);
+    return true;
+  } catch (error) {
+    console.error('Error sending contact form email:', error);
+    if (error.statusCode === 429) {
+      console.log('Rate limited while sending contact form email, retrying...');
+      await delay(1000);
+      return sendContactFormEmail(contactData);
+    }
+    return false;
+  }
+};
+
 // ... (rest of the code remains the same)
 
 module.exports = {
@@ -809,5 +889,6 @@ module.exports = {
   sendLowStockEmail,
   logEmailNotification,
   sendOTPNotification,
-  sendPasswordResetOTP
+  sendPasswordResetOTP,
+  sendContactFormEmail
 };

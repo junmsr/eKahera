@@ -95,7 +95,7 @@ class BusinessVerification {
                b.verification_submitted_at, b.verification_reviewed_at,
                b.verification_reviewed_by, b.verification_rejection_reason,
                b.verification_resubmission_notes
-      ORDER BY b.verification_submitted_at ASC
+      ORDER BY b.verification_submitted_at DESC
     `;
 
     const result = await pool.query(query);
@@ -126,7 +126,7 @@ class BusinessVerification {
           WHEN b.verification_status = 'approved' THEN 2
           ELSE 3
         END,
-        b.verification_submitted_at ASC
+        b.verification_submitted_at DESC
     `;
 
     const result = await pool.query(query);

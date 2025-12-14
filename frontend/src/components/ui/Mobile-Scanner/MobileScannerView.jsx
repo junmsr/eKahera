@@ -171,10 +171,12 @@ function MobileScannerView() {
       }
     } catch (err) {
       setError("Product not found");
-
     } finally {
       setLoading(false);
-      setScannerPaused(false);
+      // Resume scanner after a short delay to allow UI feedback
+      setTimeout(() => {
+        setScannerPaused(false);
+      }, 400);
     }
   };
 

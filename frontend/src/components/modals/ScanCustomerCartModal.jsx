@@ -89,7 +89,10 @@ export default function ScanCustomerCartModal({ isOpen, onClose, onImport }) {
       setError(e.message || "Failed to process QR code");
       console.error('Scan error:', e);
     } finally {
-      setScannerPaused(false);
+      // Resume scanner after a delay to allow error message to be visible
+      setTimeout(() => {
+        setScannerPaused(false);
+      }, 500);
     }
   };
 

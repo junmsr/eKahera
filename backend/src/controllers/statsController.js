@@ -376,11 +376,26 @@ exports.getPaymentMethods = async (req, res) => {
     );
 
     const total = paymentRes.rows.reduce((s, r) => s + Number(r.count), 0) || 1;
-    const data = paymentRes.rows.map(r => ({
-      name: r.payment_type,
-      value: Math.round((Number(r.count) / total) * 100),
-      fill: r.payment_type === 'Cash' ? '#3b82f6' : r.payment_type === 'GCash' ? '#10b981' : r.payment_type === 'Maya' ? '#8B5CF6' : '#f59e0b'
-    }));
+    const data = paymentRes.rows.map(r => {
+      const paymentType = (r.payment_type || '').toString().trim();
+      const paymentTypeLower = paymentType.toLowerCase();
+      let fillColor = '#f59e0b'; // default orange
+      
+      // Map payment types to colors (handles lowercase: cash, gcash, maya)
+      if (paymentTypeLower === 'cash') {
+        fillColor = '#3b82f6'; // blue
+      } else if (paymentTypeLower === 'gcash') {
+        fillColor = '#10b981'; // green
+      } else if (paymentTypeLower === 'maya' || paymentTypeLower === 'paymaya') {
+        fillColor = '#8B5CF6'; // purple
+      }
+      
+      return {
+        name: paymentType,
+        value: Math.round((Number(r.count) / total) * 100),
+        fill: fillColor
+      };
+    });
 
     res.json(data);
   } catch (err) {

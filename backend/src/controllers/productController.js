@@ -343,7 +343,11 @@ const sendLowStockAlert = async (req, res) => {
       return res.status(404).json({ error: 'User email not found.' });
     }
 
-    await sendLowStockEmail(userEmail, lowStockProducts);
+    const emailSent = await sendLowStockEmail(userEmail, lowStockProducts, businessId, req.user.userId);
+
+    if (!emailSent) {
+      return res.status(500).json({ error: 'Failed to send low stock alert email.' });
+    }
 
     res.json({ message: 'Low stock alert sent successfully.' });
   } catch (err) {

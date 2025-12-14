@@ -73,6 +73,7 @@ const locationRoutes = require('./routes/locationRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const cleanupRoutes = require('./routes/cleanupRoutes');
 const cleanupUserRoutes = require('./routes/cleanupUserRoutes');
+const contactRoutes = require('./routes/contactRoutes');
 const { sendApplicationSubmittedNotification } = require('./utils/emailService');
 const { startPendingTransactionCleanup } = require('./utils/cleanup');
 const { startStoreDeletionScheduler } = require('./utils/storeDeletionService');
@@ -167,6 +168,7 @@ app.use('/api/locations', locationRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/cleanup', cleanupRoutes);
 app.use('/api/cleanup', cleanupUserRoutes);
+app.use('/api/contact', contactRoutes);
 
 // Serve static files with cache headers - AFTER API routes
 app.use(express.static(path.join(__dirname, '../frontend/dist'), staticOptions));

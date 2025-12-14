@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
+import { api } from "../lib/api";
 
 function Contact() {
   const [formData, setFormData] = useState({
@@ -8,6 +9,8 @@ function Contact() {
     message: "",
   });
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -15,12 +18,31 @@ function Contact() {
       ...prev,
       [name]: value,
     }));
+    // Clear error when user starts typing
+    if (error) setError("");
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Here you could add form validation or API call if needed
-    setSubmitted(true);
+    setLoading(true);
+    setError("");
+
+    try {
+      const response = await api("/contact/submit", {
+        method: "POST",
+        body: JSON.stringify(formData),
+      });
+
+      if (response.success) {
+        setSubmitted(true);
+      } else {
+        setError(response.error || "Failed to send message. Please try again.");
+      }
+    } catch (err) {
+      setError(err.message || "Failed to send message. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (submitted) {
@@ -106,20 +128,26 @@ function Contact() {
             className="border border-gray-300 rounded px-4 py-2 h-32 resize-none focus:outline-none focus:ring-2 focus:ring-blue-400"
             required
           />
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+              {error}
+            </div>
+          )}
           <button
             type="submit"
-            className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-full font-medium cursor-pointer"
+            disabled={loading}
+            className="bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 disabled:cursor-not-allowed text-white px-6 py-2 rounded-full font-medium cursor-pointer"
           >
-            Send Message
+            {loading ? "Sending..." : "Send Message"}
           </button>
         </form>
         <div className="mt-6 text-center text-gray-500 text-sm">
           Or email us at{" "}
           <a
-            href="mailto:support@ekahera.com"
+            href="mailto:ekahera.business@gmail.com"
             className="text-blue-600 underline"
           >
-            support@ekahera.com
+            ekahera.business@gmail.com
           </a>
         </div>
       </div>

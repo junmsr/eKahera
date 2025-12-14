@@ -111,14 +111,8 @@ export default function DocumentVerification({ isRefreshing }) {
         headers: { Authorization: `Bearer ${token}` },
         body: JSON.stringify({ status: action, notes: notes }),
       });
-      // Refresh business details and show success message
+      // Refresh business details
       fetchBusinessDetails(selectedBusiness.business_id);
-      setAlert({
-        isOpen: true,
-        title: "Success",
-        message: `Document ${action} successfully`,
-        type: "success",
-      });
     } catch (error) {
       console.error("Error updating document:", error);
       setAlert({
@@ -148,19 +142,11 @@ export default function DocumentVerification({ isRefreshing }) {
         }
       );
 
-      // Show success message
-      setAlert({
-        isOpen: true,
-        title: "Success",
-        message: `Business verification ${status} successfully`,
-        type: "success",
-        onClose: () => {
-          setSelectedBusiness(null);
-          setBusinessDetails(null);
-          fetchPendingVerifications();
-          fetchStats();
-        },
-      });
+      // Refresh data silently
+      setSelectedBusiness(null);
+      setBusinessDetails(null);
+      fetchPendingVerifications();
+      fetchStats();
     } catch (error) {
       console.error("Error completing verification:", error);
       setAlert({
@@ -235,6 +221,19 @@ export default function DocumentVerification({ isRefreshing }) {
     }
   };
 
+  const getStatusGlassColor = (status) => {
+    switch (status) {
+      case "pending":
+        return "bg-blue-100/70 backdrop-blur-sm border-blue-300/80 hover:border-blue-400/90 hover:bg-blue-100/80 shadow-sm";
+      case "approved":
+        return "bg-green-100/70 backdrop-blur-sm border-green-300/80 hover:border-green-400/90 hover:bg-green-100/80 shadow-sm";
+      case "rejected":
+        return "bg-red-100/70 backdrop-blur-sm border-red-300/80 hover:border-red-400/90 hover:bg-red-100/80 shadow-sm";
+      default:
+        return "bg-gray-100/70 backdrop-blur-sm border-gray-300/80 hover:border-gray-400/90 hover:bg-gray-100/80 shadow-sm";
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -305,10 +304,10 @@ export default function DocumentVerification({ isRefreshing }) {
                 {pendingVerifications.map((business) => (
                   <div
                     key={business.business_id}
-                    className={`p-3 border rounded-lg cursor-pointer transition-colors ${
+                    className={`p-3 border-2 rounded-lg cursor-pointer transition-all duration-200 ${
                       selectedBusiness?.business_id === business.business_id
-                        ? "border-blue-500 bg-blue-50"
-                        : "border-gray-200 hover:border-gray-300"
+                        ? "border-blue-500 bg-blue-200/80 backdrop-blur-sm shadow-lg ring-2 ring-blue-300/50"
+                        : getStatusGlassColor(business.verification_status)
                     }`}
                     onClick={() => handleSelectBusiness(business)}
                   >
@@ -400,6 +399,16 @@ function BusinessVerificationDetails({
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [showRepassModal, setShowRepassModal] = useState(false);
   const [isViewerOpen, setIsViewerOpen] = useState(false);
+  const [documentConfirmModal, setDocumentConfirmModal] = useState({
+    isOpen: false,
+    documentId: null,
+    documentName: "",
+    action: null, // "approved" or "rejected"
+  });
+  const [businessConfirmModal, setBusinessConfirmModal] = useState({
+    isOpen: false,
+    action: null, // "approved" or "rejected"
+  });
   const [alert, setAlert] = useState({
     isOpen: false,
     title: "",
@@ -428,6 +437,50 @@ function BusinessVerificationDetails({
     }
   };
 
+  // Required document types
+  const requiredDocumentTypes = [
+    "Business Registration Certificate (DTI/SEC/CDA)",
+    "Mayor's Permit / Business Permit",
+    "BIR Certificate of Registration (Form 2303)",
+  ];
+
+  // Helper function to check if a document type is required
+  const isRequiredDocument = (documentType) => {
+    if (!documentType) return false;
+    const normalizedType = documentType.toLowerCase().trim();
+    return requiredDocumentTypes.some((required) => {
+      const normalizedRequired = required.toLowerCase().trim();
+      // Check for exact match or if the document type contains key words from required types
+      if (normalizedType === normalizedRequired) return true;
+      // Check for Business Registration Certificate variations
+      if (
+        normalizedRequired.includes("business registration") &&
+        (normalizedType.includes("business registration") ||
+          normalizedType.includes("dti") ||
+          normalizedType.includes("sec") ||
+          normalizedType.includes("cda"))
+      )
+        return true;
+      // Check for Mayor's Permit variations
+      if (
+        normalizedRequired.includes("mayor") &&
+        (normalizedType.includes("mayor") ||
+          normalizedType.includes("business permit") ||
+          normalizedType.includes("permit"))
+      )
+        return true;
+      // Check for BIR Certificate variations
+      if (
+        normalizedRequired.includes("bir") &&
+        (normalizedType.includes("bir") ||
+          normalizedType.includes("2303") ||
+          normalizedType.includes("form 2303"))
+      )
+        return true;
+      return false;
+    });
+  };
+
   // Check if all documents are either approved or rejected (none pending)
   const allDocumentsReviewed = business.documents?.every(
     (doc) =>
@@ -439,6 +492,12 @@ function BusinessVerificationDetails({
   );
   const hasRejected = business.documents?.some(
     (doc) => doc.verification_status === "rejected"
+  );
+  // Check if any required document is rejected
+  const hasRequiredDocumentRejected = business.documents?.some(
+    (doc) =>
+      isRequiredDocument(doc.document_type) &&
+      doc.verification_status === "rejected"
   );
 
   return (
@@ -580,7 +639,13 @@ function BusinessVerificationDetails({
                       <Button
                         size="sm"
                         onClick={() =>
-                          onDocumentAction(document.document_id, "approved")
+                          setDocumentConfirmModal({
+                            isOpen: true,
+                            documentId: document.document_id,
+                            documentName:
+                              document.document_name || document.document_type,
+                            action: "approved",
+                          })
                         }
                         disabled={actionLoading}
                       >
@@ -603,7 +668,13 @@ function BusinessVerificationDetails({
                         size="sm"
                         variant="outline"
                         onClick={() =>
-                          onDocumentAction(document.document_id, "rejected")
+                          setDocumentConfirmModal({
+                            isOpen: true,
+                            documentId: document.document_id,
+                            documentName:
+                              document.document_name || document.document_type,
+                            action: "rejected",
+                          })
                         }
                         disabled={actionLoading}
                       >
@@ -637,11 +708,24 @@ function BusinessVerificationDetails({
           <h3 className="text-lg font-semibold mb-4">Complete Verification</h3>
           <div className="flex space-x-3">
             <Button
-              onClick={() => onCompleteVerification("approved")}
-              disabled={!allDocumentsReviewed || actionLoading}
-              className="bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={() =>
+                setBusinessConfirmModal({
+                  isOpen: true,
+                  action: "approved",
+                })
+              }
+              disabled={
+                !allDocumentsReviewed ||
+                hasRequiredDocumentRejected ||
+                actionLoading
+              }
+              className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
               title={
-                !allDocumentsReviewed ? "Please review all documents first" : ""
+                !allDocumentsReviewed
+                  ? "Please review all documents first"
+                  : hasRequiredDocumentRejected
+                  ? "Cannot approve: at least one required document is rejected"
+                  : ""
               }
             >
               Approve Business
@@ -663,6 +747,12 @@ function BusinessVerificationDetails({
             <p className="text-sm text-yellow-600 mt-2">
               All documents must be reviewed (approved or rejected) before
               completing verification.
+            </p>
+          )}
+          {hasRequiredDocumentRejected && (
+            <p className="text-sm text-red-600 mt-2">
+              Cannot approve business: at least one required document has been
+              rejected. Please review the rejected documents.
             </p>
           )}
         </Card>
@@ -796,6 +886,253 @@ function BusinessVerificationDetails({
                 className="bg-orange-600 hover:bg-orange-700"
               >
                 Request Resubmission
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Document Confirmation Modal */}
+      {documentConfirmModal.isOpen && (
+        <div className="fixed inset-0 backdrop-blur-md bg-black/20 flex items-center justify-center z-50 transition-opacity duration-300">
+          <div className="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full mx-4 relative transform transition-all duration-300 ease-in-out scale-100">
+            {/* Close Button */}
+            <button
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors duration-200"
+              onClick={() =>
+                setDocumentConfirmModal({
+                  isOpen: false,
+                  documentId: null,
+                  documentName: "",
+                  action: null,
+                })
+              }
+              aria-label="Close modal"
+            >
+              <svg
+                className="w-6 h-6"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+
+            {/* Icon and Title */}
+            <div className="flex items-center mb-6">
+              {documentConfirmModal.action === "approved" ? (
+                <svg
+                  className="w-8 h-8 text-blue-600 mr-3"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+              ) : (
+                <svg
+                  className="w-8 h-8 text-red-600 mr-3"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+              )}
+              <h3 className="text-xl font-semibold text-gray-900">
+                Confirm Document{" "}
+                {documentConfirmModal.action === "approved"
+                  ? "Approval"
+                  : "Rejection"}
+                ?
+              </h3>
+            </div>
+
+            {/* Message */}
+            <p className="text-gray-600 mb-6 text-sm">
+              Are you sure you want to{" "}
+              {documentConfirmModal.action === "approved"
+                ? "approve"
+                : "reject"}{" "}
+              the document{" "}
+              <span className="font-semibold text-gray-900">
+                "{documentConfirmModal.documentName}"
+              </span>
+              ?
+            </p>
+
+            {/* Buttons */}
+            <div className="flex justify-end space-x-3 mt-6">
+              <Button
+                variant="outline"
+                onClick={() =>
+                  setDocumentConfirmModal({
+                    isOpen: false,
+                    documentId: null,
+                    documentName: "",
+                    action: null,
+                  })
+                }
+                className="px-6 py-2 border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors duration-200"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  onDocumentAction(
+                    documentConfirmModal.documentId,
+                    documentConfirmModal.action
+                  );
+                  setDocumentConfirmModal({
+                    isOpen: false,
+                    documentId: null,
+                    documentName: "",
+                    action: null,
+                  });
+                }}
+                disabled={actionLoading}
+                className={`px-6 py-2 text-white font-medium rounded-lg transition-all duration-200 ${
+                  documentConfirmModal.action === "approved"
+                    ? "bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed"
+                    : "bg-red-600 hover:bg-red-700 disabled:bg-red-400 disabled:cursor-not-allowed"
+                }`}
+              >
+                {actionLoading ? "Processing..." : "Confirm"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Business Confirmation Modal */}
+      {businessConfirmModal.isOpen && (
+        <div className="fixed inset-0 backdrop-blur-md bg-black/20 flex items-center justify-center z-50 transition-opacity duration-300">
+          <div className="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full mx-4 relative transform transition-all duration-300 ease-in-out scale-100">
+            {/* Close Button */}
+            <button
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors duration-200"
+              onClick={() =>
+                setBusinessConfirmModal({
+                  isOpen: false,
+                  action: null,
+                })
+              }
+              aria-label="Close modal"
+            >
+              <svg
+                className="w-6 h-6"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+
+            {/* Icon and Title */}
+            <div className="flex items-center mb-6">
+              {businessConfirmModal.action === "approved" ? (
+                <svg
+                  className="w-8 h-8 text-blue-600 mr-3"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+              ) : (
+                <svg
+                  className="w-8 h-8 text-red-600 mr-3"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+              )}
+              <h3 className="text-xl font-semibold text-gray-900">
+                Confirm Business{" "}
+                {businessConfirmModal.action === "approved"
+                  ? "Approval"
+                  : "Rejection"}
+                ?
+              </h3>
+            </div>
+
+            {/* Message */}
+            <p className="text-gray-600 mb-6 text-sm">
+              Are you sure you want to{" "}
+              {businessConfirmModal.action === "approved"
+                ? "approve"
+                : "reject"}{" "}
+              the business{" "}
+              <span className="font-semibold text-gray-900">
+                "{business.business_name}"
+              </span>
+              ? This action will complete the verification process.
+            </p>
+
+            {/* Buttons */}
+            <div className="flex justify-end space-x-3 mt-6">
+              <Button
+                variant="outline"
+                onClick={() =>
+                  setBusinessConfirmModal({
+                    isOpen: false,
+                    action: null,
+                  })
+                }
+                className="px-6 py-2 border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors duration-200"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  onCompleteVerification(businessConfirmModal.action);
+                  setBusinessConfirmModal({
+                    isOpen: false,
+                    action: null,
+                  });
+                }}
+                disabled={actionLoading}
+                className={`px-6 py-2 text-white font-medium rounded-lg transition-all duration-200 ${
+                  businessConfirmModal.action === "approved"
+                    ? "bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed"
+                    : "bg-red-600 hover:bg-red-700 disabled:bg-red-400 disabled:cursor-not-allowed"
+                }`}
+              >
+                {actionLoading ? "Processing..." : "Confirm"}
               </Button>
             </div>
           </div>

@@ -116,17 +116,6 @@ function getCategoriesByBusinessType(businessType) {
       "Gaming Consoles & Accessories",
       "Cables, Adapters & Chargers",
     ],
-    "Hardware Store": [
-      "Hand Tools",
-      "Power Tools",
-      "Construction Materials",
-      "Electrical Supplies",
-      "Plumbing Supplies",
-      "Paint & Painting Supplies",
-      "Gardening Tools",
-      "Fasteners (Nails, Screws, Bolts)",
-      "Safety Gear",
-    ],
     Bookstore: [
       "Fiction Books",
       "Non-Fiction Books",

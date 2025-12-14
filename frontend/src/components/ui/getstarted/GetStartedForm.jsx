@@ -23,7 +23,6 @@ export default function GetStartedForm({
     { value: "Pharmacy", label: "Pharmacy" },
     { value: "Clothing Store", label: "Clothing Store" },
     { value: "Electronics Store", label: "Electronics Store" },
-    { value: "Hardware Store", label: "Hardware Store" },
     { value: "Bookstore", label: "Bookstore" },
     { value: "Convenience Store", label: "Convenience Store" },
     { value: "Others", label: "Others" },
@@ -446,7 +445,6 @@ export default function GetStartedForm({
                 <option value="Pharmacy">Pharmacy</option>
                 <option value="Clothing Store">Clothing Store</option>
                 <option value="Electronics Store">Electronics Store</option>
-                <option value="Hardware Store">Hardware Store</option>
                 <option value="Bookstore">Bookstore</option>
                 <option value="Convenience Store">Convenience Store</option>
                 <option value="Others">Others</option>
@@ -535,14 +533,6 @@ export default function GetStartedForm({
               <li>• Fire Safety Inspection Certificate (if applicable)</li>
               <li>• Sanitary Permit (for food businesses)</li>
             </ul>
-          </div>
-
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-4">
-            <p className="text-sm text-yellow-800">
-              <strong>Important:</strong> After submitting your documents,
-              please allow 1-3 business days for verification. You will receive
-              an email notification once the review is complete.
-            </p>
           </div>
 
           <div className="mt-6 space-y-4">

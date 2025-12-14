@@ -52,6 +52,16 @@ function POS() {
   const [error, setError] = useState("");
   const [transactionNumber, setTransactionNumber] = useState("");
   const [transactionId, setTransactionId] = useState(null);
+  
+  // Auto-clear error message after 5 seconds
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => {
+        setError("");
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
   const [showReceipts, setShowReceipts] = useState(false);
   const skuInputRef = useRef(null);
   const [isSidebarOpen, setSidebarOpen] = useState(false);
@@ -90,6 +100,14 @@ function POS() {
       );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Auto-focus SKU input on initial mount
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      skuInputRef.current?.focus();
+    }, 300);
+    return () => clearTimeout(timer);
   }, []);
 
   // On mount, if returned from PayMongo success/cancel, finalize or cleanup
@@ -230,9 +248,17 @@ function POS() {
       });
       setSku("");
       setQuantity(1);
-      setScannerPaused(false);
+      // Auto-focus SKU input after adding item for next scan
+      setTimeout(() => {
+        skuInputRef.current?.focus();
+      }, 50);
     } catch (err) {
       setError("Product not found");
+    } finally {
+      // Always resume scanner after processing, even on error
+      setTimeout(() => {
+        setScannerPaused(false);
+      }, 300);
     }
   };
 
@@ -282,6 +308,53 @@ function POS() {
     setEditQty(value);
   };
 
+  // Handler for increment quantity (=)
+  const handleIncrementQuantity = async () => {
+    if (cart.length === 0 || selectedCartIdx < 0 || selectedCartIdx >= cart.length) return;
+    const item = cart[selectedCartIdx];
+    if (!item) return;
+    const currentQty = item.quantity;
+    const newQty = currentQty + 1;
+    setError("");
+    try {
+      const product = await api(
+        `/api/products/sku/${encodeURIComponent(item.sku)}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      const stockQty = Number(product.stock_quantity ?? 0);
+      if (newQty > stockQty) {
+        setError(
+          `Insufficient stock. Available: ${stockQty}, requested: ${newQty}.`
+        );
+        return;
+      }
+      setCart((prev) =>
+        prev.map((cartItem, i) =>
+          i === selectedCartIdx ? { ...cartItem, quantity: newQty } : cartItem
+        )
+      );
+    } catch (err) {
+      setError(err.message || "Failed to update quantity");
+    }
+  };
+
+  // Handler for decrement quantity (-)
+  const handleDecrementQuantity = () => {
+    if (cart.length === 0 || selectedCartIdx < 0 || selectedCartIdx >= cart.length) return;
+    const item = cart[selectedCartIdx];
+    if (!item) return;
+    const currentQty = item.quantity;
+    if (currentQty <= 1) return; // Don't allow going below 1
+    const newQty = currentQty - 1;
+    setCart((prev) =>
+      prev.map((cartItem, i) =>
+        i === selectedCartIdx ? { ...cartItem, quantity: newQty } : cartItem
+      )
+    );
+  };
+
   const subtotal = cart.reduce(
     (sum, item) => sum + item.price * item.quantity,
     0
@@ -307,58 +380,89 @@ function POS() {
   // Handle keyboard navigation for cart items
   useEffect(() => {
     const handleKeyDown = (e) => {
+      // Don't handle keys when modals are open
       if (showDiscount || showPriceCheck || showImportCart || showCashLedger || showCheckout || showCashModal || showReceipts || showLogoutConfirm) {
-        return; // Don't handle keys when modals are open
+        return;
       }
 
-      switch (e.key) {
-        case 'ArrowUp':
+      // Don't handle if user is typing in an input field (unless it's specific navigation keys)
+      const isInputFocused = e.target && (
+        e.target.tagName === 'INPUT' || 
+        e.target.tagName === 'TEXTAREA' ||
+        e.target.isContentEditable
+      );
+
+      // Only handle navigation keys if not in input or if editing cart item
+      const navigationKeys = ['ArrowUp', 'ArrowDown', 'Enter', 'Escape'];
+      const editKeys = ['e', 'E', 'd', 'D'];
+      const quantityKeys = ['=', '-'];
+      
+      if (isInputFocused && editingCartItem === null && !navigationKeys.includes(e.key) && !editKeys.includes(e.key) && !quantityKeys.includes(e.key)) {
+        return;
+      }
+
+      // Handle Escape key for editing state (but let shortcut handler handle modal closing)
+      if (e.key === 'Escape' && editingCartItem !== null) {
+        e.preventDefault();
+        e.stopPropagation();
+        setEditingCartItem(null);
+        return;
+      }
+
+      // Handle Enter key for editing state
+      if (e.key === 'Enter' && editingCartItem !== null) {
+        e.preventDefault();
+        e.stopPropagation();
+        handleEditQuantity(editingCartItem, editQty);
+        setEditingCartItem(null);
+        return;
+      }
+
+      // Handle arrow keys - allow navigation even when SKU input is focused
+      const isSkuInput = e.target === skuInputRef.current;
+      const isArrowKey = e.key === 'ArrowUp' || e.key === 'ArrowDown';
+      const isQuantityKey = e.key === '=' || e.key === '-';
+      
+      if (isArrowKey && (isSkuInput || !isInputFocused || editingCartItem !== null)) {
+        switch (e.key) {
+          case 'ArrowUp':
           e.preventDefault();
+          e.stopPropagation();
           setSelectedCartIdx(prev => prev > 0 ? prev - 1 : cart.length - 1);
           break;
-        case 'ArrowDown':
+          case 'ArrowDown':
           e.preventDefault();
+          e.stopPropagation();
           setSelectedCartIdx(prev => prev < cart.length - 1 ? prev + 1 : 0);
           break;
-        case 'e':
-        case 'E':
-          e.preventDefault();
-          if (cart.length > 0 && selectedCartIdx >= 0 && selectedCartIdx < cart.length) {
-            setEditingCartItem(selectedCartIdx);
-            setEditQty(String(cart[selectedCartIdx].quantity));
-          }
-          break;
-        case 'd':
-        case 'D':
-          e.preventDefault();
-          if (cart.length > 0 && selectedCartIdx >= 0 && selectedCartIdx < cart.length) {
-            handleRemove(selectedCartIdx);
-            setSelectedCartIdx(prev => Math.min(prev, cart.length - 2));
-          }
-          break;
-        case 'Enter':
-          if (editingCartItem !== null) {
+          // E and D keys removed - now using F1 and F2 instead
+          default:
+            break;
+        }
+      }
+      
+      // Handle quantity keys (= and -) even when SKU input is focused
+      if (isQuantityKey && (isSkuInput || !isInputFocused || editingCartItem !== null)) {
+        if (cart.length > 0 && selectedCartIdx >= 0 && selectedCartIdx < cart.length) {
+          if (e.key === '=') {
             e.preventDefault();
-            handleEditQuantity(editingCartItem, editQty);
-            setEditingCartItem(null);
-          }
-          break;
-        case 'Escape':
-          if (editingCartItem !== null) {
+            e.stopPropagation();
+            handleIncrementQuantity();
+          } else if (e.key === '-') {
             e.preventDefault();
-            setEditingCartItem(null);
+            e.stopPropagation();
+            handleDecrementQuantity();
           }
-          break;
-        default:
-          break;
+        }
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
+    // Use bubble phase (after shortcuts hook which uses capture)
+    window.addEventListener('keydown', handleKeyDown, false);
     return () => {
-      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keydown', handleKeyDown, false);
     };
-  }, [cart.length, selectedCartIdx, editingCartItem, editQty, showDiscount, showPriceCheck, showImportCart, showCashLedger, showCheckout, showCashModal, showReceipts, showLogoutConfirm]);
+  }, [cart.length, selectedCartIdx, editingCartItem, editQty, showDiscount, showPriceCheck, showImportCart, showCashLedger, showCheckout, showCashModal, showReceipts, showLogoutConfirm, handleIncrementQuantity, handleDecrementQuantity]);
 
   // Reset selected index when cart changes
   useEffect(() => {
@@ -368,6 +472,7 @@ function POS() {
       setSelectedCartIdx(prev => Math.min(prev, cart.length - 1));
     }
   }, [cart.length]);
+
 
   // Pause scanner when any modal is open to avoid hardware scanner/keyboard events interfering with shortcuts
   useEffect(() => {
@@ -380,7 +485,26 @@ function POS() {
       showCashModal ||
       showReceipts ||
       showLogoutConfirm;
+    
     setScannerPaused(anyModalOpen);
+    
+    // When modals close, refocus SKU input after a delay (but not if user is interacting with other elements)
+    if (!anyModalOpen) {
+      const timer = setTimeout(() => {
+        const activeElement = document.activeElement;
+        const isInputFocused = activeElement && (
+          activeElement.tagName === 'INPUT' || 
+          activeElement.tagName === 'TEXTAREA' ||
+          activeElement.isContentEditable ||
+          activeElement.tagName === 'BUTTON'
+        );
+        // Only refocus if user isn't actively clicking buttons or using inputs
+        if (!isInputFocused && document.body === activeElement) {
+          skuInputRef.current?.focus();
+        }
+      }, 300);
+      return () => clearTimeout(timer);
+    }
   }, [
     showDiscount,
     showPriceCheck,
@@ -430,57 +554,97 @@ function POS() {
     }
   };
 
+  // Handler for edit quantity (F1)
+  const handleEditQuantityShortcut = () => {
+    if (cart.length > 0 && selectedCartIdx >= 0 && selectedCartIdx < cart.length) {
+      setEditingCartItem(selectedCartIdx);
+      setEditQty(String(cart[selectedCartIdx].quantity));
+    }
+  };
+
+  // Handler for discount modal toggle (F6) - open/close discount modal
+  const handleDiscountToggle = () => {
+    setShowDiscount(!showDiscount);
+  };
+
   useKeyboardShortcuts(
     [
-      { key: "f1", action: handleNewTransaction },
+      // ` (backtick) - focus SKU field
+      { key: "`", action: focusSkuInput },
+      // F1 - edit product quantity
+      {
+        key: "f1",
+        action: handleEditQuantityShortcut,
+        enabled: cart.length > 0 && selectedCartIdx >= 0,
+      },
+      // F2 - delete item
       {
         key: "f2",
+        action: handleVoidSelected,
+        enabled: cart.length > 0,
+      },
+      // F3 - logout
+      {
+        key: "f3",
+        description: "Logout",
+        action: () => setShowLogoutConfirm(true),
+      },
+      // F4 - add to cart button
+      {
+        key: "f4",
+        action: handleAddToCart,
+        enabled: !!sku, // Only enable if there's a SKU value
+      },
+      // F5 - cash ledger
+      { key: "f5", action: () => setShowCashLedger(true) },
+      // F6 - open/close discount modal
+      {
+        key: "f6",
+        action: handleDiscountToggle,
+      },
+      // F7 - price check
+      {
+        key: "f7",
         action: () => {
           setShowPriceCheck(true);
         },
       },
-      { key: "f3", action: focusSkuInput },
-      {
-        key: "f4",
-        action: handleVoidSelected,
-        enabled: cart.length > 0,
-      },
-      { key: "f5", action: () => setShowDiscount(true) },
-      {
-        key: "f6",
-        action: handleSetQuantityShortcut,
-        enabled: cart.length > 0,
-      },
-      {
-        key: "f7",
-        action: () => setShowCheckout(true),
-        enabled: cart.length > 0,
-      },
+      // F8 - scan customer cart (keep existing)
       {
         key: "f8",
         action: () => setShowImportCart(true),
       },
+      // F9 - receipts
+      { key: "f9", action: () => setShowReceipts(true) },
+      // F10 - (reserved, no action specified)
+      // F11 - remove discount
       {
-        key: "f10",
-        action: () => setShowCheckout(true),
-        enabled: cart.length > 0,
-      },
-      { key: "f11", action: () => setShowReceipts(true) },
-      {
-        key: "f12",
-        description: "Logout",
-        action: () => setShowLogoutConfirm(true),
-      },
-      {
-        key: "r",
-        description: "Remove Discount",
+        key: "f11",
         action: handleRemoveDiscount,
         enabled: !!appliedDiscount,
       },
-      { key: "ctrl+l", action: () => setShowCashLedger(true) },
+      // F12 - checkout
+      {
+        key: "f12",
+        action: () => setShowCheckout(true),
+        enabled: cart.length > 0,
+      },
+      // = (equals) - increment quantity
+      {
+        key: "=",
+        action: handleIncrementQuantity,
+        enabled: cart.length > 0 && selectedCartIdx >= 0 && selectedCartIdx < cart.length,
+      },
+      // - (minus) - decrement quantity
+      {
+        key: "-",
+        action: handleDecrementQuantity,
+        enabled: cart.length > 0 && selectedCartIdx >= 0 && selectedCartIdx < cart.length,
+      },
       {
         key: "escape",
         action: () => {
+          // Only close modals, don't interfere with cart editing (handled separately)
           if (showCheckout) setShowCheckout(false);
           else if (showDiscount) setShowDiscount(false);
           else if (showPriceCheck) setShowPriceCheck(false);
@@ -489,13 +653,17 @@ function POS() {
           else if (showCashLedger) setShowCashLedger(false);
           else if (showReceipts) setShowReceipts(false);
           else if (showLogoutConfirm) setShowLogoutConfirm(false);
+          // Note: Cart item editing escape is handled in the separate keyboard handler
         },
         allowWhileTyping: true,
+        stopPropagation: false, // Allow other handlers to process
       },
     ],
     [
       cart.length,
       selectedCartIdx,
+      sku,
+      appliedDiscount,
       showCheckout,
       showDiscount,
       showPriceCheck,
@@ -504,7 +672,6 @@ function POS() {
       showCashLedger,
       showReceipts,
       showLogoutConfirm,
-      appliedDiscount,
     ]
   );
 
@@ -668,16 +835,16 @@ function POS() {
       <button
         onClick={() => setShowReceipts(true)}
         className="flex items-center gap-2 bg-white/80 backdrop-blur-sm p-1.5 sm:px-3 sm:py-2 rounded-lg border border-gray-200/80 hover:bg-gray-50 transition-colors"
-        title="View all receipts (F11)"
+        title="View all receipts (F9)"
       >
         <div className="relative">
           <BiReceipt className="w-5 h-5 text-blue-600" />
         </div>
-        <span className="hidden sm:inline-block bg-blue-50 text-blue-700 border border-blue-200 text-xs font-bold px-1.5 py-0.5 rounded">
-          F11
-        </span>
         <span className="text-sm font-medium text-gray-700 hidden sm:inline">
           Receipts
+        </span>
+        <span className="hidden sm:inline-block bg-blue-50 text-blue-700 border border-blue-200 text-xs font-bold px-1.5 py-0.5 rounded">
+          F9
         </span>
       </button>
     </div>
@@ -820,7 +987,7 @@ function POS() {
                   quantityInputRef={quantityInputRef}
                 />
                 {error && (
-                  <div className="bg-red-50 border-l-4 border-red-500 rounded-lg p-3 flex items-start gap-2 mt-3">
+                  <div className="bg-red-50 border-l-4 border-red-500 rounded-lg p-3 flex items-start gap-2 mt-3 relative animate-in slide-in-from-top-2 duration-300">
                     <svg
                       className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5"
                       fill="none"
@@ -834,7 +1001,7 @@ function POS() {
                         d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
                       />
                     </svg>
-                    <p className="text-sm font-medium text-red-700">
+                    <p className="text-sm font-medium text-red-700 flex-1">
                       {(() => {
                         try {
                           const parsed = JSON.parse(error);
@@ -844,6 +1011,25 @@ function POS() {
                         }
                       })()}
                     </p>
+                    <button
+                      onClick={() => setError("")}
+                      className="text-red-400 hover:text-red-600 transition-colors flex-shrink-0 ml-2"
+                      aria-label="Dismiss error"
+                    >
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M6 18L18 6M6 6l12 12"
+                        />
+                      </svg>
+                    </button>
                   </div>
                 )}
               </div>
@@ -893,7 +1079,7 @@ function POS() {
                       className="text-xs font-bold underline flex items-center gap-1"
                       onClick={() => setAppliedDiscount(null)}
                     >
-                      <span className="text-yellow-600">(R)</span> Remove
+                      <span className="text-yellow-600">(F11)</span> Remove
                     </button>
                   </div>
                 )}
@@ -901,7 +1087,7 @@ function POS() {
                 <div className="col-span-8">
                   <div className="grid grid-cols-2 sm:grid-cols-2 gap-2 sm:gap-3">
                     <Button
-                      label={<ButtonLabel text="CASH LEDGER" shortcut="Ctrl+L" />}
+                      label={<ButtonLabel text="CASH LEDGER" shortcut="F5" />}
                       size="md"
                       className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
                       variant="secondary"
@@ -928,10 +1114,10 @@ function POS() {
                       <Button
                         label={
                           appliedDiscount
-                            ? <ButtonLabel text={`REMOVE ${appliedDiscount.label || 'DISCOUNT'}`} shortcut="R" variant="primary" />
-                            : <ButtonLabel text="ADD DISCOUNT" shortcut="F5" />
+                            ? <ButtonLabel text="REMOVE DISCOUNT" shortcut="F11" variant="secondary" />
+                            : <ButtonLabel text="ADD DISCOUNT" shortcut="F6" />
                         }
-                        variant={appliedDiscount ? "danger" : "secondary"}
+                        variant="secondary"
                         onClick={() => {
                           if (appliedDiscount) {
                             if (window.confirm(`Remove ${appliedDiscount.label || 'discount'}?`)) {
@@ -972,9 +1158,7 @@ function POS() {
                             </svg>
                           )
                         }
-                        className={`w-full h-10 sm:h-12 text-xs sm:text-sm font-bold ${
-                          appliedDiscount ? 'bg-red-600 hover:bg-red-700' : ''
-                        }`}
+                        className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
                       />
                       {appliedDiscount && (
                         <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
@@ -984,7 +1168,7 @@ function POS() {
                       )}
                     </div>
                     <Button
-                      label={<ButtonLabel text="PRICE CHECK" shortcut="F2" />}
+                      label={<ButtonLabel text="PRICE CHECK" shortcut="F7" />}
                       size="md"
                       className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
                       onClick={() => setShowPriceCheck(true)}
@@ -1037,7 +1221,7 @@ function POS() {
                 {/* Checkout Button */}
                 <div className="col-span-4">
                   <Button
-                    label={<ButtonLabel text="CHECKOUT" shortcut="F10" variant="primary" />}
+                    label={<ButtonLabel text="CHECKOUT" shortcut="F12" variant="primary" />}
                     size="md"
                     className="w-full h-full text-sm sm:text-base font-bold"
                     variant="primary"

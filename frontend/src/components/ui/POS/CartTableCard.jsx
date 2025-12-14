@@ -267,12 +267,12 @@ function CartTableCard({
                             onStartEdit?.(idx);
                           }}
                           className={`p-1.5 rounded-md transition-all duration-200 ${selectedIdx === idx ? 'bg-blue-100 text-blue-700 border-blue-200' : 'bg-blue-50 text-blue-600 hover:bg-blue-100 border-blue-200'} border`}
-                          title="Edit (E)"
+                          title="Edit (F1)"
                           
                         >
                           <div className="flex items-center gap-1">
                             {(
-                              <span className="hidden sm:inline-block text-[10px] font-bold text-blue-700 bg-blue-100 border border-blue-200 px-1.5 py-0.5 rounded">E</span>
+                              <span className="hidden sm:inline-block text-[10px] font-bold text-blue-700 bg-blue-100 border border-blue-200 px-1.5 py-0.5 rounded">F1</span>
                             )}
                             <EditIcon />
                           </div>
@@ -284,11 +284,11 @@ function CartTableCard({
                             handleRemove(idx);
                           }}
                           className={`p-1.5 rounded-md transition-all duration-200 ${selectedIdx === idx ? 'bg-red-100 text-red-700 border-red-200' : 'bg-red-50 text-red-600 hover:bg-red-100 border-red-200'} border`}
-                          title="Delete (D)"
+                          title="Delete (F2)"
                         >
                           <div className="flex items-center gap-1">
                             {(
-                              <span className="hidden sm:inline-block text-[10px] font-bold text-red-700 bg-red-100 border border-red-200 px-1.5 py-0.5 rounded">D</span>
+                              <span className="hidden sm:inline-block text-[10px] font-bold text-red-700 bg-red-100 border border-red-200 px-1.5 py-0.5 rounded">F2</span>
                             )}
                             <DeleteIcon />
                           </div>

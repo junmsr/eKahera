@@ -121,7 +121,7 @@ function Footer({ className = "" }) {
             {/* Contact Info with enhanced styling */}
             <motion.div className="space-y-4 mb-8">
               <motion.a
-                href="mailto:business@ekahera.online"
+                href="mailto:ekahera.business@gmail.com"
                 className="flex items-center gap-3 text-sm text-slate-700 hover:text-blue-600 transition-all duration-300 group"
                 whileHover={{ x: 6, scale: 1.02 }}
               >
@@ -149,7 +149,7 @@ function Footer({ className = "" }) {
                     <path d="M22 6l-10 7L2 6" />
                   </svg>
                 </motion.div>
-                <motion.span className="font-medium">business@ekahera.online</motion.span>
+                <motion.span className="font-medium">ekahera.business@gmail.com</motion.span>
               </motion.a>
 
               <motion.a

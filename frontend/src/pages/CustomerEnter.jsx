@@ -5,6 +5,26 @@ import ScannerCard from "../components/ui/POS/ScannerCard";
 import { useNavigate, Link } from "react-router-dom";
 import Button from "../components/common/Button";
 
+function parseBusinessIdFromCode(raw) {
+  try {
+    // If it's a URL, parse query params
+    const url = new URL(raw);
+    const bid = url.searchParams.get('business_id') || url.searchParams.get('b') || url.searchParams.get('store');
+    if (bid) return bid;
+  } catch (_) {
+    // not a URL; continue
+  }
+  // Try JSON payload
+  try {
+    const obj = JSON.parse(raw);
+    if (obj && (obj.business_id || obj.businessId || obj.storeId)) {
+      return obj.business_id || obj.businessId || obj.storeId;
+    }
+  } catch (_) {}
+  // Fallback: numeric/string id directly
+  return raw;
+}
+
 export default function CustomerEnter() {
   const [paused, setPaused] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
@@ -20,75 +40,77 @@ export default function CustomerEnter() {
     setError(null);
 
     try {
-      const url = new URL(code);
-      const bid = url.searchParams.get("business_id");
-
-      if (url.pathname.endsWith("/enter-store") && bid) {
-        // Set business ID and generate a transaction number for this session
-        localStorage.setItem("business_id", String(bid));
-        // Clear old transaction data
-        localStorage.removeItem("provisionalTransactionNumber");
-        localStorage.removeItem("customerCart");
-        // Generate and save new transaction number
-        const timePart = new Date()
-          .toISOString()
-          .replace(/[-:T.Z]/g, "")
-          .slice(0, 14);
-        const randPart = Math.floor(1000 + Math.random() * 9000);
-        const transactionNumber = `T-${String(bid).padStart(
-          2,
-          "0"
-        )}-${timePart}-${randPart}`;
-        localStorage.setItem("provisionalTransactionNumber", transactionNumber);
-
-        // New: Call backend /public/enter-store to create user
-        try {
-          const response = await fetch("/api/sales/public/enter-store", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ business_id: bid }),
-          });
-
-          if (!response.ok) {
-            const errorData = await response
-              .json()
-              .catch(() => ({ error: "Failed to create customer" }));
-            console.error("Failed to create customer user:", errorData);
-            // Don't block navigation, but log the error
-          } else {
-            const data = await response.json();
-            // Store user_id and username in localStorage for use later
-            if (data.user_id) {
-              localStorage.setItem("customer_user_id", String(data.user_id));
-              console.log("Customer user created:", data.user_id);
-            }
-            if (data.username) {
-              localStorage.setItem("customer_username", data.username);
-            }
-          }
-        } catch (err) {
-          console.error("Error creating customer user:", err);
-          // Don't block navigation, but log the error
-        }
-
-        // Small delay for better UX feedback
-        setTimeout(() => {
-          navigate("/customer");
-        }, 300);
-      } else {
-        // Handle invalid QR code format
+      const businessId = parseBusinessIdFromCode(code);
+      
+      if (!businessId) {
         setError("Invalid QR Code. Please scan a valid store QR code.");
         setIsScanning(false);
-        setPaused(false);
+        setTimeout(() => {
+          setPaused(false);
+        }, 500);
+        return;
       }
+
+      // Set business ID and generate a transaction number for this session
+      localStorage.setItem("business_id", String(businessId));
+      // Clear old transaction data
+      localStorage.removeItem("provisionalTransactionNumber");
+      localStorage.removeItem("customerCart");
+      // Generate and save new transaction number
+      const timePart = new Date()
+        .toISOString()
+        .replace(/[-:T.Z]/g, "")
+        .slice(0, 14);
+      const randPart = Math.floor(1000 + Math.random() * 9000);
+      const transactionNumber = `T-${String(businessId).padStart(
+        2,
+        "0"
+      )}-${timePart}-${randPart}`;
+      localStorage.setItem("provisionalTransactionNumber", transactionNumber);
+
+      // Call backend /public/enter-store to create user
+      try {
+        const response = await fetch("/api/sales/public/enter-store", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ business_id: businessId }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response
+            .json()
+            .catch(() => ({ error: "Failed to create customer" }));
+          console.error("Failed to create customer user:", errorData);
+          // Don't block navigation, but log the error
+        } else {
+          const data = await response.json();
+          // Store user_id and username in localStorage for use later
+          if (data.user_id) {
+            localStorage.setItem("customer_user_id", String(data.user_id));
+            console.log("Customer user created:", data.user_id);
+          }
+          if (data.username) {
+            localStorage.setItem("customer_username", data.username);
+          }
+        }
+      } catch (err) {
+        console.error("Error creating customer user:", err);
+        // Don't block navigation, but log the error
+      }
+
+      // Small delay for better UX feedback
+      setTimeout(() => {
+        navigate("/customer");
+      }, 300);
     } catch (error) {
-      // Handle cases where the scanned code is not a valid URL
+      // Handle cases where the scanned code cannot be parsed
       setError("Invalid QR Code. Please scan a valid store QR code.");
-      alert("Invalid QR Code. Please scan a valid store QR code.");
       setIsScanning(false);
-      setPaused(false);
+      setTimeout(() => {
+        setPaused(false);
+      }, 500);
     }
   };
 

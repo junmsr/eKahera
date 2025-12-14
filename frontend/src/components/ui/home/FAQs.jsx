@@ -17,7 +17,7 @@ const faqs = [
   },
   {
     q: "How do I get support?",
-    a: "You can reach us via the email business@ekahera.online, or chat. We are here to help you succeed.",
+    a: "You can reach us via the email ekahera.business@gmail.com, or chat. We are here to help you succeed.",
   },
 ];
 

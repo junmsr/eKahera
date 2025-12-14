@@ -579,9 +579,6 @@ function DiscountModal({ isOpen, onClose, onApplyDiscount }) {
               } relative group`}
               onClick={() => setSelectedIdx(idx)}
             >
-              <div className="absolute -top-2 -right-2 bg-blue-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center font-bold">
-                {idx + 1}
-              </div>
               <div className="font-medium">{d.label}</div>
               <div className="text-sm text-gray-500">{d.value}%</div>
               {selectedIdx === idx && (

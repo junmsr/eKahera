@@ -173,15 +173,35 @@ export default function DashboardBusinessReport({ dateRange }) {
                 data={paymentMethods}
                 cx="50%"
                 cy="50%"
-                labelLine={false}
-                label={({ name, value }) => `${name} ${value}%`}
+                labelLine={true}
+                label={({ name, value, cx, cy, midAngle, innerRadius, outerRadius }) => {
+                  const RADIAN = Math.PI / 180;
+                  const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+                  const x = cx + radius * Math.cos(-midAngle * RADIAN);
+                  const y = cy + radius * Math.sin(-midAngle * RADIAN);
+                  
+                  return (
+                    <text
+                      x={x}
+                      y={y}
+                      fill="white"
+                      textAnchor={x > cx ? 'start' : 'end'}
+                      dominantBaseline="central"
+                      fontSize={12}
+                      fontWeight="bold"
+                      style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.5)' }}
+                    >
+                      {`${name}: ${value}%`}
+                    </text>
+                  );
+                }}
                 outerRadius={90}
                 dataKey="value"
               >
                 {paymentMethods.map((entry, index) => (
                   <Cell
                     key={`cell-${index}`}
-                    fill={blueShades[index % blueShades.length]}
+                    fill={entry.fill}
                   />
                 ))}
               </Pie>
@@ -197,6 +217,16 @@ export default function DashboardBusinessReport({ dateRange }) {
                   fontWeight: "600",
                 }}
                 labelStyle={{ fontWeight: "700", color: "#1e40af" }}
+              />
+              <Legend
+                verticalAlign="bottom"
+                height={36}
+                iconType="circle"
+                formatter={(value, entry) => (
+                  <span style={{ color: "#374151", fontSize: "12px", fontWeight: "500" }}>
+                    {value}
+                  </span>
+                )}
               />
             </PieChart>
           </ResponsiveContainer>

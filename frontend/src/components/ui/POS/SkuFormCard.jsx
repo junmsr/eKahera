@@ -50,8 +50,11 @@ export default React.forwardRef(
 
           <div className="space-y-2">
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">
-                SKU Code
+              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-1">
+                <span>SKU Code</span>
+                <span className="hidden sm:inline-block text-xs font-bold px-1.5 py-0.5 rounded border bg-gray-100 border-gray-300 text-gray-600">
+                  `
+                </span>
               </label>
               <div className="relative">
                 <input
@@ -65,7 +68,7 @@ export default React.forwardRef(
                       handleAddToCart();
                     }
                   }}
-                  placeholder="Scan or enter SKU code"
+                  placeholder="Scan or enter SKU code (Press ` to focus)"
                   className="w-full pl-3 pr-3 py-2 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 placeholder-gray-400 font-medium"
                 />
               </div>
@@ -101,7 +104,14 @@ export default React.forwardRef(
                 </button>
               </div>
               <Button
-                label="Add to Cart"
+                label={
+                  <div className="flex items-center gap-2">
+                    <span>Add to Cart</span>
+                    <span className="hidden sm:inline-block text-xs font-bold px-1.5 py-0.5 rounded border bg-white/20 border-white/40 text-white">
+                      F4
+                    </span>
+                  </div>
+                }
                 onClick={handleAddToCart}
                 variant="primary"
                 size="sm"

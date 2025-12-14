@@ -85,6 +85,7 @@ function VisitorsChart({ data, className = "", rangeType = "Custom" }) {
               stroke={SOFT_BLUE}
               strokeWidth={3}
               dot={{ r: 5, fill: SOFT_BLUE }}
+              isAnimationActive={false}
             />
           </LineChart>
         </ResponsiveContainer>
@@ -127,7 +128,7 @@ function SalesPieChart({ data, className = "" }) {
               }}
             />
             <Legend />
-            <Bar dataKey="value" fill={SOFT_BLUE} radius={[8, 8, 0, 0]} />
+            <Bar dataKey="value" fill={SOFT_BLUE} radius={[8, 8, 0, 0]} isAnimationActive={false} />
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -964,11 +965,6 @@ export default function Dashboard() {
   // Header actions - REMOVED SELECT DROPDOWN
   const headerActions = (
     <div className="flex items-center gap-2">
-      <div className="hidden md:block text-right mr-2">
-        <div className="text-xs text-gray-500 font-medium">{currentTime.format("ddd, MMM D, YYYY")}</div>
-        <div className="text-sm font-bold text-gray-700">{currentTime.format("h:mm A")}</div>
-      </div>
-
       <button
         onClick={fetchData}
         disabled={loading}
@@ -1187,6 +1183,7 @@ export default function Dashboard() {
                   stats={todayHighlight}
                   formatCurrency={formatCurrency}
                   rangeType="Today"
+                  currentTime={currentTime}
               />
             )}
 
