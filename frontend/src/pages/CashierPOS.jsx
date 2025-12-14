@@ -69,6 +69,12 @@ function CashierPOS() {
   };
   const skuInputRef = useRef(null);
   const quantityInputRef = useRef(null);
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const token = sessionStorage.getItem("auth_token");
   const user = JSON.parse(sessionStorage.getItem("user") || "{}");
@@ -665,6 +671,14 @@ function CashierPOS() {
 
   const headerActions = (
     <div className="flex items-center gap-2">
+      <div className="hidden md:block text-right mr-2">
+        <div className="text-xs text-gray-500 font-medium">
+          {currentTime.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+        </div>
+        <div className="text-sm font-bold text-gray-700">
+          {currentTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+        </div>
+      </div>
       <button
         onClick={() => setShowReceipts(true)}
         className="flex items-center gap-2 bg-white/80 backdrop-blur-sm p-1.5 sm:px-3 sm:py-2 rounded-lg border border-gray-200/80 hover:bg-gray-50 transition-colors group relative"

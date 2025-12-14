@@ -173,6 +173,7 @@ export default function Dashboard() {
     averageTransactionValue: 0,
   });
   const [exportingPDF, setExportingPDF] = useState(false);
+  const [currentTime, setCurrentTime] = useState(dayjs());
 
   // Refs for PDF export
   const dashboardRef = useRef(null);
@@ -180,6 +181,11 @@ export default function Dashboard() {
   const pieChartRef = useRef(null);
   const keyMetricsRef = useRef(null);
   const businessReportRef = useRef(null);
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(dayjs()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Helper function to detect modern CSS color functions
   const hasModernColor = (val = "") => {
@@ -958,6 +964,11 @@ export default function Dashboard() {
   // Header actions - REMOVED SELECT DROPDOWN
   const headerActions = (
     <div className="flex items-center gap-2">
+      <div className="hidden md:block text-right mr-2">
+        <div className="text-xs text-gray-500 font-medium">{currentTime.format("ddd, MMM D, YYYY")}</div>
+        <div className="text-sm font-bold text-gray-700">{currentTime.format("h:mm A")}</div>
+      </div>
+
       <button
         onClick={fetchData}
         disabled={loading}
