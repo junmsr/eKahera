@@ -54,8 +54,13 @@ export default function Receipt() {
 
 
 	const handlePrint = () => {
-		window.print();
+		if (!details) return;
+		printThermal(details).catch(err => {
+			console.error(err);
+			alert('Printer not connected');
+		});
 	};
+
 
 	const handleDownload = async () => {
 		if (!details || !receiptRef.current) {
@@ -216,6 +221,97 @@ export default function Receipt() {
 		],
 		[fromCustomer, loading, details, user]
 	);
+
+	function buildEscPosReceipt(details) {
+		const ESC = '\x1B';
+		const GS = '\x1D';
+
+		let r = '';
+
+		r += ESC + '@';                 // init
+		r += ESC + 'a' + '\x01';        // center
+		r += details.business.name + '\n';
+		r += details.business.address + '\n';
+		r += details.business.contact + '\n';
+		if (details.business.tin) {
+			r += 'TIN: ' + details.business.tin + '\n';
+		}
+
+		r += '_______________________________\n';
+
+		r += '\n';
+		r += ESC + 'a' + '\x00';        // left
+		r += 'Receipt #: ' + details.transactionNumber + '\n';
+		r += 'Date: ' + new Date(details.date).toLocaleString() + '\n';
+		r += 'Cashier: ' + (details.cashierName || 'N/A') + '\n';
+		r += 'Payment: ' + details.payment.method + '\n';
+
+		r += 'Item                      Total\n';
+
+		r += '--------------------------------\n';
+
+		details.items.forEach(item => {
+			r += item.name + '\n';
+			r += `  ${item.quantity} x P${item.price} \t  P${item.subtotal}\n`;
+		});
+
+		r += '--------------------------------\n';
+
+		r += `Subtotal: P${details.subtotal.toFixed(2)}\n`;
+
+		if (details.discountTotal > 0) {
+			r += `Discount: -P${details.discountTotal.toFixed(2)}\n`;
+		}
+
+		r += ESC + 'E' + '\x01';        // bold ON
+		r += `TOTAL: P${details.total.toFixed(2)}\n`;
+		r += ESC + 'E' + '\x00';        // bold OFF
+
+		if (details.payment.amountTendered) {
+			r += `Cash: P${details.payment.amountTendered}\n`;
+			r += `Change: P${details.payment.change}\n`;
+		}
+
+		r += '\n';
+		r += ESC + 'a' + '\x01';
+		r += 'THANK YOU\n';
+		r += 'This is not an official receipt\n';
+
+		r += '\n\n\n';
+		r += GS + 'V' + 'A';            // cut
+		console.log(r);
+		return r;
+		}
+
+	async function printThermal(details) {
+		try {
+			if (!qz.websocket.isActive()) {
+				await qz.websocket.connect();
+			}
+
+			const printer = await qz.printers.getDefault();
+			console.log(printer); // printer name logger
+
+			const config = qz.configs.create(printer, {
+				encoding: 'UTF-8',
+				rasterize: false,
+				scaleContent: false
+			});
+
+			const data = [
+				{	
+					type: 'raw',
+					format: 'command',
+					data: buildEscPosReceipt(details)
+				}
+			];
+			await qz.print(config, data);
+		} catch (err) {
+			console.error('QZ ERROR:', err);
+			alert(err.message || 'Printer not connected');
+		}
+	}
+
 
 	return (
 		<Background variant="gradientBlue" pattern="dots" overlay floatingElements>
