@@ -68,18 +68,109 @@ export default function Receipt() {
 				useCORS: true,
 				scale: 2, // Higher scale for better quality
 				allowTaint: true,
-				backgroundColor: '#ffffff'
+				backgroundColor: '#ffffff',
+				logging: false, // Disable logging for better performance
 			});
 			
-			const link = document.createElement('a');
-			link.download = `eKahera-Receipt-${tn || 'receipt'}.png`;
-			link.href = canvas.toDataURL('image/png');
-			document.body.appendChild(link);
-			link.click();
-			document.body.removeChild(link);
+			// Convert canvas to blob for better mobile support
+			canvas.toBlob((blob) => {
+				if (!blob) {
+					alert('Failed to generate receipt image. Please try again.');
+					return;
+				}
+
+				const fileName = `eKahera-Receipt-${tn || 'receipt'}.png`;
+				const url = window.URL.createObjectURL(blob);
+
+				// Check if Web Share API is available and supports files (mobile devices)
+				const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+				const hasShareAPI = navigator.share && typeof navigator.share === 'function';
+				const hasCanShare = navigator.canShare && typeof navigator.canShare === 'function';
+
+				if (isMobile && hasShareAPI) {
+					// Use Web Share API for mobile devices
+					const file = new File([blob], fileName, { type: 'image/png' });
+					
+					// Check if file sharing is supported
+					let canShareFile = false;
+					if (hasCanShare) {
+						try {
+							canShareFile = navigator.canShare({ files: [file] });
+						} catch (e) {
+							// canShare might throw, so we'll try sharing anyway
+							canShareFile = true;
+						}
+					} else {
+						// If canShare doesn't exist, try sharing anyway (some browsers support it without canShare)
+						canShareFile = true;
+					}
+
+					if (canShareFile) {
+						navigator.share({
+							title: 'Receipt',
+							text: `Receipt for transaction ${tn || 'receipt'}`,
+							files: [file]
+						}).then(() => {
+							window.URL.revokeObjectURL(url);
+						}).catch((err) => {
+							// Share failed (user cancelled or not supported), fallback to download
+							console.log('Share failed, falling back to download:', err);
+							downloadFile(url, fileName, isMobile);
+						});
+						return;
+					}
+				}
+				
+				// Fallback to download for desktop or mobile without file share support
+				downloadFile(url, fileName, isMobile);
+			}, 'image/png');
 		} catch (error) {
 			console.error('Error downloading receipt:', error);
 			alert('Failed to download receipt. Please try again.');
+		}
+	};
+
+	const downloadFile = (url, fileName, isMobile) => {
+		const link = document.createElement('a');
+		link.download = fileName;
+		link.href = url;
+		link.style.display = 'none';
+		
+		if (isMobile) {
+			// On mobile, append link and trigger click
+			document.body.appendChild(link);
+			
+			// Use requestAnimationFrame for better mobile compatibility
+			requestAnimationFrame(() => {
+				try {
+					// Try to trigger download
+					link.click();
+					
+					// Clean up after a delay
+					setTimeout(() => {
+						if (document.body.contains(link)) {
+							document.body.removeChild(link);
+						}
+						window.URL.revokeObjectURL(url);
+					}, 200);
+				} catch (e) {
+					console.error('Download click failed:', e);
+					// If click fails, open in new tab as last resort
+					window.open(url, '_blank');
+					if (document.body.contains(link)) {
+						document.body.removeChild(link);
+					}
+					// Don't revoke URL immediately if opened in new tab
+					setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+				}
+			});
+		} else {
+			// Desktop: standard download
+			document.body.appendChild(link);
+			link.click();
+			document.body.removeChild(link);
+			// Clean up after a short delay
+			setTimeout(() => window.URL.revokeObjectURL(url), 100);
 		}
 	};
 

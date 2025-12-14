@@ -1712,15 +1712,17 @@ const Profile = () => {
                     <div className="space-y-4">
                       {!showDeleteConfirm ? (
                         <div className="flex flex-wrap gap-3">
-                          <Button
-                            label={
-                              downloadLoading ? "Preparing..." : "Download transactions"
-                            }
-                            variant="secondary"
-                            onClick={handleDownloadExport}
-                            disabled={downloadLoading}
-                            icon={<DownloadIcon />}
-                          />
+                          {deleteState.status === "pending" && (
+                            <Button
+                              label={
+                                downloadLoading ? "Preparing..." : "Download transactions"
+                              }
+                              variant="secondary"
+                              onClick={handleDownloadExport}
+                              disabled={downloadLoading}
+                              icon={<DownloadIcon />}
+                            />
+                          )}
                           <Button
                             label="Delete store"
                             variant="danger"
