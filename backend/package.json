@@ -31,7 +31,8 @@
     "nodemailer": "^7.0.10",
     "otp-generator": "^4.0.1",
     "pg": "^8.16.3",
-    "resend": "^6.4.2"
+    "resend": "^6.4.2",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "nodemon": "^3.1.10"

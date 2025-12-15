@@ -1616,10 +1616,20 @@ exports.downloadStoreDeletionExport = async (req, res) => {
     const fileName = path.basename(filePath);
     const isGzip = latest.export_type === 'gzip';
     const isCsv = latest.export_type === 'csv';
-    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    const isXlsx = latest.export_type === 'xlsx';
+    
+    // For Excel files, ensure .xlsx extension
+    const downloadFileName = isXlsx && !fileName.endsWith('.xlsx') 
+      ? fileName.replace(/\.[^.]+$/, '.xlsx')
+      : fileName;
+    
+    res.setHeader('Content-Disposition', `attachment; filename="${downloadFileName}"`);
     res.setHeader(
       'Content-Type',
-      isGzip ? 'application/gzip' : isCsv ? 'text/csv' : 'application/json'
+      isGzip ? 'application/gzip' 
+        : isXlsx ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        : isCsv ? 'text/csv' 
+        : 'application/json'
     );
 
     const stream = fs.createReadStream(filePath);

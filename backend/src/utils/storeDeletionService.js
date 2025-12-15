@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const zlib = require('zlib');
 const cron = require('node-cron');
+const XLSX = require('xlsx');
 const pool = require('../config/database');
 const { logAction } = require('./logger');
 
@@ -69,10 +70,13 @@ async function exportTransactions(businessId) {
             SELECT 
               ti.transaction_item_id,
               ti.product_id,
+              p.product_name,
+              p.sku,
               ti.product_quantity,
               ti.price_at_sale,
               ti.subtotal
             FROM transaction_items ti
+            LEFT JOIN products p ON ti.product_id = p.product_id
             WHERE ti.transaction_id = t.transaction_id
             ORDER BY ti.transaction_item_id
           ) ti
@@ -98,80 +102,142 @@ async function exportTransactions(businessId) {
     [businessId]
   );
 
-  // Build a CSV that is easy to read for store owners
-  const escapeCsv = (val) => {
-    if (val === null || val === undefined) return '';
-    const s = String(val);
-    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-  };
+  // Create Excel workbook
+  const workbook = XLSX.utils.book_new();
 
-  const header = [
-    'transaction_id',
-    'transaction_number',
-    'total_amount',
-    'status',
-    'created_at',
-    'updated_at',
-    'cashier_user_id',
-    'customer_user_id',
-    'items',
-    'payments'
-  ].join(',');
-
-  const rows = txRes.rows.map((t) => {
+  // Prepare transactions data for main sheet
+  const transactionsData = txRes.rows.map((t) => {
     const itemsSummary = (t.items || [])
       .map(
         (it) =>
-          `${it.product_id || ''} x${it.product_quantity || 0}@${it.price_at_sale ?? ''}`
+          `${it.product_name || `Product ID: ${it.product_id || 'N/A'}`} (SKU: ${it.sku || 'N/A'}) - Qty: ${it.product_quantity || 0} @ ${it.price_at_sale ?? '0.00'} = ${it.subtotal ?? '0.00'}`
       )
       .join('; ');
 
     const paymentsSummary = (t.payments || [])
       .map(
         (p) =>
-          `${p.payment_type || ''} received:${p.money_received ?? ''} change:${p.money_change ?? ''}${
-            p.discount_id ? ` discount:${p.discount_id}` : ''
+          `${p.payment_type || 'N/A'}: Received ${p.money_received ?? '0.00'}, Change ${p.money_change ?? '0.00'}${
+            p.discount_id ? `, Discount ID: ${p.discount_id}` : ''
           }`
       )
       .join('; ');
 
-    return [
-      escapeCsv(t.transaction_id),
-      escapeCsv(t.transaction_number),
-      escapeCsv(t.total_amount),
-      escapeCsv(t.status),
-      escapeCsv(t.created_at),
-      escapeCsv(t.updated_at),
-      escapeCsv(t.cashier_user_id),
-      escapeCsv(t.customer_user_id),
-      escapeCsv(itemsSummary),
-      escapeCsv(paymentsSummary),
-    ].join(',');
+    return {
+      'Transaction ID': t.transaction_id,
+      'Transaction Number': t.transaction_number,
+      'Total Amount': parseFloat(t.total_amount) || 0,
+      'Status': t.status,
+      'Created At': t.created_at ? new Date(t.created_at).toLocaleString() : '',
+      'Updated At': t.updated_at ? new Date(t.updated_at).toLocaleString() : '',
+      'Cashier User ID': t.cashier_user_id || '',
+      'Customer User ID': t.customer_user_id || '',
+      'Items': itemsSummary || '',
+      'Payments': paymentsSummary || '',
+    };
   });
 
-  const csvString = [header, ...rows].join('\n');
-  const baseName = `biz-${businessId}-transactions-${Date.now()}`;
-  const csvPath = path.join(EXPORT_DIR, `${baseName}.csv`);
-  await fs.promises.writeFile(csvPath, csvString, 'utf8');
+  // Create transactions sheet
+  const transactionsSheet = XLSX.utils.json_to_sheet(transactionsData);
+  
+  // Set column widths for better readability
+  const transactionsColWidths = [
+    { wch: 15 }, // Transaction ID
+    { wch: 20 }, // Transaction Number
+    { wch: 12 }, // Total Amount
+    { wch: 12 }, // Status
+    { wch: 20 }, // Created At
+    { wch: 20 }, // Updated At
+    { wch: 15 }, // Cashier User ID
+    { wch: 15 }, // Customer User ID
+    { wch: 60 }, // Items
+    { wch: 40 }, // Payments
+  ];
+  transactionsSheet['!cols'] = transactionsColWidths;
 
-  const sizeBytes = Buffer.byteLength(csvString);
+  XLSX.utils.book_append_sheet(workbook, transactionsSheet, 'Transactions');
 
-  // Use gzip for larger payloads to save space
-  if (sizeBytes > 500_000) {
-    const gzPath = `${csvPath}.gz`;
-    const gzipped = zlib.gzipSync(csvString);
-    await fs.promises.writeFile(gzPath, gzipped);
-    return {
-      exportPath: gzPath,
-      exportType: 'gzip',
-      exportSizeBytes: gzipped.length,
-      exportReadyAt: new Date(),
-    };
+  // Prepare detailed items data for separate sheet
+  const itemsData = [];
+  txRes.rows.forEach((t) => {
+    (t.items || []).forEach((item) => {
+      itemsData.push({
+        'Transaction ID': t.transaction_id,
+        'Transaction Number': t.transaction_number,
+        'Transaction Date': t.created_at ? new Date(t.created_at).toLocaleString() : '',
+        'Item ID': item.transaction_item_id,
+        'Product ID': item.product_id || '',
+        'Product Name': item.product_name || 'N/A',
+        'SKU': item.sku || 'N/A',
+        'Quantity': item.product_quantity || 0,
+        'Price at Sale': parseFloat(item.price_at_sale) || 0,
+        'Subtotal': parseFloat(item.subtotal) || 0,
+      });
+    });
+  });
+
+  if (itemsData.length > 0) {
+    const itemsSheet = XLSX.utils.json_to_sheet(itemsData);
+    const itemsColWidths = [
+      { wch: 15 }, // Transaction ID
+      { wch: 20 }, // Transaction Number
+      { wch: 20 }, // Transaction Date
+      { wch: 12 }, // Item ID
+      { wch: 12 }, // Product ID
+      { wch: 30 }, // Product Name
+      { wch: 15 }, // SKU
+      { wch: 10 }, // Quantity
+      { wch: 12 }, // Price at Sale
+      { wch: 12 }, // Subtotal
+    ];
+    itemsSheet['!cols'] = itemsColWidths;
+    XLSX.utils.book_append_sheet(workbook, itemsSheet, 'Transaction Items');
   }
 
+  // Prepare payments data for separate sheet
+  const paymentsData = [];
+  txRes.rows.forEach((t) => {
+    (t.payments || []).forEach((payment) => {
+      paymentsData.push({
+        'Transaction ID': t.transaction_id,
+        'Transaction Number': t.transaction_number,
+        'Transaction Date': t.created_at ? new Date(t.created_at).toLocaleString() : '',
+        'Payment ID': payment.transaction_payment_id,
+        'Payment Type': payment.payment_type || 'N/A',
+        'Money Received': parseFloat(payment.money_received) || 0,
+        'Money Change': parseFloat(payment.money_change) || 0,
+        'Discount ID': payment.discount_id || '',
+      });
+    });
+  });
+
+  if (paymentsData.length > 0) {
+    const paymentsSheet = XLSX.utils.json_to_sheet(paymentsData);
+    const paymentsColWidths = [
+      { wch: 15 }, // Transaction ID
+      { wch: 20 }, // Transaction Number
+      { wch: 20 }, // Transaction Date
+      { wch: 12 }, // Payment ID
+      { wch: 15 }, // Payment Type
+      { wch: 15 }, // Money Received
+      { wch: 15 }, // Money Change
+      { wch: 12 }, // Discount ID
+    ];
+    paymentsSheet['!cols'] = paymentsColWidths;
+    XLSX.utils.book_append_sheet(workbook, paymentsSheet, 'Payments');
+  }
+
+  // Write Excel file
+  const baseName = `biz-${businessId}-transactions-${Date.now()}`;
+  const excelPath = path.join(EXPORT_DIR, `${baseName}.xlsx`);
+  XLSX.writeFile(workbook, excelPath);
+
+  const stats = await fs.promises.stat(excelPath);
+  const sizeBytes = stats.size;
+
   return {
-    exportPath: csvPath,
-    exportType: 'csv',
+    exportPath: excelPath,
+    exportType: 'xlsx',
     exportSizeBytes: sizeBytes,
     exportReadyAt: new Date(),
   };

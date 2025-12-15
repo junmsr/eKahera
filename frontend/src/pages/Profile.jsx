@@ -432,7 +432,30 @@ const Profile = () => {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `transactions-export.${blob.type.includes("gzip") ? "gz" : "json"}`;
+      
+      // Determine file extension from content type or default to xlsx
+      let fileExtension = "xlsx";
+      if (blob.type.includes("gzip")) {
+        fileExtension = "gz";
+      } else if (blob.type.includes("csv")) {
+        fileExtension = "csv";
+      } else if (blob.type.includes("json")) {
+        fileExtension = "json";
+      } else if (blob.type.includes("spreadsheet") || blob.type.includes("excel") || blob.type.includes("xlsx")) {
+        fileExtension = "xlsx";
+      }
+      
+      // Try to get filename from Content-Disposition header
+      const contentDisposition = res.headers.get("Content-Disposition");
+      let fileName = `transactions-export.${fileExtension}`;
+      if (contentDisposition) {
+        const fileNameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+        if (fileNameMatch && fileNameMatch[1]) {
+          fileName = decodeURIComponent(fileNameMatch[1]);
+        }
+      }
+      
+      link.download = fileName;
       document.body.appendChild(link);
       link.click();
       link.remove();
