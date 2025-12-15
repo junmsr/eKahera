@@ -61,6 +61,12 @@ async function addIndexes() {
       CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
       CREATE INDEX IF NOT EXISTS idx_users_business_id ON users(business_id);
       CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
+      -- Case-insensitive indexes for login performance
+      CREATE INDEX IF NOT EXISTS idx_users_email_lower ON users(lower(email));
+      CREATE INDEX IF NOT EXISTS idx_users_username_lower ON users(lower(username));
+      
+      -- Business table indexes for login
+      CREATE INDEX IF NOT EXISTS idx_business_name_lower ON business(lower(business_name));
       
       -- Business table
       CREATE INDEX IF NOT EXISTS idx_business_verification_status ON business(verification_status);

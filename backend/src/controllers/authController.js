@@ -259,7 +259,10 @@ exports.checkEmail = async (req, res) => {
 };
 
 exports.login = async (req, res) => {
-  console.log("Login attempt:", req.body); // Log incoming request data
+  // Only log in development to avoid performance impact in production
+  if (process.env.NODE_ENV !== 'production') {
+    console.log("Login attempt:", req.body);
+  }
   const { email, password } = req.body; // email field can contain either email or username
   if (!email || !password) {
     return res
@@ -268,31 +271,49 @@ exports.login = async (req, res) => {
   }
 
   try {
-    // Try to find user by email, username, or business name
-    // When matching by business name, prioritize admin users
-    const result = await pool.query(
+    // Normalize input for case-insensitive search
+    const normalizedEmail = email.trim().toLowerCase();
+    
+    // Optimized query: Try to find user by email or username first (most common cases)
+    // This avoids the expensive business_name search unless needed
+    let result = await pool.query(
       `SELECT u.user_id, u.username, u.first_name, u.last_name, u.email, u.password_hash, u.role, u.contact_number,
               u.user_type_id,
               u.business_id AS business_id,
               ut.user_type_name,
-              b.business_name AS store_name
+              b.business_name AS store_name,
+              b.verification_status
        FROM users u
        LEFT JOIN user_type ut ON ut.user_type_id = u.user_type_id
        LEFT JOIN business b ON b.business_id = u.business_id
-       WHERE lower(u.email) = lower($1) OR lower(u.username) = lower($1) OR lower(b.business_name) = lower($1)
-       ORDER BY
-         CASE
-           WHEN lower(u.username) = lower($1) THEN 1
-           WHEN lower(u.email) = lower($1) THEN 2
-           WHEN lower(b.business_name) = lower($1) AND lower(ut.user_type_name) = 'admin' THEN 3
-           WHEN lower(b.business_name) = lower($1) AND lower(ut.user_type_name) = 'business_owner' THEN 4
-           WHEN lower(b.business_name) = lower($1) THEN 5
-           ELSE 6
-         END`,
-      [email]
+       WHERE lower(u.email) = $1 OR lower(u.username) = $1
+       LIMIT 1`,
+      [normalizedEmail]
     );
 
-    console.log("User query result:", result);
+    // If not found by email/username, try business name (less common, more expensive)
+    if (result.rowCount === 0) {
+      result = await pool.query(
+        `SELECT u.user_id, u.username, u.first_name, u.last_name, u.email, u.password_hash, u.role, u.contact_number,
+                u.user_type_id,
+                u.business_id AS business_id,
+                ut.user_type_name,
+                b.business_name AS store_name,
+                b.verification_status
+         FROM users u
+         LEFT JOIN user_type ut ON ut.user_type_id = u.user_type_id
+         LEFT JOIN business b ON b.business_id = u.business_id
+         WHERE lower(b.business_name) = $1
+         ORDER BY
+           CASE
+             WHEN lower(ut.user_type_name) = 'admin' THEN 1
+             WHEN lower(ut.user_type_name) = 'business_owner' THEN 2
+             ELSE 3
+           END
+         LIMIT 1`,
+        [normalizedEmail]
+      );
+    }
 
     if (result.rowCount === 0) {
       return res.status(401).json({ error: "Invalid credentials" });
@@ -303,21 +324,12 @@ exports.login = async (req, res) => {
     const lastName = user.last_name || "";
 
     // Check business verification status if user belongs to a business
-    if (user.business_id) {
-      const businessResult = await pool.query(
-        "SELECT verification_status FROM business WHERE business_id = $1",
-        [user.business_id]
-      );
-
-      if (businessResult.rows.length > 0) {
-        const businessStatus = businessResult.rows[0].verification_status;
-        if (businessStatus !== "approved") {
-          return res.status(403).json({
-            error:
-              "Your business application is still under review. Please wait for approval before logging in.",
-          });
-        }
-      }
+    // (verification_status is now included in the query above, so no extra query needed)
+    if (user.business_id && user.verification_status && user.verification_status !== "approved") {
+      return res.status(403).json({
+        error:
+          "Your business application is still under review. Please wait for approval before logging in.",
+      });
     }
 
     // Check if password_hash exists and verify it
@@ -346,7 +358,10 @@ exports.login = async (req, res) => {
       businessId: user.business_id ? parseInt(user.business_id, 10) : null,
     };
 
-    console.log("Creating JWT token with payload:", tokenPayload);
+    // Only log in development
+    if (process.env.NODE_ENV !== 'production') {
+      console.log("Creating JWT token with payload:", tokenPayload);
+    }
 
     const token = jwt.sign(tokenPayload, config.JWT_SECRET, {
       expiresIn: "7d",
@@ -367,14 +382,18 @@ exports.login = async (req, res) => {
       },
     };
 
-    // Log login action (best effort)
+    // Return response immediately, log action asynchronously (non-blocking)
+    res.json(response);
+    
+    // Log login action asynchronously (fire-and-forget, doesn't block response)
     logAction({
       userId: user.user_id,
       businessId: user.business_id || null,
       action: "Login",
+    }).catch(err => {
+      // Silently fail logging - don't affect user experience
+      console.error('Failed to log login action:', err);
     });
-
-    return res.json(response);
   } catch (err) {
     console.error("Login error:", err);
     console.error("Stack trace:", err.stack);
