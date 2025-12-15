@@ -22,14 +22,22 @@ export default React.forwardRef(
     },
     ref
   ) => {
+    // Track if we're processing a barcode scan to prevent double-firing
+    const isProcessingScanRef = useRef(false);
+
     // Handle hardware barcode scanner input - auto-submit when scanner sends Enter quickly
     useBarcodeScanner((scannedCode) => {
       if (scannedCode && scannedCode.trim()) {
+        isProcessingScanRef.current = true;
         // Set the SKU and immediately add to cart
         setSku(scannedCode.trim());
         // Use a small delay to ensure state update, then add to cart
         setTimeout(() => {
           handleAddToCart();
+          // Reset flag after processing
+          setTimeout(() => {
+            isProcessingScanRef.current = false;
+          }, 200);
         }, 100);
       }
     }, { inputSelector: 'input[name="sku"]' });
@@ -77,23 +85,11 @@ export default React.forwardRef(
                   value={sku}
                   onChange={(e) => setSku(e.target.value)}
                   onKeyPress={(e) => {
-                    if (e.key === "Enter" && sku.trim()) {
+                    // Only handle manual Enter key presses (not barcode scanner)
+                    // The useBarcodeScanner hook handles scanner input
+                    if (e.key === "Enter" && sku.trim() && !isProcessingScanRef.current) {
                       handleAddToCart();
                     }
-                  }}
-                  onKeyDown={(e) => {
-                    // Handle hardware barcode scanner input
-                    // Barcode scanners typically send data very quickly
-                    // If Enter is pressed quickly after typing, it's likely a scanner
-                    if (e.key === "Enter" && sku.trim()) {
-                      e.preventDefault();
-                      handleAddToCart();
-                    }
-                  }}
-                  onInput={(e) => {
-                    // Auto-submit when barcode scanner sends data
-                    // Hardware scanners typically append Enter key automatically
-                    // This will be handled by onKeyPress/onKeyDown
                   }}
                   autoComplete="off"
                   autoFocus={false}

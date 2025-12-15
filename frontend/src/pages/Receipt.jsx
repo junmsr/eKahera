@@ -199,14 +199,14 @@ export default function Receipt() {
 			{
 				key: 'p',
 				action: (e) => {
-					if (!fromCustomer) {
+					if (!fromCustomer && !loading && details) {
 						e.preventDefault();
 						e.stopPropagation();
 						handlePrint();
 					}
 				},
 				enabled: !fromCustomer && !loading && details,
-				allowWhileTyping: false,
+				allowWhileTyping: true, // Allow print shortcut even when typing
 			},
 			{
 				key: 'enter',

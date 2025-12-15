@@ -170,12 +170,59 @@ export default function Cashiers() {
   const handleSaveEdit = async (formData) => {
     try {
       setModalLoading(true);
-      const updated = [...cashiers];
-      const index = updated.findIndex((c) => c.id === editingCashier.id);
-      if (index !== -1) {
-        updated[index] = { ...updated[index], ...formData };
+      setApiError("");
+      
+      // Ensure first_name and last_name are present and not empty
+      const firstName = (formData.first_name || "").trim();
+      const lastName = (formData.last_name || "").trim();
+      
+      if (!firstName) {
+        setApiError("First name is required");
+        setModalLoading(false);
+        return;
       }
-      setCashiers(updated);
+      if (!lastName) {
+        setApiError("Last name is required");
+        setModalLoading(false);
+        return;
+      }
+      
+      const token = sessionStorage.getItem("auth_token");
+      const requestBody = {
+        username: (formData.name || "").trim(),
+        first_name: firstName,
+        last_name: lastName,
+        contact_number: (formData.number || "").trim() || null,
+        email: (formData.email || "").trim() || null,
+      };
+      
+      console.log("Updating cashier with ID:", editingCashier.id);
+      console.log("Sending cashier update data:", requestBody);
+      
+      await api(`/api/business/cashiers/${editingCashier.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", ...authHeaders(token) },
+        body: JSON.stringify(requestBody),
+      });
+      
+      // Refresh list after successful update
+      const list = await api("/api/business/cashiers", {
+        headers: authHeaders(token),
+      });
+      const mapped = (list || []).map((r) => {
+        const fullName = [r.first_name, r.last_name].filter(Boolean).join(" ").trim();
+        return {
+          name: fullName || r.username || "-",
+          username: r.username || "",
+          first_name: r.first_name || "",
+          last_name: r.last_name || "",
+          id: r.user_id || "-",
+          number: r.contact_number || "-",
+          email: r.email || "-",
+          status: r.status || "ACTIVE",
+        };
+      });
+      setCashiers(mapped);
       setShowEditModal(false);
       setEditingCashier(null);
     } catch (err) {

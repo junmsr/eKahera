@@ -67,11 +67,12 @@ export function useBarcodeScanner(onScan, options = {}) {
       }
     };
 
-    // Use capture phase to catch events early, but don't interfere with normal input
-    document.addEventListener('keydown', handleKeyDown, false);
+    // Use capture phase to catch events early, before React's synthetic events
+    // This ensures we can prevent default and stop propagation before React handlers fire
+    document.addEventListener('keydown', handleKeyDown, true);
 
     return () => {
-      document.removeEventListener('keydown', handleKeyDown, false);
+      document.removeEventListener('keydown', handleKeyDown, true);
     };
   }, [onScan, maxDelay, inputSelector]);
 }

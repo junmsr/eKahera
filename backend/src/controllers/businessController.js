@@ -279,6 +279,129 @@ exports.createCashier = async (req, res) => {
   }
 };
 
+// Update a cashier under current admin's business
+exports.updateCashier = async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { id } = req.params;
+    const businessId = req.user.businessId;
+    const userId = req.user.userId;
+    const { username, first_name, last_name, contact_number, email } = req.body;
+
+    // Verify the cashier belongs to the admin's business
+    const cashierCheck = await client.query(
+      'SELECT user_id FROM users WHERE user_id = $1 AND business_id = $2 AND role = $3',
+      [id, businessId, 'cashier']
+    );
+
+    if (cashierCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Cashier not found or not authorized' });
+    }
+
+    // Validate required fields
+    if (!first_name || !first_name.trim()) {
+      return res.status(400).json({ error: 'first_name is required' });
+    }
+    if (!last_name || !last_name.trim()) {
+      return res.status(400).json({ error: 'last_name is required' });
+    }
+    if (!username || !username.trim()) {
+      return res.status(400).json({ error: 'username is required' });
+    }
+
+    // Check if username or email is already taken by another user
+    if (username) {
+      const usernameCheck = await client.query(
+        'SELECT user_id FROM users WHERE username = $1 AND user_id != $2',
+        [username.trim(), id]
+      );
+      if (usernameCheck.rowCount > 0) {
+        return res.status(409).json({ error: 'Username is already in use by another account' });
+      }
+    }
+
+    if (email) {
+      const emailCheck = await client.query(
+        'SELECT user_id FROM users WHERE email = $1 AND user_id != $2',
+        [email.trim(), id]
+      );
+      if (emailCheck.rowCount > 0) {
+        return res.status(409).json({ error: 'Email is already in use by another account' });
+      }
+    }
+
+    // Begin transaction
+    await client.query('BEGIN');
+
+    // Build update query dynamically
+    const updateFields = [];
+    const queryParams = [];
+    let paramIndex = 1;
+
+    if (username !== undefined) {
+      updateFields.push(`username = $${paramIndex++}`);
+      queryParams.push(username.trim());
+    }
+    if (first_name !== undefined) {
+      updateFields.push(`first_name = $${paramIndex++}`);
+      queryParams.push(first_name.trim());
+    }
+    if (last_name !== undefined) {
+      updateFields.push(`last_name = $${paramIndex++}`);
+      queryParams.push(last_name.trim());
+    }
+    if (email !== undefined) {
+      updateFields.push(`email = $${paramIndex++}`);
+      queryParams.push(email ? email.trim() : null);
+    }
+    if (contact_number !== undefined) {
+      updateFields.push(`contact_number = $${paramIndex++}`);
+      queryParams.push(contact_number ? contact_number.trim() : null);
+    }
+
+    // Always update updated_at
+    updateFields.push(`updated_at = NOW()`);
+    queryParams.push(id);
+
+    const updateQuery = `
+      UPDATE users
+      SET ${updateFields.join(', ')}
+      WHERE user_id = $${paramIndex}
+      RETURNING user_id, username, first_name, last_name, email, contact_number, updated_at
+    `;
+
+    const result = await client.query(updateQuery, queryParams);
+
+    if (result.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Cashier not found' });
+    }
+
+    // Log the action
+    await logAction({
+      userId: userId,
+      businessId: businessId,
+      action: 'UPDATE_CASHIER',
+      details: { cashierId: id },
+      client
+    });
+
+    await client.query('COMMIT');
+    
+    const updatedCashier = result.rows[0];
+    res.status(200).json({
+      message: 'Cashier updated successfully',
+      cashier: updatedCashier
+    });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error updating cashier:', error);
+    res.status(500).json({ error: 'Failed to update cashier' });
+  } finally {
+    client.release();
+  }
+};
+
 // List cashiers under current admin's business
 // Delete a cashier from the business
 exports.deleteCashier = async (req, res) => {
