@@ -709,8 +709,8 @@ export default function Dashboard() {
       // Business information (you can customize these values)
       const businessInfo = {
         name: "eKahera Business",
-        address: "123 Business St, City, Country",
-        contact: "contact@ekahera.com | +1 234 567 890"
+        address: "Bicol University, West (Main Campus) Legazpi City, Albay, Philippines",
+        contact: "ekahera.business@gmail.com | +63 970 846 8324"
       };
 
       header.innerHTML = `
