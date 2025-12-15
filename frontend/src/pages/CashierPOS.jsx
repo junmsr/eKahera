@@ -594,7 +594,7 @@ function CashierPOS() {
   };
 
   const handleVoidSelected = () => {
-    if (cart.length === 0 || selectedCartIdx == null || selectedCartIdx < 0 || selectedCartIdx >= cart.length) return;
+    if (cart.length === 0 || selectedCartIdx == null) return;
     handleRemove(selectedCartIdx);
   };
 
@@ -650,7 +650,7 @@ function CashierPOS() {
       {
         key: "f2",
         action: handleVoidSelected,
-        enabled: cart.length > 0 && selectedCartIdx >= 0 && selectedCartIdx < cart.length,
+        enabled: cart.length > 0,
       },
       // F3 - logout
       {

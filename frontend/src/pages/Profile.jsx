@@ -423,11 +423,48 @@ const Profile = () => {
     setDeleteError("");
     setDownloadLoading(true);
     try {
-      const res = await api(
-        "/api/business/delete-request/export",
-        { method: "GET" },
-        true
-      );
+      // Use fetch directly to handle non-OK responses for file downloads
+      const token = sessionStorage.getItem("auth_token");
+      // Use same API base logic as api.js
+      const LOCAL_DEFAULT = "http://localhost:5000";
+      const envUrl = import.meta.env.PROD ? import.meta.env.VITE_API_BASE_URL : '';
+      const isLocalHost =
+        typeof window !== "undefined" &&
+        (window.location.hostname === "localhost" ||
+          window.location.hostname === "127.0.0.1");
+      
+      let API_BASE = "";
+      if (envUrl) {
+        API_BASE = envUrl;
+      } else if (import.meta.env.DEV) {
+        API_BASE = LOCAL_DEFAULT;
+      } else {
+        API_BASE = isLocalHost ? LOCAL_DEFAULT : "";
+      }
+      
+      const res = await fetch(`${API_BASE}/api/business/delete-request/export`, {
+        method: "GET",
+        credentials: "include",
+        headers: {
+          "Authorization": token ? `Bearer ${token}` : "",
+        },
+      });
+
+      // Check if response is OK
+      if (!res.ok) {
+        // Try to parse error message
+        const errorText = await res.text();
+        let errorMessage = "Failed to download export.";
+        try {
+          const errorJson = JSON.parse(errorText);
+          errorMessage = errorJson.error || errorMessage;
+        } catch {
+          errorMessage = errorText || errorMessage;
+        }
+        setDeleteError(errorMessage);
+        return;
+      }
+
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");

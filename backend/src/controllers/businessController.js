@@ -1601,16 +1601,29 @@ exports.downloadStoreDeletionExport = async (req, res) => {
     }
 
     const latest = await getLatestDeletionRequest(businessId);
-    if (!latest?.export_path) {
-      return res.status(404).json({ error: 'No export available for this business' });
+    if (!latest) {
+      return res.status(404).json({ error: 'No deletion request found. Please create a deletion request first.' });
+    }
+    
+    if (!latest.export_path) {
+      return res.status(404).json({ error: 'No export available for this business. The export may still be generating.' });
     }
 
-    const filePath = path.isAbsolute(latest.export_path)
-      ? latest.export_path
-      : path.join(__dirname, '..', '..', latest.export_path);
+    // Resolve file path - export_path is stored as absolute path
+    let filePath = latest.export_path;
+    
+    // If path is not absolute, resolve it relative to exports directory
+    if (!path.isAbsolute(filePath)) {
+      const exportsDir = path.join(__dirname, '..', '..', 'uploads', 'exports');
+      filePath = path.join(exportsDir, path.basename(filePath));
+    }
 
+    // Check if file exists
     if (!fs.existsSync(filePath)) {
-      return res.status(404).json({ error: 'Export file not found on server' });
+      console.error(`Export file not found for business ${businessId}. Path: ${filePath}, Stored path: ${latest.export_path}`);
+      return res.status(404).json({ 
+        error: 'Export file not found on server. The file may have been deleted or moved. Please create a new deletion request to regenerate the export.' 
+      });
     }
 
     const fileName = path.basename(filePath);
