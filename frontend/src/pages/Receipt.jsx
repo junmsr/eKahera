@@ -277,6 +277,8 @@ export default function Receipt() {
 		r += 'THANK YOU\n';
 		r += 'This is not an official receipt\n';
 
+		r+= 'eKahera';
+
 		r += '\n\n\n';
 		r += GS + 'V' + 'A';            // cut
 		console.log(r);
