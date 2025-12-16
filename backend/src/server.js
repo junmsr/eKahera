@@ -54,7 +54,7 @@ const config = {
   SUPABASE_SECRET_ACCESS_KEY: process.env.SUPABASE_SECRET_ACCESS_KEY,
 };
 
-const { corsOptions, apiLimiter, securityHeaders, compressionOptions } = require('./config/serverConfig');
+const { corsOptions, apiLimiter, securityHeaders } = require('./config/serverConfig');
 
 // Import routes
 const productRoutes = require('./routes/productRoutes');
@@ -66,16 +66,25 @@ const otpRoutes = require('./routes/otpRoutes');
 const statsRoutes = require('./routes/statsRoutes');
 const logsRoutes = require('./routes/logsRoutes');
 const paymentsRoutes = require('./routes/paymentsRoutes');
+const discountRoutes = require('./routes/discountRoutes');
 const superAdminRoutes = require('./routes/superAdminRoutes');
 const documentRoutes = require('./routes/documentRoutes');
 const locationRoutes = require('./routes/locationRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const cleanupRoutes = require('./routes/cleanupRoutes');
 const cleanupUserRoutes = require('./routes/cleanupUserRoutes');
+const contactRoutes = require('./routes/contactRoutes');
 const { sendApplicationSubmittedNotification } = require('./utils/emailService');
 const { startPendingTransactionCleanup } = require('./utils/cleanup');
+const { startStoreDeletionScheduler } = require('./utils/storeDeletionService');
 
 const app = express();
+
+// Log ALL requests at the very top level - before any other middleware
+app.use((req, res, next) => {
+  console.log(`[ALL REQUESTS] ${req.method} ${req.url} - Path: ${req.path} - Original URL: ${req.originalUrl}`);
+  next();
+});
 
 // Enable compression for all responses
 app.use(compression());
@@ -101,9 +110,6 @@ const staticOptions = {
     }
   }
 };
-
-// Serve static files with cache headers
-app.use(express.static(path.join(__dirname, '../frontend/dist'), staticOptions));
 
 // Apply security headers
 app.use(securityHeaders);
@@ -138,6 +144,14 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
+// Log all API requests for debugging - MUST be before routes
+app.use('/api', (req, res, next) => {
+  console.log(`[API REQUEST] ${req.method} ${req.path} - Full URL: ${req.originalUrl}`);
+  console.log(`[API REQUEST] Headers:`, JSON.stringify(req.headers, null, 2));
+  next();
+});
+
+// API routes - registered AFTER all middleware but BEFORE static files
 app.use('/api/products', productRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/inventory', inventoryRoutes);
@@ -147,12 +161,17 @@ app.use('/api/otp', otpRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/logs', logsRoutes);
 app.use('/api/payments', paymentsRoutes);
+app.use('/api/discounts', discountRoutes);
 app.use('/api/superadmin', superAdminRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/locations', locationRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/cleanup', cleanupRoutes);
 app.use('/api/cleanup', cleanupUserRoutes);
+app.use('/api/contact', contactRoutes);
+
+// Serve static files with cache headers - AFTER API routes
+app.use(express.static(path.join(__dirname, '../frontend/dist'), staticOptions));
 
 // Test email endpoint - for debugging only
 app.get('/api/test-email', async (req, res) => {
@@ -173,6 +192,13 @@ app.get('/api/test-email', async (req, res) => {
     console.error('Email test failed:', error);
     res.status(500).json({ success: false, error: error.message });
   }
+});
+
+// 404 handler - catch all unmatched routes
+app.use('/api', (req, res, next) => {
+  console.log(`[404 HANDLER] Unmatched API route: ${req.method} ${req.path} - Full URL: ${req.originalUrl}`);
+  console.log(`[404 HANDLER] Available routes should include: DELETE /api/discounts/:id`);
+  res.status(404).json({ error: 'The requested resource was not found.' });
 });
 
 // Error handling middleware (should be after all other middleware and routes)
@@ -222,6 +248,7 @@ if (config.AUTO_INIT_DB === 'true') {
       app.listen(port, () => {
         console.log(`API server listening on port ${port}`);
         startPendingTransactionCleanup();
+        startStoreDeletionScheduler();
       });
     })
     .catch((err) => {
@@ -232,6 +259,7 @@ if (config.AUTO_INIT_DB === 'true') {
   app.listen(port, () => {
     console.log(`API server listening on port ${port} (DB init skipped)`);
     startPendingTransactionCleanup();
+    startStoreDeletionScheduler();
     // Print a one-time DB host diagnostic
     try {
       const cfgPath = path.join(__dirname, '..', 'config.env');

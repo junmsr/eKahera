@@ -1,22 +1,34 @@
 import React from "react";
 import Button from "../common/Button";
 import BaseModal from "./BaseModal";
+import { useKeyboardShortcuts } from "../../hooks/useKeyboardShortcuts";
 
 function CheckoutModal({ isOpen, onClose, total, onSelectPayment }) {
+  useKeyboardShortcuts(
+    [
+      { key: "1", action: () => onSelectPayment("cash"), enabled: isOpen },
+      { key: "2", action: () => onSelectPayment("gcash"), enabled: isOpen },
+      { key: "3", action: () => onSelectPayment("maya"), enabled: isOpen },
+      { key: "enter", action: () => onSelectPayment("cash"), enabled: isOpen },
+      { key: "escape", action: onClose, enabled: isOpen },
+    ],
+    [isOpen]
+  );
+
   const footerContent = (
     <div className="w-full flex flex-col gap-3">
       <Button
-        label="CASH"
+        label="CASH (1 / Enter)"
         className="w-full h-12 text-base font-bold"
         onClick={() => onSelectPayment("cash")}
       />
       <Button
-        label="GCASH"
+        label="GCASH (2)"
         className="w-full h-12 text-base font-bold"
         onClick={() => onSelectPayment("gcash")}
       />
       <Button
-        label="MAYA"
+        label="MAYA (3)"
         className="w-full h-12 text-base font-bold"
         onClick={() => onSelectPayment("maya")}
       />
@@ -55,6 +67,24 @@ function CheckoutModal({ isOpen, onClose, total, onSelectPayment }) {
       <p className="text-gray-600 text-sm mb-4">
         Choose your preferred payment method
       </p>
+      <div className="text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 space-y-1">
+        <div className="flex items-center justify-between">
+          <span>Cash:</span>
+          <span className="font-mono bg-white px-2 py-0.5 rounded">1 / Enter</span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span>GCash:</span>
+          <span className="font-mono bg-white px-2 py-0.5 rounded">2</span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span>Maya:</span>
+          <span className="font-mono bg-white px-2 py-0.5 rounded">3</span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span>Close:</span>
+          <span className="font-mono bg-white px-2 py-0.5 rounded">Esc</span>
+        </div>
+      </div>
     </BaseModal>
   );
 }

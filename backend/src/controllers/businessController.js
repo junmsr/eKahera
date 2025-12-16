@@ -10,6 +10,13 @@ const BusinessDocument = require('../models/BusinessDocument');
 const BusinessVerification = require('../models/BusinessVerification');
 const multer = require('multer');
 const axios = require('axios');
+const {
+  createDeletionRequest,
+  cancelDeletionRequest,
+  getLatestDeletionRequest,
+  exportTransactions,
+  DEFAULT_GRACE_DAYS
+} = require('../utils/storeDeletionService');
 
 // Use environment variables directly, no manual config.env reading
 const config = process.env;
@@ -177,10 +184,31 @@ exports.createCashier = async (req, res) => {
       return res.status(400).json({ error: 'Admin is not associated with a business' });
     }
 
-    const { username, password, contact_number, email } = req.body;
+    const { username, password, contact_number, email, first_name, last_name } = req.body;
     if (!username || !password) {
       return res.status(400).json({ error: 'username and password are required' });
     }
+
+    // Validate first_name and last_name are provided
+    if (!first_name || !first_name.trim()) {
+      return res.status(400).json({ error: 'first_name is required' });
+    }
+    if (!last_name || !last_name.trim()) {
+      return res.status(400).json({ error: 'last_name is required' });
+    }
+
+    // Trim first_name and last_name
+    const trimmedFirstName = first_name.trim();
+    const trimmedLastName = last_name.trim();
+    
+    console.log('Creating cashier - received:', { 
+      username, 
+      first_name: req.body.first_name, 
+      last_name: req.body.last_name,
+      first_name_type: typeof req.body.first_name,
+      last_name_type: typeof req.body.last_name
+    });
+    console.log('Creating cashier - processed:', { trimmedFirstName, trimmedLastName });
 
     // Get a client from the pool for transaction with timeout and retry
     client = await retryDbOperation(async () => {
@@ -210,16 +238,18 @@ exports.createCashier = async (req, res) => {
     // Insert cashier with retry
     const ins = await retryDbOperation(async () =>
       await client.query(
-        `INSERT INTO users (username, email, password_hash, contact_number, user_type_id, role, business_id, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, $5, 'cashier', $6, NOW(), NOW())
-         RETURNING user_id, username, business_id`,
-        [username, email || null, passwordHash, contact_number || null, cashierTypeId, adminBusinessId]
+        `INSERT INTO users (username, email, password_hash, contact_number, user_type_id, role, business_id, first_name, last_name, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, 'cashier', $6, $7, $8, NOW(), NOW())
+         RETURNING user_id, username, business_id, first_name, last_name`,
+        [username, email || null, passwordHash, contact_number || null, cashierTypeId, adminBusinessId, trimmedFirstName, trimmedLastName]
       )
     );
 
     client.release();
 
     const newCashier = ins.rows[0];
+    console.log('Created cashier result:', newCashier);
+    
     logAction({
       userId: adminUserId,
       businessId: adminBusinessId,
@@ -228,7 +258,13 @@ exports.createCashier = async (req, res) => {
 
     res.status(201).json({
       message: 'Cashier created',
-      cashier: newCashier,
+      cashier: {
+        user_id: newCashier.user_id,
+        username: newCashier.username,
+        business_id: newCashier.business_id,
+        first_name: newCashier.first_name,
+        last_name: newCashier.last_name,
+      },
     });
   } catch (err) {
     if (client) {
@@ -243,7 +279,175 @@ exports.createCashier = async (req, res) => {
   }
 };
 
+// Update a cashier under current admin's business
+exports.updateCashier = async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { id } = req.params;
+    const businessId = req.user.businessId;
+    const userId = req.user.userId;
+    const { username, first_name, last_name, contact_number, email } = req.body;
+
+    // Verify the cashier belongs to the admin's business
+    const cashierCheck = await client.query(
+      'SELECT user_id FROM users WHERE user_id = $1 AND business_id = $2 AND role = $3',
+      [id, businessId, 'cashier']
+    );
+
+    if (cashierCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Cashier not found or not authorized' });
+    }
+
+    // Validate required fields
+    if (!first_name || !first_name.trim()) {
+      return res.status(400).json({ error: 'first_name is required' });
+    }
+    if (!last_name || !last_name.trim()) {
+      return res.status(400).json({ error: 'last_name is required' });
+    }
+    if (!username || !username.trim()) {
+      return res.status(400).json({ error: 'username is required' });
+    }
+
+    // Check if username or email is already taken by another user
+    if (username) {
+      const usernameCheck = await client.query(
+        'SELECT user_id FROM users WHERE username = $1 AND user_id != $2',
+        [username.trim(), id]
+      );
+      if (usernameCheck.rowCount > 0) {
+        return res.status(409).json({ error: 'Username is already in use by another account' });
+      }
+    }
+
+    if (email) {
+      const emailCheck = await client.query(
+        'SELECT user_id FROM users WHERE email = $1 AND user_id != $2',
+        [email.trim(), id]
+      );
+      if (emailCheck.rowCount > 0) {
+        return res.status(409).json({ error: 'Email is already in use by another account' });
+      }
+    }
+
+    // Begin transaction
+    await client.query('BEGIN');
+
+    // Build update query dynamically
+    const updateFields = [];
+    const queryParams = [];
+    let paramIndex = 1;
+
+    if (username !== undefined) {
+      updateFields.push(`username = $${paramIndex++}`);
+      queryParams.push(username.trim());
+    }
+    if (first_name !== undefined) {
+      updateFields.push(`first_name = $${paramIndex++}`);
+      queryParams.push(first_name.trim());
+    }
+    if (last_name !== undefined) {
+      updateFields.push(`last_name = $${paramIndex++}`);
+      queryParams.push(last_name.trim());
+    }
+    if (email !== undefined) {
+      updateFields.push(`email = $${paramIndex++}`);
+      queryParams.push(email ? email.trim() : null);
+    }
+    if (contact_number !== undefined) {
+      updateFields.push(`contact_number = $${paramIndex++}`);
+      queryParams.push(contact_number ? contact_number.trim() : null);
+    }
+
+    // Always update updated_at
+    updateFields.push(`updated_at = NOW()`);
+    queryParams.push(id);
+
+    const updateQuery = `
+      UPDATE users
+      SET ${updateFields.join(', ')}
+      WHERE user_id = $${paramIndex}
+      RETURNING user_id, username, first_name, last_name, email, contact_number, updated_at
+    `;
+
+    const result = await client.query(updateQuery, queryParams);
+
+    if (result.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Cashier not found' });
+    }
+
+    // Log the action
+    await logAction({
+      userId: userId,
+      businessId: businessId,
+      action: 'UPDATE_CASHIER',
+      details: { cashierId: id },
+      client
+    });
+
+    await client.query('COMMIT');
+    
+    const updatedCashier = result.rows[0];
+    res.status(200).json({
+      message: 'Cashier updated successfully',
+      cashier: updatedCashier
+    });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error updating cashier:', error);
+    res.status(500).json({ error: 'Failed to update cashier' });
+  } finally {
+    client.release();
+  }
+};
+
 // List cashiers under current admin's business
+// Delete a cashier from the business
+exports.deleteCashier = async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { id } = req.params;
+    const businessId = req.user.businessId;
+    const userId = req.user.userId;
+
+    // Verify the cashier belongs to the admin's business
+    const cashierCheck = await client.query(
+      'SELECT user_id FROM users WHERE user_id = $1 AND business_id = $2 AND role = $3',
+      [id, businessId, 'cashier']
+    );
+
+    if (cashierCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Cashier not found or not authorized' });
+    }
+
+    // Begin transaction
+    await client.query('BEGIN');
+
+    // Delete the cashier
+    await client.query('DELETE FROM users WHERE user_id = $1', [id]);
+
+    // Log the action
+    await logAction({
+      userId: userId,
+      businessId: businessId,
+      action: 'DELETE_CASHIER',
+      details: { cashierId: id },
+      client
+    });
+
+    await client.query('COMMIT');
+    
+    res.status(200).json({ message: 'Cashier deleted successfully' });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error deleting cashier:', error);
+    res.status(500).json({ error: 'Failed to delete cashier' });
+  } finally {
+    client.release();
+  }
+};
+
 exports.listCashiers = async (req, res) => {
   try {
     // Fetch the business_id directly from the database to ensure accuracy
@@ -262,7 +466,7 @@ exports.listCashiers = async (req, res) => {
     }
 
     const rows = await pool.query(
-      `SELECT u.user_id, u.username, u.email, u.contact_number, u.created_at
+      `SELECT u.user_id, u.username, u.email, u.contact_number, u.created_at, u.first_name, u.last_name
        FROM users u
        LEFT JOIN user_type ut ON ut.user_type_id = u.user_type_id
        WHERE u.business_id = $1 AND (lower(ut.user_type_name) = 'cashier' OR lower(u.role) = 'cashier')
@@ -297,7 +501,7 @@ exports.registerBusiness = async (req, res) => {
     email: req.body.email,
     businessName: req.body.businessName,
     businessType: req.body.businessType,
-    country: req.body.country,
+    region: req.body.region,
     province: req.body.province,
     city: req.body.city,
     barangay: req.body.barangay,
@@ -311,11 +515,11 @@ exports.registerBusiness = async (req, res) => {
     username,
     businessName,
     businessType,
-    country,
+    region,
+    regionName,
     province,
     city,
     barangay,
-    regionName,
     provinceName,
     cityName,
     barangayName,
@@ -325,7 +529,7 @@ exports.registerBusiness = async (req, res) => {
   } = req.body;
 
   // Validate required fields
-  if (!email || !username || !businessName || !businessType || !country || !province || !city || !barangay || !houseNumber || !mobile || !password) {
+  if (!email || !username || !businessName || !businessType || !region || !province || !city || !barangay || !houseNumber || !mobile || !password) {
     return res.status(400).json({ 
       error: 'All required fields must be provided' 
     });
@@ -377,16 +581,16 @@ exports.registerBusiness = async (req, res) => {
     const userId = userResult.rows[0].user_id;
 
     // Create business profile - combine address components into business_address
-    const businessAddress = `${houseNumber}, ${barangayName}, ${cityName}, ${provinceName}, Philippines`;
+    const businessAddress = `${houseNumber}, ${barangayName}, ${cityName}, ${provinceName}`;
     const businessResult = await client.query(`
       INSERT INTO business (
-        business_name, business_type, country, 
+        business_name, business_type, region, 
         business_address, house_number, mobile, email, 
         created_at, updated_at
       )
       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
       RETURNING business_id, business_name
-    `, [businessName, businessType, 'Philippines', businessAddress, houseNumber, mobile, email]);
+    `, [businessName, businessType, regionName || region, businessAddress, houseNumber, mobile, email]);
 
     // Update user with business_id (users table has business_id column per ekahera.sql)
     await client.query('UPDATE users SET business_id = $1 WHERE user_id = $2', [businessResult.rows[0].business_id, userId]);
@@ -574,7 +778,7 @@ exports.getBusinessProfile = async (req, res) => {
         business_id,
         business_name,
         business_type,
-        country,
+        region,
         business_address,
         house_number,
         mobile,
@@ -615,7 +819,9 @@ exports.updateBusinessProfile = async (req, res) => {
   const {
     businessName,
     businessType,
-    country,
+    email,
+    region,
+    province,
     businessAddress,
     houseNumber,
     mobile
@@ -637,19 +843,53 @@ exports.updateBusinessProfile = async (req, res) => {
       return res.status(400).json({ error: 'User is not associated with a business' });
     }
 
-    const result = await pool.query(`
+    // Build update query dynamically - only update business_address if it's provided
+    const updateFields = [];
+    const queryParams = [];
+    let paramIndex = 1;
+
+    if (businessName !== undefined) {
+      updateFields.push(`business_name = $${paramIndex++}`);
+      queryParams.push(businessName);
+    }
+    if (businessType !== undefined) {
+      updateFields.push(`business_type = $${paramIndex++}`);
+      queryParams.push(businessType);
+    }
+    if (email !== undefined) {
+      updateFields.push(`email = $${paramIndex++}`);
+      queryParams.push(email);
+    }
+    if (region !== undefined) {
+      updateFields.push(`region = $${paramIndex++}`);
+      queryParams.push(region);
+    }
+    // Only update business_address if it's explicitly provided (when location fields change)
+    if (businessAddress !== undefined) {
+      updateFields.push(`business_address = $${paramIndex++}`);
+      queryParams.push(businessAddress);
+    }
+    if (houseNumber !== undefined) {
+      updateFields.push(`house_number = $${paramIndex++}`);
+      queryParams.push(houseNumber);
+    }
+    if (mobile !== undefined) {
+      updateFields.push(`mobile = $${paramIndex++}`);
+      queryParams.push(mobile);
+    }
+
+    // Always update updated_at
+    updateFields.push(`updated_at = NOW()`);
+    queryParams.push(businessId);
+
+    const updateQuery = `
       UPDATE business
-      SET
-        business_name = COALESCE($1, business_name),
-        business_type = COALESCE($2, business_type),
-        country = COALESCE($3, country),
-        business_address = COALESCE($4, business_address),
-        house_number = COALESCE($5, house_number),
-        mobile = COALESCE($6, mobile),
-        updated_at = NOW()
-      WHERE business_id = $7
+      SET ${updateFields.join(', ')}
+      WHERE business_id = $${paramIndex}
       RETURNING *
-    `, [businessName, businessType, country, businessAddress, houseNumber, mobile, businessId]);
+    `;
+
+    const result = await pool.query(updateQuery, queryParams);
 
     if (result.rows.length === 0) {
       return res.status(404).json({
@@ -835,11 +1075,11 @@ exports.registerBusinessWithDocuments = [
       username,
       businessName,
       businessType,
-      country,
+      region,
+      regionName,
       province,
       city,
       barangay,
-      regionName,
       provinceName,
       cityName,
       barangayName,
@@ -852,7 +1092,7 @@ exports.registerBusinessWithDocuments = [
     const files = req.files;
 
     // Validate required fields
-    if (!email || !username || !businessName || !businessType || !country || !province || !city || !barangay || !houseNumber || !mobile || !password) {
+    if (!email || !username || !businessName || !businessType || !region || !province || !city || !barangay || !houseNumber || !mobile || !password) {
       return res.status(400).json({
         error: 'All required fields must be provided'
       });
@@ -926,16 +1166,17 @@ exports.registerBusinessWithDocuments = [
       const userId = userResult.rows[0].user_id;
 
       // Create business profile - combine address components into business_address
-      const businessAddress = `${barangayName}, ${cityName}, ${provinceName}`;
+      // Format: houseNumber, barangayName, cityName, provinceName
+      const businessAddress = `${houseNumber}, ${barangayName}, ${cityName}, ${provinceName}`;
       const businessResult = await client.query(`
         INSERT INTO business (
-          business_name, business_type, country,
+          business_name, business_type, region,
           business_address, house_number, mobile, email,
           created_at, updated_at
         )
         VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
         RETURNING business_id, business_name
-      `, [businessName, businessType, country, businessAddress, houseNumber, mobile, email]);
+      `, [businessName, businessType, regionName || region, businessAddress, houseNumber, mobile, email]);
 
       const business = businessResult.rows[0];
       const businessId = business.business_id;
@@ -1025,7 +1266,7 @@ exports.registerBusinessWithDocuments = [
         business_name: businessName,
         business_id: businessId,
         created_at: new Date().toISOString(),
-        business_address: `${houseNumber || ''} ${barangayName || ''} ${cityName || ''} ${provinceName || ''}`.trim(),
+        business_address: `${houseNumber || ''}, ${barangayName || ''}, ${cityName || ''}, ${provinceName || ''}`.trim(),
         mobile: mobile,
         business_type: businessType
       };
@@ -1049,7 +1290,7 @@ exports.registerBusinessWithDocuments = [
         email: email,
         business_name: businessName,
         created_at: new Date().toISOString(),
-        business_address: `${houseNumber || ''} ${barangayName || ''} ${cityName || ''} ${provinceName || ''}`.trim(),
+        business_address: `${houseNumber || ''}, ${barangayName || ''}, ${cityName || ''}, ${provinceName || ''}`.trim(),
         mobile: mobile,
         business_type: businessType
       };
@@ -1243,6 +1484,176 @@ exports.getBusinessPublic = async (req, res) => {
   } catch (error) {
     console.error("Get public business info error:", error);
     res.status(500).json({ error: "Failed to get business information" });
+  }
+};
+
+// --- Store deletion lifecycle (admin-side) ---
+const toDeletionDto = (request) => {
+  if (!request) {
+    return { status: 'none' };
+  }
+  return {
+    status: request.status,
+    requestedAt: request.requested_at,
+    scheduledFor: request.scheduled_for,
+    exportReadyAt: request.export_ready_at,
+    exportType: request.export_type,
+    exportSizeBytes: request.export_size_bytes,
+    recoveredAt: request.recovered_at,
+    deletedAt: request.deleted_at,
+  };
+};
+
+exports.getStoreDeletionStatus = async (req, res) => {
+  try {
+    const businessId = req.user?.businessId;
+    if (!businessId) {
+      return res.status(400).json({ error: 'Business not found for user' });
+    }
+    const latest = await getLatestDeletionRequest(businessId);
+    res.json({
+      message: latest ? 'Found deletion request' : 'No deletion request',
+      graceDays: DEFAULT_GRACE_DAYS,
+      deletion: toDeletionDto(latest),
+    });
+  } catch (err) {
+    console.error('Get store deletion status error:', err);
+    res.status(500).json({ error: 'Failed to load deletion status' });
+  }
+};
+
+exports.requestStoreDeletion = async (req, res) => {
+  try {
+    const businessId = req.user?.businessId;
+    if (!businessId) {
+      return res.status(400).json({ error: 'Business not found for user' });
+    }
+
+    const { password } = req.body;
+    if (!password) {
+      return res.status(400).json({ error: 'Password is required to confirm deletion' });
+    }
+
+    // Verify user's password before proceeding
+    const userResult = await pool.query(
+      'SELECT password_hash FROM users WHERE user_id = $1',
+      [req.user?.userId]
+    );
+
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, userResult.rows[0].password_hash);
+    if (!isPasswordValid) {
+      return res.status(401).json({ error: 'The password you entered is incorrect. Please try again.' });
+    }
+
+    const { request, alreadyExists } = await createDeletionRequest({
+      businessId,
+      userId: req.user?.userId,
+    });
+
+    res.json({
+      message: alreadyExists
+        ? 'A deletion request is already pending.'
+        : `Store deletion scheduled after a ${DEFAULT_GRACE_DAYS}-day grace period.`,
+      graceDays: DEFAULT_GRACE_DAYS,
+      deletion: toDeletionDto(request),
+    });
+  } catch (err) {
+    console.error('Request store deletion error:', err);
+    res.status(500).json({ error: 'Failed to request store deletion' });
+  }
+};
+
+exports.cancelStoreDeletion = async (req, res) => {
+  try {
+    const businessId = req.user?.businessId;
+    if (!businessId) {
+      return res.status(400).json({ error: 'Business not found for user' });
+    }
+
+    const cancelled = await cancelDeletionRequest({
+      businessId,
+      userId: req.user?.userId,
+    });
+
+    if (!cancelled) {
+      return res.status(404).json({ error: 'No pending deletion request to cancel' });
+    }
+
+    res.json({
+      message: 'Deletion request cancelled. Your store remains active.',
+      deletion: toDeletionDto(cancelled),
+    });
+  } catch (err) {
+    console.error('Cancel store deletion error:', err);
+    res.status(500).json({ error: 'Failed to cancel deletion request' });
+  }
+};
+
+exports.downloadStoreDeletionExport = async (req, res) => {
+  try {
+    const businessId = req.user?.businessId;
+    if (!businessId) {
+      return res.status(400).json({ error: 'Business not found for user' });
+    }
+
+    const latest = await getLatestDeletionRequest(businessId);
+    if (!latest) {
+      return res.status(404).json({ error: 'No deletion request found. Please create a deletion request first.' });
+    }
+    
+    if (!latest.export_path) {
+      return res.status(404).json({ error: 'No export available for this business. The export may still be generating.' });
+    }
+
+    // Resolve file path - export_path is stored as absolute path
+    let filePath = latest.export_path;
+    
+    // If path is not absolute, resolve it relative to exports directory
+    if (!path.isAbsolute(filePath)) {
+      const exportsDir = path.join(__dirname, '..', '..', 'uploads', 'exports');
+      filePath = path.join(exportsDir, path.basename(filePath));
+    }
+
+    // Check if file exists
+    if (!fs.existsSync(filePath)) {
+      console.error(`Export file not found for business ${businessId}. Path: ${filePath}, Stored path: ${latest.export_path}`);
+      return res.status(404).json({ 
+        error: 'Export file not found on server. The file may have been deleted or moved. Please create a new deletion request to regenerate the export.' 
+      });
+    }
+
+    const fileName = path.basename(filePath);
+    const isGzip = latest.export_type === 'gzip';
+    const isCsv = latest.export_type === 'csv';
+    const isXlsx = latest.export_type === 'xlsx';
+    
+    // For Excel files, ensure .xlsx extension
+    const downloadFileName = isXlsx && !fileName.endsWith('.xlsx') 
+      ? fileName.replace(/\.[^.]+$/, '.xlsx')
+      : fileName;
+    
+    res.setHeader('Content-Disposition', `attachment; filename="${downloadFileName}"`);
+    res.setHeader(
+      'Content-Type',
+      isGzip ? 'application/gzip' 
+        : isXlsx ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        : isCsv ? 'text/csv' 
+        : 'application/json'
+    );
+
+    const stream = fs.createReadStream(filePath);
+    stream.on('error', (err) => {
+      console.error('Stream error for deletion export:', err);
+      res.status(500).end();
+    });
+    stream.pipe(res);
+  } catch (err) {
+    console.error('Download store deletion export error:', err);
+    res.status(500).json({ error: 'Failed to download export' });
   }
 };
 module.exports.hasRequiredDocuments = hasRequiredDocuments;

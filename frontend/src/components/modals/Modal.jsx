@@ -62,6 +62,7 @@ function ProductForm({
   loading,
   onClose,
   businessType,
+  error,
 }) {
   const [scannerOpen, setScannerOpen] = useState(false);
   const [scannerPaused, setScannerPaused] = useState(false);
@@ -87,7 +88,7 @@ function ProductForm({
         "Baby Products",
         "Pet Supplies",
       ],
-      "Pharmacy": [
+      Pharmacy: [
         "Prescription Medicines",
         "OTC Medicines",
         "Vitamins & Supplements",
@@ -121,18 +122,7 @@ function ProductForm({
         "Gaming Consoles & Accessories",
         "Cables, Adapters & Chargers",
       ],
-      "Hardware Store": [
-        "Hand Tools",
-        "Power Tools",
-        "Construction Materials",
-        "Electrical Supplies",
-        "Plumbing Supplies",
-        "Paint & Painting Supplies",
-        "Gardening Tools",
-        "Fasteners (Nails, Screws, Bolts)",
-        "Safety Gear",
-      ],
-      "Bookstore": [
+      Bookstore: [
         "Fiction Books",
         "Non-Fiction Books",
         "Educational Books",
@@ -160,18 +150,27 @@ function ProductForm({
       Others: ["General"],
     };
 
-    const storedFromSession = (typeof window !== "undefined" && sessionStorage.getItem("business_type")) || null;
+    const storedFromSession =
+      (typeof window !== "undefined" &&
+        sessionStorage.getItem("business_type")) ||
+      null;
     let stored = businessType || storedFromSession || "Others";
     // Try to derive from logged-in `user` object if available (login stores `user` in sessionStorage)
     if (stored === "Others" && typeof window !== "undefined") {
       try {
-        const raw = sessionStorage.getItem("user") || localStorage.getItem("user");
+        const raw =
+          sessionStorage.getItem("user") || localStorage.getItem("user");
         if (raw) {
           const parsed = JSON.parse(raw);
-          const b = parsed?.business?.business_type || parsed?.business_type || null;
+          const b =
+            parsed?.business?.business_type || parsed?.business_type || null;
           if (b) {
             stored = b;
-            try { sessionStorage.setItem("business_type", b); } catch (e) { /* ignore */ }
+            try {
+              sessionStorage.setItem("business_type", b);
+            } catch (e) {
+              /* ignore */
+            }
           }
         }
       } catch (e) {
@@ -191,7 +190,13 @@ function ProductForm({
     // businessType is not known.
     if (businessType) {
       const fb = getFallbackCategories();
-      try { console.debug('ProductForm: using fallback categories for businessType=', businessType, fb); } catch (e) {}
+      try {
+        console.debug(
+          "ProductForm: using fallback categories for businessType=",
+          businessType,
+          fb
+        );
+      } catch (e) {}
       return fb;
     }
 
@@ -199,23 +204,129 @@ function ProductForm({
       const first = categories[0];
       const firstName = first && (first.name || first);
       // If categories only contains a generic value, fallback
-      if (categories.length === 1 && (firstName === "General" || firstName === "Others")) {
+      if (
+        categories.length === 1 &&
+        (firstName === "General" || firstName === "Others")
+      ) {
         const fb = getFallbackCategories();
-        try { console.debug('ProductForm: categories prop is generic, using fallback=', fb); } catch (e) {}
+        try {
+          console.debug(
+            "ProductForm: categories prop is generic, using fallback=",
+            fb
+          );
+        } catch (e) {}
         return fb;
       }
       const norm = normalizeCategories(categories);
-      try { console.debug('ProductForm: using provided categories=', norm); } catch (e) {}
+      try {
+        console.debug("ProductForm: using provided categories=", norm);
+      } catch (e) {}
       return norm;
     }
 
     const fb = getFallbackCategories();
-    try { console.debug('ProductForm: no categories provided, using fallback=', fb); } catch (e) {}
+    try {
+      console.debug("ProductForm: no categories provided, using fallback=", fb);
+    } catch (e) {}
     return fb;
   })();
+
+  // Validation function to check if all required fields are filled
+  const isFormValid = () => {
+    // Required fields for adding a product
+    const sku = (productForm.sku?.trim() || "").trim();
+    const name = (productForm.name?.trim() || "").trim();
+    const description = (productForm.description?.trim() || "").trim(); // Optional
+    const category = productForm.category || "";
+    const quantity = productForm.quantity;
+    const costPrice = Number(productForm.cost_price);
+    const sellingPrice = Number(productForm.selling_price);
+
+    // Check if all required text fields have values (description is optional)
+    if (!sku || !name || !category) {
+      return false;
+    }
+
+    // If category is "Others", customCategory is also required
+    if (category === "Others") {
+      const customCategory = (productForm.customCategory?.trim() || "").trim();
+      if (!customCategory) {
+        return false;
+      }
+    }
+
+    // For new products, quantity must be provided and >= 0
+    if (!editingProduct) {
+      const qty = Number(quantity);
+      if (quantity === "" || quantity === null || quantity === undefined || isNaN(qty) || qty < 0) {
+        return false;
+      }
+    }
+
+    // Cost price and selling price must be valid numbers > 0
+    if (isNaN(costPrice) || costPrice <= 0 || isNaN(sellingPrice) || sellingPrice <= 0) {
+      return false;
+    }
+
+    return true;
+  };
+
+  const formIsValid = isFormValid();
+
   return (
-    <form onSubmit={onSubmit} className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className="space-y-4">
+      {error && (
+        <div className="bg-red-50 border-l-4 border-red-500 rounded-lg p-4 flex items-start gap-3 shadow-sm mb-4">
+          <div className="flex-shrink-0">
+            <svg
+              className="w-5 h-5 text-red-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
+              />
+            </svg>
+          </div>
+          <div className="flex-1">
+            <h3 className="text-sm font-semibold text-red-800 mb-1">
+              {error.includes("already exists") || error.includes("SKU") 
+                ? "Duplicate Product" 
+                : "Error"}
+            </h3>
+            <p className="text-sm text-red-700">
+              {error}
+            </p>
+            {error.includes("already exists") && (
+              <p className="text-xs text-red-600 mt-2 italic">
+                Please use a different SKU code or update the existing product instead.
+              </p>
+            )}
+          </div>
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              if (onChange) {
+                onChange({ target: { name: 'clearError', value: '' } });
+              }
+            }}
+            className="flex-shrink-0 text-red-400 hover:text-red-600 transition-colors"
+            aria-label="Close error"
+            type="button"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      )}
+      <form onSubmit={onSubmit} className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <FormField
           label="SKU Code"
           name="sku"
@@ -292,13 +403,9 @@ function ProductForm({
         name="description"
         value={productForm.description}
         onChange={onChange}
-        required
+        placeholder="Product description (optional)"
       />
-      <div
-        className={`grid grid-cols-1 ${
-          editingProduct ? "md:grid-cols-2" : "md:grid-cols-3"
-        } gap-4`}
-      >
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {!editingProduct && (
           <FormField
             label="Quantity"
@@ -310,7 +417,7 @@ function ProductForm({
           />
         )}
         <FormField
-          label="Cost Price (₱)"
+          label="Cost Price"
           name="cost_price"
           type="number"
           value={productForm.cost_price}
@@ -318,12 +425,21 @@ function ProductForm({
           required
         />
         <FormField
-          label="Selling Price (₱)"
+          label="Selling Price"
           name="selling_price"
           type="number"
           value={productForm.selling_price}
           onChange={onChange}
           required
+        />
+        <FormField
+          label="Low Stock Level"
+          name="low_stock_level"
+          type="number"
+          value={productForm.low_stock_level}
+          onChange={onChange}
+          placeholder="10"
+          min="0"
         />
       </div>
       <div className="flex justify-end gap-2 mt-4">
@@ -337,11 +453,12 @@ function ProductForm({
           label={editingProduct ? "Update" : "Add"}
           variant="primary"
           type="submit"
-          disabled={loading}
+          disabled={loading || !formIsValid}
         />
       </div>
       {loading && <Loader size="sm" className="mt-2" />}
-    </form>
+      </form>
+    </div>
   );
 }
 
@@ -363,6 +480,7 @@ function Modal({
   categories,
   onSubmit,
   loading,
+  error,
   // Stock Modal Props
   stockForm,
 }) {
@@ -375,11 +493,16 @@ function Modal({
 
     const loadBusinessType = async () => {
       try {
-        let bid = (typeof window !== "undefined" && (localStorage.getItem("business_id") || sessionStorage.getItem("business_id"))) || null;
+        let bid =
+          (typeof window !== "undefined" &&
+            (localStorage.getItem("business_id") ||
+              sessionStorage.getItem("business_id"))) ||
+          null;
         // If business_id key not set, try to read from stored `user` object
         if (!bid && typeof window !== "undefined") {
           try {
-            const raw = sessionStorage.getItem('user') || localStorage.getItem('user');
+            const raw =
+              sessionStorage.getItem("user") || localStorage.getItem("user");
             if (raw) {
               const parsed = JSON.parse(raw);
               bid = parsed?.businessId || parsed?.business_id || null;
@@ -389,22 +512,27 @@ function Modal({
           }
         }
         if (!bid) {
-          console.debug('Modal: no business id available to fetch business_type');
+          console.debug(
+            "Modal: no business id available to fetch business_type"
+          );
           return;
         }
-        console.debug('Modal: loading business_type for business_id=', bid);
+        console.debug("Modal: loading business_type for business_id=", bid);
         const { data, error } = await supabase
           .from("business")
           .select("business_type")
           .eq("business_id", bid)
           .maybeSingle();
         if (error) {
-          console.debug("Could not fetch business_type:", error.message || error);
+          console.debug(
+            "Could not fetch business_type:",
+            error.message || error
+          );
           return;
         }
         const btype = data?.business_type || null;
         if (btype) {
-          console.debug('Modal: got business_type=', btype);
+          console.debug("Modal: got business_type=", btype);
           setBusinessType(btype);
           try {
             sessionStorage.setItem("business_type", btype);
@@ -480,6 +608,7 @@ function Modal({
                 onSubmit={onSubmit}
                 loading={loading}
                 onClose={onClose}
+                error={error}
               />
             </div>
           ) : variant === "stock" ? (

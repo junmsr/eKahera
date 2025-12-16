@@ -11,7 +11,6 @@ function Card({
   variant = 'glass',
   padding = 'default',
   cardBg,
-  ...props
 }) {
   // Base styles
   const baseStyles = "rounded-lg transition-all duration-300 backdrop-blur-xl bg-white/60 border border-white/30 shadow-xl";
@@ -36,7 +35,7 @@ function Card({
   const combinedStyles = `${baseStyles} ${variantStyles[variant]} ${paddingStyles[padding]} ${className}`;
 
   return (
-    <div className={`${combinedStyles} ${cardBg || ''}`} tabIndex={0} {...props}>
+    <div className={`${combinedStyles} ${cardBg || ''}`} tabIndex={0}>
       {children}
       <style>{`
         .emphasized-card {

@@ -8,6 +8,7 @@ import {
   MdDescription,
   MdChevronRight,
 } from "react-icons/md";
+import { useKeyboardShortcuts } from "../../hooks/useKeyboardShortcuts";
 
 function CashLedgerModal({ isOpen, onClose }) {
   // Tab state: "SUMMARY" or "TRANSACTIONS"
@@ -60,6 +61,34 @@ function CashLedgerModal({ isOpen, onClose }) {
     fetchTransactions();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
+
+  useKeyboardShortcuts(
+    [
+      {
+        key: "escape",
+        action: onClose,
+        enabled: isOpen,
+        allowWhileTyping: true,
+      },
+      {
+        key: "1",
+        action: () => {
+          setTab("SUMMARY");
+          setSelectedPaymentType(null);
+        },
+        enabled: isOpen,
+      },
+      {
+        key: "2",
+        action: () => {
+          setTab("TRANSACTIONS");
+          setSelectedPaymentType(null);
+        },
+        enabled: isOpen,
+      },
+    ],
+    [isOpen, tab]
+  );
 
   // Summary Page Component
   const renderSummary = () => {
@@ -142,21 +171,6 @@ function CashLedgerModal({ isOpen, onClose }) {
   const renderTransactions = () => {
     return (
       <div className="space-y-4">
-        {/* Back Button */}
-        <button
-          type="button"
-          onClick={() => {
-            setSelectedPaymentType(null);
-            setTab('SUMMARY');
-          }}
-          className="text-sm text-blue-600 hover:text-blue-800 font-semibold flex items-center gap-2 hover:gap-3 transition-all"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-          Back to Summary
-        </button>
-
         {/* Transactions Title */}
         <div className="bg-gradient-to-r from-indigo-50 to-blue-50 rounded-2xl p-4 border border-indigo-100/50">
           <h3 className="font-bold text-lg text-gray-900">{selectedPaymentType ? `${selectedPaymentType} Transactions` : 'All Transactions'}</h3>
@@ -216,7 +230,7 @@ function CashLedgerModal({ isOpen, onClose }) {
         }`}
       >
         <MdDescription className="w-5 h-5" />
-        <span>Summary</span>
+        <span>Summary (1)</span>
       </button>
       <button
         onClick={() => {
@@ -230,7 +244,7 @@ function CashLedgerModal({ isOpen, onClose }) {
         }`}
       >
         <MdSwapHoriz className="w-5 h-5" />
-        <span>Transactions</span>
+        <span>Transactions (2)</span>
       </button>
     </div>
   );
@@ -248,6 +262,20 @@ function CashLedgerModal({ isOpen, onClose }) {
       <div className="space-y-6">
         {tab === "SUMMARY" ? renderSummary() : renderTransactions()}
         {tabContent}
+        <div className="text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
+          <div className="flex items-center justify-between">
+            <span>Summary view:</span>
+            <span className="font-mono bg-white px-2 py-0.5 rounded">1</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span>Transactions view:</span>
+            <span className="font-mono bg-white px-2 py-0.5 rounded">2</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span>Close:</span>
+            <span className="font-mono bg-white px-2 py-0.5 rounded">Esc</span>
+          </div>
+        </div>
       </div>
     </BaseModal>
   );

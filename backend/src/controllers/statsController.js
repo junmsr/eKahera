@@ -98,7 +98,9 @@ exports.getSalesByCategory = async (req, res) => {
        JOIN transaction_items ti ON ti.transaction_id = t.transaction_id
        JOIN products p ON p.product_id = ti.product_id
        LEFT JOIN product_categories pc ON pc.product_category_id = p.product_category_id
-       WHERE t.business_id = $1 ${dateFilter}
+       WHERE t.business_id = $1 
+         AND t.status = 'completed'
+         ${dateFilter}
        GROUP BY pc.product_category_name
        ORDER BY value DESC
        LIMIT 10`,
@@ -137,6 +139,8 @@ exports.getCustomersTimeseries = async (req, res) => {
                 COUNT(DISTINCT customer_user_id) AS cnt
          FROM transactions
          WHERE business_id = $1
+           AND status = 'completed'
+           AND DATE(created_at) BETWEEN $2::date AND $3::date
          GROUP BY day_key
        ) t ON t.day_key = d
        ORDER BY d`,
@@ -192,16 +196,33 @@ exports.getKeyMetrics = async (req, res) => {
       grossMargin: { value: 0, change: 0 }
     });
 
-    const endDate = new Date();
-    const startDate = new Date();
-    startDate.setDate(endDate.getDate() - 30);
+    const { startDate, endDate } = req.query;
+    let end, start, prevEnd, prevStart;
 
-    const prevEndDate = startDate;
-    const prevStartDate = new Date();
-    prevStartDate.setDate(prevEndDate.getDate() - 30);
+    if (startDate && endDate) {
+      // Use provided date range
+      end = new Date(endDate);
+      start = new Date(startDate);
+      
+      // Calculate previous period (same duration before startDate)
+      const duration = Math.ceil((end - start) / (1000 * 60 * 60 * 24)); // days
+      prevEnd = new Date(start);
+      prevEnd.setDate(prevEnd.getDate() - 1);
+      prevStart = new Date(prevEnd);
+      prevStart.setDate(prevStart.getDate() - duration);
+    } else {
+      // Default: last 30 days
+      end = new Date();
+      start = new Date();
+      start.setDate(end.getDate() - 30);
 
-    const currentMetrics = await getPeriodMetrics(businessId, startDate, endDate);
-    const previousMetrics = await getPeriodMetrics(businessId, prevStartDate, prevEndDate);
+      prevEnd = start;
+      prevStart = new Date();
+      prevStart.setDate(prevEnd.getDate() - 30);
+    }
+
+    const currentMetrics = await getPeriodMetrics(businessId, start, end);
+    const previousMetrics = await getPeriodMetrics(businessId, prevStart, prevEnd);
 
     const calculateChange = (current, previous) => {
       if (previous === 0) {
@@ -233,67 +254,6 @@ exports.getKeyMetrics = async (req, res) => {
   }
 };
 
-exports.getSalesByLocation = async (req, res) => {
-  try {
-    const role = (req.user?.role || '').toLowerCase();
-    const businessId = role === 'superadmin' ? (req.query?.business_id ? Number(req.query.business_id) : null) : (req.user?.businessId || null);
-    if (!businessId) return res.json([]);
-
-    // Since no location table, return sales by business (single entry)
-    const salesRes = await pool.query(
-      `SELECT 'Main' AS location, COALESCE(SUM(total_amount),0) AS sales FROM transactions WHERE business_id = $1 AND created_at >= NOW() - INTERVAL '30 days'`,
-      [businessId]
-    );
-
-    res.json(salesRes.rows.map(r => ({ location: r.location, sales: Number(r.sales) })));
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
-
-exports.getRevenueVsExpenses = async (req, res) => {
-  try {
-    const role = (req.user?.role || '').toLowerCase();
-    const businessId = role === 'superadmin' ? (req.query?.business_id ? Number(req.query.business_id) : null) : (req.user?.businessId || null);
-    if (!businessId) return res.json([]);
-
-    // Last 2 months
-    const data = [];
-    for (let i = 1; i >= 0; i--) {
-      const monthStart = new Date();
-      monthStart.setMonth(monthStart.getMonth() - i, 1);
-      monthStart.setHours(0, 0, 0, 0);
-      const monthEnd = new Date(monthStart);
-      monthEnd.setMonth(monthEnd.getMonth() + 1);
-
-      const revenueRes = await pool.query(
-        `SELECT COALESCE(SUM(total_amount),0) AS total FROM transactions WHERE business_id = $1 AND created_at >= $2 AND created_at < $3`,
-        [businessId, monthStart, monthEnd]
-      );
-      const revenue = Number(revenueRes.rows[0].total) || 0;
-      
-      const costRes = await pool.query(
-        `SELECT COALESCE(SUM(p.cost_price * ti.product_quantity),0) AS total_cost
-         FROM transactions t
-         JOIN transaction_items ti ON ti.transaction_id = t.transaction_id
-         JOIN products p ON p.product_id = ti.product_id
-         WHERE t.business_id = $1 AND t.created_at >= $2 AND t.created_at < $3`,
-        [businessId, monthStart, monthEnd]
-      );
-      const expenses = Number(costRes.rows[0].total_cost) || 0;
-
-      data.push({
-        month: monthStart.toLocaleString('default', { month: 'short' }),
-        revenue,
-        expenses
-      });
-    }
-
-    res.json(data);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
 
 exports.getProfitTrend = async (req, res) => {
   try {
@@ -301,35 +261,87 @@ exports.getProfitTrend = async (req, res) => {
     const businessId = role === 'superadmin' ? (req.query?.business_id ? Number(req.query.business_id) : null) : (req.user?.businessId || null);
     if (!businessId) return res.json([]);
 
-    // Last 3 months
-    const data = [];
-    for (let i = 2; i >= 0; i--) {
-      const monthStart = new Date();
-      monthStart.setMonth(monthStart.getMonth() - i, 1);
-      monthStart.setHours(0, 0, 0, 0);
-      const monthEnd = new Date(monthStart);
-      monthEnd.setMonth(monthEnd.getMonth() + 1);
+    const { startDate, endDate } = req.query;
+    let data = [];
 
-      const revenueRes = await pool.query(
-        `SELECT COALESCE(SUM(total_amount),0) AS total FROM transactions WHERE business_id = $1 AND created_at >= $2 AND created_at < $3`,
-        [businessId, monthStart, monthEnd]
-      );
-      const revenue = Number(revenueRes.rows[0].total) || 0;
-      const costRes = await pool.query(
-        `SELECT COALESCE(SUM(p.cost_price * ti.product_quantity),0) AS total_cost
-         FROM transactions t
-         JOIN transaction_items ti ON ti.transaction_id = t.transaction_id
-         JOIN products p ON p.product_id = ti.product_id
-         WHERE t.business_id = $1 AND t.created_at >= $2 AND t.created_at < $3`,
-        [businessId, monthStart, monthEnd]
-      );
-      const expenses = Number(costRes.rows[0].total_cost) || 0;
-      const profit = revenue - expenses;
+    if (startDate && endDate) {
+      // Use provided date range - split into months if range spans multiple months
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      
+      // Group by month within the date range
+      const monthMap = new Map();
+      const current = new Date(start);
+      
+      while (current <= end) {
+        const monthKey = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}`;
+        const monthStart = new Date(current.getFullYear(), current.getMonth(), 1);
+        const monthEnd = new Date(current.getFullYear(), current.getMonth() + 1, 0, 23, 59, 59);
+        
+        // Clamp to actual date range
+        const rangeStart = monthStart < start ? start : monthStart;
+        const rangeEnd = monthEnd > end ? end : monthEnd;
+        
+        if (!monthMap.has(monthKey)) {
+          monthMap.set(monthKey, { monthStart: rangeStart, monthEnd: rangeEnd, monthName: monthStart.toLocaleString('default', { month: 'short' }) });
+        }
+        
+        current.setMonth(current.getMonth() + 1);
+      }
+      
+      // Fetch data for each month
+      for (const [key, { monthStart, monthEnd, monthName }] of monthMap) {
+        const revenueRes = await pool.query(
+          `SELECT COALESCE(SUM(total_amount),0) AS total FROM transactions WHERE business_id = $1 AND created_at >= $2 AND created_at <= $3`,
+          [businessId, monthStart, monthEnd]
+        );
+        const revenue = Number(revenueRes.rows[0].total) || 0;
+        const costRes = await pool.query(
+          `SELECT COALESCE(SUM(p.cost_price * ti.product_quantity),0) AS total_cost
+           FROM transactions t
+           JOIN transaction_items ti ON ti.transaction_id = t.transaction_id
+           JOIN products p ON p.product_id = ti.product_id
+           WHERE t.business_id = $1 AND t.created_at >= $2 AND t.created_at <= $3`,
+          [businessId, monthStart, monthEnd]
+        );
+        const expenses = Number(costRes.rows[0].total_cost) || 0;
+        const profit = revenue - expenses;
 
-      data.push({
-        month: monthStart.toLocaleString('default', { month: 'short' }),
-        profit
-      });
+        data.push({
+          month: monthName,
+          profit
+        });
+      }
+    } else {
+      // Default: Last 3 months
+      for (let i = 2; i >= 0; i--) {
+        const monthStart = new Date();
+        monthStart.setMonth(monthStart.getMonth() - i, 1);
+        monthStart.setHours(0, 0, 0, 0);
+        const monthEnd = new Date(monthStart);
+        monthEnd.setMonth(monthEnd.getMonth() + 1);
+
+        const revenueRes = await pool.query(
+          `SELECT COALESCE(SUM(total_amount),0) AS total FROM transactions WHERE business_id = $1 AND created_at >= $2 AND created_at < $3`,
+          [businessId, monthStart, monthEnd]
+        );
+        const revenue = Number(revenueRes.rows[0].total) || 0;
+        const costRes = await pool.query(
+          `SELECT COALESCE(SUM(p.cost_price * ti.product_quantity),0) AS total_cost
+           FROM transactions t
+           JOIN transaction_items ti ON ti.transaction_id = t.transaction_id
+           JOIN products p ON p.product_id = ti.product_id
+           WHERE t.business_id = $1 AND t.created_at >= $2 AND t.created_at < $3`,
+          [businessId, monthStart, monthEnd]
+        );
+        const expenses = Number(costRes.rows[0].total_cost) || 0;
+        const profit = revenue - expenses;
+
+        data.push({
+          month: monthStart.toLocaleString('default', { month: 'short' }),
+          profit
+        });
+      }
     }
 
     res.json(data);
@@ -344,21 +356,46 @@ exports.getPaymentMethods = async (req, res) => {
     const businessId = role === 'superadmin' ? (req.query?.business_id ? Number(req.query.business_id) : null) : (req.user?.businessId || null);
     if (!businessId) return res.json([]);
 
+    const { startDate, endDate } = req.query;
+    let queryParams = [businessId];
+    let dateFilter = '';
+
+    if (startDate && endDate) {
+      queryParams.push(startDate);
+      queryParams.push(endDate);
+      dateFilter = `AND DATE(t.created_at) BETWEEN $2 AND $3`;
+    }
+
     const paymentRes = await pool.query(
       `SELECT payment_type, COUNT(*) as count
        FROM transaction_payment tp
        JOIN transactions t ON t.transaction_id = tp.transaction_id
-       WHERE t.business_id = $1
+       WHERE t.business_id = $1 ${dateFilter}
        GROUP BY payment_type`,
-      [businessId]
+      queryParams
     );
 
     const total = paymentRes.rows.reduce((s, r) => s + Number(r.count), 0) || 1;
-    const data = paymentRes.rows.map(r => ({
-      name: r.payment_type,
-      value: Math.round((Number(r.count) / total) * 100),
-      fill: r.payment_type === 'Cash' ? '#3b82f6' : r.payment_type === 'GCash' ? '#10b981' : r.payment_type === 'Maya' ? '#8B5CF6' : '#f59e0b'
-    }));
+    const data = paymentRes.rows.map(r => {
+      const paymentType = (r.payment_type || '').toString().trim();
+      const paymentTypeLower = paymentType.toLowerCase();
+      let fillColor = '#f59e0b'; // default orange
+      
+      // Map payment types to colors (handles lowercase: cash, gcash, maya)
+      if (paymentTypeLower === 'cash') {
+        fillColor = '#3b82f6'; // blue
+      } else if (paymentTypeLower === 'gcash') {
+        fillColor = '#10b981'; // green
+      } else if (paymentTypeLower === 'maya' || paymentTypeLower === 'paymaya') {
+        fillColor = '#8B5CF6'; // purple
+      }
+      
+      return {
+        name: paymentType,
+        value: Math.round((Number(r.count) / total) * 100),
+        fill: fillColor
+      };
+    });
 
     res.json(data);
   } catch (err) {
@@ -372,6 +409,35 @@ exports.getProductPerformance = async (req, res) => {
     const businessId = role === 'superadmin' ? (req.query?.business_id ? Number(req.query.business_id) : null) : (req.user?.businessId || null);
     if (!businessId) return res.json([]);
 
+    const { startDate, endDate } = req.query;
+    let currentQueryParams = [businessId];
+    let currentDateFilter = '';
+    let previousQueryParams = [businessId];
+    let previousDateFilter = '';
+
+    if (startDate && endDate) {
+      // Calculate previous period (same duration before startDate)
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      const duration = Math.ceil((end - start) / (1000 * 60 * 60 * 24)); // days
+      const prevEnd = new Date(start);
+      prevEnd.setDate(prevEnd.getDate() - 1);
+      const prevStart = new Date(prevEnd);
+      prevStart.setDate(prevStart.getDate() - duration);
+
+      currentQueryParams.push(startDate);
+      currentQueryParams.push(endDate);
+      currentDateFilter = `AND DATE(t.created_at) BETWEEN $2 AND $3`;
+
+      previousQueryParams.push(prevStart.toISOString().split('T')[0]);
+      previousQueryParams.push(prevEnd.toISOString().split('T')[0]);
+      previousDateFilter = `AND DATE(t.created_at) BETWEEN $2 AND $3`;
+    } else {
+      // Default: last 30 days vs previous 30 days
+      currentDateFilter = `AND t.created_at >= NOW() - INTERVAL '30 days'`;
+      previousDateFilter = `AND t.created_at >= NOW() - INTERVAL '60 days' AND t.created_at < NOW() - INTERVAL '30 days'`;
+    }
+
     const currentSalesRes = await pool.query(
       `SELECT COALESCE(pc.product_category_name, 'Uncategorized') AS name,
               COALESCE(SUM(ti.subtotal),0) AS sales
@@ -379,11 +445,11 @@ exports.getProductPerformance = async (req, res) => {
        JOIN transaction_items ti ON ti.transaction_id = t.transaction_id
        JOIN products p ON p.product_id = ti.product_id
        LEFT JOIN product_categories pc ON pc.product_category_id = p.product_category_id
-       WHERE t.business_id = $1 AND t.created_at >= NOW() - INTERVAL '30 days'
+       WHERE t.business_id = $1 ${currentDateFilter}
        GROUP BY pc.product_category_name
        ORDER BY sales DESC
        LIMIT 5`,
-      [businessId]
+      currentQueryParams
     );
 
     const previousSalesRes = await pool.query(
@@ -393,9 +459,9 @@ exports.getProductPerformance = async (req, res) => {
        JOIN transaction_items ti ON ti.transaction_id = t.transaction_id
        JOIN products p ON p.product_id = ti.product_id
        LEFT JOIN product_categories pc ON pc.product_category_id = p.product_category_id
-       WHERE t.business_id = $1 AND t.created_at >= NOW() - INTERVAL '60 days' AND t.created_at < NOW() - INTERVAL '30 days'
+       WHERE t.business_id = $1 ${previousDateFilter}
        GROUP BY pc.product_category_name`,
-      [businessId]
+      previousQueryParams
     );
 
     const previousSalesMap = new Map(previousSalesRes.rows.map(r => [r.name, Number(r.sales)]));
@@ -428,23 +494,40 @@ exports.getBusinessStats = async (req, res) => {
     const businessId = role === 'superadmin' ? (req.query?.business_id ? Number(req.query.business_id) : null) : (req.user?.businessId || null);
     if (!businessId) return res.json({ cashFlow: 0, operatingCosts: 0, profitGrowth: 0 });
 
-    const endDate = new Date();
-    const startDate = new Date();
-    startDate.setMonth(endDate.getMonth() - 1);
+    const { startDate, endDate } = req.query;
+    let end, start, prevEnd, prevStart;
 
-    const prevEndDate = startDate;
-    const prevStartDate = new Date();
-    prevStartDate.setMonth(prevEndDate.getMonth() - 1);
+    if (startDate && endDate) {
+      // Use provided date range
+      end = new Date(endDate);
+      start = new Date(startDate);
+      
+      // Calculate previous period (same duration before startDate)
+      const duration = Math.ceil((end - start) / (1000 * 60 * 60 * 24)); // days
+      prevEnd = new Date(start);
+      prevEnd.setDate(prevEnd.getDate() - 1);
+      prevStart = new Date(prevEnd);
+      prevStart.setDate(prevStart.getDate() - duration);
+    } else {
+      // Default: last month
+      end = new Date();
+      start = new Date();
+      start.setMonth(end.getMonth() - 1);
 
-    const currentMetrics = await getPeriodMetrics(businessId, startDate, endDate);
-    const previousMetrics = await getPeriodMetrics(businessId, prevStartDate, prevEndDate);
+      prevEnd = start;
+      prevStart = new Date();
+      prevStart.setMonth(prevEnd.getMonth() - 1);
+    }
+
+    const currentMetrics = await getPeriodMetrics(businessId, start, end);
+    const previousMetrics = await getPeriodMetrics(businessId, prevStart, prevEnd);
 
     // Cash flow: assume positive, calculate as net profit
     const cashFlow = currentMetrics.netProfit;
 
     const operatingCosts = currentMetrics.expenses;
 
-    // Profit growth: compare current month to previous
+    // Profit growth: compare current period to previous
     const profitGrowth = previousMetrics.netProfit > 0 ? Math.round(((currentMetrics.netProfit - previousMetrics.netProfit) / previousMetrics.netProfit) * 100 * 10) / 10 : (currentMetrics.netProfit > 0 ? 100 : 0);
 
     res.json({

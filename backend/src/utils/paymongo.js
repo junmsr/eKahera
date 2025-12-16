@@ -44,6 +44,25 @@ async function createCheckout({ secretKey, amountCentavos, description, referenc
 	return json;
 }
 
-module.exports = { createCheckout };
+async function getCheckoutSession({ secretKey, sessionId }) {
+	const response = await fetch(`https://api.paymongo.com/v1/checkout_sessions/${sessionId}`, {
+		method: 'GET',
+		headers: {
+			'Accept': 'application/json',
+			'Authorization': buildAuthHeader(secretKey)
+		}
+	});
+
+	const json = await response.json();
+	if (!response.ok) {
+		const firstDetail = Array.isArray(json?.errors) && json.errors[0]?.detail ? json.errors[0].detail : undefined;
+		const err = new Error(firstDetail || 'Failed to fetch PayMongo checkout session');
+		err.details = json;
+		throw err;
+	}
+	return json;
+}
+
+module.exports = { createCheckout, getCheckoutSession };
 
 

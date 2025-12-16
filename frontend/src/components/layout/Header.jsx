@@ -14,7 +14,7 @@ const Header = ({
     >
       <div className="px-6 lg:px-6 py-2">
         <div className="grid grid-cols-[1fr_auto] items-center h-16 gap-4">
-          <div className="flex items-center gap-3 min-w-0">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
             {onMenuClick && (
               <button
                 type="button"
@@ -55,12 +55,12 @@ const Header = ({
               </button>
             )}
             <h1 className="text-2xl font-bold truncate">
-              {title.includes(" - POS") ? (
+              {title.includes("POS") ? (
                 <>
-                  <span className="text-blue-600">
+                  {/*<span className="text-blue-600">
                     {title.replace(" - POS", "")}
-                  </span>
-                  <span className="text-gray-900"> - POS</span>
+                  </span>*/}
+                  <span className="text-blue-600">POS</span>
                 </>
               ) : (
                 <span className="text-blue-600">{title}</span>
@@ -75,7 +75,7 @@ const Header = ({
 
           {/* Header Actions */}
           {headerActions && (
-            <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
+            <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0 h-16">
               {headerActions}
             </div>
           )}

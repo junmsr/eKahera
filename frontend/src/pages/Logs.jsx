@@ -1,38 +1,100 @@
 import React, { useEffect, useMemo, useState, useRef } from "react";
+import { useDebounce } from "../hooks/useDebounce";
 import NavAdmin from "../components/layout/Nav-Admin";
-import { BiRefresh } from "react-icons/bi";
+import { BiRefresh, BiCalendarAlt } from "react-icons/bi";
 import PageLayout from "../components/layout/PageLayout";
 import Button from "../components/common/Button";
 import { api, authHeaders } from "../lib/api";
+import dayjs from "dayjs";
+import DateRangeFilterModal from "../components/modals/DateRangeFilterModal";
 
 const LogsPage = () => {
   const [logs, setLogs] = useState([]);
   const [error, setError] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearchQuery = useDebounce(searchQuery, 400);
   const [loading, setLoading] = useState(false);
   const [clearing, setClearing] = useState(false);
+  const [dateRange, setDateRange] = useState({
+    startDate: dayjs().startOf('month'),
+    endDate: dayjs().endOf('day'),
+    rangeType: 'Month'
+  });
   const [roleFilter, setRoleFilter] = useState("all");
   const [sortOrder, setSortOrder] = useState("desc");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isSidebarOpen, setSidebarOpen] = useState(false);
+  const [showFilterModal, setShowFilterModal] = useState(false);
   const dropdownRef = useRef(null);
+  
+  const headerDateDisplay = useMemo(() => {
+    if (!dateRange.startDate || !dateRange.endDate) return "Select Range";
+    
+    const start = dayjs(dateRange.startDate);
+    const end = dayjs(dateRange.endDate);
+    const diff = end.diff(start, 'day') + 1;
+    
+    if (dateRange.rangeType === 'Day') {
+      return start.format('MMM D, YYYY');
+    } else if (dateRange.rangeType === 'Week') {
+      return `${start.format('MMM D')} - ${end.format('MMM D, YYYY')} (${diff} days)`;
+    } else if (dateRange.rangeType === 'Month') {
+      return `${start.format('MMM YYYY')} (${diff} days)`;
+    } else {
+      return `${start.format('MMM D, YYYY')} - ${end.format('MMM D, YYYY')} (${diff} days)`;
+    }
+  }, [dateRange]);
+
+  // Format timestamp with month names instead of numbers
+  const formatTimestamp = (dateString) => {
+    if (!dateString) return "Invalid date";
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return "Invalid date";
+    
+    const monthNames = [
+      "January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December"
+    ];
+    
+    const month = monthNames[date.getMonth()];
+    const day = date.getDate();
+    const year = date.getFullYear();
+    const hours = date.getHours();
+    const minutes = date.getMinutes();
+    const seconds = date.getSeconds();
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    const displayHours = hours % 12 || 12;
+    const displayMinutes = minutes.toString().padStart(2, '0');
+    const displaySeconds = seconds.toString().padStart(2, '0');
+    
+    return `${month} ${day}, ${year} ${displayHours}:${displayMinutes}:${displaySeconds} ${ampm}`;
+  };
 
   const fetchLogs = async () => {
     try {
       setLoading(true);
       setError("");
       const token = sessionStorage.getItem("auth_token");
+      
+      // Format dates for the API
+      const params = {};
+      if (dateRange.startDate) {
+        params.startDate = dayjs(dateRange.startDate).format('YYYY-MM-DD');
+      }
+      if (dateRange.endDate) {
+        params.endDate = dayjs(dateRange.endDate).format('YYYY-MM-DD');
+      }
+      
       const data = await api("/api/logs", {
         headers: authHeaders(token),
+        params,
       });
       const normalized = (data || []).map((l) => ({
         id: l.log_id,
         userId: l.user_id,
         username: l.username || "",
         action: l.action || `Action by ${l.username || l.user_id}`,
-        time: l.date_time
-          ? new Date(l.date_time).toLocaleString()
-          : "Invalid date",
+        time: formatTimestamp(l.date_time),
         dateTime: l.date_time,
         role: (l.role === "business_owner"
           ? "admin"
@@ -68,11 +130,16 @@ const LogsPage = () => {
     let filtered = logs;
 
     if (roleFilter !== "all") {
-      filtered = filtered.filter((l) => l.role === roleFilter);
+      filtered = filtered.filter((l) => {
+        if (roleFilter === 'customer') {
+          return l.role === 'user' || l.role === 'customer';
+        }
+        return l.role === roleFilter;
+      });
     }
 
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
+    if (debouncedSearchQuery) {
+      const query = debouncedSearchQuery.toLowerCase();
       filtered = filtered.filter(
         (l) =>
           (l.action || "").toLowerCase().includes(query) ||
@@ -80,6 +147,18 @@ const LogsPage = () => {
       );
     }
 
+    // Apply date range filter
+    if (dateRange.startDate) {
+      const startDate = dayjs(dateRange.startDate).startOf('day');
+      const endDate = dateRange.endDate ? dayjs(dateRange.endDate).endOf('day') : dayjs().endOf('day');
+      
+      filtered = filtered.filter(log => {
+        const logDate = dayjs(log.dateTime);
+        return logDate.isBetween(startDate, endDate, null, '[]');
+      });
+    }
+
+    // Sort based on sortOrder: "desc" = newest first, "asc" = oldest first
     filtered.sort((a, b) => {
       const dateA = new Date(a.dateTime);
       const dateB = new Date(b.dateTime);
@@ -87,15 +166,23 @@ const LogsPage = () => {
     });
 
     return filtered;
-  }, [logs, roleFilter, searchQuery, sortOrder]);
+  }, [logs, roleFilter, debouncedSearchQuery, sortOrder, dateRange]);
 
   const exportToCSV = () => {
     try {
-      const headers = ["User ID", "Username", "Role", "Action", "Time"];
+      // Export only the filtered logs (which already respect date range, role filter, and search query)
+      const logsToExport = filteredLogs;
+      
+      if (logsToExport.length === 0) {
+        setError("No logs to export for the selected date range");
+        return;
+      }
+
+      const headers = ["Customer ID", "Customer Name", "Role", "Action", "Time"];
 
       const csvRows = [
         headers.join(","),
-        ...filteredLogs.map((log) => {
+        ...logsToExport.map((log) => {
           const row = [
             log.userId || log.id || "",
             `"${(log.username || "").replace(/"/g, '""')}"`,
@@ -109,14 +196,19 @@ const LogsPage = () => {
 
       const csvContent = csvRows.join("\n");
 
+      // Generate filename with date range if available
+      let filename = `logs_export_${new Date().toISOString().split("T")[0]}`;
+      if (dateRange.startDate && dateRange.endDate) {
+        const startStr = dayjs(dateRange.startDate).format('YYYY-MM-DD');
+        const endStr = dayjs(dateRange.endDate).format('YYYY-MM-DD');
+        filename = `logs_export_${startStr}_to_${endStr}`;
+      }
+
       const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
       const link = document.createElement("a");
       const url = URL.createObjectURL(blob);
       link.setAttribute("href", url);
-      link.setAttribute(
-        "download",
-        `logs_export_${new Date().toISOString().split("T")[0]}.csv`
-      );
+      link.setAttribute("download", `${filename}.csv`);
       link.style.visibility = "hidden";
       document.body.appendChild(link);
       link.click();
@@ -171,7 +263,7 @@ const LogsPage = () => {
     { value: "all", label: "All Roles" },
     { value: "cashier", label: "Cashier" },
     { value: "admin", label: "Admin" },
-    { value: "user", label: "User" },
+    { value: "customer", label: "Customer" },
   ];
 
   const selectedRole = roleOptions.find(
@@ -189,15 +281,19 @@ const LogsPage = () => {
         <BiRefresh className={`w-5 h-5 ${loading ? "animate-spin" : ""}`} />
       </button>
 
-      <Button
-        onClick={exportToCSV}
-        variant="secondary"
-        size="md"
-        className="flex items-center gap-2"
-        disabled={filteredLogs.length === 0 || loading}
+      <button
+        onClick={() => setShowFilterModal(true)}
+        disabled={loading}
+        title="Select Date Range"
+        className={`flex items-center gap-1 sm:gap-2 ${
+          dateRange.rangeType !== 'Custom' ? 'bg-blue-50 border-blue-200' : 'bg-white/80 border-gray-200/80'
+        } backdrop-blur-sm hover:bg-white text-gray-700 px-2 sm:px-3 py-1.5 rounded-lg border text-xs sm:text-sm font-medium transition-all duration-200 hover:shadow-md`}
       >
-        Export
-      </Button>
+        <BiCalendarAlt className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+        <span className="hidden sm:inline text-left truncate max-w-[180px]">
+          {headerDateDisplay}
+        </span>
+      </button>
     </div>
   );
 
@@ -207,11 +303,12 @@ const LogsPage = () => {
       sidebar={<NavAdmin />}
       isSidebarOpen={isSidebarOpen}
       setSidebarOpen={setSidebarOpen}
-      className="h-screen overflow-hidden"
+      className="overflow-hidden"
+      headerActions={headerActions}
     >
-      <div className="flex-1 bg-transparent overflow-hidden p-4 flex flex-col">
-        <div className="mb-6 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-          <div className="relative flex-1 max-w-xl w-full">
+      <div className="h-[calc(100vh-80px)] bg-transparent p-4 flex flex-col overflow-hidden">
+        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between mb-4">
+          <div className="relative flex-1 max-w-xl w-full flex-shrink-0">
             <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
               <svg
                 className="h-5 w-5 text-gray-400"
@@ -330,75 +427,79 @@ const LogsPage = () => {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto">
-          <table className="min-w-full bg-white/80 backdrop-blur-md rounded-xl overflow-hidden hidden sm:table">
-            <thead className="bg-gray-100/50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  User
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Role
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Action
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Timestamp
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200/50">
-              {loading ? (
+        {/* Desktop Table View */}
+        <div className="hidden sm:block overflow-hidden rounded-xl border border-gray-200/50 h-[calc(100%-150px)] flex-1 min-h-0">
+          <div className="h-full overflow-y-auto">
+            <table className="w-full bg-white/80 backdrop-blur-md">
+              <thead className="bg-gray-100/90 backdrop-blur-md sticky top-0 z-10">
                 <tr>
-                  <td colSpan="4" className="text-center py-8 text-gray-500">
-                    Loading logs...
-                  </td>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Customer
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Role
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Action
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Timestamp
+                  </th>
                 </tr>
-              ) : filteredLogs.length === 0 ? (
-                <tr>
-                  <td colSpan="4" className="text-center py-8 text-gray-500">
-                    No logs found.
-                  </td>
-                </tr>
-              ) : (
-                filteredLogs.map((log) => (
-                  <tr key={log.id}>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
-                        {log.username}
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        ID: {log.userId}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          log.role === "admin" || log.role === "business_owner"
-                            ? "bg-purple-100 text-purple-800"
-                            : log.role === "cashier"
-                            ? "bg-blue-100 text-blue-800"
-                            : "bg-green-100 text-green-800"
-                        }`}
-                      >
-                        {log.role}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
-                      {log.action}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {log.time}
+              </thead>
+              <tbody className="divide-y divide-gray-200/50">
+                {loading ? (
+                  <tr>
+                    <td colSpan="4" className="text-center py-8 text-gray-500">
+                      Loading logs...
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : filteredLogs.length === 0 ? (
+                  <tr>
+                    <td colSpan="4" className="text-center py-8 text-gray-500">
+                      No logs found.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredLogs.map((log) => (
+                    <tr key={log.id} className="hover:bg-gray-50/50 transition-colors">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900">
+                          {log.username}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          ID: {log.userId}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span
+                          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                            log.role === "admin" || log.role === "business_owner"
+                              ? "bg-purple-100 text-purple-800"
+                              : log.role === "cashier"
+                              ? "bg-blue-100 text-blue-800"
+                              : "bg-green-100 text-green-800"
+                          }`}
+                        >
+                          {log.role}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
+                        {log.action}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {log.time}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
+
         {/* Mobile Card View */}
-        <div className="flex-1 overflow-y-auto sm:hidden space-y-3">
+        <div className="sm:hidden overflow-y-auto space-y-3 h-[calc(100%-150px)]">
           {loading ? (
             Array.from({ length: 5 }).map((_, i) => (
               <div
@@ -480,6 +581,21 @@ const LogsPage = () => {
             </p>
           </div>
         )}
+        
+        {/* Date Range Filter Modal */}
+        <DateRangeFilterModal
+          isOpen={showFilterModal}
+          onClose={() => setShowFilterModal(false)}
+          onDateRangeApply={(newDateRange) => {
+            setDateRange({
+              startDate: newDateRange.startDate,
+              endDate: newDateRange.endDate,
+              rangeType: newDateRange.rangeType
+            });
+            // Trigger a refetch of logs with the new date range
+            fetchLogs();
+          }}
+        />
       </div>
     </PageLayout>
   );

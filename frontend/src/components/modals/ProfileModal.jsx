@@ -1,8 +1,16 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Button from "../common/Button";
 import FormField from "../common/FormField";
+import SelectDropdown from "../common/SelectDropdown";
 import BaseModal from "./BaseModal";
+import { useKeyboardShortcuts } from "../../hooks/useKeyboardShortcuts";
 import { api } from "../../lib/api";
+import {
+  getRegions,
+  getProvinces,
+  getCities,
+  getBarangays,
+} from "../../lib/locationApi";
 
 /**
  * ProfileModal Component
@@ -18,11 +26,18 @@ const ProfileModal = ({ isOpen, onClose, userData, businessData }) => {
     newPassword: "",
     confirmPassword: "",
     // Business fields
-    country: businessData?.country || "",
+    business_name: businessData?.business_name || "",
     business_email: businessData?.email || "",
-    business_address: businessData?.business_address || "",
-    house_number: businessData?.house_number || "",
-    mobile: businessData?.mobile || "",
+    business_type: businessData?.business_type || "",
+    region: businessData?.region || "",
+    province: businessData?.province || "",
+    city: businessData?.city || "",
+    barangay: businessData?.barangay || "",
+    house_street:
+      businessData?.house_number ||
+      businessData?.business_address ||
+      businessData?.address_line ||
+      "",
   });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
@@ -30,6 +45,24 @@ const ProfileModal = ({ isOpen, onClose, userData, businessData }) => {
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
   const [activeTab, setActiveTab] = useState("account");
+  const [locationOptions, setLocationOptions] = useState({
+    regions: [],
+    provinces: [],
+    cities: [],
+    barangays: [],
+  });
+  const [locationLoading, setLocationLoading] = useState({
+    regions: false,
+    provinces: false,
+    cities: false,
+    barangays: false,
+  });
+  const initialLocationRef = useRef({
+    region: businessData?.region || "",
+    province: businessData?.province || "",
+    city: businessData?.city || "",
+    barangay: businessData?.barangay || "",
+  });
 
   useEffect(() => {
     if (userData || businessData) {
@@ -42,11 +75,18 @@ const ProfileModal = ({ isOpen, onClose, userData, businessData }) => {
         newPassword: "",
         confirmPassword: "",
         // Business fields
-        country: businessData?.country || "",
+        business_name: businessData?.business_name || "",
         business_email: businessData?.email || "",
-        business_address: businessData?.business_address || "",
-        house_number: businessData?.house_number || "",
-        mobile: businessData?.mobile || "",
+        business_type: businessData?.business_type || "",
+        region: businessData?.region || "",
+        province: businessData?.province || "",
+        city: businessData?.city || "",
+        barangay: businessData?.barangay || "",
+        house_street:
+          businessData?.house_number ||
+          businessData?.business_address ||
+          businessData?.address_line ||
+          "",
       });
       setMessage("");
       setError("");
@@ -55,6 +95,160 @@ const ProfileModal = ({ isOpen, onClose, userData, businessData }) => {
       setActiveTab("account");
     }
   }, [userData, businessData, isOpen]);
+
+  // Helpers
+  const findOptionByLabel = (options, label) => {
+    if (!label) return null;
+    const target = label.toLowerCase().trim();
+    return options.find((o) => o.label.toLowerCase() === target) || null;
+  };
+
+  const getLabel = (options, value, fallback) => {
+    const match = options.find((o) => o.value === value);
+    return match ? match.label : fallback || "";
+  };
+
+  // Fetch regions on open
+  useEffect(() => {
+    const fetchRegions = async () => {
+      try {
+        setLocationLoading((l) => ({ ...l, regions: true }));
+        const data = await getRegions();
+        const options = data.map((r) => ({ value: r.code, label: r.name }));
+        setLocationOptions((o) => ({ ...o, regions: options }));
+      } catch (err) {
+        console.error("Failed to load regions", err);
+      } finally {
+        setLocationLoading((l) => ({ ...l, regions: false }));
+      }
+    };
+    if (isOpen) {
+      fetchRegions();
+    }
+  }, [isOpen]);
+
+  // When regions loaded, map existing region name to code
+  useEffect(() => {
+    if (
+      locationOptions.regions.length &&
+      initialLocationRef.current.region &&
+      !profileData.region
+    ) {
+      const match = findOptionByLabel(
+        locationOptions.regions,
+        initialLocationRef.current.region
+      );
+      if (match) {
+        setProfileData((p) => ({ ...p, region: match.value }));
+      }
+    }
+  }, [locationOptions.regions, profileData.region]);
+
+  // Fetch provinces when region changes
+  useEffect(() => {
+    const loadProvinces = async () => {
+      if (!profileData.region) {
+        setLocationOptions((o) => ({
+          ...o,
+          provinces: [],
+          cities: [],
+          barangays: [],
+        }));
+        return;
+      }
+      try {
+        setLocationLoading((l) => ({ ...l, provinces: true }));
+        const data = await getProvinces(profileData.region);
+        const options = data.map((p) => ({ value: p.code, label: p.name }));
+        setLocationOptions((o) => ({
+          ...o,
+          provinces: options,
+          cities: [],
+          barangays: [],
+        }));
+
+        // Preselect province if we have a name from initial data
+        if (initialLocationRef.current.province) {
+          const match = findOptionByLabel(
+            options,
+            initialLocationRef.current.province
+          );
+          if (match) {
+            setProfileData((p) => ({ ...p, province: match.value }));
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load provinces", err);
+      } finally {
+        setLocationLoading((l) => ({ ...l, provinces: false }));
+      }
+    };
+    loadProvinces();
+  }, [profileData.region]);
+
+  // Fetch cities when province changes
+  useEffect(() => {
+    const loadCities = async () => {
+      if (!profileData.province) {
+        setLocationOptions((o) => ({ ...o, cities: [], barangays: [] }));
+        return;
+      }
+      try {
+        setLocationLoading((l) => ({ ...l, cities: true }));
+        const data = await getCities(profileData.province);
+        const options = data.map((c) => ({ value: c.code, label: c.name }));
+        setLocationOptions((o) => ({ ...o, cities: options, barangays: [] }));
+
+        // Preselect city
+        if (initialLocationRef.current.city) {
+          const match = findOptionByLabel(
+            options,
+            initialLocationRef.current.city
+          );
+          if (match) {
+            setProfileData((p) => ({ ...p, city: match.value }));
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load cities", err);
+      } finally {
+        setLocationLoading((l) => ({ ...l, cities: false }));
+      }
+    };
+    loadCities();
+  }, [profileData.province]);
+
+  // Fetch barangays when city changes
+  useEffect(() => {
+    const loadBarangays = async () => {
+      if (!profileData.city) {
+        setLocationOptions((o) => ({ ...o, barangays: [] }));
+        return;
+      }
+      try {
+        setLocationLoading((l) => ({ ...l, barangays: true }));
+        const data = await getBarangays(profileData.city);
+        const options = data.map((b) => ({ value: b.code, label: b.name }));
+        setLocationOptions((o) => ({ ...o, barangays: options }));
+
+        // Preselect barangay
+        if (initialLocationRef.current.barangay) {
+          const match = findOptionByLabel(
+            options,
+            initialLocationRef.current.barangay
+          );
+          if (match) {
+            setProfileData((p) => ({ ...p, barangay: match.value }));
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load barangays", err);
+      } finally {
+        setLocationLoading((l) => ({ ...l, barangays: false }));
+      }
+    };
+    loadBarangays();
+  }, [profileData.city]);
 
   const validateField = (name, value) => {
     const newErrors = { ...errors };
@@ -106,14 +300,6 @@ const ProfileModal = ({ isOpen, onClose, userData, businessData }) => {
           newErrors.business_email = "Please enter a valid email";
         } else {
           delete newErrors.business_email;
-        }
-        break;
-
-      case "mobile":
-        if (value && value.trim().length < 7) {
-          newErrors.mobile = "Mobile number must be at least 7 digits";
-        } else {
-          delete newErrors.mobile;
         }
         break;
 
@@ -172,16 +358,17 @@ const ProfileModal = ({ isOpen, onClose, userData, businessData }) => {
     setMessage("");
     setError("");
 
-    // Validate all fields
-    Object.keys(profileData).forEach((key) => {
-      validateField(key, profileData[key]);
-    });
-
-    // Check if form is valid
-    const hasErrors = Object.keys(errors).length > 0;
-    if (hasErrors) {
-      setLoading(false);
-      return;
+    if (activeTab === "security") {
+      if (!profileData.currentPassword || !profileData.newPassword || !profileData.confirmPassword) {
+        setError("Please fill in all password fields.");
+        setLoading(false);
+        return;
+      }
+      if (profileData.newPassword !== profileData.confirmPassword) {
+        setError("New password and confirmation do not match.");
+        setLoading(false);
+        return;
+      }
     }
 
     try {
@@ -210,12 +397,43 @@ const ProfileModal = ({ isOpen, onClose, userData, businessData }) => {
           body: JSON.stringify(updateData),
         });
       } else if (activeTab === "business") {
+        const regionLabel = getLabel(
+          locationOptions.regions,
+          profileData.region,
+          businessData?.region
+        );
+        const provinceLabel = getLabel(
+          locationOptions.provinces,
+          profileData.province,
+          businessData?.province
+        );
+        const cityLabel = getLabel(
+          locationOptions.cities,
+          profileData.city,
+          businessData?.city
+        );
+        const barangayLabel = getLabel(
+          locationOptions.barangays,
+          profileData.barangay,
+          businessData?.barangay
+        );
+
         const businessUpdateData = {
-          country: profileData.country,
-          business_email: profileData.business_email,
-          business_address: profileData.business_address,
-          house_number: profileData.house_number,
-          mobile: profileData.mobile,
+          businessName: profileData.business_name || undefined,
+          businessType: profileData.business_type || undefined,
+          businessAddress: [
+            profileData.house_street,
+            barangayLabel,
+            cityLabel,
+            provinceLabel,
+            regionLabel,
+            profileData.region || "",
+          ]
+            .filter(Boolean)
+            .join(", "),
+          houseNumber: profileData.house_street || undefined,
+          region: profileData.region || "",
+          business_email: profileData.business_email || undefined,
         };
 
         await api("/api/business/update-business", {
@@ -230,7 +448,7 @@ const ProfileModal = ({ isOpen, onClose, userData, businessData }) => {
 
       setMessage("Profile updated successfully!");
       setTimeout(() => {
-        handleClose();
+        onClose();
         window.location.reload();
       }, 2000);
     } catch (err) {
@@ -241,145 +459,107 @@ const ProfileModal = ({ isOpen, onClose, userData, businessData }) => {
     }
   };
 
-  const handleClose = () => {
-    setProfileData({
-      first_name: userData?.first_name || "",
-      last_name: userData?.last_name || "",
-      email: userData?.email || "",
-      contact_number: userData?.contact_number || "",
-      currentPassword: "",
-      newPassword: "",
-      confirmPassword: "",
-      // Business fields
-      country: businessData?.country || "",
-      business_email: businessData?.email || "",
-      business_address: businessData?.business_address || "",
-      house_number: businessData?.house_number || "",
-      mobile: businessData?.mobile || "",
-    });
-    setErrors({});
-    setTouched({});
-    setMessage("");
-    setError("");
-    setActiveTab("account");
-    onClose();
-  };
+  // Reset form when modal opens/closes
+  useEffect(() => {
+    if (isOpen) {
+      setActiveTab("account");
+      setProfileData({
+        first_name: userData?.first_name || "",
+        last_name: userData?.last_name || "",
+        email: userData?.email || "",
+        contact_number: userData?.contact_number || "",
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+        business_name: businessData?.business_name || "",
+        business_email: businessData?.email || "",
+        business_type: businessData?.business_type || "",
+        region: businessData?.region || "",
+        province: businessData?.province || "",
+        city: businessData?.city || "",
+        barangay: businessData?.barangay || "",
+        house_street:
+          businessData?.house_number ||
+          businessData?.business_address ||
+          businessData?.address_line ||
+          "",
+      });
+      setErrors({});
+      setTouched({});
+      setMessage("");
+      setError("");
+    }
+  }, [isOpen, userData, businessData]);
+
+  // Set up keyboard shortcuts
+  useKeyboardShortcuts(
+    [
+      {
+        key: "escape",
+        action: onClose,
+        enabled: isOpen,
+        allowWhileTyping: true,
+      },
+      {
+        key: "enter",
+        action: (e) => {
+          if (isOpen) {
+            e.preventDefault();
+            e.stopPropagation();
+            handleSubmit(e);
+          }
+        },
+        enabled: isOpen && activeTab !== "security",
+      },
+    ],
+    [isOpen, onClose, handleSubmit, activeTab]
+  );
 
   if (!isOpen) return null;
 
-  const isFormValid = () => {
-    if (activeTab === "account") {
-      return (
-        Object.keys(errors).length === 0 &&
-        profileData.first_name.trim() &&
-        profileData.last_name.trim() &&
-        profileData.email.trim()
-      );
-    } else if (activeTab === "business") {
-      return Object.keys(errors).length === 0;
-    } else if (activeTab === "security") {
-      return Object.keys(errors).length === 0;
-    }
-    return false;
-  };
-
-  const footerContent = (
-    <>
-      <Button
-        label="Cancel"
-        variant="secondary"
-        onClick={handleClose}
-        type="button"
-        disabled={loading}
-        className="px-6 py-2.5 rounded-xl font-medium transition-all duration-200"
-      />
-      <Button
-        label={loading ? "Saving..." : "Save Changes"}
-        variant="primary"
-        type="submit"
-        onClick={handleSubmit}
-        disabled={!isFormValid() || loading}
-        className="px-6 py-2.5 rounded-xl font-medium transition-all duration-200 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg hover:shadow-xl"
-      />
-    </>
-  );
+  const storeLabel =
+    userData?.store_name ||
+    userData?.storeName ||
+    userData?.businessName ||
+    "your store";
 
   return (
     <BaseModal
       isOpen={isOpen}
-      onClose={handleClose}
-      title="Edit Profile"
-      subtitle="Update your account details"
-      icon={
-        <svg
-          className="w-5 h-5 text-white"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-          />
-        </svg>
+      onClose={onClose}
+      title="Update Password"
+      subtitle={
+        <div className="flex flex-col gap-2">
+          <p>Cashiers can only change their password here</p>
+        </div>
       }
-      footer={footerContent}
-      disabled={loading}
-      contentClassName="space-y-5"
+      footer={
+        <div className="w-full flex gap-2 justify-end">
+          <Button
+            label="Cancel"
+            variant="secondary"
+            onClick={onClose}
+            disabled={loading}
+          />
+          <Button
+            label={
+              loading ? "Saving..." : "Save Password (Enter)"
+            }
+            variant="primary"
+            onClick={handleSubmit}
+            disabled={loading}
+          />
+        </div>
+      }
     >
-      {/* Success Message */}
       {message && (
-        <div className="p-4 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200/50 rounded-2xl flex items-start gap-3 animate-in slide-in-from-top duration-300">
-          <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-            <svg
-              className="w-5 h-5 text-emerald-600"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M5 13l4 4L19 7"
-              />
-            </svg>
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-emerald-900">{message}</p>
-            <p className="text-xs text-emerald-700 mt-0.5">
-              Your profile has been updated successfully
-            </p>
-          </div>
+        <div className="text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 mb-3">
+          {message}
         </div>
       )}
-
-      {/* Error Message */}
       {error && (
-        <div className="p-4 bg-gradient-to-r from-red-50 to-rose-50 border border-red-200/50 rounded-2xl flex items-start gap-3 animate-in slide-in-from-top duration-300">
-          <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-            <svg
-              className="w-5 h-5 text-red-600"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-red-900">{error}</p>
-            <p className="text-xs text-red-700 mt-0.5">
-              Please check your information and try again
-            </p>
-          </div>
+        <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-3">
+          {error}
         </div>
       )}
 
@@ -472,7 +652,7 @@ const ProfileModal = ({ isOpen, onClose, userData, businessData }) => {
       </div>
 
       {/* Form Content */}
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} className="space-y-6">
         {/* Account Tab */}
         {activeTab === "account" && (
           <div className="space-y-4 animate-in fade-in duration-300">
@@ -554,15 +734,19 @@ const ProfileModal = ({ isOpen, onClose, userData, businessData }) => {
               <div className="flex-1 h-px bg-gradient-to-r from-slate-200 to-transparent"></div>
             </div>
 
-            {/* Country Field */}
+            {/* Business Name */}
             <FormField
-              label="Country"
-              name="country"
-              value={profileData.country}
+              label="Business Name"
+              name="business_name"
+              value={profileData.business_name}
               onChange={handleInputChange}
               onBlur={handleBlur}
-              placeholder="Enter country"
-              error={touched.country && errors.country ? errors.country : null}
+              placeholder="Enter business name"
+              error={
+                touched.business_name && errors.business_name
+                  ? errors.business_name
+                  : null
+              }
             />
 
             {/* Business Email Field */}
@@ -581,46 +765,168 @@ const ProfileModal = ({ isOpen, onClose, userData, businessData }) => {
               }
             />
 
-            {/* Business Address Field */}
+            {/* Business Type */}
+            <div className="mb-5">
+              <label className="block mb-1 font-medium text-blue-800">
+                Business Type
+              </label>
+              <SelectDropdown
+                name="business_type"
+                value={profileData.business_type}
+                onChange={(e) => handleInputChange(e)}
+                options={[
+                  { value: "Grocery Store", label: "Grocery Store" },
+                  { value: "Retail", label: "Retail" },
+                  { value: "Restaurant", label: "Restaurant" },
+                  { value: "Cafe", label: "Cafe" },
+                  { value: "Pharmacy", label: "Pharmacy" },
+                  { value: "Services", label: "Services" },
+                  ...(profileData.business_type &&
+                  ![
+                    "Grocery Store",
+                    "Retail",
+                    "Restaurant",
+                    "Cafe",
+                    "Pharmacy",
+                    "Services",
+                  ].includes(profileData.business_type)
+                    ? [
+                        {
+                          value: profileData.business_type,
+                          label: profileData.business_type,
+                        },
+                      ]
+                    : []),
+                ]}
+                placeholder="Select business type"
+                error={
+                  touched.business_type && errors.business_type
+                    ? errors.business_type
+                    : null
+                }
+              />
+            </div>
+
+            <div className="flex items-center gap-2 mb-2 pt-2">
+              <h3 className="text-sm font-bold text-slate-900">
+                Business Location
+              </h3>
+              <div className="flex-1 h-px bg-gradient-to-r from-slate-200 to-transparent"></div>
+            </div>
+
+            {/* Region */}
+            <div className="mb-5">
+              <label className="block mb-1 font-medium text-blue-800">
+                Region
+              </label>
+              <SelectDropdown
+                name="region"
+                value={profileData.region}
+                options={locationOptions.regions}
+                onChange={(e) =>
+                  handleInputChange({
+                    target: { name: "region", value: e.target.value },
+                  })
+                }
+                placeholder={
+                  locationLoading.regions
+                    ? "Loading regions..."
+                    : "Select Region"
+                }
+                disabled={locationLoading.regions}
+                error={touched.region && errors.region ? errors.region : null}
+              />
+            </div>
+
+            {/* Province */}
+            <div className="mb-5">
+              <label className="block mb-1 font-medium text-blue-800">
+                Province
+              </label>
+              <SelectDropdown
+                name="province"
+                value={profileData.province}
+                options={locationOptions.provinces}
+                onChange={(e) =>
+                  handleInputChange({
+                    target: { name: "province", value: e.target.value },
+                  })
+                }
+                placeholder={
+                  locationLoading.provinces
+                    ? "Loading provinces..."
+                    : "Select Province"
+                }
+                disabled={!profileData.region || locationLoading.provinces}
+                error={
+                  touched.province && errors.province ? errors.province : null
+                }
+              />
+            </div>
+
+            {/* City/Municipality */}
+            <div className="mb-5">
+              <label className="block mb-1 font-medium text-blue-800">
+                City/Municipality
+              </label>
+              <SelectDropdown
+                name="city"
+                value={profileData.city}
+                options={locationOptions.cities}
+                onChange={(e) =>
+                  handleInputChange({
+                    target: { name: "city", value: e.target.value },
+                  })
+                }
+                placeholder={
+                  locationLoading.cities
+                    ? "Loading cities..."
+                    : "Select City/Municipality"
+                }
+                disabled={!profileData.province || locationLoading.cities}
+                error={touched.city && errors.city ? errors.city : null}
+              />
+            </div>
+
+            {/* Barangay */}
+            <div className="mb-5">
+              <label className="block mb-1 font-medium text-blue-800">
+                Barangay
+              </label>
+              <SelectDropdown
+                name="barangay"
+                value={profileData.barangay}
+                options={locationOptions.barangays}
+                onChange={(e) =>
+                  handleInputChange({
+                    target: { name: "barangay", value: e.target.value },
+                  })
+                }
+                placeholder={
+                  locationLoading.barangays
+                    ? "Loading barangays..."
+                    : "Select Barangay"
+                }
+                disabled={!profileData.city || locationLoading.barangays}
+                error={
+                  touched.barangay && errors.barangay ? errors.barangay : null
+                }
+              />
+            </div>
+
+            {/* House / Street / Landmark */}
             <FormField
-              label="Business Address"
-              name="business_address"
-              value={profileData.business_address}
+              label="House no./ Street Name / Landmark (optional)"
+              name="house_street"
+              value={profileData.house_street}
               onChange={handleInputChange}
               onBlur={handleBlur}
-              placeholder="Enter business address"
+              placeholder="Enter house number, street, or landmark"
               error={
-                touched.business_address && errors.business_address
-                  ? errors.business_address
+                touched.house_street && errors.house_street
+                  ? errors.house_street
                   : null
               }
-            />
-
-            {/* House Number Field */}
-            <FormField
-              label="House Number"
-              name="house_number"
-              value={profileData.house_number}
-              onChange={handleInputChange}
-              onBlur={handleBlur}
-              placeholder="Enter house number"
-              error={
-                touched.house_number && errors.house_number
-                  ? errors.house_number
-                  : null
-              }
-            />
-
-            {/* Mobile Field */}
-            <FormField
-              label="Mobile Number"
-              name="mobile"
-              type="tel"
-              value={profileData.mobile}
-              onChange={handleInputChange}
-              onBlur={handleBlur}
-              placeholder="Enter mobile number"
-              error={touched.mobile && errors.mobile ? errors.mobile : null}
             />
           </div>
         )}
@@ -707,6 +1013,21 @@ const ProfileModal = ({ isOpen, onClose, userData, businessData }) => {
             />
           </div>
         )}
+        <div className="flex justify-end gap-2 pt-4 border-t border-gray-100 mt-6">
+          <Button
+            label="Cancel"
+            variant="secondary"
+            onClick={onClose}
+            disabled={loading}
+            type="button"
+          />
+          <Button
+            label={loading ? "Saving..." : "Save Changes"}
+            variant="primary"
+            type="submit"
+            disabled={loading}
+          />
+        </div>
       </form>
     </BaseModal>
   );

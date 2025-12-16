@@ -1,8 +1,9 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import Card from "../../common/Card";
 import FormField from "../../common/FormField";
 import Input from "../../common/Input";
 import Button from "../../common/Button";
+import { useBarcodeScanner } from "../../../hooks/useBarcodeScanner";
 
 /**
  * SKU Form Card Component
@@ -16,16 +17,35 @@ export default React.forwardRef(
       quantity,
       setQuantity,
       handleAddToCart,
+      quantityInputRef,
       className = "",
-      ...props
     },
     ref
   ) => {
+    // Track if we're processing a barcode scan to prevent double-firing
+    const isProcessingScanRef = useRef(false);
+
+    // Handle hardware barcode scanner input - auto-submit when scanner sends Enter quickly
+    useBarcodeScanner((scannedCode) => {
+      if (scannedCode && scannedCode.trim()) {
+        isProcessingScanRef.current = true;
+        // Set the SKU and immediately add to cart
+        setSku(scannedCode.trim());
+        // Use a small delay to ensure state update, then add to cart
+        setTimeout(() => {
+          handleAddToCart();
+          // Reset flag after processing
+          setTimeout(() => {
+            isProcessingScanRef.current = false;
+          }, 200);
+        }, 100);
+      }
+    }, { inputSelector: 'input[name="sku"]' });
+
     return (
       <Card
         className={`flex-shrink-0 bg-white/80 backdrop-blur-md border border-white/60 shadow-xl hover:shadow-2xl transition-all duration-300 ${className}`}
         variant="glass"
-        {...props}
       >
         <div className="flex flex-col gap-1 p-1 sm:p-2">
           <div className="flex items-center gap-2 mb-0.5">
@@ -51,8 +71,11 @@ export default React.forwardRef(
 
           <div className="space-y-2">
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">
-                SKU Code
+              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-1">
+                <span>SKU Code</span>
+                <span className="hidden sm:inline-block text-xs font-bold px-1.5 py-0.5 rounded border bg-gray-100 border-gray-300 text-gray-600">
+                  `
+                </span>
               </label>
               <div className="relative">
                 <input
@@ -62,11 +85,15 @@ export default React.forwardRef(
                   value={sku}
                   onChange={(e) => setSku(e.target.value)}
                   onKeyPress={(e) => {
-                    if (e.key === "Enter" && sku.trim()) {
+                    // Only handle manual Enter key presses (not barcode scanner)
+                    // The useBarcodeScanner hook handles scanner input
+                    if (e.key === "Enter" && sku.trim() && !isProcessingScanRef.current) {
                       handleAddToCart();
                     }
                   }}
-                  placeholder="Scan or enter SKU code"
+                  autoComplete="off"
+                  autoFocus={false}
+                  placeholder="Scan or enter SKU code (Press ` to focus)"
                   className="w-full pl-3 pr-3 py-2 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 placeholder-gray-400 font-medium"
                 />
               </div>
@@ -88,6 +115,7 @@ export default React.forwardRef(
                   name="quantity"
                   value={quantity}
                   min={1}
+                  ref={quantityInputRef}
                   onChange={(e) =>
                     setQuantity(Math.max(1, Number(e.target.value) || 1))
                   }
@@ -101,7 +129,14 @@ export default React.forwardRef(
                 </button>
               </div>
               <Button
-                label="Add to Cart"
+                label={
+                  <div className="flex items-center gap-2">
+                    <span>Add to Cart</span>
+                    <span className="hidden sm:inline-block text-xs font-bold px-1.5 py-0.5 rounded border bg-white/20 border-white/40 text-white">
+                      F4
+                    </span>
+                  </div>
+                }
                 onClick={handleAddToCart}
                 variant="primary"
                 size="sm"

@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict 2bWPnr8SsoYX1aDKPCsgQhr6zLxDSx37R39lbnVwljni7MuKxNIYMhKoeJ9hOoG
+\restrict jnRGr07zdzWxsyeLfLBBg9YJbzU8O3qwneZY1bhWJ078wCBTqfebHaSOk0VMkfC
 
 -- Dumped from database version 17.6
 -- Dumped by pg_dump version 17.6
@@ -106,7 +106,7 @@ CREATE TABLE public.business (
     business_id integer DEFAULT nextval('public.business_business_id_seq'::regclass) NOT NULL,
     business_name character varying(255) NOT NULL,
     business_type character varying(100) NOT NULL,
-    country character varying(100) NOT NULL,
+    region character varying(100) NOT NULL,
     business_address text NOT NULL,
     house_number character varying(100),
     mobile character varying(15) NOT NULL,
@@ -225,12 +225,14 @@ CREATE TABLE public.users (
     user_type_id integer,
     username character varying(50) NOT NULL,
     contact_number character varying(11),
-    email character varying(255) NOT NULL,
+    email character varying(255),
     password_hash character varying(255),
     role character varying(50) DEFAULT 'user'::character varying,
     created_at timestamp with time zone DEFAULT now(),
     updated_at timestamp with time zone DEFAULT now(),
-    business_id integer
+    business_id integer,
+    first_name character varying(255) DEFAULT 'N/A'::character varying NOT NULL,
+    last_name character varying(255) DEFAULT 'N/A'::character varying NOT NULL
 );
 
 
@@ -341,7 +343,9 @@ CREATE TABLE public.products (
     updated_at timestamp with time zone DEFAULT now(),
     created_by_user_id integer,
     business_id integer,
-    description text
+    description text,
+    low_stock_alert integer DEFAULT 5 NOT NULL,
+    CONSTRAINT low_stock_alert_non_negative CHECK ((low_stock_alert >= 0))
 );
 
 
@@ -515,7 +519,7 @@ CREATE TABLE public.logs (
     user_id integer NOT NULL,
     business_id integer NOT NULL,
     action text NOT NULL,
-    date_time timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+    date_time timestamp with time zone DEFAULT (now() AT TIME ZONE 'utc'::text)
 );
 
 
@@ -530,7 +534,7 @@ CREATE VIEW public.pending_verifications AS
     b.email,
     b.mobile,
     b.business_address,
-    b.country,
+    b.region AS country,
     b.verification_submitted_at,
     count(bd.document_id) AS total_documents,
     count(
@@ -541,7 +545,7 @@ CREATE VIEW public.pending_verifications AS
    FROM (public.business b
      LEFT JOIN public.business_documents bd ON ((b.business_id = bd.business_id)))
   WHERE ((b.verification_status)::text = 'pending'::text)
-  GROUP BY b.business_id, b.business_name, b.business_type, b.email, b.mobile, b.business_address, b.country, b.verification_submitted_at
+  GROUP BY b.business_id, b.business_name, b.business_type, b.email, b.mobile, b.business_address, b.region, b.verification_submitted_at
   ORDER BY b.verification_submitted_at;
 
 
@@ -619,6 +623,47 @@ CREATE VIEW public.sales_summary_view AS
 
 
 --
+-- Name: store_deletion_requests; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.store_deletion_requests (
+    id integer NOT NULL,
+    business_id integer NOT NULL,
+    requested_by integer,
+    requested_at timestamp with time zone DEFAULT now() NOT NULL,
+    scheduled_for timestamp with time zone NOT NULL,
+    status character varying(20) DEFAULT 'pending'::character varying NOT NULL,
+    export_path text,
+    export_type character varying(20),
+    export_ready_at timestamp with time zone,
+    export_size_bytes bigint,
+    recovered_at timestamp with time zone,
+    deleted_at timestamp with time zone,
+    metadata jsonb DEFAULT '{}'::jsonb
+);
+
+
+--
+-- Name: store_deletion_requests_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.store_deletion_requests_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: store_deletion_requests_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.store_deletion_requests_id_seq OWNED BY public.store_deletion_requests.id;
+
+
+--
 -- Name: top_selling_products; Type: VIEW; Schema: public; Owner: -
 --
 
@@ -650,7 +695,7 @@ CREATE SEQUENCE public.transaction_payment_transasction_payment_id_seq
 --
 
 CREATE TABLE public.transaction_payment (
-    transasction_payment_id integer DEFAULT nextval('public.transaction_payment_transasction_payment_id_seq'::regclass) NOT NULL,
+    transaction_payment_id integer DEFAULT nextval('public.transaction_payment_transasction_payment_id_seq'::regclass) NOT NULL,
     user_id integer,
     discount_id integer,
     payment_type character varying(20) NOT NULL,
@@ -682,6 +727,13 @@ CREATE TABLE public.user_type (
     user_type_id integer DEFAULT nextval('public.user_type_user_type_id_seq'::regclass) NOT NULL,
     user_type_name character varying(20)
 );
+
+
+--
+-- Name: store_deletion_requests id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.store_deletion_requests ALTER COLUMN id SET DEFAULT nextval('public.store_deletion_requests_id_seq'::regclass);
 
 
 --
@@ -765,6 +817,14 @@ ALTER TABLE ONLY public.products
 
 
 --
+-- Name: store_deletion_requests store_deletion_requests_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.store_deletion_requests
+    ADD CONSTRAINT store_deletion_requests_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: transaction_items transaction_items_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -777,7 +837,7 @@ ALTER TABLE ONLY public.transaction_items
 --
 
 ALTER TABLE ONLY public.transaction_payment
-    ADD CONSTRAINT transaction_payment_pkey PRIMARY KEY (transasction_payment_id);
+    ADD CONSTRAINT transaction_payment_pkey PRIMARY KEY (transaction_payment_id);
 
 
 --
@@ -925,6 +985,20 @@ CREATE INDEX idx_products_business ON public.products USING btree (business_id);
 --
 
 CREATE INDEX idx_products_created_by ON public.products USING btree (created_by_user_id);
+
+
+--
+-- Name: idx_store_deletion_business; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_store_deletion_business ON public.store_deletion_requests USING btree (business_id);
+
+
+--
+-- Name: idx_store_deletion_status; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_store_deletion_status ON public.store_deletion_requests USING btree (status, scheduled_for);
 
 
 --
@@ -1539,6 +1613,24 @@ GRANT ALL ON TABLE public.sales_summary_view TO service_role;
 
 
 --
+-- Name: TABLE store_deletion_requests; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT ALL ON TABLE public.store_deletion_requests TO anon;
+GRANT ALL ON TABLE public.store_deletion_requests TO authenticated;
+GRANT ALL ON TABLE public.store_deletion_requests TO service_role;
+
+
+--
+-- Name: SEQUENCE store_deletion_requests_id_seq; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT ALL ON SEQUENCE public.store_deletion_requests_id_seq TO anon;
+GRANT ALL ON SEQUENCE public.store_deletion_requests_id_seq TO authenticated;
+GRANT ALL ON SEQUENCE public.store_deletion_requests_id_seq TO service_role;
+
+
+--
 -- Name: TABLE top_selling_products; Type: ACL; Schema: public; Owner: -
 --
 
@@ -1647,5 +1739,5 @@ ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin IN SCHEMA public GRANT ALL ON T
 -- PostgreSQL database dump complete
 --
 
-\unrestrict 2bWPnr8SsoYX1aDKPCsgQhr6zLxDSx37R39lbnVwljni7MuKxNIYMhKoeJ9hOoG
+\unrestrict jnRGr07zdzWxsyeLfLBBg9YJbzU8O3qwneZY1bhWJ078wCBTqfebHaSOk0VMkfC
 

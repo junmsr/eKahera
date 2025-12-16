@@ -2,31 +2,48 @@ const pool = require('../config/database');
 const { logAction } = require('../utils/logger');
 const { sendVerificationStatusNotification } = require('../utils/emailService');
 const bcrypt = require('bcryptjs');
+const {
+  ensureStoreDeletionTable,
+  getLatestDeletionRequest,
+  hardDeleteBusiness
+} = require('../utils/storeDeletionService');
 
 const normalizeStatus = (status) => (status === 'repass' ? 'rejected' : status);
 
 // Get all stores/businesses for SuperAdmin
 exports.getAllStores = async (req, res) => {
   try {
+    await ensureStoreDeletionTable();
     const result = await pool.query(`
       SELECT
         b.business_id as id,
         b.business_name as name,
         b.email,
         b.business_type,
-        b.country,
+        b.region,
         b.business_address,
         b.house_number,
         b.mobile,
         b.created_at,
         b.updated_at,
         b.verification_status as status,
-        COUNT(u.user_id) as user_count
+        COUNT(u.user_id) as user_count,
+        sdr.status as deletion_status,
+        sdr.scheduled_for as deletion_scheduled_for,
+        sdr.requested_at as deletion_requested_at
       FROM business b
       LEFT JOIN users u ON u.business_id = b.business_id
+      LEFT JOIN LATERAL (
+        SELECT status, scheduled_for, requested_at
+        FROM store_deletion_requests sdr
+        WHERE sdr.business_id = b.business_id
+        ORDER BY requested_at DESC
+        LIMIT 1
+      ) sdr ON TRUE
       GROUP BY b.business_id, b.business_name, b.email, b.business_type,
-               b.country, b.business_address, b.house_number, b.mobile,
-               b.created_at, b.updated_at, b.verification_status
+               b.region, b.business_address, b.house_number, b.mobile,
+               b.created_at, b.updated_at, b.verification_status,
+               sdr.status, sdr.scheduled_for, sdr.requested_at
       ORDER BY b.created_at DESC
     `);
     
@@ -46,11 +63,11 @@ exports.getStoreById = async (req, res) => {
     const businessResult = await pool.query(`
       SELECT 
         business_id as id,
+        business_name,
         business_name as name,
-        business_name as storeName,
         email,
         business_type,
-        country,
+        region,
         business_address as location,
         house_number,
         mobile as phone,
@@ -71,7 +88,10 @@ exports.getStoreById = async (req, res) => {
     // Get business owner details
     const ownerResult = await pool.query(`
       SELECT 
+        user_id,
         username,
+        first_name,
+        last_name,
         email,
         contact_number,
         created_at,
@@ -101,10 +121,54 @@ exports.getStoreById = async (req, res) => {
     const fullAddress = [
       business.house_number,
       business.location,
-      business.country,
+      business.region,
     ]
       .filter(Boolean)
       .join(", ");
+
+    const deletionInfo = await getLatestDeletionRequest(id);
+
+    // Get owner user_id for filtering logs
+    const ownerUserId = owner?.user_id || null;
+    
+    // Get last login (most recent "Login" action for the owner/admin specifically)
+    let lastLogin = null;
+    if (ownerUserId) {
+      const lastLoginResult = await pool.query(
+        `SELECT date_time 
+         FROM logs 
+         WHERE business_id = $1 AND user_id = $2 AND action = 'Login'
+         ORDER BY date_time DESC 
+         LIMIT 1`,
+        [id, ownerUserId]
+      );
+      lastLogin = lastLoginResult.rows[0]?.date_time || null;
+    }
+
+    // Get last password change (most recent action ending with "changed password" for the owner/admin)
+    // Use both business_id and user_id to ensure we get the password change for the correct user
+    // The action format is: 'Admin "username" changed password' or 'User "username" changed password' or 'Cashier "username" changed password'
+    // We require it to end with "changed password" (not just contain it) to avoid false matches
+    let lastPasswordChange = null;
+    if (ownerUserId) {
+      const lastPasswordChangeResult = await pool.query(
+        `SELECT date_time, action
+         FROM logs 
+         WHERE business_id = $1 
+         AND user_id = $2 
+         AND action ILIKE '%changed password'
+         ORDER BY date_time DESC 
+         LIMIT 1`,
+        [id, ownerUserId]
+      );
+      // Double-check that it actually ends with "changed password" to avoid false matches
+      if (lastPasswordChangeResult.rows.length > 0) {
+        const actionText = (lastPasswordChangeResult.rows[0].action || '').trim();
+        if (actionText.toLowerCase().endsWith('changed password')) {
+          lastPasswordChange = lastPasswordChangeResult.rows[0].date_time;
+        }
+      }
+    }
 
     // Get documents for this business
     const documentsResult = await pool.query(
@@ -132,28 +196,38 @@ exports.getStoreById = async (req, res) => {
     // Format response similar to what frontend expects
     const storeDetails = {
       id: business.id,
-      name: owner?.username || business.name,
-      firstName: owner?.username?.split(' ')[0] || business.name,
-      lastName: owner?.username?.split(' ')[1] || '',
+      name: owner?.first_name && owner?.last_name 
+        ? `${owner.first_name} ${owner.last_name}` 
+        : owner?.username || business.name,
+      firstName: owner?.first_name || owner?.username?.split(' ')[0] || business.name,
+      lastName: owner?.last_name || owner?.username?.split(' ').slice(1).join(' ') || '',
       email: business.email,
       phone: business.phone,
-      storeName: business.storeName,
+      storeName: business.business_name,
       business_type: business.business_type,
+      region: business.region,
       location: fullAddress,
+      business_address: business.location,
+      house_number: business.house_number,
       established: business.established?.toString(),
       verificationStatus: normalizeStatus(business.verification_status) || 'pending',
       documents: formattedDocuments,
       verifiedDocuments: approvedDocuments,
+      deletion: deletionInfo
+        ? {
+            status: deletionInfo.status,
+            scheduledFor: deletionInfo.scheduled_for,
+            requestedAt: deletionInfo.requested_at,
+          }
+        : null,
       account: {
         username: owner?.username || 'N/A',
         passwordHint: '******** (Secure)',
-        lastLogin: 'N/A',
+        lastLogin: lastLogin,
         createdAt: business.created_at,
-        lastPasswordChange: 'N/A',
-        loginAttemptsToday: 0,
+        lastPasswordChange: lastPasswordChange,
         storeAddress: fullAddress,
-        status: normalizeStatus(business.verification_status || 'pending'),
-        sessionTimeout: '30 minutes'
+        status: normalizeStatus(business.verification_status || 'pending')
       },
       users: usersResult.rows,
       totalUsers: usersResult.rows.length
@@ -367,61 +441,24 @@ exports.deleteStore = async (req, res) => {
     }
 
     const store = storeResult.rows[0];
+  await hardDeleteBusiness({ businessId: id, performedBy: req.user.userId });
 
-    // Start transaction for cascading delete
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
+  // Log the deletion action
+  logAction({
+    userId: req.user.userId,
+    businessId: null,
+    action: `Deleted store: ${store.business_name} (ID: ${id})`
+  });
 
-      // Delete related data in order (to handle foreign key constraints)
-      // Delete logs
-      await client.query('DELETE FROM logs WHERE business_id = $1', [id]);
+  console.log(`SuperAdmin ${req.user.email} deleted store ${store.business_name}`);
 
-      // Delete transactions (this will cascade to transaction_items, transaction_payment, returns, returned_items)
-      await client.query('DELETE FROM transactions WHERE business_id = $1', [id]);
-
-      // Delete inventory
-      await client.query('DELETE FROM inventory WHERE business_id = $1', [id]);
-
-      // Delete products
-      await client.query('DELETE FROM products WHERE business_id = $1', [id]);
-
-      // Delete business documents
-      await client.query('DELETE FROM business_documents WHERE business_id = $1', [id]);
-
-      // Delete email notifications
-      await client.query('DELETE FROM email_notifications WHERE business_id = $1', [id]);
-
-      // Delete users (this will cascade to related tables)
-      await client.query('DELETE FROM users WHERE business_id = $1', [id]);
-
-      // Finally delete the business
-      await client.query('DELETE FROM business WHERE business_id = $1', [id]);
-
-      await client.query('COMMIT');
-
-      // Log the deletion action
-      logAction({
-        userId: req.user.userId,
-        businessId: null,
-        action: `Deleted store: ${store.business_name} (ID: ${id})`
-      });
-
-      console.log(`SuperAdmin ${req.user.email} deleted store ${store.business_name}`);
-
-      res.json({
-        message: 'Store deleted successfully',
-        store: {
-          id: store.business_id,
-          name: store.business_name
-        }
-      });
-    } catch (err) {
-      await client.query('ROLLBACK');
-      throw err;
-    } finally {
-      client.release();
+  res.json({
+    message: 'Store deleted successfully',
+    store: {
+      id: store.business_id,
+      name: store.business_name
     }
+  });
   } catch (err) {
     console.error('Delete store error:', err);
     res.status(500).json({ error: 'Failed to delete store' });

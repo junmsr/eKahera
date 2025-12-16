@@ -25,8 +25,24 @@ export default defineConfig(({ mode }) => {
           plugins: ['styled-jsx/babel'],
         },
       }),
-      tailwindcss()
+      tailwindcss({
+        css: {
+          colorFunction: 'rgb'
+        }
+      })
     ],
+    css: {
+      modules: {
+        scopeBehaviour: 'local',
+      },
+      preprocessorOptions: {
+        css: {
+          modules: {
+            localsConvention: 'camelCaseOnly',
+          },
+        },
+      },
+    },
     server: {
       proxy: proxySettings,
     },

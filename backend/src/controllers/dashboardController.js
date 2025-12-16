@@ -8,14 +8,9 @@ function resolveBusinessId(req) {
 
 exports.getOverview = async (req, res) => {
   try {
-    console.log('=== getOverview called ===');
-    console.log('Request query params:', req.query);
-    
     const businessId = resolveBusinessId(req);
-    console.log('Resolved businessId:', businessId);
     
     if (!businessId) {
-      console.log('No businessId found, returning empty response');
       return res.status(200).json({ message: 'no business selected', metrics: {} });
     }
 
@@ -27,7 +22,6 @@ exports.getOverview = async (req, res) => {
     let start, end;
     
     if (startDate && endDate) {
-      // Use provided dates, but ensure they're in the correct format
       start = new Date(startDate);
       end = new Date(endDate);
     } else {
@@ -45,22 +39,10 @@ exports.getOverview = async (req, res) => {
       return `${year}-${month}-${day}`;
     };
     
-    const startFormatted = formatDate(start);
-    const endFormatted = formatDate(end);
-    
-    console.log('Using date range:', { 
-      start: startFormatted, 
-      end: endFormatted,
-      rawStart: startDate,
-      rawEnd: endDate
-    });
-    
-    // Use the formatted dates in the query
-    const startDateForQuery = startFormatted;
-    const endDateForQuery = endFormatted;
+    const startDateForQuery = formatDate(start);
+    const endDateForQuery = formatDate(end);
 
     // Get sales data for the period
-    console.log('Executing sales query...');
     const salesQuery = `
       SELECT 
         COALESCE(SUM(ssv.total_sales_amount), 0) AS total_sales,
@@ -71,14 +53,9 @@ exports.getOverview = async (req, res) => {
        WHERE ssv.business_id = $1 
          AND ssv.sale_date BETWEEN $2::date AND $3::date`;
     
-    console.log('Sales query:', salesQuery);
-    console.log('Query params:', [businessId, startDateForQuery, endDateForQuery]);
-    
     const salesRes = await pool.query(salesQuery, [businessId, startDateForQuery, endDateForQuery]);
-    console.log('Sales query result:', JSON.stringify(salesRes.rows[0], null, 2));
 
     // Calculate expenses (using transaction_items and products cost_price)
-    console.log('Executing expenses query...');
     const expensesQuery = `
       SELECT 
         COALESCE(SUM(ti.product_quantity * p.cost_price), 0) AS total_expenses
@@ -89,26 +66,14 @@ exports.getOverview = async (req, res) => {
          AND t.status = 'completed'
          AND DATE(t.created_at) BETWEEN $2::date AND $3::date`;
     
-    console.log('Expenses query:', expensesQuery);
-    console.log('Query params:', [businessId, startDateForQuery, endDateForQuery]);
-    
     const expensesRes = await pool.query(expensesQuery, [businessId, startDateForQuery, endDateForQuery]);
-    console.log('Expenses query result:', JSON.stringify(expensesRes.rows[0], null, 2));
 
     const totalSales = Number(salesRes.rows[0].total_sales) || 0;
     const totalExpenses = Number(expensesRes.rows[0]?.total_expenses) || 0;
     const netProfit = totalSales - totalExpenses;
     const grossMargin = totalSales > 0 ? (netProfit / totalSales) * 100 : 0;
-    
-    console.log('Calculated values:', {
-      totalSales,
-      totalExpenses,
-      netProfit,
-      grossMargin
-    });
 
     // Top products and categories for the period
-    console.log('Fetching top products...');
     const topProductsQuery = `
       SELECT 
         p.product_id, 
@@ -126,9 +91,7 @@ exports.getOverview = async (req, res) => {
        LIMIT 5`;
     
     const topProductsRes = await pool.query(topProductsQuery, [businessId, startDateForQuery, endDateForQuery]);
-    console.log('Top products result count:', topProductsRes.rows.length);
 
-    console.log('Fetching top categories...');
     const categoriesQuery = `
       SELECT 
         pc.product_category_name, 
@@ -146,13 +109,12 @@ exports.getOverview = async (req, res) => {
        LIMIT 5`;
     
     const categoriesRes = await pool.query(categoriesQuery, [businessId, startDateForQuery, endDateForQuery]);
-    console.log('Top categories result count:', categoriesRes.rows.length);
 
     const response = {
       totalSales,
       totalExpenses,
       netProfit,
-      grossMargin: Math.round(grossMargin * 100) / 100, // Round to 2 decimal places
+      grossMargin: Math.round(grossMargin * 100) / 100,
       totalTransactions: Number(salesRes.rows[0].total_transactions) || 0,
       totalItemsSold: Number(salesRes.rows[0].total_items_sold) || 0,
       averageTransactionValue: Number(salesRes.rows[0].avg_transaction_value) || 0,
@@ -160,7 +122,6 @@ exports.getOverview = async (req, res) => {
       topCategories: categoriesRes.rows || []
     };
     
-    console.log('Sending response:', JSON.stringify(response, null, 2));
     res.json(response);
   } catch (err) {
     res.status(500).json({ error: err.message });

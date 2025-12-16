@@ -1,6 +1,7 @@
 import React from "react";
 import Button from "../common/Button";
 import BaseModal from "./BaseModal";
+import { useKeyboardShortcuts } from "../../hooks/useKeyboardShortcuts";
 
 function CashPaymentCompleteModal({
   isOpen,
@@ -10,10 +11,30 @@ function CashPaymentCompleteModal({
   onReceipt,
   onNewEntry,
 }) {
+  useKeyboardShortcuts(
+    [
+      {
+        key: "escape",
+        action: onClose,
+        enabled: isOpen,
+        allowWhileTyping: true,
+      },
+      {
+        key: "enter",
+        action: () => {
+          if (onReceipt) onReceipt();
+        },
+        enabled: isOpen,
+        allowWhileTyping: true,
+      },
+    ],
+    [isOpen]
+  );
+
   const footerContent = (
     <div className="w-full flex flex-col gap-3">
       <Button
-        label="RECEIPT"
+        label="RECEIPT (Enter)"
         className="w-full h-11 text-sm font-semibold bg-blue-700 hover:bg-blue-800 text-white"
         onClick={() => {
           if (onReceipt) onReceipt();
@@ -83,6 +104,16 @@ function CashPaymentCompleteModal({
         <div className="mt-4 text-sm opacity-90">Payable</div>
         <div className="text-sm font-semibold">
           ₱{Number(payable).toFixed(2)}
+        </div>
+      </div>
+      <div className="text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 space-y-1">
+        <div className="flex items-center justify-between">
+          <span>Print / open receipt:</span>
+          <span className="font-mono bg-white px-2 py-0.5 rounded">Enter</span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span>Close:</span>
+          <span className="font-mono bg-white px-2 py-0.5 rounded">Esc</span>
         </div>
       </div>
     </BaseModal>

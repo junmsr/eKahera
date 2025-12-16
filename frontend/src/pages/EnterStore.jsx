@@ -39,7 +39,9 @@ export default function EnterStore() {
 		const businessId = parseBusinessIdFromCode(code);
 		if (!businessId) {
 			setError('Invalid store QR');
-			setScannerPaused(false);
+			setTimeout(() => {
+				setScannerPaused(false);
+			}, 500);
 			return;
 		}
 		// Set business ID and generate a transaction number for this session

@@ -14,10 +14,23 @@ import CashLedgerModal from "../components/modals/CashLedgerModal";
 import CheckoutModal from "../components/modals/CheckoutModal";
 import CashPaymentModal from "../components/modals/CashPaymentModal";
 import ScanCustomerCartModal from "../components/modals/ScanCustomerCartModal";
-import ProfileModal from "../components/modals/ProfileModal";
-import NotificationDropdown from "../components/common/NotificationDropdown";
-import { BiBell, BiSync, BiUser } from "react-icons/bi";
+import { BiReceipt, BiSync } from "react-icons/bi";
+import AdminReceiptsModal from "../components/modals/AdminReceiptsModal";
 import { MdClose } from "react-icons/md";
+import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
+
+const ButtonLabel = ({ text, shortcut, variant = "secondary" }) => (
+  <div className="flex items-center gap-2">
+    <span>{text}</span>
+    <span className={`hidden sm:inline-block text-xs font-bold px-1.5 py-0.5 rounded border ${
+      variant === "primary" 
+        ? "bg-white/20 border-white/40 text-white" 
+        : "bg-gray-100 border-gray-300 text-gray-600"
+    }`}>
+      {shortcut}
+    </span>
+  </div>
+);
 
 function POS() {
   const navigate = useNavigate();
@@ -39,54 +52,39 @@ function POS() {
   const [error, setError] = useState("");
   const [transactionNumber, setTransactionNumber] = useState("");
   const [transactionId, setTransactionId] = useState(null);
-  const [showNotifications, setShowNotifications] = useState(false);
-  const [showProfileModal, setShowProfileModal] = useState(false);
-  const notificationRef = useRef(null);
+  
+  // Auto-clear error message after 5 seconds
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => {
+        setError("");
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
+  const [showReceipts, setShowReceipts] = useState(false);
   const skuInputRef = useRef(null);
   const [isSidebarOpen, setSidebarOpen] = useState(false);
+  const [selectedItemIdx, setSelectedItemIdx] = useState(-1);
+  const [editingIdx, setEditingIdx] = useState(null);
   const token = sessionStorage.getItem("auth_token");
   const user = JSON.parse(sessionStorage.getItem("user") || "{}");
   const hasFinalizedRef = React.useRef(false);
   const [businessName, setBusinessName] = useState("");
+  const [selectedCartIdx, setSelectedCartIdx] = useState(0);
+  const [editingCartItem, setEditingCartItem] = useState(null);
+  const [editQty, setEditQty] = useState('1');
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [appliedDiscount, setAppliedDiscount] = useState(null);
+  const quantityInputRef = useRef(null);
 
-  // Add keyboard shortcuts for buttons: F3-F8
-  useEffect(() => {
-    const keyDownHandler = (e) => {
-      if (e.repeat) return;
-      switch (e.key) {
-        case "F3":
-          e.preventDefault();
-          skuInputRef.current?.focus();
-          break;
-        case "F4":
-          e.preventDefault();
-          setShowCashLedger(true);
-          break;
-        case "F5":
-          e.preventDefault();
-          setShowDiscount(true);
-          break;
-        case "F6":
-          e.preventDefault();
-          setShowPriceCheck(true);
-          break;
-        case "F7":
-          e.preventDefault();
-          setShowImportCart(true);
-          break;
-        case "F8":
-          e.preventDefault();
-          if (cart.length > 0) {
-            setShowCheckout(true);
-          }
-          break;
-        default:
-          break;
-      }
-    };
-    window.addEventListener("keydown", keyDownHandler);
-    return () => window.removeEventListener("keydown", keyDownHandler);
-  }, [cart.length]);
+  // Set editing cart item and initialize quantity
+  const setSelectedCartItem = (idx) => {
+    setSelectedCartIdx(idx);
+    if (idx >= 0 && idx < cart.length) {
+      setEditQty(String(cart[idx].quantity));
+    }
+  };
 
   // Generate a client-side provisional transaction number when POS opens
   useEffect(() => {
@@ -97,9 +95,19 @@ function POS() {
         .replace(/[-:T.Z]/g, "")
         .slice(0, 14);
       const randPart = Math.floor(1000 + Math.random() * 9000);
-      setTransactionNumber(`T-${businessId}-${timePart}-${randPart}`);
+      setTransactionNumber(
+        `T-${businessId.toString().padStart(2, "0")}-${timePart}-${randPart}`
+      );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Auto-focus SKU input on initial mount
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      skuInputRef.current?.focus();
+    }, 300);
+    return () => clearTimeout(timer);
   }, []);
 
   // On mount, if returned from PayMongo success/cancel, finalize or cleanup
@@ -127,6 +135,9 @@ function POS() {
               items: parsed.items || [],
               payment_type: paymentType.toLowerCase(),
               money_received: parsed.total || null,
+              discount_id: parsed.discount_id || null,
+              discount_percentage: parsed.discount_percentage || null,
+              discount_amount: parsed.discount_amount || null,
             };
             const resp = await api("/api/sales/checkout", {
               method: "POST",
@@ -145,7 +156,7 @@ function POS() {
                 url.searchParams.set("tid", String(resp.transaction_id));
               if (resp?.total != null)
                 url.searchParams.set("total", String(resp.total));
-              
+
               // If in new tab, redirect opener and close this tab
               if (isNewTab && window.opener) {
                 window.opener.location.href = url.toString();
@@ -179,10 +190,9 @@ function POS() {
         }
       }
     };
-    
+
     finalizeOnlinePayment("pending_gcash_cart", "GCash");
     finalizeOnlinePayment("pending_maya_cart", "Maya");
-
   }, []);
 
   const addSkuToCart = async (skuValue, qty = 1) => {
@@ -238,9 +248,17 @@ function POS() {
       });
       setSku("");
       setQuantity(1);
-      setScannerPaused(false);
+      // Auto-focus SKU input after adding item for next scan
+      setTimeout(() => {
+        skuInputRef.current?.focus();
+      }, 50);
     } catch (err) {
       setError("Product not found");
+    } finally {
+      // Always resume scanner after processing, even on error
+      setTimeout(() => {
+        setScannerPaused(false);
+      }, 300);
     }
   };
 
@@ -248,13 +266,14 @@ function POS() {
     await addSkuToCart(sku, quantity);
   };
 
-  const handleRemove = (idx) => setCart(cart.filter((_, i) => i !== idx));
-
-  const handleEditQuantity = async (idx, newQty) => {
-    if (newQty < 1) {
-      setError("Quantity must be at least 1");
-      return;
+  const handleRemove = (idx) => {
+    if (idx >= 0 && idx < cart.length) {
+      setCart(cart.filter((_, i) => i !== idx));
     }
+  };
+
+  const handleEditQuantity = async (idx, qty) => {
+    const newQty = qty === '' ? 1 : Math.max(1, Number(qty) || 1);
     const item = cart[idx];
     if (!item) return;
     setError("");
@@ -273,11 +292,67 @@ function POS() {
         return;
       }
       setCart((prev) =>
-        prev.map((it, i) => (i === idx ? { ...it, quantity: newQty } : it))
+        prev.map((item, i) =>
+          i === idx ? { ...item, quantity: newQty } : item
+        )
+      );
+      setEditQty(newQty); // Keep editQty in sync
+      setEditingCartItem(null);
+    } catch (err) {
+      setError(err.message || "Failed to update quantity");
+    }
+  };
+  
+  // Handle edit quantity change
+  const handleEditQtyChange = (value) => {
+    setEditQty(value);
+  };
+
+  // Handler for increment quantity (=)
+  const handleIncrementQuantity = async () => {
+    if (cart.length === 0 || selectedCartIdx < 0 || selectedCartIdx >= cart.length) return;
+    const item = cart[selectedCartIdx];
+    if (!item) return;
+    const currentQty = item.quantity;
+    const newQty = currentQty + 1;
+    setError("");
+    try {
+      const product = await api(
+        `/api/products/sku/${encodeURIComponent(item.sku)}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      const stockQty = Number(product.stock_quantity ?? 0);
+      if (newQty > stockQty) {
+        setError(
+          `Insufficient stock. Available: ${stockQty}, requested: ${newQty}.`
+        );
+        return;
+      }
+      setCart((prev) =>
+        prev.map((cartItem, i) =>
+          i === selectedCartIdx ? { ...cartItem, quantity: newQty } : cartItem
+        )
       );
     } catch (err) {
       setError(err.message || "Failed to update quantity");
     }
+  };
+
+  // Handler for decrement quantity (-)
+  const handleDecrementQuantity = () => {
+    if (cart.length === 0 || selectedCartIdx < 0 || selectedCartIdx >= cart.length) return;
+    const item = cart[selectedCartIdx];
+    if (!item) return;
+    const currentQty = item.quantity;
+    if (currentQty <= 1) return; // Don't allow going below 1
+    const newQty = currentQty - 1;
+    setCart((prev) =>
+      prev.map((cartItem, i) =>
+        i === selectedCartIdx ? { ...cartItem, quantity: newQty } : cartItem
+      )
+    );
   };
 
   const subtotal = cart.reduce(
@@ -285,11 +360,359 @@ function POS() {
     0
   );
 
-  // Placeholder for appliedDiscount state and discount calculation if needed
-  // const [appliedDiscount, setAppliedDiscount] = useState(null);
-  // const total = calculateTotalWithDiscount(subtotal, appliedDiscount);
-  // For now, total equals subtotal
-  const total = subtotal;
+  // Calculate total with discount
+  let total = subtotal;
+  if (appliedDiscount) {
+    if (appliedDiscount.type === "percentage") {
+      const discountValue = Number(appliedDiscount.value);
+      if (!isNaN(discountValue) && discountValue > 0) {
+        const discountAmount = subtotal * (discountValue / 100);
+        total = Math.max(0, subtotal - discountAmount);
+      }
+    } else if (appliedDiscount.type === "amount") {
+      const discountValue = Number(appliedDiscount.value);
+      if (!isNaN(discountValue) && discountValue > 0) {
+        total = Math.max(0, subtotal - discountValue);
+      }
+    }
+  }
+
+  // Handle keyboard navigation for cart items
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Don't handle keys when modals are open
+      if (showDiscount || showPriceCheck || showImportCart || showCashLedger || showCheckout || showCashModal || showReceipts || showLogoutConfirm) {
+        return;
+      }
+
+      // Don't handle if user is typing in an input field (unless it's specific navigation keys)
+      const isInputFocused = e.target && (
+        e.target.tagName === 'INPUT' || 
+        e.target.tagName === 'TEXTAREA' ||
+        e.target.isContentEditable
+      );
+
+      // Only handle navigation keys if not in input or if editing cart item
+      const navigationKeys = ['ArrowUp', 'ArrowDown', 'Enter', 'Escape'];
+      const editKeys = ['e', 'E', 'd', 'D'];
+      const quantityKeys = ['=', '-'];
+      
+      if (isInputFocused && editingCartItem === null && !navigationKeys.includes(e.key) && !editKeys.includes(e.key) && !quantityKeys.includes(e.key)) {
+        return;
+      }
+
+      // Handle Escape key for editing state (but let shortcut handler handle modal closing)
+      if (e.key === 'Escape' && editingCartItem !== null) {
+        e.preventDefault();
+        e.stopPropagation();
+        setEditingCartItem(null);
+        return;
+      }
+
+      // Handle Enter key for editing state
+      if (e.key === 'Enter' && editingCartItem !== null) {
+        e.preventDefault();
+        e.stopPropagation();
+        handleEditQuantity(editingCartItem, editQty);
+        setEditingCartItem(null);
+        return;
+      }
+
+      // Handle arrow keys - allow navigation even when SKU input is focused
+      const isSkuInput = e.target === skuInputRef.current;
+      const isArrowKey = e.key === 'ArrowUp' || e.key === 'ArrowDown';
+      const isQuantityKey = e.key === '=' || e.key === '-';
+      
+      if (isArrowKey && (isSkuInput || !isInputFocused || editingCartItem !== null)) {
+        switch (e.key) {
+          case 'ArrowUp':
+          e.preventDefault();
+          e.stopPropagation();
+          setSelectedCartIdx(prev => prev > 0 ? prev - 1 : cart.length - 1);
+          break;
+          case 'ArrowDown':
+          e.preventDefault();
+          e.stopPropagation();
+          setSelectedCartIdx(prev => prev < cart.length - 1 ? prev + 1 : 0);
+          break;
+          // E and D keys removed - now using F1 and F2 instead
+          default:
+            break;
+        }
+      }
+      
+      // Handle quantity keys (= and -) even when SKU input is focused
+      if (isQuantityKey && (isSkuInput || !isInputFocused || editingCartItem !== null)) {
+        if (cart.length > 0 && selectedCartIdx >= 0 && selectedCartIdx < cart.length) {
+          if (e.key === '=') {
+            e.preventDefault();
+            e.stopPropagation();
+            handleIncrementQuantity();
+          } else if (e.key === '-') {
+            e.preventDefault();
+            e.stopPropagation();
+            handleDecrementQuantity();
+          }
+        }
+      }
+    };
+
+    // Use bubble phase (after shortcuts hook which uses capture)
+    window.addEventListener('keydown', handleKeyDown, false);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown, false);
+    };
+  }, [cart.length, selectedCartIdx, editingCartItem, editQty, showDiscount, showPriceCheck, showImportCart, showCashLedger, showCheckout, showCashModal, showReceipts, showLogoutConfirm, handleIncrementQuantity, handleDecrementQuantity]);
+
+  // Reset selected index when cart changes
+  useEffect(() => {
+    if (cart.length === 0) {
+      setSelectedCartIdx(0);
+    } else {
+      setSelectedCartIdx(prev => Math.min(prev, cart.length - 1));
+    }
+  }, [cart.length]);
+
+
+  // Pause scanner when any modal is open to avoid hardware scanner/keyboard events interfering with shortcuts
+  useEffect(() => {
+    const anyModalOpen =
+      showDiscount ||
+      showPriceCheck ||
+      showImportCart ||
+      showCashLedger ||
+      showCheckout ||
+      showCashModal ||
+      showReceipts ||
+      showLogoutConfirm;
+    
+    setScannerPaused(anyModalOpen);
+    
+    // When modals close, refocus SKU input after a delay (but not if user is interacting with other elements)
+    if (!anyModalOpen) {
+      const timer = setTimeout(() => {
+        const activeElement = document.activeElement;
+        const isInputFocused = activeElement && (
+          activeElement.tagName === 'INPUT' || 
+          activeElement.tagName === 'TEXTAREA' ||
+          activeElement.isContentEditable ||
+          activeElement.tagName === 'BUTTON'
+        );
+        // Only refocus if user isn't actively clicking buttons or using inputs
+        if (!isInputFocused && document.body === activeElement) {
+          skuInputRef.current?.focus();
+        }
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [
+    showDiscount,
+    showPriceCheck,
+    showImportCart,
+    showCashLedger,
+    showCheckout,
+    showCashModal,
+    showReceipts,
+    showLogoutConfirm,
+  ]);
+
+  const focusSkuInput = () => {
+    skuInputRef.current?.focus();
+    skuInputRef.current?.select?.();
+  };
+
+  const handleNewTransaction = () => {
+    setCart([]);
+    setAppliedDiscount(null);
+    setTransactionId(null);
+    setError("");
+    focusSkuInput();
+  };
+
+  const handleVoidSelected = () => {
+    if (cart.length === 0 || selectedCartIdx == null) return;
+    handleRemove(selectedCartIdx);
+  };
+
+  const handleSetQuantityShortcut = () => {
+    if (cart.length === 0 || selectedCartIdx == null) return;
+    const current = cart[selectedCartIdx];
+    const nextQty = Number(
+      window.prompt(
+        `Set quantity for ${current.name || current.sku}:`,
+        current.quantity
+      )
+    );
+    if (!Number.isNaN(nextQty) && nextQty > 0) {
+      handleEditQuantity(selectedCartIdx, nextQty);
+    }
+  };
+
+  const handleRemoveDiscount = () => {
+    if (appliedDiscount) {
+      setAppliedDiscount(null);
+    }
+  };
+
+  // Handler for edit quantity (F1)
+  const handleEditQuantityShortcut = () => {
+    if (cart.length > 0 && selectedCartIdx >= 0 && selectedCartIdx < cart.length) {
+      setEditingCartItem(selectedCartIdx);
+      setEditQty(String(cart[selectedCartIdx].quantity));
+    }
+  };
+
+  // Handler for discount modal toggle (F6) - open/close discount modal
+  const handleDiscountToggle = () => {
+    setShowDiscount(!showDiscount);
+  };
+
+  useKeyboardShortcuts(
+    [
+      // ` (backtick) - focus SKU field
+      { key: "`", action: focusSkuInput },
+      // F1 - edit product quantity
+      {
+        key: "f1",
+        action: handleEditQuantityShortcut,
+        enabled: cart.length > 0 && selectedCartIdx >= 0,
+      },
+      // F2 - delete item
+      {
+        key: "f2",
+        action: handleVoidSelected,
+        enabled: cart.length > 0,
+      },
+      // F3 - logout
+      {
+        key: "f3",
+        description: "Logout",
+        action: () => setShowLogoutConfirm(true),
+      },
+      // F4 - add to cart button
+      {
+        key: "f4",
+        action: handleAddToCart,
+        enabled: !!sku, // Only enable if there's a SKU value
+      },
+      // F5 - cash ledger
+      { key: "f5", action: () => setShowCashLedger(true) },
+      // F6 - open/close discount modal
+      {
+        key: "f6",
+        action: handleDiscountToggle,
+      },
+      // F7 - price check
+      {
+        key: "f7",
+        action: () => {
+          setShowPriceCheck(true);
+        },
+      },
+      // F8 - scan customer cart (keep existing)
+      {
+        key: "f8",
+        action: () => setShowImportCart(true),
+      },
+      // F9 - receipts
+      { key: "f9", action: () => setShowReceipts(true) },
+      // F10 - (reserved, no action specified)
+      // F11 - remove discount
+      {
+        key: "f11",
+        action: handleRemoveDiscount,
+        enabled: !!appliedDiscount,
+      },
+      // F12 - checkout
+      {
+        key: "f12",
+        action: () => setShowCheckout(true),
+        enabled: cart.length > 0,
+      },
+      // = (equals) - increment quantity
+      {
+        key: "=",
+        action: handleIncrementQuantity,
+        enabled: cart.length > 0 && selectedCartIdx >= 0 && selectedCartIdx < cart.length,
+      },
+      // - (minus) - decrement quantity
+      {
+        key: "-",
+        action: handleDecrementQuantity,
+        enabled: cart.length > 0 && selectedCartIdx >= 0 && selectedCartIdx < cart.length,
+      },
+      {
+        key: "escape",
+        action: () => {
+          // Only close modals, don't interfere with cart editing (handled separately)
+          if (showCheckout) setShowCheckout(false);
+          else if (showDiscount) setShowDiscount(false);
+          else if (showPriceCheck) setShowPriceCheck(false);
+          else if (showImportCart) setShowImportCart(false);
+          else if (showCashModal) setShowCashModal(false);
+          else if (showCashLedger) setShowCashLedger(false);
+          else if (showReceipts) setShowReceipts(false);
+          else if (showLogoutConfirm) setShowLogoutConfirm(false);
+          // Note: Cart item editing escape is handled in the separate keyboard handler
+        },
+        allowWhileTyping: true,
+        stopPropagation: false, // Allow other handlers to process
+      },
+    ],
+    [
+      cart.length,
+      selectedCartIdx,
+      sku,
+      appliedDiscount,
+      showCheckout,
+      showDiscount,
+      showPriceCheck,
+      showImportCart,
+      showCashModal,
+      showCashLedger,
+      showReceipts,
+      showLogoutConfirm,
+    ]
+  );
+
+  // show confirmation modal first, perform actual logout in confirmLogout
+  const handleLogout = () => {
+    setShowLogoutConfirm(true);
+  };
+
+  const confirmLogout = () => {
+    sessionStorage.removeItem("auth_token");
+    sessionStorage.removeItem("user");
+    // close modal then navigate home
+    setShowLogoutConfirm(false);
+    navigate("/");
+  };
+
+  const handleCloseLogoutModal = () => {
+    setShowLogoutConfirm(false);
+  };
+
+  // Handle keyboard events for logout confirmation
+  useEffect(() => {
+    if (!showLogoutConfirm) return;
+
+    const handleKeyDown = (e) => {
+      // Use stopPropagation to prevent other handlers from interfering
+      e.stopPropagation();
+      
+      if (e.key === 'Escape' || e.key === 'Esc') {
+        e.preventDefault();
+        handleCloseLogoutModal();
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        confirmLogout();
+      }
+    };
+
+    // Use capture phase to ensure we get the event first
+    document.addEventListener('keydown', handleKeyDown, { capture: true });
+    return () => document.removeEventListener('keydown', handleKeyDown, { capture: true });
+  }, [showLogoutConfirm]);
 
   const handleCheckout = async (paymentMethod, amountReceived = null) => {
     if (cart.length === 0) return;
@@ -306,6 +729,9 @@ function POS() {
         money_received: amountReceived,
         transaction_id: transactionId, // Include the transaction ID if it exists
         transaction_number: transactionNumber,
+        discount_id: appliedDiscount?.discount_id || null,
+        discount_percentage: appliedDiscount?.type === 'percentage' ? appliedDiscount.value : null,
+        discount_amount: appliedDiscount?.type === 'amount' ? appliedDiscount.value : null,
       };
 
       const resp = await api("/api/sales/checkout", {
@@ -334,126 +760,18 @@ function POS() {
         .replace(/[-:T.Z]/g, "")
         .slice(0, 14);
       const randPart = Math.floor(1000 + Math.random() * 9000);
-      setTransactionNumber(`T-${businessId}-${timePart}-${randPart}`);
-      // setAppliedDiscount(null); // if using discount
+      setTransactionNumber(
+        `T-${businessId.toString().padStart(2, "0")}-${timePart}-${randPart}`
+      );
+      setAppliedDiscount(null); // Reset discount after successful checkout
+      setTransactionId(null);
     } catch (err) {
       console.error("Checkout error:", err);
       setError("Checkout failed");
     }
   };
 
-  const [notifications, setNotifications] = useState([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-
-  const getReadNotifIds = () => {
-    try {
-      return JSON.parse(sessionStorage.getItem("read_notif_ids") || "[]");
-    } catch (e) {
-      return [];
-    }
-  };
-
-  const fetchNotifications = async () => {
-    try {
-      const resp = await api("/api/logs", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const readIds = new Set(getReadNotifIds());
-      const deletedIds = new Set(
-        JSON.parse(sessionStorage.getItem("deleted_notif_ids") || "[]")
-      );
-      const mapped = (resp || [])
-        .filter((log) => !deletedIds.has(log.log_id))
-        .map((log) => ({
-          id: log.log_id,
-          title: log.action,
-          message: `${log.username} (${log.role}) did an action: ${log.action}`,
-          time: new Date(log.date_time).toLocaleString(),
-          isRead: readIds.has(log.log_id),
-        }));
-      setNotifications(mapped);
-      setUnreadCount(mapped.filter((n) => !n.isRead).length);
-    } catch (e) {
-      console.error("Failed to fetch notifications", e);
-    }
-  };
-
-  const handleMarkAsRead = (id) => {
-    const readIds = getReadNotifIds();
-    if (!readIds.includes(id)) {
-      sessionStorage.setItem(
-        "read_notif_ids",
-        JSON.stringify([...readIds, id])
-      );
-    }
-    setNotifications((notifs) =>
-      notifs.map((n) => (n.id === id ? { ...n, isRead: true } : n))
-    );
-    setUnreadCount((c) => Math.max(0, c - 1));
-  };
-
-  const handleMarkAsUnread = (id) => {
-    const readIds = getReadNotifIds();
-    const filtered = readIds.filter((rid) => rid !== id);
-    sessionStorage.setItem("read_notif_ids", JSON.stringify(filtered));
-    setNotifications((notifs) =>
-      notifs.map((n) => (n.id === id ? { ...n, isRead: false } : n))
-    );
-    setUnreadCount((c) => c + 1);
-  };
-
-  const handleDeleteNotification = (id) => {
-    const deletedIds = JSON.parse(
-      sessionStorage.getItem("deleted_notif_ids") || "[]"
-    );
-    sessionStorage.setItem(
-      "deleted_notif_ids",
-      JSON.stringify([...deletedIds, id])
-    );
-    setNotifications((notifs) => notifs.filter((n) => n.id !== id));
-    // Update unread count if deleted notification was unread
-    const notif = notifications.find((n) => n.id === id);
-    if (notif && !notif.isRead) {
-      setUnreadCount((c) => Math.max(0, c - 1));
-    }
-  };
-
-  useEffect(() => {
-    fetchNotifications();
-  }, []);
-
-  // Fetch business name
-  useEffect(() => {
-    const fetchBusinessName = async () => {
-      try {
-        const resp = await api("/api/business/profile", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (resp?.business?.business_name) {
-          setBusinessName(resp.business.business_name);
-        }
-      } catch (e) {
-        console.error("Failed to fetch business name", e);
-      }
-    };
-    if (token) {
-      fetchBusinessName();
-    }
-  }, [token]);
-
-  // Close dropdown when clicking outside notifications
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (
-        notificationRef.current &&
-        !notificationRef.current.contains(event.target)
-      ) {
-        setShowNotifications(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  const [showRecentReceiptsModal, setShowRecentReceiptsModal] = useState(false);
 
   const handleCopyTn = async () => {
     try {
@@ -464,6 +782,30 @@ function POS() {
 
   const headerActions = (
     <div className="flex items-center gap-1 sm:gap-4 mr-3">
+      {/* Transaction Number display */}
+      <div className="space-y-2">
+        {appliedDiscount && (
+          <div className="flex items-center justify-between text-sm text-green-600">
+            <span>Discount Applied:</span>
+            <span className="font-medium">
+              {appliedDiscount.type === 'percentage' 
+                ? `${appliedDiscount.value}%` 
+                : `₱${Number(appliedDiscount.value).toFixed(2)}`}
+            </span>
+          </div>
+        )}
+        <div className="flex items-center justify-between text-lg font-semibold">
+          <span>Total:</span>
+          <div className="flex items-center gap-2">
+            {appliedDiscount && (
+              <span className="text-sm text-gray-500 line-through">
+                ₱{subtotal.toFixed(2)}
+              </span>
+            )}
+            <span>₱{total.toFixed(2)}</span>
+          </div>
+        </div>
+      </div>
       {/* Transaction Number display */}
       <div className="flex-1 flex items-center justify-center">
         <button
@@ -489,30 +831,20 @@ function POS() {
           </span>
         </button>
       </div>
-      {/* Notification Button with Dropdown */}
-      <div className="relative" ref={notificationRef}>
-        <NotificationDropdown
-          notifications={notifications}
-          unreadCount={unreadCount}
-          onMarkAsRead={handleMarkAsRead}
-          onMarkAsUnread={handleMarkAsUnread}
-          onDelete={handleDeleteNotification}
-          isOpen={showNotifications}
-          onToggle={() => setShowNotifications(!showNotifications)}
-          containerRef={notificationRef}
-        />
-      </div>
-
-      {/* Cashier Profile Button */}
+      {/* View All Receipts Button */}
       <button
-        onClick={() => setShowProfileModal(true)}
-        className="flex items-center gap-2 bg-white/80 backdrop-blur-sm p-1.5 sm:px-3 sm:py-2 rounded-lg border border-gray-200/80"
+        onClick={() => setShowReceipts(true)}
+        className="flex items-center gap-2 bg-white/80 backdrop-blur-sm p-1.5 sm:px-3 sm:py-2 rounded-lg border border-gray-200/80 hover:bg-gray-50 transition-colors"
+        title="View all receipts (F9)"
       >
-        <div className="w-6 h-6 sm:w-7 sm:h-7 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-full flex items-center justify-center text-sm font-medium shadow-md">
-          {user.username?.[0]?.toUpperCase() || "A"}
+        <div className="relative">
+          <BiReceipt className="w-5 h-5 text-blue-600" />
         </div>
         <span className="text-sm font-medium text-gray-700 hidden sm:inline">
-          {user.username || "Admin"}
+          Receipts
+        </span>
+        <span className="hidden sm:inline-block bg-blue-50 text-blue-700 border border-blue-200 text-xs font-bold px-1.5 py-0.5 rounded">
+          F9
         </span>
       </button>
     </div>
@@ -520,7 +852,7 @@ function POS() {
 
   return (
     <PageLayout
-      title={businessName ? `${businessName} - POS` : "POS"}
+      title="POS"
       sidebar={<NavAdmin />}
       headerActions={headerActions}
       isSidebarOpen={isSidebarOpen}
@@ -541,7 +873,100 @@ function POS() {
                     if (showPriceCheck) {
                       setPriceCheckSku(code);
                     } else {
-                      await addSkuToCart(code, 1);
+                      try {
+                        let scannedData;
+                        try {
+                          scannedData = JSON.parse(code);
+                        } catch (e) {
+                          scannedData = null;
+                        }
+                        if (
+                          scannedData &&
+                          scannedData.t === "cart" &&
+                          Array.isArray(scannedData.items)
+                        ) {
+                          // set transactionId from scanned data if present
+                          if (scannedData.transaction_id) {
+                            setTransactionId(scannedData.transaction_id);
+                          }
+                          // set transaction_number from scanned data if present
+                          if (scannedData.transaction_number) {
+                            setTransactionNumber(
+                              scannedData.transaction_number
+                            );
+                          }
+                          const items = scannedData.items.map((it) => ({
+                            product_id: it.p,
+                            quantity: it.q,
+                            sku: it.sku || "",
+                          }));
+                          try {
+                            const fetchedProducts = await Promise.all(
+                              items.map(async (item) => {
+                                const res = await api(
+                                  `/api/products/${item.product_id}`,
+                                  {
+                                    headers: {
+                                      Authorization: `Bearer ${token}`,
+                                    },
+                                  }
+                                );
+                                return {
+                                  product_id: item.product_id,
+                                  sku: res.sku || item.sku || "",
+                                  name: res.product_name || "",
+                                  price: Number(res.selling_price) || 0,
+                                  quantity: item.quantity,
+                                };
+                              })
+                            );
+                            setCart((prev) => {
+                              const byProductId = new Map(
+                                prev.map((i) => [i.product_id, i])
+                              );
+                              for (const it of fetchedProducts) {
+                                const existing = byProductId.get(it.product_id);
+                                if (existing) {
+                                  existing.quantity += it.quantity;
+                                } else {
+                                  byProductId.set(it.product_id, { ...it });
+                                }
+                              }
+                              return Array.from(byProductId.values());
+                            });
+                            return;
+                          } catch (err) {
+                            console.error(
+                              "Error fetching product details for scanned cart:",
+                              err
+                            );
+                            // fallback to merging raw scanned items without product details
+                            setCart((prev) => {
+                              const byProductId = new Map(
+                                prev.map((i) => [i.product_id, i])
+                              );
+                              for (const it of items) {
+                                const existing = byProductId.get(it.product_id);
+                                if (existing) {
+                                  existing.quantity += it.quantity;
+                                } else {
+                                  byProductId.set(it.product_id, {
+                                    ...it,
+                                    name: "",
+                                    price: 0,
+                                  });
+                                }
+                              }
+                              return Array.from(byProductId.values());
+                            });
+                            return;
+                          }
+                        }
+                        await addSkuToCart(code, 1);
+                      } catch (err) {
+                        console.error("Error processing scanned code:", err);
+                        await addSkuToCart(code, 1);
+                      }
                     }
                   }}
                   paused={scannerPaused}
@@ -559,9 +984,10 @@ function POS() {
                   quantity={quantity}
                   setQuantity={setQuantity}
                   handleAddToCart={handleAddToCart}
+                  quantityInputRef={quantityInputRef}
                 />
                 {error && (
-                  <div className="bg-red-50 border-l-4 border-red-500 rounded-lg p-3 flex items-start gap-2 mt-3">
+                  <div className="bg-red-50 border-l-4 border-red-500 rounded-lg p-3 flex items-start gap-2 mt-3 relative animate-in slide-in-from-top-2 duration-300">
                     <svg
                       className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5"
                       fill="none"
@@ -575,7 +1001,7 @@ function POS() {
                         d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
                       />
                     </svg>
-                    <p className="text-sm font-medium text-red-700">
+                    <p className="text-sm font-medium text-red-700 flex-1">
                       {(() => {
                         try {
                           const parsed = JSON.parse(error);
@@ -585,6 +1011,25 @@ function POS() {
                         }
                       })()}
                     </p>
+                    <button
+                      onClick={() => setError("")}
+                      className="text-red-400 hover:text-red-600 transition-colors flex-shrink-0 ml-2"
+                      aria-label="Dismiss error"
+                    >
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M6 18L18 6M6 6l12 12"
+                        />
+                      </svg>
+                    </button>
                   </div>
                 )}
               </div>
@@ -604,21 +1049,45 @@ function POS() {
               {/* CartTableCard */}
               <div className="flex-1 min-h-0 max-h-[calc(100vh-280px)]">
                 <CartTableCard
-                  cart={cart}
-                  handleRemove={handleRemove}
-                  handleEditQuantity={handleEditQuantity}
-                  total={total}
-                  className="flex-1 h-full"
-                />
+                cart={cart}
+                handleRemove={handleRemove}
+                handleEditQuantity={(idx, newQuantity) => {
+                  handleEditQuantity(idx, newQuantity);
+                  setEditingCartItem(null);
+                }}
+                total={total}
+                appliedDiscount={appliedDiscount}
+                selectedIdx={selectedCartIdx}
+                onSelectRow={setSelectedCartItem}
+                editingIdx={editingCartItem}
+                editQty={editQty}
+                onEditQtyChange={handleEditQtyChange}
+                onEditComplete={() => setEditingCartItem(null)}
+                onStartEdit={(idx) => setEditingCartItem(idx)}
+                className="flex-1 h-full"
+              />
               </div>
 
               {/* Action Buttons */}
               <div className="grid grid-cols-12 gap-2 sm:gap-3 flex-shrink-0">
+                {appliedDiscount && (
+                  <div className="col-span-12 flex items-center justify-between bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-lg px-3 py-2">
+                    <span className="text-sm font-semibold">
+                      Discount applied: {appliedDiscount.label}
+                    </span>
+                    <button
+                      className="text-xs font-bold underline flex items-center gap-1"
+                      onClick={() => setAppliedDiscount(null)}
+                    >
+                      <span className="text-yellow-600">(F11)</span> Remove
+                    </button>
+                  </div>
+                )}
                 {/* Grouped Buttons */}
                 <div className="col-span-8">
                   <div className="grid grid-cols-2 sm:grid-cols-2 gap-2 sm:gap-3">
                     <Button
-                      label="CASH LEDGER (F4)"
+                      label={<ButtonLabel text="CASH LEDGER" shortcut="F5" />}
                       size="md"
                       className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
                       variant="secondary"
@@ -641,32 +1110,65 @@ function POS() {
                       }
                       iconPosition="left"
                     />
+                    <div className="relative group flex-1">
+                      <Button
+                        label={
+                          appliedDiscount
+                            ? <ButtonLabel text="REMOVE DISCOUNT" shortcut="F11" variant="secondary" />
+                            : <ButtonLabel text="ADD DISCOUNT" shortcut="F6" />
+                        }
+                        variant="secondary"
+                        onClick={() => {
+                          if (appliedDiscount) {
+                            if (window.confirm(`Remove ${appliedDiscount.label || 'discount'}?`)) {
+                              setAppliedDiscount(null);
+                            }
+                          } else {
+                            setShowDiscount(true);
+                          }
+                        }}
+                        icon={
+                          appliedDiscount ? (
+                            <svg
+                              className="w-5 h-5"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                              />
+                            </svg>
+                          ) : (
+                            <svg
+                              className="w-5 h-5"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                              />
+                            </svg>
+                          )
+                        }
+                        className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
+                      />
+                      {appliedDiscount && (
+                        <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                          Click to remove discount
+                          <div className="absolute bottom-0 left-1/2 w-2 h-2 bg-gray-800 transform -translate-x-1/2 translate-y-1/2 rotate-45"></div>
+                        </div>
+                      )}
+                    </div>
                     <Button
-                      label="DISCOUNT (F5)"
-                      size="md"
-                      className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
-                      onClick={() => setShowDiscount(true)}
-                      variant="secondary"
-                      microinteraction
-                      icon={
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                          />
-                        </svg>
-                      }
-                      iconPosition="left"
-                    />
-                    <Button
-                      label="PRICE CHECK (F6)"
+                      label={<ButtonLabel text="PRICE CHECK" shortcut="F7" />}
                       size="md"
                       className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
                       onClick={() => setShowPriceCheck(true)}
@@ -690,7 +1192,7 @@ function POS() {
                       iconPosition="left"
                     />
                     <Button
-                      label="IMPORT CART (F7)"
+                      label={<ButtonLabel text="SCAN CUSTOMER QR" shortcut="F8" />}
                       size="md"
                       className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
                       onClick={() => setShowImportCart(true)}
@@ -719,7 +1221,7 @@ function POS() {
                 {/* Checkout Button */}
                 <div className="col-span-4">
                   <Button
-                    label="CHECKOUT (F8)"
+                    label={<ButtonLabel text="CHECKOUT" shortcut="F12" variant="primary" />}
                     size="md"
                     className="w-full h-full text-sm sm:text-base font-bold"
                     variant="primary"
@@ -754,8 +1256,7 @@ function POS() {
         isOpen={showDiscount}
         onClose={() => setShowDiscount(false)}
         onApplyDiscount={(discount) => {
-          // Apply the discount to your transaction/cart here
-          // Optionally handle discount state update
+          setAppliedDiscount(discount);
           setShowDiscount(false);
         }}
       />
@@ -768,6 +1269,10 @@ function POS() {
       <CashLedgerModal
         isOpen={showCashLedger}
         onClose={() => setShowCashLedger(false)}
+      />
+      <AdminReceiptsModal
+        isOpen={showReceipts}
+        onClose={() => setShowReceipts(false)}
       />
       <CheckoutModal
         isOpen={showCheckout}
@@ -795,6 +1300,9 @@ function POS() {
                       quantity: i.quantity,
                     })),
                     total,
+                    discount_id: appliedDiscount?.discount_id || null,
+                    discount_percentage: appliedDiscount?.type === 'percentage' ? Number(appliedDiscount.value) : null,
+                    discount_amount: appliedDiscount?.type === 'amount' ? Number(appliedDiscount.value) : null,
                   })
                 );
                 const { checkoutUrl } = await createGcashCheckout({
@@ -804,7 +1312,7 @@ function POS() {
                   cancelUrl,
                   successUrl,
                 });
-                window.open(checkoutUrl, '_blank');
+                window.open(checkoutUrl, "_blank");
               } catch (e) {
                 setError("Failed to init GCash");
                 localStorage.removeItem("pending_gcash_cart");
@@ -826,6 +1334,9 @@ function POS() {
                       quantity: i.quantity,
                     })),
                     total,
+                    discount_id: appliedDiscount?.discount_id || null,
+                    discount_percentage: appliedDiscount?.type === 'percentage' ? Number(appliedDiscount.value) : null,
+                    discount_amount: appliedDiscount?.type === 'amount' ? Number(appliedDiscount.value) : null,
                   })
                 );
                 const { checkoutUrl } = await createMayaCheckout({
@@ -835,7 +1346,7 @@ function POS() {
                   cancelUrl,
                   successUrl,
                 });
-                window.open(checkoutUrl, '_blank');
+                window.open(checkoutUrl, "_blank");
               } catch (e) {
                 setError("Failed to init Maya");
                 localStorage.removeItem("pending_maya_cart");
@@ -855,33 +1366,176 @@ function POS() {
           setShowCashModal(false);
         }}
       />
-      <ProfileModal
-        isOpen={showProfileModal}
-        onClose={() => setShowProfileModal(false)}
-        userData={user}
-      />
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 z-90 flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/80 z-90"
+            onClick={handleCloseLogoutModal}
+          />
+          <div 
+            className="relative bg-white rounded-xl shadow-xl w-[92%] max-w-md z-100 p-0"
+            onKeyDown={(e) => {
+              // Prevent event from bubbling up to document
+              e.stopPropagation();
+              
+              // Handle Enter key specifically for the modal
+              if (e.key === 'Enter' && !e.isPropagationStopped()) {
+                e.preventDefault();
+                confirmLogout();
+              }
+            }}
+          >
+            {/* Header Section */}
+            <div className="bg-gradient-to-r from-red-50 via-red-50/80 to-orange-50/50 border-b border-red-100 px-6 py-5 rounded-t-2xl">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-red-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <svg
+                    className="w-6 h-6 text-white"
+                    fill="none"
+                    stroke="white"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                    />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <h2 className="text-xl font-bold text-gray-900 mb-1">
+                    Confirm Logout
+                  </h2>
+                  <p className="text-sm text-gray-600">
+                    Are you sure you want to log out? <span className="text-xs opacity-70">(Press Esc to cancel, Enter to confirm)</span>
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Content Section */}
+            <div className="p-6">
+              <p className="text-sm text-gray-700 mb-6">
+                You will be redirected to the login page and your session will
+                end.
+              </p>
+
+              {/* Action Buttons */}
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={handleCloseLogoutModal}
+                  className="px-5 py-2.5 rounded-lg text-sm font-semibold text-gray-700 bg-white border-2 border-gray-300 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                  autoFocus
+                >
+                  Cancel (Esc)
+                </button>
+                <button
+                  onClick={confirmLogout}
+                  className="px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 shadow-md hover:shadow-lg transition-all duration-200 flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                >
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                    />
+                  </svg>
+                  Logout (Enter)
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       <ScanCustomerCartModal
         isOpen={showImportCart}
         onClose={() => setShowImportCart(false)}
-        onImport={(items, transactionId) => {
-          // If we have a transaction ID from the scanned cart, use it
-          if (transactionId) {
-            setTransactionId(transactionId);
-          }
-          
-          // Merge imported items into current cart
-          setCart((prev) => {
-            const bySku = new Map(prev.map((i) => [i.sku, i]));
-            for (const it of items) {
-              const existing = bySku.get(it.sku);
-              if (existing) {
-                existing.quantity += it.quantity;
-              } else {
-                bySku.set(it.sku, { ...it });
-              }
+        onImport={async (items, transactionId, completionResponse) => {
+          try {
+            // If transaction was completed (completionResponse exists), navigate to receipt
+            if (completionResponse && transactionId) {
+              setCart([]);
+              setTransactionId(null);
+              setTransactionNumber(null);
+              setError("");
+              setShowImportCart(false);
+              // Navigate to receipt page for admin
+              window.location.href = `/receipt?tn=${completionResponse.transaction_number || transactionId}`;
+              return;
             }
-            return Array.from(bySku.values());
-          });
+            
+            // Otherwise, import items (backward compatibility for old QR format)
+            if (!items || items.length === 0) {
+              setError("No items found in QR code");
+              return;
+            }
+            
+            // If we have a transaction ID from the scanned cart, use it
+            if (transactionId) {
+              setTransactionId(transactionId);
+            }
+            
+            console.log("Scanned items:", items);
+            // Fetch product details by product_id for all scanned items concurrently
+            const fetchedProducts = await Promise.all(
+              items.map(async (item) => {
+                const res = await api(`/api/products/${item.product_id}`, {
+                  headers: { Authorization: `Bearer ${token}` },
+                });
+                console.log(
+                  "Fetched product for id",
+                  item.product_id,
+                  ":",
+                  res
+                );
+                return {
+                  product_id: item.product_id,
+                  sku: res.sku || item.sku || "",
+                  name: res.product_name || "",
+                  price: Number(res.selling_price) || 0,
+                  quantity: item.quantity,
+                };
+              })
+            );
+            setCart((prev) => {
+              const byProductId = new Map(prev.map((i) => [i.product_id, i]));
+              for (const it of fetchedProducts) {
+                const existing = byProductId.get(it.product_id);
+                if (existing) {
+                  existing.quantity += it.quantity;
+                } else {
+                  byProductId.set(it.product_id, { ...it });
+                }
+              }
+              return Array.from(byProductId.values());
+            });
+          } catch (e) {
+            console.error("Error fetching products for scanned items:", e);
+            // Fallback to use raw items if fetch fails
+            setCart((prev) => {
+              const byProductId = new Map(prev.map((i) => [i.product_id, i]));
+              for (const it of items) {
+                const existing = byProductId.get(it.product_id);
+                if (existing) {
+                  existing.quantity += it.quantity;
+                } else {
+                  byProductId.set(it.product_id, {
+                    ...it,
+                    name: "",
+                    price: 0,
+                  });
+                }
+              }
+              return Array.from(byProductId.values());
+            });
+          }
         }}
       />
     </PageLayout>

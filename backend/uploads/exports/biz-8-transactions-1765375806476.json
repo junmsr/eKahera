@@ -1,0 +1,1414 @@
+{
+  "businessId": 8,
+  "exportedAt": "2025-12-10T14:10:06.475Z",
+  "totalTransactions": 49,
+  "transactions": [
+    {
+      "transaction_id": 79,
+      "transaction_number": "T-08-20251128030657-8484",
+      "total_amount": "8.00",
+      "status": "completed",
+      "created_at": "2025-11-28T03:07:33.682Z",
+      "updated_at": "2025-11-28T03:07:33.682Z",
+      "cashier_user_id": 12,
+      "customer_user_id": null,
+      "items": [
+        {
+          "transaction_item_id": 101,
+          "product_id": 8,
+          "product_quantity": 1,
+          "price_at_sale": 8,
+          "subtotal": 8
+        }
+      ],
+      "payments": [
+        {
+          "transaction_payment_id": 90,
+          "payment_type": "cash",
+          "money_received": 10,
+          "money_change": 2,
+          "discount_id": null
+        }
+      ]
+    },
+    {
+      "transaction_id": 81,
+      "transaction_number": "T-08-20251202055029-5115",
+      "total_amount": "88.00",
+      "status": "completed",
+      "created_at": "2025-12-02T05:50:29.071Z",
+      "updated_at": "2025-12-02T05:50:29.071Z",
+      "cashier_user_id": 9,
+      "customer_user_id": null,
+      "items": [
+        {
+          "transaction_item_id": 103,
+          "product_id": 8,
+          "product_quantity": 11,
+          "price_at_sale": 8,
+          "subtotal": 88
+        }
+      ],
+      "payments": [
+        {
+          "transaction_payment_id": 92,
+          "payment_type": "cash",
+          "money_received": 88,
+          "money_change": 0,
+          "discount_id": null
+        }
+      ]
+    },
+    {
+      "transaction_id": 83,
+      "transaction_number": "T-08-20251202055220-4106",
+      "total_amount": "8.00",
+      "status": "completed",
+      "created_at": "2025-12-02T05:52:20.296Z",
+      "updated_at": "2025-12-02T05:52:20.296Z",
+      "cashier_user_id": 9,
+      "customer_user_id": null,
+      "items": [
+        {
+          "transaction_item_id": 105,
+          "product_id": 8,
+          "product_quantity": 1,
+          "price_at_sale": 8,
+          "subtotal": 8
+        }
+      ],
+      "payments": [
+        {
+          "transaction_payment_id": 94,
+          "payment_type": "cash",
+          "money_received": 8,
+          "money_change": 0,
+          "discount_id": null
+        }
+      ]
+    },
+    {
+      "transaction_id": 84,
+      "transaction_number": "T-08-20251202055520-6224",
+      "total_amount": "18.00",
+      "status": "completed",
+      "created_at": "2025-12-02T05:55:20.146Z",
+      "updated_at": "2025-12-02T05:55:20.146Z",
+      "cashier_user_id": 9,
+      "customer_user_id": null,
+      "items": [
+        {
+          "transaction_item_id": 106,
+          "product_id": 16,
+          "product_quantity": 1,
+          "price_at_sale": 10,
+          "subtotal": 10
+        },
+        {
+          "transaction_item_id": 107,
+          "product_id": 8,
+          "product_quantity": 1,
+          "price_at_sale": 8,
+          "subtotal": 8
+        }
+      ],
+      "payments": [
+        {
+          "transaction_payment_id": 95,
+          "payment_type": "gcash",
+          "money_received": 18,
+          "money_change": 0,
+          "discount_id": null
+        }
+      ]
+    },
+    {
+      "transaction_id": 94,
+      "transaction_number": "T-08-20251204163333-7274",
+      "total_amount": "8.00",
+      "status": "completed",
+      "created_at": "2025-12-04T16:33:33.840Z",
+      "updated_at": "2025-12-04T16:33:33.840Z",
+      "cashier_user_id": 9,
+      "customer_user_id": null,
+      "items": [
+        {
+          "transaction_item_id": 116,
+          "product_id": 8,
+          "product_quantity": 1,
+          "price_at_sale": 8,
+          "subtotal": 8
+        }
+      ],
+      "payments": [
+        {
+          "transaction_payment_id": 104,
+          "payment_type": "cash",
+          "money_received": 8,
+          "money_change": 0,
+          "discount_id": null
+        }
+      ]
+    },
+    {
+      "transaction_id": 96,
+      "transaction_number": "T-08-20251204223926-8018",
+      "total_amount": "8.00",
+      "status": "completed",
+      "created_at": "2025-12-04T22:39:26.259Z",
+      "updated_at": "2025-12-04T22:39:26.259Z",
+      "cashier_user_id": 9,
+      "customer_user_id": null,
+      "items": [
+        {
+          "transaction_item_id": 118,
+          "product_id": 8,
+          "product_quantity": 1,
+          "price_at_sale": 8,
+          "subtotal": 8
+        }
+      ],
+      "payments": [
+        {
+          "transaction_payment_id": 106,
+          "payment_type": "cash",
+          "money_received": 8,
+          "money_change": 0,
+          "discount_id": null
+        }
+      ]
+    },
+    {
+      "transaction_id": 99,
+      "transaction_number": "T-08-20251204225628-9083",
+      "total_amount": "8.00",
+      "status": "completed",
+      "created_at": "2025-12-04T22:56:27.818Z",
+      "updated_at": "2025-12-04T22:56:27.818Z",
+      "cashier_user_id": 9,
+      "customer_user_id": null,
+      "items": [
+        {
+          "transaction_item_id": 120,
+          "product_id": 8,
+          "product_quantity": 1,
+          "price_at_sale": 8,
+          "subtotal": 8
+        }
+      ],
+      "payments": [
+        {
+          "transaction_payment_id": 108,
+          "payment_type": "cash",
+          "money_received": 8,
+          "money_change": 0,
+          "discount_id": null
+        }
+      ]
+    },
+    {
+      "transaction_id": 100,
+      "transaction_number": "T-08-20251204230551-3239",
+      "total_amount": "8.00",
+      "status": "completed",
+      "created_at": "2025-12-04T23:07:01.206Z",
+      "updated_at": "2025-12-04T23:07:45.652Z",
+      "cashier_user_id": 9,
+      "customer_user_id": 155,
+      "items": [
+        {
+          "transaction_item_id": 121,
+          "product_id": 8,
+          "product_quantity": 1,
+          "price_at_sale": 8,
+          "subtotal": 8
+        }
+      ],
+      "payments": [
+        {
+          "transaction_payment_id": 109,
+          "payment_type": "cash",
+          "money_received": 8,
+          "money_change": 0,
+          "discount_id": null
+        }
+      ]
+    },
+    {
+      "transaction_id": 102,
+      "transaction_number": "T-08-20251204231911-8597",
+      "total_amount": "8.00",
+      "status": "completed",
+      "created_at": "2025-12-04T23:19:11.037Z",
+      "updated_at": "2025-12-04T23:19:11.037Z",
+      "cashier_user_id": 9,
+      "customer_user_id": null,
+      "items": [
+        {
+          "transaction_item_id": 123,
+          "product_id": 8,
+          "product_quantity": 1,
+          "price_at_sale": 8,
+          "subtotal": 8
+        }
+      ],
+      "payments": [
+        {
+          "transaction_payment_id": 111,
+          "payment_type": "cash",
+          "money_received": 8,
+          "money_change": 0,
+          "discount_id": null
+        }
+      ]
+    },
+    {
+      "transaction_id": 104,
+      "transaction_number": "T-08-20251204233848-7405",
+      "total_amount": "8.00",
+      "status": "completed",
+      "created_at": "2025-12-04T23:38:48.045Z",
+      "updated_at": "2025-12-04T23:38:48.045Z",
+      "cashier_user_id": 9,
+      "customer_user_id": null,
+      "items": [
+        {
+          "transaction_item_id": 125,
+          "product_id": 8,
+          "product_quantity": 1,
+          "price_at_sale": 8,
+          "subtotal": 8
+        }
+      ],
+      "payments": [
+        {
+          "transaction_payment_id": 113,
+          "payment_type": "gcash",
+          "money_received": 8,
+          "money_change": 0,
+          "discount_id": null
+        }
+      ]
+    },
+    {
+      "transaction_id": 106,
+      "transaction_number": "T-08-20251205001355-2793",
+      "total_amount": "8.00",
+      "status": "completed",
+      "created_at": "2025-12-05T00:14:09.946Z",
+      "updated_at": "2025-12-05T00:15:13.963Z",
+      "cashier_user_id": 9,
+      "customer_user_id": null,
+      "items": [
+        {
+          "transaction_item_id": 127,
+          "product_id": 8,
+          "product_quantity": 1,
+          "price_at_sale": 8,
+          "subtotal": 8
+        }
+      ],
+      "payments": [
+        {
+          "transaction_payment_id": 115,
+          "payment_type": "cash",
+          "money_received": 8,
+          "money_change": 0,
+          "discount_id": null
+        }
+      ]
+    },
+    {
+      "transaction_id": 107,
+      "transaction_number": "T-08-20251205002640-7955",
+      "total_amount": "8.00",
+      "status": "completed",
+      "created_at": "2025-12-05T00:26:53.598Z",
+      "updated_at": "2025-12-05T00:26:53.598Z",
+      "cashier_user_id": 12,
+      "customer_user_id": null,
+      "items": [
+        {
+          "transaction_item_id": 128,
+          "product_id": 8,
+          "product_quantity": 1,
+          "price_at_sale": 8,
+          "subtotal": 8
+        }
+      ],
+      "payments": [
+        {
+          "transaction_payment_id": 116,
+          "payment_type": "cash",
+          "money_received": 8,
+          "money_change": 0,
+          "discount_id": null
+        }
+      ]
+    },
+    {
+      "transaction_id": 108,
+      "transaction_number": "T-08-20251205002717-9854",
+      "total_amount": "8.00",
+      "status": "completed",
+      "created_at": "2025-12-05T00:27:17.263Z",
+      "updated_at": "2025-12-05T00:27:17.263Z",
+      "cashier_user_id": 12,
+      "customer_user_id": null,
+      "items": [
+        {
+          "transaction_item_id": 129,
+          "product_id": 8,
+          "product_quantity": 1,
+          "price_at_sale": 8,
+          "subtotal": 8
+        }
+      ],
+      "payments": [
+        {
+          "transaction_payment_id": 117,
+          "payment_type": "gcash",
+          "money_received": 8,
+          "money_change": 0,
+          "discount_id": null
+        }
+      ]
+    },
+    {
+      "transaction_id": 109,
+      "transaction_number": "T-08-20251205002721-3162",
+      "total_amount": "8.00",
+      "status": "completed",
+      "created_at": "2025-12-05T00:27:33.951Z",
+      "updated_at": "2025-12-05T00:27:33.951Z",
+      "cashier_user_id": 12,
+      "customer_user_id": null,
+      "items": [
+        {
+          "transaction_item_id": 130,
+          "product_id": 8,
+          "product_quantity": 1,
+          "price_at_sale": 8,
+          "subtotal": 8
+        }
+      ],
+      "payments": [
+        {
+          "transaction_payment_id": 118,
+          "payment_type": "maya",
+          "money_received": 8,
+          "money_change": 0,
+          "discount_id": null
+        }
+      ]
+    },
+    {
+      "transaction_id": 110,
+      "transaction_number": "T-08-20251205002802-3240",
+      "total_amount": "8.00",
+      "status": "completed",
+      "created_at": "2025-12-05T00:30:11.157Z",
+      "updated_at": "2025-12-05T00:30:11.157Z",
+      "cashier_user_id": 9,
+      "customer_user_id": null,
+      "items": [
+        {
+          "transaction_item_id": 131,
+          "product_id": 8,
+          "product_quantity": 1,
+          "price_at_sale": 8,
+          "subtotal": 8
+        }
+      ],
+      "payments": [
+        {
+          "transaction_payment_id": 119,
+          "payment_type": "cash",
+          "money_received": 8,
+          "money_change": 0,
+          "discount_id": null
+        }
+      ]
+    },
+    {
+      "transaction_id": 111,
+      "transaction_number": "T-08-20251205003050-1981",
+      "total_amount": "8.00",
+      "status": "completed",
+      "created_at": "2025-12-05T00:30:50.189Z",
+      "updated_at": "2025-12-05T00:30:50.189Z",
+      "cashier_user_id": 9,
+      "customer_user_id": null,
+      "items": [
+        {
+          "transaction_item_id": 132,
+          "product_id": 8,
+          "product_quantity": 1,
+          "price_at_sale": 8,
+          "subtotal": 8
+        }
+      ],
+      "payments": [
+        {
+          "transaction_payment_id": 120,
+          "payment_type": "gcash",
+          "money_received": 8,
+          "money_change": 0,
+          "discount_id": null
+        }
+      ]
+    },
+    {
+      "transaction_id": 112,
+      "transaction_number": "T-08-20251205003128-1411",
+      "total_amount": "8.00",
+      "status": "completed",
+      "created_at": "2025-12-05T00:31:28.249Z",
+      "updated_at": "2025-12-05T00:31:28.249Z",
+      "cashier_user_id": 9,
+      "customer_user_id": null,
+      "items": [
+        {
+          "transaction_item_id": 133,
+          "product_id": 8,
+          "product_quantity": 1,
+          "price_at_sale": 8,
+          "subtotal": 8
+        }
+      ],
+      "payments": [
+        {
+          "transaction_payment_id": 121,
+          "payment_type": "maya",
+          "money_received": 8,
+          "money_change": 0,
+          "discount_id": null
+        }
+      ]
+    },
+    {
+      "transaction_id": 114,
+      "transaction_number": "T-08-20251205004328-8185",
+      "total_amount": "8.00",
+      "status": "completed",
+      "created_at": "2025-12-05T00:43:28.546Z",
+      "updated_at": "2025-12-05T00:43:28.546Z",
+      "cashier_user_id": 9,
+      "customer_user_id": null,
+      "items": [
+        {
+          "transaction_item_id": 135,
+          "product_id": 8,
+          "product_quantity": 1,
+          "price_at_sale": 8,
+          "subtotal": 8
+        }
+      ],
+      "payments": [
+        {
+          "transaction_payment_id": 123,
+          "payment_type": "gcash",
+          "money_received": 8,
+          "money_change": 0,
+          "discount_id": null
+        }
+      ]
+    },
+    {
+      "transaction_id": 115,
+      "transaction_number": "T-08-20251205004409-5689",
+      "total_amount": "8.00",
+      "status": "completed",
+      "created_at": "2025-12-05T00:44:09.410Z",
+      "updated_at": "2025-12-05T00:44:09.410Z",
+      "cashier_user_id": 9,
+      "customer_user_id": null,
+      "items": [
+        {
+          "transaction_item_id": 136,
+          "product_id": 8,
+          "product_quantity": 1,
+          "price_at_sale": 8,
+          "subtotal": 8
+        }
+      ],
+      "payments": [
+        {
+          "transaction_payment_id": 124,
+          "payment_type": "maya",
+          "money_received": 8,
+          "money_change": 0,
+          "discount_id": null
+        }
+      ]
+    },
+    {
+      "transaction_id": 116,
+      "transaction_number": "T-08-20251205004444-7138",
+      "total_amount": "8.00",
+      "status": "completed",
+      "created_at": "2025-12-05T00:44:55.507Z",
+      "updated_at": "2025-12-05T00:44:55.507Z",
+      "cashier_user_id": 12,
+      "customer_user_id": null,
+      "items": [
+        {
+          "transaction_item_id": 137,
+          "product_id": 8,
+          "product_quantity": 1,
+          "price_at_sale": 8,
+          "subtotal": 8
+        }
+      ],
+      "payments": [
+        {
+          "transaction_payment_id": 125,
+          "payment_type": "cash",
+          "money_received": 8,
+          "money_change": 0,
+          "discount_id": null
+        }
+      ]
+    },
+    {
+      "transaction_id": 117,
+      "transaction_number": "T-08-20251205004516-8992",
+      "total_amount": "8.00",
+      "status": "completed",
+      "created_at": "2025-12-05T00:45:16.495Z",
+      "updated_at": "2025-12-05T00:45:16.495Z",
+      "cashier_user_id": 12,
+      "customer_user_id": null,
+      "items": [
+        {
+          "transaction_item_id": 138,
+          "product_id": 8,
+          "product_quantity": 1,
+          "price_at_sale": 8,
+          "subtotal": 8
+        }
+      ],
+      "payments": [
+        {
+          "transaction_payment_id": 126,
+          "payment_type": "gcash",
+          "money_received": 8,
+          "money_change": 0,
+          "discount_id": null
+        }
+      ]
+    },
+    {
+      "transaction_id": 118,
+      "transaction_number": "T-08-20251205004545-5783",
+      "total_amount": "8.00",
+      "status": "completed",
+      "created_at": "2025-12-05T00:45:44.887Z",
+      "updated_at": "2025-12-05T00:45:44.887Z",
+      "cashier_user_id": 12,
+      "customer_user_id": null,
+      "items": [
+        {
+          "transaction_item_id": 139,
+          "product_id": 8,
+          "product_quantity": 1,
+          "price_at_sale": 8,
+          "subtotal": 8
+        }
+      ],
+      "payments": [
+        {
+          "transaction_payment_id": 127,
+          "payment_type": "maya",
+          "money_received": 8,
+          "money_change": 0,
+          "discount_id": null
+        }
+      ]
+    },
+    {
+      "transaction_id": 119,
+      "transaction_number": "T-08-20251205004603-9433",
+      "total_amount": "8.00",
+      "status": "completed",
+      "created_at": "2025-12-05T00:46:16.426Z",
+      "updated_at": "2025-12-05T00:46:32.917Z",
+      "cashier_user_id": 9,
+      "customer_user_id": 162,
+      "items": [
+        {
+          "transaction_item_id": 140,
+          "product_id": 8,
+          "product_quantity": 1,
+          "price_at_sale": 8,
+          "subtotal": 8
+        }
+      ],
+      "payments": [
+        {
+          "transaction_payment_id": 128,
+          "payment_type": "cash",
+          "money_received": 8,
+          "money_change": 0,
+          "discount_id": null
+        }
+      ]
+    },
+    {
+      "transaction_id": 121,
+      "transaction_number": "T-08-20251205005323-3686",
+      "total_amount": "8.00",
+      "status": "completed",
+      "created_at": "2025-12-05T00:53:23.687Z",
+      "updated_at": "2025-12-05T00:53:23.687Z",
+      "cashier_user_id": 9,
+      "customer_user_id": null,
+      "items": [
+        {
+          "transaction_item_id": 142,
+          "product_id": 8,
+          "product_quantity": 1,
+          "price_at_sale": 8,
+          "subtotal": 8
+        }
+      ],
+      "payments": [
+        {
+          "transaction_payment_id": 130,
+          "payment_type": "gcash",
+          "money_received": 8,
+          "money_change": 0,
+          "discount_id": null
+        }
+      ]
+    },
+    {
+      "transaction_id": 122,
+      "transaction_number": "T-08-20251205005352-4276",
+      "total_amount": "8.00",
+      "status": "completed",
+      "created_at": "2025-12-05T00:53:52.515Z",
+      "updated_at": "2025-12-05T00:53:52.515Z",
+      "cashier_user_id": 12,
+      "customer_user_id": null,
+      "items": [
+        {
+          "transaction_item_id": 143,
+          "product_id": 8,
+          "product_quantity": 1,
+          "price_at_sale": 8,
+          "subtotal": 8
+        }
+      ],
+      "payments": [
+        {
+          "transaction_payment_id": 131,
+          "payment_type": "gcash",
+          "money_received": 8,
+          "money_change": 0,
+          "discount_id": null
+        }
+      ]
+    },
+    {
+      "transaction_id": 123,
+      "transaction_number": "T-08-20251205005421-4859",
+      "total_amount": "8.00",
+      "status": "completed",
+      "created_at": "2025-12-05T00:54:33.382Z",
+      "updated_at": "2025-12-05T00:54:33.382Z",
+      "cashier_user_id": 12,
+      "customer_user_id": null,
+      "items": [
+        {
+          "transaction_item_id": 144,
+          "product_id": 8,
+          "product_quantity": 1,
+          "price_at_sale": 8,
+          "subtotal": 8
+        }
+      ],
+      "payments": [
+        {
+          "transaction_payment_id": 132,
+          "payment_type": "cash",
+          "money_received": 8,
+          "money_change": 0,
+          "discount_id": null
+        }
+      ]
+    },
+    {
+      "transaction_id": 125,
+      "transaction_number": "T-08-20251205005519-4094",
+      "total_amount": "8.00",
+      "status": "completed",
+      "created_at": "2025-12-05T00:55:30.065Z",
+      "updated_at": "2025-12-05T00:55:46.771Z",
+      "cashier_user_id": 12,
+      "customer_user_id": 165,
+      "items": [
+        {
+          "transaction_item_id": 146,
+          "product_id": 8,
+          "product_quantity": 1,
+          "price_at_sale": 8,
+          "subtotal": 8
+        }
+      ],
+      "payments": [
+        {
+          "transaction_payment_id": 134,
+          "payment_type": "cash",
+          "money_received": 8,
+          "money_change": 0,
+          "discount_id": null
+        }
+      ]
+    },
+    {
+      "transaction_id": 126,
+      "transaction_number": "T-8-20251205011717-3762",
+      "total_amount": "8.00",
+      "status": "completed",
+      "created_at": "2025-12-05T01:17:26.157Z",
+      "updated_at": "2025-12-05T01:17:26.157Z",
+      "cashier_user_id": 9,
+      "customer_user_id": null,
+      "items": [
+        {
+          "transaction_item_id": 147,
+          "product_id": 8,
+          "product_quantity": 1,
+          "price_at_sale": 8,
+          "subtotal": 8
+        }
+      ],
+      "payments": [
+        {
+          "transaction_payment_id": 135,
+          "payment_type": "cash",
+          "money_received": 8,
+          "money_change": 0,
+          "discount_id": null
+        }
+      ]
+    },
+    {
+      "transaction_id": 128,
+      "transaction_number": "T-08-20251205012925-1334",
+      "total_amount": "8.00",
+      "status": "completed",
+      "created_at": "2025-12-05T01:29:37.284Z",
+      "updated_at": "2025-12-05T01:30:37.694Z",
+      "cashier_user_id": 9,
+      "customer_user_id": null,
+      "items": [
+        {
+          "transaction_item_id": 149,
+          "product_id": 8,
+          "product_quantity": 1,
+          "price_at_sale": 8,
+          "subtotal": 8
+        }
+      ],
+      "payments": [
+        {
+          "transaction_payment_id": 137,
+          "payment_type": "cash",
+          "money_received": 8,
+          "money_change": 0,
+          "discount_id": null
+        }
+      ]
+    },
+    {
+      "transaction_id": 129,
+      "transaction_number": "T-08-20251205013213-9229",
+      "total_amount": "8.00",
+      "status": "completed",
+      "created_at": "2025-12-05T01:32:34.931Z",
+      "updated_at": "2025-12-05T01:32:41.941Z",
+      "cashier_user_id": 9,
+      "customer_user_id": null,
+      "items": [
+        {
+          "transaction_item_id": 150,
+          "product_id": 8,
+          "product_quantity": 1,
+          "price_at_sale": 8,
+          "subtotal": 8
+        }
+      ],
+      "payments": [
+        {
+          "transaction_payment_id": 138,
+          "payment_type": "cash",
+          "money_received": 8,
+          "money_change": 0,
+          "discount_id": null
+        }
+      ]
+    },
+    {
+      "transaction_id": 130,
+      "transaction_number": "T-08-20251205020056-9366",
+      "total_amount": "37.00",
+      "status": "completed",
+      "created_at": "2025-12-05T02:02:35.914Z",
+      "updated_at": "2025-12-05T02:02:49.485Z",
+      "cashier_user_id": 9,
+      "customer_user_id": null,
+      "items": [
+        {
+          "transaction_item_id": 151,
+          "product_id": 10,
+          "product_quantity": 1,
+          "price_at_sale": 7,
+          "subtotal": 7
+        },
+        {
+          "transaction_item_id": 152,
+          "product_id": 14,
+          "product_quantity": 1,
+          "price_at_sale": 30,
+          "subtotal": 30
+        }
+      ],
+      "payments": [
+        {
+          "transaction_payment_id": 139,
+          "payment_type": "cash",
+          "money_received": 37,
+          "money_change": 0,
+          "discount_id": null
+        }
+      ]
+    },
+    {
+      "transaction_id": 131,
+      "transaction_number": "T-08-20251205020422-6949",
+      "total_amount": "8.00",
+      "status": "completed",
+      "created_at": "2025-12-05T02:04:35.460Z",
+      "updated_at": "2025-12-05T02:04:52.117Z",
+      "cashier_user_id": 9,
+      "customer_user_id": 166,
+      "items": [
+        {
+          "transaction_item_id": 153,
+          "product_id": 8,
+          "product_quantity": 1,
+          "price_at_sale": 8,
+          "subtotal": 8
+        }
+      ],
+      "payments": [
+        {
+          "transaction_payment_id": 140,
+          "payment_type": "cash",
+          "money_received": 8,
+          "money_change": 0,
+          "discount_id": null
+        }
+      ]
+    },
+    {
+      "transaction_id": 132,
+      "transaction_number": "T-08-20251205025917-8780",
+      "total_amount": "45.00",
+      "status": "completed",
+      "created_at": "2025-12-05T03:00:00.745Z",
+      "updated_at": "2025-12-05T03:00:09.503Z",
+      "cashier_user_id": 9,
+      "customer_user_id": 169,
+      "items": [
+        {
+          "transaction_item_id": 154,
+          "product_id": 14,
+          "product_quantity": 1,
+          "price_at_sale": 30,
+          "subtotal": 30
+        },
+        {
+          "transaction_item_id": 155,
+          "product_id": 8,
+          "product_quantity": 1,
+          "price_at_sale": 8,
+          "subtotal": 8
+        },
+        {
+          "transaction_item_id": 156,
+          "product_id": 10,
+          "product_quantity": 1,
+          "price_at_sale": 7,
+          "subtotal": 7
+        }
+      ],
+      "payments": [
+        {
+          "transaction_payment_id": 141,
+          "payment_type": "cash",
+          "money_received": 45,
+          "money_change": 0,
+          "discount_id": null
+        }
+      ]
+    },
+    {
+      "transaction_id": 133,
+      "transaction_number": "T-08-20251205030843-7287",
+      "total_amount": "8.00",
+      "status": "completed",
+      "created_at": "2025-12-05T03:09:26.127Z",
+      "updated_at": "2025-12-05T03:10:01.656Z",
+      "cashier_user_id": 12,
+      "customer_user_id": 170,
+      "items": [
+        {
+          "transaction_item_id": 157,
+          "product_id": 8,
+          "product_quantity": 1,
+          "price_at_sale": 8,
+          "subtotal": 8
+        }
+      ],
+      "payments": [
+        {
+          "transaction_payment_id": 142,
+          "payment_type": "cash",
+          "money_received": 8,
+          "money_change": 0,
+          "discount_id": null
+        }
+      ]
+    },
+    {
+      "transaction_id": 134,
+      "transaction_number": "T-08-20251205031655-3720",
+      "total_amount": "38.00",
+      "status": "completed",
+      "created_at": "2025-12-05T03:17:27.694Z",
+      "updated_at": "2025-12-05T03:17:51.447Z",
+      "cashier_user_id": 12,
+      "customer_user_id": 171,
+      "items": [
+        {
+          "transaction_item_id": 158,
+          "product_id": 8,
+          "product_quantity": 1,
+          "price_at_sale": 8,
+          "subtotal": 8
+        },
+        {
+          "transaction_item_id": 159,
+          "product_id": 14,
+          "product_quantity": 1,
+          "price_at_sale": 30,
+          "subtotal": 30
+        }
+      ],
+      "payments": [
+        {
+          "transaction_payment_id": 143,
+          "payment_type": "cash",
+          "money_received": 38,
+          "money_change": 0,
+          "discount_id": null
+        }
+      ]
+    },
+    {
+      "transaction_id": 135,
+      "transaction_number": "T-08-20251205065106-9811",
+      "total_amount": "70.00",
+      "status": "completed",
+      "created_at": "2025-12-05T06:51:37.816Z",
+      "updated_at": "2025-12-05T06:52:19.718Z",
+      "cashier_user_id": 12,
+      "customer_user_id": 173,
+      "items": [
+        {
+          "transaction_item_id": 160,
+          "product_id": 18,
+          "product_quantity": 1,
+          "price_at_sale": 70,
+          "subtotal": 70
+        }
+      ],
+      "payments": [
+        {
+          "transaction_payment_id": 144,
+          "payment_type": "cash",
+          "money_received": 70,
+          "money_change": 0,
+          "discount_id": null
+        }
+      ]
+    },
+    {
+      "transaction_id": 136,
+      "transaction_number": "T-8-20251205074642-6095",
+      "total_amount": "10.00",
+      "status": "completed",
+      "created_at": "2025-12-05T07:47:08.252Z",
+      "updated_at": "2025-12-05T07:47:08.252Z",
+      "cashier_user_id": 9,
+      "customer_user_id": null,
+      "items": [
+        {
+          "transaction_item_id": 161,
+          "product_id": 19,
+          "product_quantity": 1,
+          "price_at_sale": 10,
+          "subtotal": 10
+        }
+      ],
+      "payments": [
+        {
+          "transaction_payment_id": 145,
+          "payment_type": "cash",
+          "money_received": 10,
+          "money_change": 0,
+          "discount_id": null
+        }
+      ]
+    },
+    {
+      "transaction_id": 137,
+      "transaction_number": "T-08-20251205074742-3870",
+      "total_amount": "10.00",
+      "status": "completed",
+      "created_at": "2025-12-05T07:48:25.088Z",
+      "updated_at": "2025-12-05T07:49:18.137Z",
+      "cashier_user_id": 9,
+      "customer_user_id": 174,
+      "items": [
+        {
+          "transaction_item_id": 162,
+          "product_id": 19,
+          "product_quantity": 1,
+          "price_at_sale": 10,
+          "subtotal": 10
+        }
+      ],
+      "payments": [
+        {
+          "transaction_payment_id": 146,
+          "payment_type": "cash",
+          "money_received": 10,
+          "money_change": 0,
+          "discount_id": null
+        }
+      ]
+    },
+    {
+      "transaction_id": 138,
+      "transaction_number": "T-08-20251205075456-8269",
+      "total_amount": "10.00",
+      "status": "completed",
+      "created_at": "2025-12-05T07:54:55.889Z",
+      "updated_at": "2025-12-05T07:54:55.889Z",
+      "cashier_user_id": 175,
+      "customer_user_id": null,
+      "items": [
+        {
+          "transaction_item_id": 163,
+          "product_id": 19,
+          "product_quantity": 1,
+          "price_at_sale": 10,
+          "subtotal": 10
+        }
+      ],
+      "payments": [
+        {
+          "transaction_payment_id": 147,
+          "payment_type": "gcash",
+          "money_received": 10,
+          "money_change": 0,
+          "discount_id": null
+        }
+      ]
+    },
+    {
+      "transaction_id": 139,
+      "transaction_number": "T-8-20251205084326-9342",
+      "total_amount": "160.00",
+      "status": "completed",
+      "created_at": "2025-12-05T08:43:45.536Z",
+      "updated_at": "2025-12-05T08:43:45.536Z",
+      "cashier_user_id": 9,
+      "customer_user_id": null,
+      "items": [
+        {
+          "transaction_item_id": 164,
+          "product_id": 20,
+          "product_quantity": 1,
+          "price_at_sale": 160,
+          "subtotal": 160
+        }
+      ],
+      "payments": [
+        {
+          "transaction_payment_id": 148,
+          "payment_type": "cash",
+          "money_received": 160,
+          "money_change": 0,
+          "discount_id": null
+        }
+      ]
+    },
+    {
+      "transaction_id": 140,
+      "transaction_number": "T-08-20251205084421-4358",
+      "total_amount": "160.00",
+      "status": "completed",
+      "created_at": "2025-12-05T08:44:55.150Z",
+      "updated_at": "2025-12-05T08:45:14.769Z",
+      "cashier_user_id": 9,
+      "customer_user_id": 176,
+      "items": [
+        {
+          "transaction_item_id": 165,
+          "product_id": 20,
+          "product_quantity": 1,
+          "price_at_sale": 160,
+          "subtotal": 160
+        }
+      ],
+      "payments": [
+        {
+          "transaction_payment_id": 149,
+          "payment_type": "cash",
+          "money_received": 160,
+          "money_change": 0,
+          "discount_id": null
+        }
+      ]
+    },
+    {
+      "transaction_id": 141,
+      "transaction_number": "T-08-20251205084549-8785",
+      "total_amount": "160.00",
+      "status": "completed",
+      "created_at": "2025-12-05T08:46:26.235Z",
+      "updated_at": "2025-12-05T08:46:26.235Z",
+      "cashier_user_id": 175,
+      "customer_user_id": null,
+      "items": [
+        {
+          "transaction_item_id": 166,
+          "product_id": 20,
+          "product_quantity": 1,
+          "price_at_sale": 160,
+          "subtotal": 160
+        }
+      ],
+      "payments": [
+        {
+          "transaction_payment_id": 150,
+          "payment_type": "cash",
+          "money_received": 160,
+          "money_change": 0,
+          "discount_id": null
+        }
+      ]
+    },
+    {
+      "transaction_id": 143,
+      "transaction_number": "T-08-20251206161205-1994",
+      "total_amount": "8.00",
+      "status": "completed",
+      "created_at": "2025-12-06T16:15:03.172Z",
+      "updated_at": "2025-12-06T16:15:37.972Z",
+      "cashier_user_id": 9,
+      "customer_user_id": 193,
+      "items": [
+        {
+          "transaction_item_id": 167,
+          "product_id": 8,
+          "product_quantity": 1,
+          "price_at_sale": 8,
+          "subtotal": 8
+        }
+      ],
+      "payments": [
+        {
+          "transaction_payment_id": 151,
+          "payment_type": "cash",
+          "money_received": 8,
+          "money_change": 0,
+          "discount_id": null
+        }
+      ]
+    },
+    {
+      "transaction_id": 144,
+      "transaction_number": "T-08-20251206161628-2301",
+      "total_amount": "8.00",
+      "status": "completed",
+      "created_at": "2025-12-06T16:18:45.429Z",
+      "updated_at": "2025-12-06T16:19:20.391Z",
+      "cashier_user_id": 9,
+      "customer_user_id": 194,
+      "items": [
+        {
+          "transaction_item_id": 168,
+          "product_id": 8,
+          "product_quantity": 1,
+          "price_at_sale": 8,
+          "subtotal": 8
+        }
+      ],
+      "payments": [
+        {
+          "transaction_payment_id": 152,
+          "payment_type": "cash",
+          "money_received": 8,
+          "money_change": 0,
+          "discount_id": null
+        }
+      ]
+    },
+    {
+      "transaction_id": 145,
+      "transaction_number": "T-8-20251207163417-1456",
+      "total_amount": "70.00",
+      "status": "completed",
+      "created_at": "2025-12-07T16:35:16.125Z",
+      "updated_at": "2025-12-07T16:35:16.125Z",
+      "cashier_user_id": 9,
+      "customer_user_id": null,
+      "items": [
+        {
+          "transaction_item_id": 169,
+          "product_id": 21,
+          "product_quantity": 1,
+          "price_at_sale": 70,
+          "subtotal": 70
+        }
+      ],
+      "payments": [
+        {
+          "transaction_payment_id": 153,
+          "payment_type": "cash",
+          "money_received": 100,
+          "money_change": 30,
+          "discount_id": null
+        }
+      ]
+    },
+    {
+      "transaction_id": 148,
+      "transaction_number": "T-08-20251209054531-2265",
+      "total_amount": "8.00",
+      "status": "completed",
+      "created_at": "2025-12-09T05:46:19.226Z",
+      "updated_at": "2025-12-09T05:46:39.314Z",
+      "cashier_user_id": 12,
+      "customer_user_id": 202,
+      "items": [
+        {
+          "transaction_item_id": 171,
+          "product_id": 8,
+          "product_quantity": 1,
+          "price_at_sale": 8,
+          "subtotal": 8
+        }
+      ],
+      "payments": [
+        {
+          "transaction_payment_id": 154,
+          "payment_type": "cash",
+          "money_received": 8,
+          "money_change": 0,
+          "discount_id": null
+        }
+      ]
+    },
+    {
+      "transaction_id": 151,
+      "transaction_number": "T-08-20251209152845-5081",
+      "total_amount": "8.00",
+      "status": "pending",
+      "created_at": "2025-12-09T15:29:11.834Z",
+      "updated_at": "2025-12-09T15:29:11.834Z",
+      "cashier_user_id": null,
+      "customer_user_id": 205,
+      "items": [
+        {
+          "transaction_item_id": 172,
+          "product_id": 8,
+          "product_quantity": 1,
+          "price_at_sale": 8,
+          "subtotal": 8
+        }
+      ],
+      "payments": [
+        {
+          "transaction_payment_id": 155,
+          "payment_type": "cash",
+          "money_received": 8,
+          "money_change": 0,
+          "discount_id": null
+        }
+      ]
+    },
+    {
+      "transaction_id": 152,
+      "transaction_number": "T-08-20251209153825-8594",
+      "total_amount": "8.00",
+      "status": "completed",
+      "created_at": "2025-12-09T15:40:50.541Z",
+      "updated_at": "2025-12-09T15:43:00.885Z",
+      "cashier_user_id": 9,
+      "customer_user_id": 206,
+      "items": [
+        {
+          "transaction_item_id": 173,
+          "product_id": 8,
+          "product_quantity": 1,
+          "price_at_sale": 8,
+          "subtotal": 8
+        }
+      ],
+      "payments": [
+        {
+          "transaction_payment_id": 156,
+          "payment_type": "cash",
+          "money_received": 8,
+          "money_change": 0,
+          "discount_id": null
+        }
+      ]
+    },
+    {
+      "transaction_id": 155,
+      "transaction_number": "T-08-20251210032628-1423",
+      "total_amount": "16.00",
+      "status": "completed",
+      "created_at": "2025-12-10T03:27:54.809Z",
+      "updated_at": "2025-12-10T03:28:26.933Z",
+      "cashier_user_id": 9,
+      "customer_user_id": 209,
+      "items": [
+        {
+          "transaction_item_id": 174,
+          "product_id": 8,
+          "product_quantity": 2,
+          "price_at_sale": 8,
+          "subtotal": 16
+        }
+      ],
+      "payments": [
+        {
+          "transaction_payment_id": 157,
+          "payment_type": "cash",
+          "money_received": 16,
+          "money_change": 0,
+          "discount_id": null
+        }
+      ]
+    }
+  ]
+}

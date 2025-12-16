@@ -7,8 +7,6 @@ const {
 	getSalesByCategory,
 	getCustomersTimeseries,
 	getKeyMetrics,
-	getSalesByLocation,
-	getRevenueVsExpenses,
 	getProfitTrend,
 	getPaymentMethods,
 	getCashLedger,
@@ -23,10 +21,8 @@ router.get('/sales-timeseries', authenticate, getSalesTimeseries);
 router.get('/sales-by-category', authenticate, getSalesByCategory);
 router.get('/customers-timeseries', authenticate, getCustomersTimeseries);
 
-// New/renamed endpoints used by the frontend dashboard components
+// Dashboard endpoints
 router.get('/key-metrics', authenticate, getKeyMetrics);
-router.get('/sales-by-location', authenticate, getSalesByLocation);
-router.get('/revenue-vs-expenses', authenticate, getRevenueVsExpenses);
 router.get('/profit-trend', authenticate, getProfitTrend);
 router.get('/payment-methods', authenticate, getPaymentMethods);
 router.get('/cash-ledger', authenticate, getCashLedger);

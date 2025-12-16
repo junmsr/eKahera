@@ -3,6 +3,8 @@ import Button from "../common/Button";
 import StatsCard from "../ui/Dashboard/StatsCard";
 import Card from "../common/Card";
 
+const DEFAULT_LOW_STOCK_LEVEL = 10;
+
 // Utility function to convert array of objects to CSV
 const convertToCSV = (data) => {
   if (!data || data.length === 0) return "";
@@ -114,13 +116,17 @@ function InventoryTable({
     </svg>
   );
 
-  const getStockStatus = (quantity) => {
+  const getStockStatus = (
+    quantity,
+    lowStockLevel = DEFAULT_LOW_STOCK_LEVEL
+  ) => {
+    const threshold = Number(lowStockLevel ?? DEFAULT_LOW_STOCK_LEVEL);
     if (quantity === 0)
       return {
         label: "Out of Stock",
         color: "bg-red-100 text-red-700 border-red-200",
       };
-    if (quantity < 10)
+    if (quantity < threshold)
       return {
         label: "Low Stock",
         color: "bg-orange-100 text-orange-700 border-orange-200",
@@ -418,7 +424,10 @@ function InventoryTable({
                 </tr>
               ) : (
                 products.map((product, idx) => {
-                  const stockStatus = getStockStatus(product.quantity);
+                  const stockStatus = getStockStatus(
+                    product.quantity,
+                    product.low_stock_level
+                  );
                   return (
                     <tr
                       key={product.id}
@@ -540,7 +549,10 @@ function InventoryTable({
             </div>
           ) : (
             products.map((product, idx) => {
-              const stockStatus = getStockStatus(product.quantity);
+              const stockStatus = getStockStatus(
+                product.quantity,
+                product.low_stock_level
+              );
               return (
                 <div key={product.id} className="p-4">
                   <div className="flex justify-between items-start gap-4">
@@ -731,9 +743,7 @@ function Inventory({
   onSearchChange,
   onEdit,
   onDelete,
-  onAddProduct,
   onStockEntry,
-  onExport,
   categories = [],
   selectedCategory,
   onCategoryFilter,
@@ -748,72 +758,15 @@ function Inventory({
     (sum, p) => sum + Number(p.selling_price || 0) * Number(p.quantity || 0),
     0
   );
-  const lowStockCount = allProducts.filter(
-    (p) => Number(p.quantity || 0) < 10
-  ).length;
-
-  const handleExport = () => {
-    const csv = convertToCSV(allProducts);
-    const timestamp = new Date().toISOString().split("T")[0];
-    const filename = `inventory_export_${timestamp}.csv`;
-    downloadCSV(csv, filename);
-  };
+  const lowStockCount = allProducts.filter((p) => {
+    const threshold = Number(p.low_stock_level ?? DEFAULT_LOW_STOCK_LEVEL);
+    return Number(p.quantity || 0) < threshold;
+  }).length;
 
   return (
     <div
       className={`w-full max-w-full overflow-x-hidden py-4 sm:py-6 px-4 md:px-6 ${className}`}
     >
-      {/* Header with Actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 sm:gap-4 mb-4 sm:mb-6 w-full">
-        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full sm:w-auto">
-          <Button
-            onClick={handleExport}
-            size="lg"
-            variant="secondary"
-            className="flex items-center gap-2 w-full sm:w-auto shrink-0"
-          >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-              />
-            </svg>
-            <span className="hidden sm:inline">Export</span>
-            <span className="sm:hidden">Export</span>
-          </Button>
-          <Button
-            onClick={onAddProduct}
-            size="lg"
-            variant="primary"
-            microinteraction
-            className="flex items-center gap-2 shadow-lg hover:shadow-xl w-full sm:w-auto shrink-0"
-          >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 4v16m8-8H4"
-              />
-            </svg>
-            <span className="hidden sm:inline">Add Product</span>
-            <span className="sm:hidden">Add</span>
-          </Button>
-        </div>
-      </div>
-
       {/* Quick Stats Bar */}
       <Card className="mb-4 sm:mb-6 p-3 sm:p-4 md:p-6 bg-gradient-to-r from-blue-50/80 to-indigo-50/80 border-blue-100 w-full overflow-hidden">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 w-full">

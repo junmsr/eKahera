@@ -52,8 +52,11 @@ const LogoutModal = ({
       footer={footerContent}
       size="sm"
       contentClassName="text-center py-2"
+      headerIconBgClassName="bg-gradient-to-br from-red-500 to-red-600"
     >
-      <p className="text-gray-600 text-base">{message}</p>
+      <p className="text-gray-600 text-base">
+        You will be redirected to the login page and your session will end.
+      </p>
     </BaseModal>
   );
 };

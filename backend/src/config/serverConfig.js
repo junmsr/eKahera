@@ -1,4 +1,3 @@
-const compression = require('compression');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const cors = require('cors');
@@ -50,23 +49,8 @@ const securityHeaders = helmet({
   },
 });
 
-// Compression options
-const compressionOptions = {
-  level: 6, // Compression level (0-9, where 9 is maximum)
-  threshold: '1kb', // Only compress responses larger than 1kb
-  filter: (req, res) => {
-    // Don't compress responses with this header
-    if (req.headers['x-no-compression']) {
-      return false;
-    }
-    // Fall back to standard filter function
-    return compression.filter(req, res);
-  },
-};
-
 module.exports = {
   corsOptions,
   apiLimiter,
   securityHeaders,
-  compressionOptions,
 };

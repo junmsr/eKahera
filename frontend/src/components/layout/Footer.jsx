@@ -105,7 +105,7 @@ function Footer({ className = "" }) {
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12 lg:gap-16 mb-16"
         >
           {/* Brand Column */}
-          <motion.div variants={itemVariants} className="lg:col-span-1">
+          <motion.div variants={itemVariants} className="lg:col-span-1 flex flex-col items-center md:items-start">
             <motion.div
               className="mb-8"
               whileHover={{ scale: 1.03 }}
@@ -113,7 +113,7 @@ function Footer({ className = "" }) {
             >
               <Logo size={45} className="text-2xl" />
             </motion.div>
-            <motion.p className="text-slate-600 text-sm leading-relaxed mb-8 max-w-xs font-medium">
+            <motion.p className="text-slate-600 text-sm leading-relaxed mb-8 max-w-xs font-medium text-center md:text-left">
               Smart POS platform for fast checkout, unified inventory, and
               real-time analytics.
             </motion.p>
@@ -121,7 +121,7 @@ function Footer({ className = "" }) {
             {/* Contact Info with enhanced styling */}
             <motion.div className="space-y-4 mb-8">
               <motion.a
-                href="mailto:support@ekahera.com"
+                href="mailto:ekahera.business@gmail.com"
                 className="flex items-center gap-3 text-sm text-slate-700 hover:text-blue-600 transition-all duration-300 group"
                 whileHover={{ x: 6, scale: 1.02 }}
               >
@@ -149,7 +149,7 @@ function Footer({ className = "" }) {
                     <path d="M22 6l-10 7L2 6" />
                   </svg>
                 </motion.div>
-                <motion.span className="font-medium">support@ekahera.com</motion.span>
+                <motion.span className="font-medium">ekahera.business@gmail.com</motion.span>
               </motion.a>
 
               <motion.a
@@ -188,7 +188,7 @@ function Footer({ className = "" }) {
               </motion.a>
 
               <motion.a
-                href="https://www.google.com/maps/search/?api=1&query=200+T.+De+Castro+Street,+Zone-8+Bulan,+Sorsogon"
+                href="https://www.google.com/maps/place/Bicol+University,+West+(Main+Campus)/@13.1473394,123.7249139,17z/data=!4m10!1m2!2m1!1sBicol+University!3m6!1s0x33a103e3fd7f2aff:0x2acc0a750f85d29b!8m2!3d13.1443405!4d123.7231321!15sChBCaWNvbCBVbml2ZXJzaXR5WhIiEGJpY29sIHVuaXZlcnNpdHmSARFwdWJsaWNfdW5pdmVyc2l0eZoBI0NoWkRTVWhOTUc5blMwVkpRMEZuU1VSbE5XWm1SV0ozRUFF4AEA-gEECAAQJw!16s%2Fg%2F11xkrw1fz?entry=ttu&g_ep=EgoyMDI1MTIwMi4wIKXMDSoASAFQAw%3D%3D"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-3 text-sm text-slate-700 hover:text-blue-600 transition-all duration-300 group"
@@ -212,16 +212,16 @@ function Footer({ className = "" }) {
                   </svg>
                 </motion.div>
                 <motion.span className="font-medium">
-                  200 T. De Castro Street, Zone-8
+                  Bicol University, West (Main Campus)
                   <br />
-                  Bulan, Sorsogon, Philippines
+                  Legazpi City, Albay, Philippines
                 </motion.span>
               </motion.a>
             </motion.div>
           </motion.div>
 
           {/* Company Column */}
-          <motion.div variants={itemVariants}>
+          <motion.div variants={itemVariants} className="flex flex-col items-center md:items-start">
             <motion.h3 className="text-lg font-bold text-slate-800 mb-6 relative inline-block">
               Quick Links
               <motion.span
@@ -281,7 +281,7 @@ function Footer({ className = "" }) {
           </motion.div>
 
           {/* Support Column */}
-          <motion.div variants={itemVariants}>
+          <motion.div variants={itemVariants} className="flex flex-col items-center md:items-start">
             <motion.h3 className="text-lg font-bold text-slate-800 mb-6 relative inline-block">
               Support
               <motion.span
@@ -369,7 +369,7 @@ function Footer({ className = "" }) {
               </motion.li>
               <motion.li>
                 <motion.a
-                  href="#faq"
+                  href="#faqs"
                   className="group flex items-center gap-2.5 text-sm text-slate-600 hover:text-blue-600 transition-all duration-300"
                   whileHover={{ x: 6 }}
                 >
@@ -388,7 +388,7 @@ function Footer({ className = "" }) {
                       d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                     />
                   </svg>
-                  <motion.span className="font-medium">FAQ</motion.span>
+                  <motion.span className="font-medium">FAQs</motion.span>
                 </motion.a>
               </motion.li>
             </ul>
@@ -413,18 +413,14 @@ function Footer({ className = "" }) {
 
         {/* Enhanced Bottom Bar */}
         <motion.div
-          className="flex flex-col md:flex-row justify-between items-center gap-3 md:gap-6 text-sm"
+          className="flex flex-col justify-center items-center gap-3 text-sm"
           variants={itemVariants}
           initial="hidden"
           animate="visible"
         >
-          <motion.p className="text-slate-500 text-sm mb-4 md:mb-0">
+          <p className="text-slate-500 text-sm text-center">
             &copy; {new Date().getFullYear()} eKahera. All rights reserved.
-          </motion.p>
-          <span className="hidden md:block text-slate-300 text-lg">•</span>
-          <motion.p className="text-slate-600 text-sm mb-6">
-            Follow us on social media for the latest updates and news.
-          </motion.p>
+          </p>
         </motion.div>
       </motion.div>
       <TermsModal open={openTerms} onClose={() => setOpenTerms(false)} />

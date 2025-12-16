@@ -18,15 +18,67 @@ function GetStartedLayout({
   progress,
   loading,
   errors,
+  form = {}, // Default to empty object to prevent undefined errors
+  success = false,
   onBack,
   onNext,
   onFinish,
   children,
 }) {
-  const showBack = step > 0;
+  const showBack = step > 0 && !success;
   const isOtpStep = step === 1;
-  const showNext = step < steps.length - 1 && !isOtpStep;
-  const showFinish = step === steps.length - 1;
+  const showNext = step < steps.length - 1 && !isOtpStep && !success;
+  const showFinish = step === steps.length - 1 && !success;
+  const showSuccess = success;
+
+  // Check if current step is valid
+  const isStepValid = () => {
+    if (step === 0) {
+      // Account Info step
+      return (
+        form.email &&
+        /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email) &&
+        form.firstName &&
+        form.fullName &&
+        form.username &&
+        form.mobile?.length === 11 &&
+        form.password &&
+        form.confirmPassword &&
+        form.password === form.confirmPassword &&
+        form.password.length >= 12 &&
+        /[A-Z]/.test(form.password) &&
+        /[a-z]/.test(form.password) &&
+        /\d/.test(form.password) &&
+        /[!@#$%^&*(),.?":{}|<>]/.test(form.password)
+      );
+    } else if (step === 2) {
+      // Business Details step
+      return (
+        form.businessName &&
+        (form.useAdminEmail ||
+          (form.businessEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.businessEmail))) &&
+        form.businessType &&
+        (form.businessType !== 'Others' || form.customBusinessType) &&
+        form.region &&
+        form.province &&
+        form.city &&
+        form.barangay
+      );
+    } else if (step === 3) {
+      // Document Upload step
+      return (
+        form.documents?.length > 0 &&
+        form.acceptTerms &&
+        form.acceptPrivacy &&
+        ['Business Registration Certificate (DTI/SEC/CDA)', 
+         "Mayor's Permit / Business Permit", 
+         'BIR Certificate of Registration (Form 2303)']
+          .every(reqType => form.documentTypes?.includes(reqType)) &&
+        form.documentTypes?.every(type => type)
+      );
+    }
+    return true; // For other steps (like OTP), consider them valid by default
+  };
 
   return (
     <Background variant="gradientBlue" pattern="dots" overlay floatingElements>
@@ -47,6 +99,7 @@ function GetStartedLayout({
                   Create your account, verify your email, add business details
                   and upload documents. You're minutes away from a modern POS.
                 </p>
+               { /*
                 <ul className="text-left text-white/95 text-sm space-y-2">
                   <li className="flex items-center gap-2">
                     <span className="inline-block w-2 h-2 rounded-full bg-white"></span>{" "}
@@ -61,6 +114,7 @@ function GetStartedLayout({
                     Bank‑grade security
                   </li>
                 </ul>
+                */}
               </div>
             </aside>
 
@@ -108,7 +162,7 @@ function GetStartedLayout({
                 <div className="max-w-lg">{children}</div>
               </div>
 
-              {(showBack || showNext || showFinish) && (
+              {(showBack || showNext || showFinish || showSuccess) && (
                 <div className="mt-8 md:mt-6 flex items-center justify-center gap-4">
                   {showBack && (
                     <Button
@@ -123,7 +177,7 @@ function GetStartedLayout({
                   {showNext && (
                     <Button
                       onClick={onNext}
-                      disabled={loading}
+                      disabled={loading || !isStepValid()}
                       variant="primary"
                       className="w-48"
                     >
@@ -133,11 +187,31 @@ function GetStartedLayout({
                   {showFinish && (
                     <Button
                       onClick={onFinish}
-                      disabled={loading}
+                      disabled={loading || 
+                        !form?.documents?.length || 
+                        !form?.acceptTerms || 
+                        !form?.acceptPrivacy ||
+                        // Check if all required documents are uploaded and have types
+                        !['Business Registration Certificate (DTI/SEC/CDA)', 
+                          "Mayor's Permit / Business Permit", 
+                          'BIR Certificate of Registration (Form 2303)']
+                          .every(reqType => form.documentTypes?.includes(reqType)) ||
+                        // Check if all uploaded documents have a type selected
+                        form.documentTypes?.some(type => !type)
+                      }
                       variant="primary"
                       className="w-48"
                     >
                       {loading ? <Loader size="sm" /> : "Finish"}
+                    </Button>
+                  )}
+                  {showSuccess && (
+                    <Button
+                      onClick={() => (window.location.href = "/")}
+                      variant="primary"
+                      className="w-48"
+                    >
+                      Return to Home
                     </Button>
                   )}
                 </div>

@@ -11,7 +11,6 @@ const { hasRequiredDocuments } = require('./businessController');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const fetch = require('node-fetch');
 const pool = require('../config/database');
 const supabaseStorage = require('../utils/supabaseStorage');
 const { logAction } = require('../utils/logger');

@@ -1,13 +1,67 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import PageLayout from "../components/layout/PageLayout";
 import NavAdmin from "../components/layout/Nav-Admin";
 import Inventory from "../components/inventory/Inventory";
 import Modal from "../components/modals/Modal";
+import Button from "../components/common/Button";
+
 import ProductFormModal from "../components/modals/ProductFormModal";
 import { api, authHeaders } from "../lib/api";
+import { useDebounce } from "../hooks/useDebounce";
 
 const initialProducts = [];
 const initialCategories = [];
+const DEFAULT_LOW_STOCK_LEVEL = 10;
+
+// Utility function to convert array of objects to CSV
+const convertToCSV = (data) => {
+  if (!data || data.length === 0) return "";
+
+  const headers = [
+    "Name",
+    "SKU",
+    "Category",
+    "Description",
+    "Cost Price",
+    "Selling Price",
+    "Stock",
+  ];
+  const csvRows = [];
+
+  // Add headers
+  csvRows.push(headers.join(","));
+
+  // Add data rows
+  data.forEach((item) => {
+    const row = [
+      `"${item.name || ""}"`,
+      `"${item.sku || ""}"`,
+      `"${item.category || ""}"`,
+      `"${item.description || ""}"`,
+      item.cost_price || 0,
+      item.selling_price || 0,
+      item.quantity || 0,
+    ];
+    csvRows.push(row.join(","));
+  });
+
+  return csvRows.join("\n");
+};
+
+// Utility function to download CSV
+const downloadCSV = (csv, filename) => {
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const link = document.createElement("a");
+  if (link.download !== undefined) {
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", filename);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+};
 
 // Function to get predefined categories based on business type
 function getCategoriesByBusinessType(businessType) {
@@ -62,17 +116,6 @@ function getCategoriesByBusinessType(businessType) {
       "Personal Appliances",
       "Gaming Consoles & Accessories",
       "Cables, Adapters & Chargers",
-    ],
-    "Hardware Store": [
-      "Hand Tools",
-      "Power Tools",
-      "Construction Materials",
-      "Electrical Supplies",
-      "Plumbing Supplies",
-      "Paint & Painting Supplies",
-      "Gardening Tools",
-      "Fasteners (Nails, Screws, Bolts)",
-      "Safety Gear",
     ],
     Bookstore: [
       "Fiction Books",
@@ -159,15 +202,19 @@ export default function InventoryPage() {
     quantity: "",
     cost_price: "",
     selling_price: "",
+    low_stock_level: DEFAULT_LOW_STOCK_LEVEL,
   });
   const [stockForm, setStockForm] = useState({ sku: "", quantity: "" });
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 400);
   const [entriesPerPage, setEntriesPerPage] = useState(10);
   const [page, setPage] = useState(1);
   const [apiError, setApiError] = useState("");
   const [isSidebarOpen, setSidebarOpen] = useState(false);
-
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [productToDelete, setProductToDelete] = useState(null);
   // Load inventory and business type from API
   useEffect(() => {
     const fetchInventory = async () => {
@@ -200,13 +247,17 @@ export default function InventoryPage() {
           }))
         );
 
-        // Fetch inventory
+        // Fetch inventory with pagination support
         const data = await api("/api/inventory", {
           headers: authHeaders(token),
+          params: { limit: 1000, offset: 0 }, // Fetch all for now, can be optimized later
         });
 
+        // Handle both old array format and new paginated format
+        const productsData = data?.products || data || [];
+
         // Map backend rows to UI shape with correct column mapping
-        const mapped = (data || []).map((row) => ({
+        const mapped = (productsData || []).map((row) => ({
           id: String(row.id || ""),
           name: row.name || "-",
           category: row.category || "-",
@@ -215,6 +266,9 @@ export default function InventoryPage() {
           selling_price: Number(row.selling_price || 0),
           sku: row.sku || "",
           description: row.description || "",
+          low_stock_level: Number(
+            row.low_stock_level ?? DEFAULT_LOW_STOCK_LEVEL
+          ),
         }));
         setProducts(mapped);
       } catch (err) {
@@ -232,9 +286,10 @@ export default function InventoryPage() {
     (sum, p) => sum + Number(p.selling_price || 0) * Number(p.quantity || 0),
     0
   );
-  const lowStockItems = products.filter(
-    (p) => Number(p.quantity || 0) < 10
-  ).length;
+  const lowStockItems = products.filter((p) => {
+    const threshold = Number(p.low_stock_level ?? DEFAULT_LOW_STOCK_LEVEL);
+    return Number(p.quantity || 0) < threshold;
+  }).length;
 
   const stats = [
     {
@@ -319,13 +374,13 @@ export default function InventoryPage() {
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [stockFilter, setStockFilter] = useState(null);
 
-  // Filtering, sorting and pagination
+  // Filtering, sorting and pagination - use debounced search
   const filteredProducts = useMemo(() => {
     let filtered = products.filter(
       (p) =>
-        p.name.toLowerCase().includes(search.toLowerCase()) ||
-        p.category.toLowerCase().includes(search.toLowerCase()) ||
-        p.description.toLowerCase().includes(search.toLowerCase())
+        p.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        p.category.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        p.description.toLowerCase().includes(debouncedSearch.toLowerCase())
     );
 
     // Apply category filter
@@ -340,10 +395,18 @@ export default function InventoryPage() {
       } else if (stockFilter === "low_stock") {
         filtered = filtered.filter((p) => {
           const qty = Number(p.quantity || 0);
-          return qty > 0 && qty < 10;
+          const threshold = Number(
+            p.low_stock_level ?? DEFAULT_LOW_STOCK_LEVEL
+          );
+          return qty > 0 && qty < threshold;
         });
       } else if (stockFilter === "in_stock") {
-        filtered = filtered.filter((p) => Number(p.quantity || 0) >= 10);
+        filtered = filtered.filter((p) => {
+          const threshold = Number(
+            p.low_stock_level ?? DEFAULT_LOW_STOCK_LEVEL
+          );
+          return Number(p.quantity || 0) >= threshold;
+        });
       }
     }
 
@@ -372,7 +435,7 @@ export default function InventoryPage() {
     });
 
     return filtered;
-  }, [products, search, selectedCategory, stockFilter, sortBy, sortOrder]);
+  }, [products, debouncedSearch, selectedCategory, stockFilter, sortBy, sortOrder]);
 
   const totalPages = Math.ceil(filteredProducts.length / entriesPerPage) || 1;
   const paginatedProducts = filteredProducts.slice(
@@ -380,8 +443,8 @@ export default function InventoryPage() {
     page * entriesPerPage
   );
 
-  // Handlers
-  const openAddProduct = () => {
+  // Handlers - memoized with useCallback
+  const openAddProduct = useCallback(() => {
     setEditingProduct(null);
     setProductForm({
       sku: "",
@@ -392,27 +455,43 @@ export default function InventoryPage() {
       quantity: "",
       cost_price: "",
       selling_price: "",
+      low_stock_level: DEFAULT_LOW_STOCK_LEVEL,
     });
     setShowProductModal(true);
-  };
+  }, []);
 
-  const openEditProduct = (product) => {
+  const openEditProduct = useCallback((product) => {
     setEditingProduct(product);
-    setProductForm({ ...product });
+    setProductForm({
+      ...product,
+      low_stock_level:
+        typeof product.low_stock_level === "number"
+          ? product.low_stock_level
+          : DEFAULT_LOW_STOCK_LEVEL,
+    });
     setShowProductModal(true);
-  };
+  }, []);
 
-  const openStockEntry = (product) => {
+  const openStockEntry = useCallback((product) => {
     setStockForm({ sku: product?.sku || "", quantity: "" });
     setShowStockModal(true);
-  };
+  }, []);
 
-  const handleProductFormChange = (e) => {
+  const handleProductFormChange = useCallback((e) => {
     const { name, value } = e.target;
-    setProductForm((prev) => ({ ...prev, [name]: value }));
-  };
+    // Clear error if user explicitly clears it or starts typing in form fields
+    if (name === 'clearError') {
+      setApiError("");
+    } else if (apiError && name !== 'clearError') {
+      // Only clear error when user modifies form fields (not on initial render)
+      setApiError("");
+    }
+    if (name !== 'clearError') {
+      setProductForm((prev) => ({ ...prev, [name]: value }));
+    }
+  }, []);
 
-  const handleProductSubmit = async (e) => {
+  const handleProductSubmit = useCallback(async (e) => {
     e.preventDefault();
     try {
       setLoading(true);
@@ -432,6 +511,8 @@ export default function InventoryPage() {
             cost_price: Number(productForm.cost_price) || 0,
             selling_price: Number(productForm.selling_price) || 0,
             sku: (productForm.sku || "").trim(),
+            low_stock_level:
+              Number(productForm.low_stock_level) || DEFAULT_LOW_STOCK_LEVEL,
             category:
               productForm.category === "Others"
                 ? (productForm.customCategory || "").trim()
@@ -461,13 +542,19 @@ export default function InventoryPage() {
             price: Number(productForm.selling_price) || 0,
             sku: (productForm.sku || "").trim() || `SKU-${Date.now()}`,
             quantity: Number(productForm.quantity) || 0,
+            low_stock_level:
+              Number(productForm.low_stock_level) || DEFAULT_LOW_STOCK_LEVEL,
           }),
         });
       }
 
       // Refresh inventory list after creation/update
-      const data = await api("/api/inventory", { headers: authHeaders(token) });
-      const mapped = (data || []).map((row) => ({
+      const data = await api("/api/inventory", { 
+        headers: authHeaders(token),
+        params: { limit: 1000, offset: 0 }
+      });
+      const productsData = data?.products || data || [];
+      const mapped = (productsData || []).map((row) => ({
         id: String(row.id || ""),
         name: row.name || "-",
         category: row.category || "-",
@@ -476,17 +563,43 @@ export default function InventoryPage() {
         selling_price: Number(row.selling_price || 0),
         sku: row.sku || "",
         description: row.description || "",
+        low_stock_level: Number(row.low_stock_level ?? DEFAULT_LOW_STOCK_LEVEL),
       }));
       setProducts(mapped);
       setShowProductModal(false);
     } catch (err) {
-      setApiError("Failed to save product");
+      // Handle duplicate SKU error and other errors
+      let errorMessage = "Failed to save product";
+      try {
+        // Check if error has response data (from api.js)
+        const errorData = err.response?.data || err.data || {};
+        const errorStatus = err.response?.status;
+        
+        if (errorStatus === 409 || errorData.error === 'Product with this SKU already exists') {
+          // Duplicate SKU error - provide clear message
+          errorMessage = errorData.message || `A product with SKU "${productForm.sku?.trim() || 'this SKU'}" already exists. Please use a different SKU.`;
+          if (errorData.existingProduct) {
+            errorMessage = `SKU "${productForm.sku?.trim()}" is already in use by "${errorData.existingProduct.product_name}". Please use a different SKU code.`;
+          }
+        } else if (errorData.error || errorData.message) {
+          // Other API errors
+          errorMessage = errorData.message || errorData.error;
+        } else if (err.message) {
+          // Error from api.js wrapper
+          errorMessage = err.message;
+        }
+      } catch (parseErr) {
+        // If parsing fails, use error message if available
+        errorMessage = err.message || "Failed to save product";
+        console.error("Error parsing error response:", parseErr);
+      }
+      setApiError(errorMessage);
     } finally {
       setLoading(false);
     }
-  };
+  }, [editingProduct, productForm]);
 
-  const handleStockSubmit = async (e) => {
+  const handleStockSubmit = useCallback(async (e) => {
     e.preventDefault();
     try {
       setLoading(true);
@@ -500,8 +613,12 @@ export default function InventoryPage() {
           quantity: Number(stockForm.quantity),
         }),
       });
-      const data = await api("/api/inventory", { headers: authHeaders(token) });
-      const mapped = (data || []).map((row) => ({
+      const data = await api("/api/inventory", { 
+        headers: authHeaders(token),
+        params: { limit: 1000, offset: 0 }
+      });
+      const productsData = data?.products || data || [];
+      const mapped = (productsData || []).map((row) => ({
         id: String(row.id || ""),
         name: row.name || "-",
         category: row.category || "-",
@@ -510,6 +627,7 @@ export default function InventoryPage() {
         selling_price: Number(row.selling_price || 0),
         sku: row.sku || "",
         description: row.description || "",
+        low_stock_level: Number(row.low_stock_level ?? DEFAULT_LOW_STOCK_LEVEL),
       }));
       setProducts(mapped);
       setShowStockModal(false);
@@ -518,61 +636,134 @@ export default function InventoryPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [stockForm]);
 
-  const handleDeleteProduct = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this product?"))
-      return;
+  const handleDeleteProduct = useCallback((id) => {
+    const product = products.find((p) => String(p.id) === String(id));
+    if (product) {
+      setProductToDelete(product);
+      setShowDeleteModal(true);
+    }
+  }, [products]);
 
+  const confirmDeleteProduct = useCallback(async () => {
+    if (!productToDelete) return;
     try {
       setLoading(true);
       setApiError("");
       const token = sessionStorage.getItem("auth_token");
-      await api(`/api/inventory/${id}`, {
-        method: "DELETE",
-        headers: authHeaders(token),
-      });
+      
+      // First try the new API endpoint
+      try {
+        await api(`/api/products/${productToDelete.id}`, {
+          method: "DELETE",
+          headers: authHeaders(token),
+        });
+      } catch (err) {
+        // Fallback to the old endpoint if the first one fails
+        console.log('Trying fallback delete endpoint...');
+        await api(`/api/inventory/${productToDelete.id}`, {
+          method: "DELETE",
+          headers: authHeaders(token),
+        });
+      }
 
-      // Refresh inventory list after deletion
-      const data = await api("/api/inventory", { headers: authHeaders(token) });
-      const mapped = (data || []).map((row) => ({
-        id: String(row.id || ""),
-        name: row.name || "-",
-        category: row.category || "-",
-        quantity: Number(row.quantity || 0),
-        cost_price: Number(row.cost_price || 0),
-        selling_price: Number(row.selling_price || 0),
-        sku: row.sku || "",
-        description: row.description || "",
-      }));
-      setProducts(mapped);
+      // Update the UI by removing the deleted product
+      setProducts(prev => prev.filter(p => p.id !== productToDelete.id));
+      setShowDeleteModal(false);
+      setProductToDelete(null);
     } catch (err) {
-      setApiError("Failed to delete product");
+      console.error('Error deleting product:', err);
+      setApiError(err.response?.data?.error || "Failed to delete product. Please try again.");
     } finally {
       setLoading(false);
     }
-  };
+  }, [productToDelete]);
 
-  const handlePageChange = (newPage) => {
+  const handlePageChange = useCallback((newPage) => {
     if (newPage < 1 || newPage > totalPages) return;
     setPage(newPage);
-  };
+  }, [totalPages]);
 
-  const handleEntriesChange = (e) => {
+  const handleEntriesChange = useCallback((e) => {
     setEntriesPerPage(Number(e.target.value));
     setPage(1);
-  };
+  }, []);
 
-  const handleSearchChange = (e) => {
+  const handleSearchChange = useCallback((e) => {
     setSearch(e.target.value);
     setPage(1);
-  };
+  }, []);
+
+  const handleExport = useCallback(() => {
+    const csv = convertToCSV(filteredProducts);
+    const timestamp = new Date().toISOString().split("T")[0];
+    const filename = `inventory_export_${timestamp}.csv`;
+    downloadCSV(csv, filename);
+  }, [filteredProducts]);
+
+  const headerActions = (
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 sm:gap-4 mb-4 sm:mb-0 w-full">
+      <div className="flex items-center justify-end gap-2 sm:gap-3 w-auto">
+        {/* ADD PRODUCT Button: 'Add' on Mobile, 'Add Product' on Desktop */}
+        <Button
+          onClick={openAddProduct}
+          variant="primary"
+          microinteraction={true}
+          // Same width logic as Export button
+          className="bg-blue-600 text-md text-white font-semibold rounded-lg shadow hover:bg-blue-700 transition gap-1 sm:gap-2 flex items-center justify-center sm:justify-start !py-2 !px-2 sm:!px-2 shrink-0 min-w-[40px] sm:min-w-[40px] lg:min-w-0"
+        >
+          <svg
+            className="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 4v16m8-8H4"
+            />
+          </svg>
+          {/* Full text is hidden on mobile, short text shown on mobile */}
+          <span className="hidden sm:block">Add Product</span>
+          <span className="sm:inline"></span>
+        </Button>
+        
+        {/* EXPORT Button: ICON ONLY on Mobile, ICON + TEXT on Desktop */}
+        <Button
+          onClick={handleExport}
+          variant="secondary"
+          // Ensure fixed width on mobile for icon, then auto width on desktop
+          className="text-sm flex items-center justify-center sm:justify-start gap-1 sm:gap-2 shrink-0 !py-2 !px-2 sm:!px-2 min-w-[40px] sm:min-w-[40px] lg:min-w-0"
+        >
+          <svg
+            className="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+            />
+          </svg>
+          {/* Text is hidden on mobile (default) and shown from 'sm' breakpoint up */}
+          <span className="hidden sm:inline">Export</span> 
+        </Button>
+      </div>
+    </div>
+  );
 
   return (
     <PageLayout
       title="INVENTORY"
       sidebar={<NavAdmin />}
       isSidebarOpen={isSidebarOpen}
+      headerActions={headerActions}
       setSidebarOpen={setSidebarOpen}
       showHeader={true}
       showNavbar={false}
@@ -612,36 +803,62 @@ export default function InventoryPage() {
           setPage(1); // Reset to first page on sort
         }}
       />
-      {apiError && (
-        <div className="bg-red-50 border-l-4 border-red-500 rounded-lg p-3 flex items-start gap-2 mt-2">
-          <svg
-            className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+      {apiError && !showProductModal && (
+        <div className="bg-red-50 border-l-4 border-red-500 rounded-lg p-4 flex items-start gap-3 mt-4 shadow-sm">
+          <div className="flex-shrink-0">
+            <svg
+              className="w-5 h-5 text-red-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
+              />
+            </svg>
+          </div>
+          <div className="flex-1">
+            <h3 className="text-sm font-semibold text-red-800 mb-1">
+              {apiError.includes("already exists") || apiError.includes("SKU") 
+                ? "Duplicate Product" 
+                : "Error"}
+            </h3>
+            <p className="text-sm text-red-700">
+              {(() => {
+                try {
+                  const parsed = JSON.parse(apiError);
+                  return parsed.error || parsed.message || apiError;
+                } catch {
+                  return apiError;
+                }
+              })()}
+            </p>
+            {apiError.includes("already exists") && (
+              <p className="text-xs text-red-600 mt-2 italic">
+                Please use a different SKU code or update the existing product instead.
+              </p>
+            )}
+          </div>
+          <button
+            onClick={() => setApiError("")}
+            className="flex-shrink-0 text-red-400 hover:text-red-600 transition-colors"
+            aria-label="Close error"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
-            />
-          </svg>
-          <p className="text-sm font-medium text-red-700">
-            {(() => {
-              try {
-                const parsed = JSON.parse(apiError);
-                return parsed.error || parsed.message || apiError;
-              } catch {
-                return apiError;
-              }
-            })()}
-          </p>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
       )}
       <Modal
         isOpen={showProductModal}
-        onClose={() => setShowProductModal(false)}
+        onClose={() => {
+          setShowProductModal(false);
+          setApiError(""); // Clear error when closing modal
+        }}
         variant="product"
         title={editingProduct ? "Edit Product" : "Add New Product"}
         editingProduct={editingProduct}
@@ -650,6 +867,7 @@ export default function InventoryPage() {
         categories={categories}
         onSubmit={handleProductSubmit}
         loading={loading}
+        error={apiError}
       />
       {/* Stock Entry Modal */}
       <Modal
@@ -665,6 +883,64 @@ export default function InventoryPage() {
         onSubmit={handleStockSubmit}
         loading={loading}
       />
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        title=""
+        size="sm"
+      >
+        <div className="p-0">
+          <div className="bg-gradient-to-r from-red-50 via-red-50/80 to-orange-50/50 border-b border-red-100 px-6 py-5 rounded-t-2xl">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-red-600 rounded-xl flex items-center justify-center shadow-lg">
+                <svg
+                  className="w-6 h-6 text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
+                  />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h2 className="text-xl font-bold text-gray-900 mb-1">
+                  Confirm Deletion
+                </h2>
+                <p className="text-sm text-gray-600">
+                  Are you sure you want to delete this product?
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="p-6">
+            <p className="text-sm text-gray-700 mb-2">
+              You are about to delete:{" "}
+              <strong className="text-red-700">{productToDelete?.name}</strong>
+            </p>
+            <p className="text-sm text-gray-700 mb-6">
+              This action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-3">
+              <Button
+                onClick={() => setShowDeleteModal(false)}
+                variant="secondary"
+                disabled={loading}
+              >
+                Cancel
+              </Button>
+              <Button onClick={confirmDeleteProduct} variant="danger" loading={loading}>
+                Delete
+              </Button>
+            </div>
+          </div>
+        </div>
+      </Modal>
     </PageLayout>
   );
 }

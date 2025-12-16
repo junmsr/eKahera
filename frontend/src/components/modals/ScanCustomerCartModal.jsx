@@ -3,6 +3,7 @@ import BaseModal from "./BaseModal";
 import ScannerCard from "../ui/POS/ScannerCard";
 import Button from "../common/Button";
 import { api } from "../../lib/api";
+import { useKeyboardShortcuts } from "../../hooks/useKeyboardShortcuts";
 
 export default function ScanCustomerCartModal({ isOpen, onClose, onImport }) {
   const [scannerPaused, setScannerPaused] = useState(false);
@@ -88,17 +89,25 @@ export default function ScanCustomerCartModal({ isOpen, onClose, onImport }) {
       setError(e.message || "Failed to process QR code");
       console.error('Scan error:', e);
     } finally {
-      setScannerPaused(false);
+      // Resume scanner after a delay to allow error message to be visible
+      setTimeout(() => {
+        setScannerPaused(false);
+      }, 500);
     }
   };
 
   const footerContent = (
     <Button
-      label="Close"
+      label="Close (Esc)"
       variant="secondary"
       onClick={onClose}
       className="w-full"
     />
+  );
+
+  useKeyboardShortcuts(
+    [{ key: "escape", action: onClose, enabled: isOpen }],
+    [isOpen]
   );
 
   return (
@@ -142,6 +151,12 @@ export default function ScanCustomerCartModal({ isOpen, onClose, onImport }) {
           {error}
         </div>
       )}
+      <div className="text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
+        <div className="flex items-center justify-between">
+          <span>Close:</span>
+          <span className="font-mono bg-white px-2 py-0.5 rounded">Esc</span>
+        </div>
+      </div>
     </BaseModal>
   );
 }

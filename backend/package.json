@@ -16,7 +16,6 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.918.0",
     "@supabase/supabase-js": "^2.76.1",
-    "aws-sdk": "^2.1692.0",
     "axios": "^1.13.2",
     "bcryptjs": "^3.0.2",
     "compression": "^1.8.1",
@@ -32,7 +31,8 @@
     "nodemailer": "^7.0.10",
     "otp-generator": "^4.0.1",
     "pg": "^8.16.3",
-    "resend": "^6.4.2"
+    "resend": "^6.4.2",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "nodemon": "^3.1.10"

@@ -3,8 +3,10 @@ export async function api(path, options = {}, returnRawResponse = false) {
   // - in dev use the local backend so `npm run dev` + Vite proxy still works
   // - in production use a relative path (empty string) so callers can set the
   //   correct API host during the build/deploy (recommended)
+  // Force localhost:5000 for development
   const LOCAL_DEFAULT = "http://localhost:5000";
-  const envUrl = import.meta.env.VITE_API_BASE_URL;
+  // Only use VITE_API_BASE_URL in production, not in development
+  const envUrl = import.meta.env.PROD ? import.meta.env.VITE_API_BASE_URL : '';
   const isLocalHost =
     typeof window !== "undefined" &&
     (window.location.hostname === "localhost" ||
@@ -37,8 +39,25 @@ export async function api(path, options = {}, returnRawResponse = false) {
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  const finalUrl =
-    (API_BASE || "") + (path.startsWith("/api") ? path : `/api${path}`);
+  // Handle params - convert to query string
+  let finalPath = path.startsWith("/api") ? path : `/api${path}`;
+  if (options.params) {
+    const queryParams = new URLSearchParams();
+    Object.entries(options.params).forEach(([key, value]) => {
+      if (value !== null && value !== undefined && value !== '') {
+        queryParams.append(key, value);
+      }
+    });
+    const queryString = queryParams.toString();
+    if (queryString) {
+      finalPath += (finalPath.includes('?') ? '&' : '?') + queryString;
+    }
+    // Remove params from options to avoid passing it to fetch
+    const { params, ...restOptions } = options;
+    options = restOptions;
+  }
+
+  const finalUrl = (API_BASE || "") + finalPath;
   const res = await fetch(finalUrl, {
     ...options,
     credentials: "include",
@@ -50,7 +69,7 @@ export async function api(path, options = {}, returnRawResponse = false) {
 
     // Provide user-friendly error messages for common status codes
     if (res.status === 400) {
-      // Handle specific 400 errors like OTP validation
+      // Handle specific 400 errors like OTP validation and password errors
       try {
         const errorJson = JSON.parse(errorText);
         if (errorJson.error && errorJson.error.includes("Invalid OTP")) {
@@ -59,18 +78,52 @@ export async function api(path, options = {}, returnRawResponse = false) {
             `Invalid verification code. ${attemptsLeft} attempts remaining.`
           );
         }
+        // Preserve password-related error messages
+        if (errorJson.error && (
+          errorJson.error.toLowerCase().includes("password") ||
+          errorJson.error.toLowerCase().includes("current password")
+        )) {
+          const error = new Error(errorJson.error);
+          error.response = { status: 400, data: errorJson };
+          error.data = errorJson;
+          throw error;
+        }
       } catch (e) {
-        // If parsing fails or it's not an OTP error, continue to general 400 handling
+        // If parsing fails or it's not a handled error, continue to general 400 handling
+        if (e.response) throw e; // Re-throw if we already set response (password errors)
       }
       throw new Error(
         "Invalid request. Please check your input and try again."
       );
     } else if (res.status === 401) {
-      throw new Error("Your session has expired. Please log in again.");
+      // Try to extract specific error message (e.g., password validation errors)
+      let specificError = null;
+      try {
+        const errorJson = JSON.parse(errorText);
+        if (errorJson.error) {
+          specificError = errorJson.error;
+        }
+      } catch (e) {
+        // JSON parsing failed, will use generic message
+      }
+      // Use specific error if found, otherwise use generic message
+      throw new Error(specificError || "Your session has expired. Please log in again.");
     } else if (res.status === 403) {
       throw new Error("You do not have permission to perform this action.");
     } else if (res.status === 404) {
       throw new Error("The requested resource was not found.");
+    } else if (res.status === 409) {
+      // Conflict - typically for duplicate resources (e.g., duplicate SKU)
+      try {
+        const errorJson = JSON.parse(errorText);
+        const error = new Error(errorJson?.message || errorJson?.error || "A resource with this information already exists.");
+        error.response = { status: 409, data: errorJson };
+        error.data = errorJson;
+        throw error;
+      } catch (e) {
+        if (e.response) throw e; // Re-throw if we already set response
+        throw new Error("A resource with this information already exists.");
+      }
     } else if (res.status === 500) {
       throw new Error("Server error occurred. Please try again later.");
     }
@@ -80,8 +133,12 @@ export async function api(path, options = {}, returnRawResponse = false) {
       const errorJson = JSON.parse(errorText);
       const msg =
         errorJson?.error || errorJson?.message || JSON.stringify(errorJson);
-      throw new Error(`${res.status} ${res.statusText}: ${msg}`);
+      const error = new Error(`${res.status} ${res.statusText}: ${msg}`);
+      error.response = { status: res.status, data: errorJson };
+      error.data = errorJson;
+      throw error;
     } catch (e) {
+      if (e.response) throw e; // Re-throw if we already set response
       // If the body looks like HTML (e.g. Vite/Express default page), hide raw HTML.
       const bodySnippet = /<[^>]+>/.test(errorText)
         ? "Server returned an HTML error page"
@@ -92,6 +149,11 @@ export async function api(path, options = {}, returnRawResponse = false) {
 
   if (returnRawResponse) {
     return res;
+  }
+
+  // Handle 204 No Content responses (common for DELETE requests)
+  if (res.status === 204) {
+    return null;
   }
 
   const contentType = res.headers.get("content-type") || "";
