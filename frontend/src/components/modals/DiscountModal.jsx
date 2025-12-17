@@ -567,6 +567,11 @@ function DiscountModal({ isOpen, onClose, onApplyDiscount }) {
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-medium">Select Discount</h3>
         </div>
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+          <p className="text-sm text-blue-800">
+            <strong>Note:</strong> Discounts (PWD/Senior Citizen) only apply to basic necessities as per Philippine law.
+          </p>
+        </div>
         <div className="grid grid-cols-3 gap-2 mb-4 max-h-64 overflow-y-auto">
           {discounts.map((d, idx) => (
             <button

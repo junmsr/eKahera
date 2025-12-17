@@ -174,6 +174,7 @@ export default function Dashboard() {
     averageTransactionValue: 0,
   });
   const [exportingPDF, setExportingPDF] = useState(false);
+  const [exportingSales, setExportingSales] = useState(false);
   const [currentTime, setCurrentTime] = useState(dayjs());
 
   // Refs for PDF export
@@ -680,6 +681,192 @@ export default function Dashboard() {
     return canvas.toDataURL("image/png");
   };
 
+  const exportSalesToPDF = async () => {
+    setExportingSales(true);
+    try {
+      const token = sessionStorage.getItem("auth_token");
+      const { startDate, endDate, rangeType } = dateRange;
+
+      const formatDate = (date) => dayjs(date).format("YYYY-MM-DD");
+      const finalStart = dayjs.min(startDate, endDate);
+      const finalEnd = dayjs.max(startDate, endDate);
+      const startDateStr = formatDate(finalStart);
+      const endDateStr = formatDate(finalEnd);
+
+      // Fetch sales data
+      const salesData = await api("/api/dashboard/sales-data", {
+        headers: authHeaders(token),
+        params: {
+          startDate: startDateStr,
+          endDate: endDateStr,
+        },
+      });
+
+      // Fetch store information
+      const profileData = await api("/auth/profile", {
+        headers: authHeaders(token),
+      });
+
+      const business = profileData?.business || {};
+      const storeName = business.business_name || "Store";
+      const addressParts = [
+        business.house_number,
+        business.barangay,
+        business.city,
+        business.province,
+      ].filter(Boolean);
+      const address = addressParts.join(", ") || "N/A";
+      const contact = business.mobile || business.email || "N/A";
+
+      // Format date range text
+      const dateRangeText =
+        rangeType === "Day"
+          ? finalStart.format("MMM D, YYYY")
+          : `${finalStart.format("MMM D")} - ${finalEnd.format("MMM D, YYYY")}`;
+
+      // Check if there's any sales data
+      if (!salesData || salesData.length === 0) {
+        alert("No sales data found for the selected date range.");
+        return;
+      }
+
+      // Calculate total
+      const total = salesData.reduce((sum, item) => sum + (item.subtotal || 0), 0);
+
+      // Create PDF
+      const pdf = new jsPDF("p", "mm", "a4");
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const margin = 20;
+      const contentWidth = pageWidth - 2 * margin;
+      let yPos = margin;
+
+      // Helper function to add a new page if needed
+      const checkPageBreak = (requiredHeight) => {
+        if (yPos + requiredHeight > pdf.internal.pageSize.getHeight() - margin) {
+          pdf.addPage();
+          yPos = margin;
+          return true;
+        }
+        return false;
+      };
+
+      // Store name (centered, top middle)
+      pdf.setFontSize(20);
+      pdf.setFont("helvetica", "bold");
+      const storeNameWidth = pdf.getTextWidth(storeName);
+      pdf.text(storeName, (pageWidth - storeNameWidth) / 2, yPos);
+      yPos += 10;
+
+      // Address (centered, under store name)
+      pdf.setFontSize(12);
+      pdf.setFont("helvetica", "normal");
+      const addressWidth = pdf.getTextWidth(address);
+      pdf.text(address, (pageWidth - addressWidth) / 2, yPos);
+      yPos += 7;
+
+      // Contact information (centered, under address)
+      const contactWidth = pdf.getTextWidth(contact);
+      pdf.text(contact, (pageWidth - contactWidth) / 2, yPos);
+      yPos += 15;
+
+      // Sales Report heading
+      pdf.setFontSize(16);
+      pdf.setFont("helvetica", "bold");
+      pdf.text("Sales Report", margin, yPos);
+      yPos += 8;
+
+      // Date range
+      pdf.setFontSize(12);
+      pdf.setFont("helvetica", "normal");
+      pdf.text(`Date: ${dateRangeText}`, margin, yPos);
+      yPos += 10;
+
+      // Table header
+      const colWidths = [
+        contentWidth * 0.15, // Product ID
+        contentWidth * 0.25, // Product Name
+        contentWidth * 0.15, // Number of Sold Items
+        contentWidth * 0.1,  // Unit
+        contentWidth * 0.15, // Price
+        contentWidth * 0.2,   // Subtotal
+      ];
+      const colX = [margin];
+      for (let i = 1; i < colWidths.length; i++) {
+        colX.push(colX[i - 1] + colWidths[i - 1]);
+      }
+
+      pdf.setFontSize(10);
+      pdf.setFont("helvetica", "bold");
+      const headerY = yPos;
+      pdf.text("Product ID", colX[0], headerY);
+      pdf.text("Product Name", colX[1], headerY);
+      pdf.text("Sold Items", colX[2], headerY);
+      pdf.text("Unit", colX[3], headerY);
+      pdf.text("Price", colX[4], headerY);
+      pdf.text("Subtotal", colX[5], headerY);
+      yPos += 8;
+
+      // Draw header line
+      pdf.setLineWidth(0.5);
+      pdf.line(margin, yPos - 2, pageWidth - margin, yPos - 2);
+      yPos += 3;
+
+      // Table rows
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(9);
+
+      salesData.forEach((item) => {
+        checkPageBreak(10);
+
+        const productId = String(item.product_id || "");
+        const productName = item.product_name || "";
+        const soldItems = Number(item.number_of_sold_items || 0).toFixed(2);
+        const unit = item.unit || "pc";
+        const price = `PHP ${Number(item.price || 0).toFixed(2)}`;
+        const subtotal = `PHP ${Number(item.subtotal || 0).toFixed(2)}`;
+
+        // Truncate product name if too long
+        const maxNameWidth = colWidths[1] - 2;
+        let displayName = productName;
+        if (pdf.getTextWidth(displayName) > maxNameWidth) {
+          while (pdf.getTextWidth(displayName + "...") > maxNameWidth && displayName.length > 0) {
+            displayName = displayName.slice(0, -1);
+          }
+          displayName += "...";
+        }
+
+        pdf.text(productId, colX[0], yPos);
+        pdf.text(displayName, colX[1], yPos);
+        pdf.text(soldItems, colX[2], yPos);
+        pdf.text(unit, colX[3], yPos);
+        pdf.text(price, colX[4], yPos);
+        pdf.text(subtotal, colX[5], yPos);
+        yPos += 7;
+      });
+
+      // Total row
+      checkPageBreak(10);
+      yPos += 3;
+      pdf.setLineWidth(0.5);
+      pdf.line(margin, yPos, pageWidth - margin, yPos);
+      yPos += 5;
+
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(10);
+      pdf.text("Total:", colX[4], yPos);
+      pdf.text(`PHP ${total.toFixed(2)}`, colX[5], yPos);
+
+      // Save PDF
+      const fileName = `Sales-Report-${dateRange.rangeType}-${dayjs().format("YYYY-MM-DD")}.pdf`;
+      pdf.save(fileName);
+    } catch (error) {
+      console.error("Error exporting sales PDF:", error);
+      alert("Failed to generate sales report. Please try again or contact support.");
+    } finally {
+      setExportingSales(false);
+    }
+  };
+
   const exportToPDF = async () => {
     setExportingPDF(true);
     try {
@@ -1012,6 +1199,39 @@ export default function Dashboard() {
       </button>
 
       <div className="py-2 flex justify-end gap-2">
+        <Button
+          onClick={exportSalesToPDF}
+          disabled={exportingSales || loading}
+          size="sm"
+          variant="primary"
+          className="flex items-center gap-2 w-full sm:w-auto shrink-0"
+        >
+          {exportingSales ? (
+            <>
+              <BiRefresh className="w-5 h-5 animate-spin" />
+              <span className="hidden sm:inline">Exporting...</span>
+              <span className="sm:hidden">...</span>
+            </>
+          ) : (
+            <>
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                />
+              </svg>
+              <span className="hidden sm:inline">Export Sales</span>
+              <span className="sm:hidden">Sales</span>
+            </>
+          )}
+        </Button>
         <Button
           onClick={exportToPDF}
           disabled={exportingPDF || loading}

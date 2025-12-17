@@ -14,6 +14,7 @@ import CashLedgerModal from "../components/modals/CashLedgerModal";
 import CheckoutModal from "../components/modals/CheckoutModal";
 import CashPaymentModal from "../components/modals/CashPaymentModal";
 import ScanCustomerCartModal from "../components/modals/ScanCustomerCartModal";
+import QuantityInputModal from "../components/modals/QuantityInputModal";
 import { BiReceipt, BiSync } from "react-icons/bi";
 import AdminReceiptsModal from "../components/modals/AdminReceiptsModal";
 import { MdClose } from "react-icons/md";
@@ -77,6 +78,8 @@ function POS() {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [appliedDiscount, setAppliedDiscount] = useState(null);
   const quantityInputRef = useRef(null);
+  const [showQuantityModal, setShowQuantityModal] = useState(false);
+  const [pendingProduct, setPendingProduct] = useState(null);
 
   // Set editing cart item and initialize quantity
   const setSelectedCartItem = (idx) => {
@@ -213,6 +216,15 @@ function POS() {
         );
         return;
       }
+
+      // Check if product is weight or volume based - show modal for quantity input
+      if (product.product_type === 'weight' || product.product_type === 'volume') {
+        setPendingProduct(product);
+        setShowQuantityModal(true);
+        return;
+      }
+
+      // For count-based products, proceed with normal flow
       if (qty > stockQty) {
         setError(
           `Insufficient stock. Available: ${stockQty}, requested: ${qty}.`
@@ -243,6 +255,7 @@ function POS() {
             name: product.product_name,
             quantity: qty,
             price,
+            is_basic_necessity: product.is_basic_necessity || false,
           },
         ];
       });
@@ -260,6 +273,76 @@ function POS() {
         setScannerPaused(false);
       }, 300);
     }
+  };
+
+  // Handle quantity confirmation from modal
+  const handleQuantityConfirm = (quantityInBaseUnits) => {
+    if (!pendingProduct) return;
+    
+    const product = pendingProduct;
+    const stockQty = Number(product.stock_quantity ?? 0);
+    
+    // Check stock
+    if (quantityInBaseUnits > stockQty) {
+      setError(
+        `Insufficient stock. Available: ${stockQty} ${product.base_unit || ''}, requested: ${quantityInBaseUnits} ${product.base_unit || ''}.`
+      );
+      setShowQuantityModal(false);
+      setPendingProduct(null);
+      return;
+    }
+
+    // Calculate price per base unit for weight/volume products
+    let pricePerUnit = Number(product.selling_price || 0);
+    if (product.product_type !== 'count' && product.quantity_per_unit && product.quantity_per_unit > 0) {
+      // Price per base unit = price per package / quantity per package
+      pricePerUnit = pricePerUnit / Number(product.quantity_per_unit);
+    }
+
+    // For weight/volume products, quantity is stored in base units
+    // Price is stored as price per base unit
+    setCart((prev) => {
+      const existingIdx = prev.findIndex(
+        (i) => i.product_id === product.product_id
+      );
+      if (existingIdx >= 0) {
+        const next = [...prev];
+        const existingQty = next[existingIdx].quantity;
+        const newQty = existingQty + quantityInBaseUnits;
+        if (newQty > stockQty) {
+          setError(
+            `Insufficient stock. Available: ${stockQty} ${product.base_unit || ''}, requested: ${newQty} ${product.base_unit || ''}.`
+          );
+          return prev;
+        }
+        next[existingIdx] = { ...next[existingIdx], quantity: newQty };
+        return next;
+      }
+        return [
+          ...prev,
+          {
+            product_id: product.product_id,
+            sku: product.sku,
+            name: product.product_name,
+            quantity: quantityInBaseUnits,
+            price: pricePerUnit,
+            product_type: product.product_type,
+            base_unit: product.base_unit,
+            quantity_per_unit: product.quantity_per_unit || 1,
+            is_basic_necessity: product.is_basic_necessity || false,
+          },
+        ];
+    });
+    
+    setSku("");
+    setQuantity(1);
+    setShowQuantityModal(false);
+    setPendingProduct(null);
+    
+    // Auto-focus SKU input after adding item for next scan
+    setTimeout(() => {
+      skuInputRef.current?.focus();
+    }, 50);
   };
 
   const handleAddToCart = async () => {
@@ -361,18 +444,28 @@ function POS() {
   );
 
   // Calculate total with discount
+  // IMPORTANT: In the Philippines, PWD/Senior Citizen discounts only apply to basic necessities
+  // Calculate subtotals separately for basic necessities and other items
+  const basicNecessitySubtotal = cart
+    .filter(item => item.is_basic_necessity === true)
+    .reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const otherItemsSubtotal = subtotal - basicNecessitySubtotal;
+  
   let total = subtotal;
   if (appliedDiscount) {
     if (appliedDiscount.type === "percentage") {
       const discountValue = Number(appliedDiscount.value);
       if (!isNaN(discountValue) && discountValue > 0) {
-        const discountAmount = subtotal * (discountValue / 100);
-        total = Math.max(0, subtotal - discountAmount);
+        // Apply discount only to basic necessity items
+        const discountAmount = basicNecessitySubtotal * (discountValue / 100);
+        total = Math.max(0, basicNecessitySubtotal - discountAmount + otherItemsSubtotal);
       }
     } else if (appliedDiscount.type === "amount") {
       const discountValue = Number(appliedDiscount.value);
       if (!isNaN(discountValue) && discountValue > 0) {
-        total = Math.max(0, subtotal - discountValue);
+        // Apply discount only to basic necessity items (capped at basic necessity subtotal)
+        const discountAmount = Math.min(discountValue, basicNecessitySubtotal);
+        total = Math.max(0, basicNecessitySubtotal - discountAmount + otherItemsSubtotal);
       }
     }
   }
@@ -753,6 +846,8 @@ function POS() {
           url.searchParams.set("total", String(resp.total));
         navigate(url.pathname + url.search);
       } catch (_) {}
+      // Reset transaction state after successful checkout
+      setTransactionId(null);
       // Start a fresh provisional transaction number after successful checkout
       const businessId = user?.businessId || user?.business_id || "BIZ";
       const timePart = new Date()
@@ -764,10 +859,11 @@ function POS() {
         `T-${businessId.toString().padStart(2, "0")}-${timePart}-${randPart}`
       );
       setAppliedDiscount(null); // Reset discount after successful checkout
-      setTransactionId(null);
     } catch (err) {
       console.error("Checkout error:", err);
-      setError("Checkout failed");
+      // Extract error message from response if available
+      const errorMessage = err?.response?.data?.error || err?.data?.error || err?.message || "Checkout failed";
+      setError(errorMessage);
     }
   };
 
@@ -1046,6 +1142,42 @@ function POS() {
 
             {/* Right Column - Cart and Actions */}
             <div className="lg:col-span-8 flex flex-col gap-2 sm:gap-3 min-h-0">
+              {/* Transaction Number Display (when loading customer cart) */}
+              {transactionId && transactionNumber && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-2 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <svg
+                      className="w-5 h-5 text-blue-600"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                      />
+                    </svg>
+                    <div>
+                      <div className="text-xs text-blue-600 font-medium">Customer Transaction</div>
+                      <div className="text-sm font-bold text-blue-800 font-mono">{transactionNumber}</div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setTransactionId(null);
+                      setTransactionNumber("");
+                      setCart([]);
+                      setAppliedDiscount(null);
+                    }}
+                    className="text-xs text-blue-600 hover:text-blue-800 underline"
+                    title="Start new transaction"
+                  >
+                    Clear
+                  </button>
+                </div>
+              )}
               {/* CartTableCard */}
               <div className="flex-1 min-h-0 max-h-[calc(100vh-280px)]">
                 <CartTableCard
@@ -1366,6 +1498,25 @@ function POS() {
           setShowCashModal(false);
         }}
       />
+      <QuantityInputModal
+        isOpen={showQuantityModal}
+        onClose={() => {
+          setShowQuantityModal(false);
+          setPendingProduct(null);
+          // Auto-focus SKU input after closing modal
+          setTimeout(() => {
+            skuInputRef.current?.focus();
+          }, 50);
+        }}
+        product={pendingProduct}
+        onConfirm={handleQuantityConfirm}
+        existingQuantity={
+          pendingProduct
+            ? cart.find((item) => item.product_id === pendingProduct.product_id)
+                ?.quantity || 0
+            : 0
+        }
+      />
       {showLogoutConfirm && (
         <div className="fixed inset-0 z-90 flex items-center justify-center">
           <div
@@ -1457,13 +1608,13 @@ function POS() {
       <ScanCustomerCartModal
         isOpen={showImportCart}
         onClose={() => setShowImportCart(false)}
-        onImport={async (items, transactionId, completionResponse) => {
+        onImport={async (items, transactionId, completionResponse, transactionNumber) => {
           try {
             // If transaction was completed (completionResponse exists), navigate to receipt
             if (completionResponse && transactionId) {
               setCart([]);
               setTransactionId(null);
-              setTransactionNumber(null);
+              setTransactionNumber("");
               setError("");
               setShowImportCart(false);
               // Navigate to receipt page for admin
@@ -1471,15 +1622,26 @@ function POS() {
               return;
             }
             
+            // If transactionId is provided, this is a pending transaction being loaded
+            if (transactionId && items && items.length > 0) {
+              // Store transaction info
+              setTransactionId(transactionId);
+              if (transactionNumber) {
+                setTransactionNumber(transactionNumber);
+              }
+              
+              // Items from pending transaction already have all product details
+              // Replace cart with these items (don't merge, since we're loading a specific transaction)
+              setCart(items);
+              setError("");
+              setShowImportCart(false);
+              return;
+            }
+            
             // Otherwise, import items (backward compatibility for old QR format)
             if (!items || items.length === 0) {
               setError("No items found in QR code");
               return;
-            }
-            
-            // If we have a transaction ID from the scanned cart, use it
-            if (transactionId) {
-              setTransactionId(transactionId);
             }
             
             console.log("Scanned items:", items);

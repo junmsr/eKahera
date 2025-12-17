@@ -6,7 +6,8 @@ const {
   getInventoryMovement,
   getProfitAnalysis,
   getCashierPerformance,
-  getSalesTimeseriesFromView
+  getSalesTimeseriesFromView,
+  getSalesData
 } = require('../controllers/dashboardController');
 
 router.get('/overview', authenticate, getOverview);
@@ -14,5 +15,6 @@ router.get('/inventory-movement', authenticate, getInventoryMovement);
 router.get('/profit-analysis', authenticate, getProfitAnalysis);
 router.get('/cashiers', authenticate, getCashierPerformance);
 router.get('/sales-timeseries', authenticate, getSalesTimeseriesFromView);
+router.get('/sales-data', authenticate, getSalesData);
 
 module.exports = router;

@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict jnRGr07zdzWxsyeLfLBBg9YJbzU8O3qwneZY1bhWJ078wCBTqfebHaSOk0VMkfC
+\restrict zVddKKqCOAk48iEuxWQhCXKdQ3D2LQRHgUFbLhzWRvU2gLvf3aWN9wogGHiYA1a
 
 -- Dumped from database version 17.6
 -- Dumped by pg_dump version 17.6
@@ -345,6 +345,13 @@ CREATE TABLE public.products (
     business_id integer,
     description text,
     low_stock_alert integer DEFAULT 5 NOT NULL,
+    base_unit character varying(10) DEFAULT 'pc'::character varying NOT NULL,
+    display_unit character varying(50),
+    quantity_per_unit numeric(10,4) DEFAULT 1 NOT NULL,
+    product_type character varying(20) DEFAULT 'count'::character varying NOT NULL,
+    CONSTRAINT chk_products_base_unit CHECK (((base_unit)::text = ANY ((ARRAY['pc'::character varying, 'kg'::character varying, 'g'::character varying, 'L'::character varying, 'mL'::character varying])::text[]))),
+    CONSTRAINT chk_products_product_type CHECK (((product_type)::text = ANY ((ARRAY['count'::character varying, 'weight'::character varying, 'volume'::character varying])::text[]))),
+    CONSTRAINT chk_products_quantity_per_unit CHECK ((quantity_per_unit > (0)::numeric)),
     CONSTRAINT low_stock_alert_non_negative CHECK ((low_stock_alert >= 0))
 );
 
@@ -904,6 +911,13 @@ CREATE INDEX idx_business_documents_business_id ON public.business_documents USI
 
 
 --
+-- Name: idx_business_documents_status; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_business_documents_status ON public.business_documents USING btree (verification_status);
+
+
+--
 -- Name: idx_business_documents_uploaded_at; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -960,6 +974,27 @@ CREATE INDEX idx_email_notifications_type ON public.email_notifications USING bt
 
 
 --
+-- Name: idx_inventory_business_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_inventory_business_id ON public.inventory USING btree (business_id);
+
+
+--
+-- Name: idx_inventory_product_business; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_inventory_product_business ON public.inventory USING btree (product_id, business_id);
+
+
+--
+-- Name: idx_inventory_product_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_inventory_product_id ON public.inventory USING btree (product_id);
+
+
+--
 -- Name: idx_payment_tx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -981,10 +1016,38 @@ CREATE INDEX idx_products_business ON public.products USING btree (business_id);
 
 
 --
+-- Name: idx_products_business_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_products_business_id ON public.products USING btree (business_id);
+
+
+--
+-- Name: idx_products_category_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_products_category_id ON public.products USING btree (product_category_id);
+
+
+--
+-- Name: idx_products_created_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_products_created_at ON public.products USING btree (created_at);
+
+
+--
 -- Name: idx_products_created_by; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_products_created_by ON public.products USING btree (created_by_user_id);
+
+
+--
+-- Name: idx_products_sku; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_products_sku ON public.products USING btree (sku);
 
 
 --
@@ -1009,10 +1072,38 @@ CREATE INDEX idx_transaction_items_product ON public.transaction_items USING btr
 
 
 --
+-- Name: idx_transaction_items_product_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_transaction_items_product_id ON public.transaction_items USING btree (product_id);
+
+
+--
+-- Name: idx_transaction_items_transaction_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_transaction_items_transaction_id ON public.transaction_items USING btree (transaction_id);
+
+
+--
 -- Name: idx_transaction_items_tx; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_transaction_items_tx ON public.transaction_items USING btree (transaction_id);
+
+
+--
+-- Name: idx_transaction_payment_transaction_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_transaction_payment_transaction_id ON public.transaction_payment USING btree (transaction_id);
+
+
+--
+-- Name: idx_transaction_payment_type; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_transaction_payment_type ON public.transaction_payment USING btree (payment_type);
 
 
 --
@@ -1023,6 +1114,13 @@ CREATE INDEX idx_transactions_business_id ON public.transactions USING btree (bu
 
 
 --
+-- Name: idx_transactions_business_status; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_transactions_business_status ON public.transactions USING btree (business_id, status);
+
+
+--
 -- Name: idx_transactions_cashier; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1030,10 +1128,38 @@ CREATE INDEX idx_transactions_cashier ON public.transactions USING btree (cashie
 
 
 --
+-- Name: idx_transactions_cashier_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_transactions_cashier_id ON public.transactions USING btree (cashier_user_id);
+
+
+--
 -- Name: idx_transactions_created_at; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_transactions_created_at ON public.transactions USING btree (created_at);
+
+
+--
+-- Name: idx_transactions_status; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_transactions_status ON public.transactions USING btree (status);
+
+
+--
+-- Name: idx_transactions_updated_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_transactions_updated_at ON public.transactions USING btree (updated_at);
+
+
+--
+-- Name: idx_users_business_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_users_business_id ON public.users USING btree (business_id);
 
 
 --
@@ -1739,5 +1865,5 @@ ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin IN SCHEMA public GRANT ALL ON T
 -- PostgreSQL database dump complete
 --
 
-\unrestrict jnRGr07zdzWxsyeLfLBBg9YJbzU8O3qwneZY1bhWJ078wCBTqfebHaSOk0VMkfC
+\unrestrict zVddKKqCOAk48iEuxWQhCXKdQ3D2LQRHgUFbLhzWRvU2gLvf3aWN9wogGHiYA1a
 

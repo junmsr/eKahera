@@ -5,6 +5,88 @@ import Card from "../common/Card";
 
 const DEFAULT_LOW_STOCK_LEVEL = 10;
 
+/**
+ * Convert inventory quantity from base units to display units
+ * @param {number} quantityInBaseUnits - The quantity stored in inventory (base units)
+ * @param {string} productType - 'count', 'weight', or 'volume'
+ * @param {number} quantityPerUnit - The quantity per unit (e.g., 20 for 20g, 350 for 350mL, 1 for 1L)
+ * @param {string} baseUnit - The base unit ('g', 'kg', 'mL', 'L', 'pc')
+ * @returns {number} - The quantity in display units (number of pieces/units)
+ */
+const convertToDisplayUnits = (quantityInBaseUnits, productType, quantityPerUnit, baseUnit) => {
+  if (!quantityInBaseUnits || quantityInBaseUnits === 0) return 0;
+  
+  // For count products, quantity is already in units
+  if (productType === 'count' || !productType) {
+    return quantityInBaseUnits;
+  }
+  
+  // For volume products with base_unit "L", inventory is stored in mL
+  // Convert mL to L first, then divide by quantity_per_unit (which is in L)
+  if (productType === 'volume' && baseUnit === 'L') {
+    const quantityInLiters = quantityInBaseUnits / 1000; // Convert mL to L
+    if (quantityPerUnit && quantityPerUnit > 0) {
+      return quantityInLiters / quantityPerUnit; // Divide by quantity_per_unit (in L)
+    }
+    return quantityInLiters;
+  }
+  
+  // For weight/volume products in other units, divide by quantity_per_unit
+  // e.g., 2000g / 20g = 100 units
+  if (quantityPerUnit && quantityPerUnit > 0) {
+    return quantityInBaseUnits / quantityPerUnit;
+  }
+  
+  return quantityInBaseUnits;
+};
+
+/**
+ * Format inventory quantity for display
+ * For weight/volume products, show total base units (e.g., "25 L", "10 kg")
+ * For count products, show number of pieces
+ * @param {number} quantityInBaseUnits - The quantity stored in inventory (base units)
+ * @param {string} productType - 'count', 'weight', or 'volume'
+ * @param {number} quantityPerUnit - The quantity per unit
+ * @param {string} baseUnit - The base unit ('g', 'kg', 'mL', 'L', 'pc')
+ * @returns {string} - Formatted display string
+ */
+const formatInventoryDisplay = (quantityInBaseUnits, productType, quantityPerUnit, baseUnit) => {
+  if (!quantityInBaseUnits || quantityInBaseUnits === 0) return '0';
+  
+  // For count products, show number of pieces
+  if (productType === 'count' || !productType) {
+    return `${Math.round(quantityInBaseUnits)} pcs`;
+  }
+  
+  // For volume products with base_unit "L", inventory is stored in mL
+  // Convert to L for display
+  if (productType === 'volume' && baseUnit === 'L') {
+    const displayValue = quantityInBaseUnits / 1000; // Convert mL to L
+    return `${displayValue % 1 === 0 ? displayValue.toFixed(0) : displayValue.toFixed(2)} L`;
+  }
+  
+  // For weight/volume products, show total base units with unit label
+  // Convert to appropriate unit for display (e.g., 25000mL -> 25L, 1500g -> 1.5kg)
+  let displayValue = quantityInBaseUnits;
+  let displayUnit = baseUnit || 'g';
+  
+  // Convert to larger units for better readability
+  if (baseUnit === 'g' && quantityInBaseUnits >= 1000) {
+    displayValue = quantityInBaseUnits / 1000;
+    displayUnit = 'kg';
+  } else if (baseUnit === 'mL' && quantityInBaseUnits >= 1000) {
+    displayValue = quantityInBaseUnits / 1000;
+    displayUnit = 'L';
+  }
+  
+  // Format the number (no decimals if whole number, 2 decimals otherwise)
+  const formattedValue = displayValue % 1 === 0 
+    ? displayValue.toFixed(0) 
+    : displayValue.toFixed(2);
+  
+  return `${formattedValue} ${displayUnit}`;
+};
+
 // Utility function to convert array of objects to CSV
 const convertToCSV = (data) => {
   if (!data || data.length === 0) return "";
@@ -117,16 +199,22 @@ function InventoryTable({
   );
 
   const getStockStatus = (
-    quantity,
-    lowStockLevel = DEFAULT_LOW_STOCK_LEVEL
+    quantityInBaseUnits,
+    lowStockLevel = DEFAULT_LOW_STOCK_LEVEL,
+    productType = 'count',
+    quantityPerUnit = 1,
+    baseUnit = 'pc'
   ) => {
+    // Convert to display units for comparison
+    const displayQuantity = convertToDisplayUnits(quantityInBaseUnits, productType, quantityPerUnit, baseUnit);
     const threshold = Number(lowStockLevel ?? DEFAULT_LOW_STOCK_LEVEL);
-    if (quantity === 0)
+    
+    if (displayQuantity === 0)
       return {
         label: "Out of Stock",
         color: "bg-red-100 text-red-700 border-red-200",
       };
-    if (quantity < threshold)
+    if (displayQuantity < threshold)
       return {
         label: "Low Stock",
         color: "bg-orange-100 text-orange-700 border-orange-200",
@@ -375,6 +463,9 @@ function InventoryTable({
                     />
                   </div>
                 </th>
+                <th className="py-3 px-2 sm:py-4 sm:px-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider hidden md:table-cell">
+                  Unit
+                </th>
                 <th
                   className="py-3 px-2 sm:py-4 sm:px-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer hover:bg-blue-100/50 transition-colors group"
                   onClick={() => handleSort("quantity")} // Added onClick handler
@@ -394,7 +485,7 @@ function InventoryTable({
             <tbody className="divide-y divide-gray-100">
               {products.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="text-center py-16">
+                  <td colSpan={9} className="text-center py-16">
                     <div className="flex flex-col items-center justify-center">
                       <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4">
                         <svg
@@ -424,9 +515,26 @@ function InventoryTable({
                 </tr>
               ) : (
                 products.map((product, idx) => {
+                  // For display: use formatted inventory (total volume/weight for weight/volume, units for count)
+                  const inventoryDisplay = formatInventoryDisplay(
+                    product.quantity,
+                    product.product_type,
+                    product.quantity_per_unit,
+                    product.base_unit
+                  );
+                  // For stock status: still use display units for comparison
+                  const displayQuantity = convertToDisplayUnits(
+                    product.quantity,
+                    product.product_type,
+                    product.quantity_per_unit,
+                    product.base_unit
+                  );
                   const stockStatus = getStockStatus(
                     product.quantity,
-                    product.low_stock_level
+                    product.low_stock_level,
+                    product.product_type,
+                    product.quantity_per_unit,
+                    product.base_unit
                   );
                   return (
                     <tr
@@ -470,10 +578,29 @@ function InventoryTable({
                           {/* Added 0 fallback */}
                         </span>
                       </td>
+                      <td className="py-3 px-2 sm:py-4 sm:px-4 hidden md:table-cell">
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-xs font-semibold text-gray-700">
+                            {product.product_type === 'count' ? 'Per Piece' : 
+                             product.product_type === 'weight' ? 'By Weight' : 
+                             product.product_type === 'volume' ? 'By Volume' : 'Per Piece'}
+                          </span>
+                          {product.display_unit && (
+                            <span className="text-[10px] text-gray-500">
+                              {product.display_unit}
+                            </span>
+                          )}
+                          {!product.display_unit && product.product_type !== 'count' && product.quantity_per_unit && (
+                            <span className="text-[10px] text-gray-500">
+                              {product.quantity_per_unit} {product.base_unit}
+                            </span>
+                          )}
+                        </div>
+                      </td>
                       <td className="py-3 px-2 sm:py-4 sm:px-4">
                         <div className="flex flex-col gap-1">
                           <span className="text-xs sm:text-sm font-semibold text-gray-900">
-                            {product.quantity}
+                            {inventoryDisplay}
                           </span>
                           <span
                             className={`inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium border ${stockStatus.color}`}
@@ -549,9 +676,24 @@ function InventoryTable({
             </div>
           ) : (
             products.map((product, idx) => {
+              // For display: use formatted inventory (total volume/weight for weight/volume, units for count)
+              const inventoryDisplay = formatInventoryDisplay(
+                product.quantity,
+                product.product_type,
+                product.quantity_per_unit,
+                product.base_unit
+              );
+              // For stock status: still use display units for comparison
+              const displayQuantity = convertToDisplayUnits(
+                product.quantity,
+                product.product_type,
+                product.quantity_per_unit
+              );
               const stockStatus = getStockStatus(
                 product.quantity,
-                product.low_stock_level
+                product.low_stock_level,
+                product.product_type,
+                product.quantity_per_unit
               );
               return (
                 <div key={product.id} className="p-4">
@@ -566,6 +708,16 @@ function InventoryTable({
                       <p className="text-xs text-gray-500 mt-1">
                         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-indigo-50 text-indigo-700 border border-indigo-200">
                           {product.category || "N/A"}
+                        </span>
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                          {product.product_type === 'count' ? 'Per Piece' : 
+                           product.product_type === 'weight' ? 'By Weight' : 
+                           product.product_type === 'volume' ? 'By Volume' : 'Per Piece'}
+                          {product.display_unit && ` • ${product.display_unit}`}
+                          {!product.display_unit && product.product_type !== 'count' && product.quantity_per_unit && 
+                           ` • ${product.quantity_per_unit} ${product.base_unit}`}
                         </span>
                       </p>
                       {product.description && (
@@ -591,7 +743,7 @@ function InventoryTable({
                             .split(" ")[0]
                         }`}
                       >
-                        {product.quantity} in stock
+                        {inventoryDisplay} in stock
                       </p>
                     </div>
                   </div>
@@ -754,10 +906,18 @@ function Inventory({
   onSort,
   className = "",
 }) {
-  const totalValue = allProducts.reduce(
-    (sum, p) => sum + Number(p.selling_price || 0) * Number(p.quantity || 0),
-    0
-  );
+  // Calculate total inventory value using cost_price and display units
+  // This matches the calculation in pages/Inventory.jsx
+  const totalValue = allProducts.reduce((sum, p) => {
+    const displayQty = convertToDisplayUnits(
+      p.quantity,
+      p.product_type,
+      p.quantity_per_unit,
+      p.base_unit
+    );
+    const costPrice = Number(p.cost_price || 0);
+    return sum + costPrice * displayQty;
+  }, 0);
   const lowStockCount = allProducts.filter((p) => {
     const threshold = Number(p.low_stock_level ?? DEFAULT_LOW_STOCK_LEVEL);
     return Number(p.quantity || 0) < threshold;

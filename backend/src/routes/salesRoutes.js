@@ -6,6 +6,7 @@ const {
   publicCheckout, 
   enterStore, 
   completeTransaction, 
+  getPendingTransactionItems,
   getTransactionStatus, 
   getSaleDetailsByTransactionNumber,
   getRecentCashierReceipts,
@@ -16,6 +17,8 @@ router.post('/checkout', authenticate, checkout);
 router.post('/public/checkout', publicCheckout);
 // When a customer scans a store QR to enter the store
 router.post('/public/enter-store', enterStore);
+// Get pending transaction items for cashier to load into cart
+router.get('/:id/pending-items', authenticate, getPendingTransactionItems);
 // Cashier completes a pending transaction (scans customer's cart QR and records payment)
 router.post('/:id/complete', authenticate, completeTransaction);
 router.get('/cashier/recent', authenticate, getRecentCashierReceipts);

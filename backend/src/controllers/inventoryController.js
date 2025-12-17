@@ -57,7 +57,11 @@ exports.getStock = async (req, res) => {
         p.selling_price,
         COALESCE(i.quantity_in_stock, 0) as quantity,
         p.sku,
-        COALESCE(p.low_stock_alert, 10) as low_stock_level
+        COALESCE(p.low_stock_alert, 10) as low_stock_level,
+        p.product_type,
+        p.quantity_per_unit,
+        p.base_unit,
+        p.display_unit
        FROM products p
        LEFT JOIN product_categories pc ON pc.product_category_id = p.product_category_id
        LEFT JOIN inventory i ON i.product_id = p.product_id AND i.business_id = p.business_id
@@ -148,62 +152,199 @@ exports.deleteProduct = async (req, res) => {
 
 exports.updateProduct = async (req, res) => {
   const { product_id } = req.params;
-  const { product_name, cost_price, selling_price, sku, category, description, low_stock_level, low_stock_alert } = req.body;
+  const body = req.body || {};
+  const { product_name, cost_price, selling_price, sku, category, description, low_stock_level, low_stock_alert, product_sold_by, unit_size, unit } = body;
   
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
     
+    // Fetch the current product details including unit fields
+    const currentProductResult = await client.query(
+      'SELECT product_name, sku, description, cost_price, selling_price, product_category_id, low_stock_alert, product_type, base_unit, quantity_per_unit, display_unit FROM products WHERE product_id = $1 AND business_id = $2',
+      [product_id, req.user?.businessId || null]
+    );
+    
+    if (currentProductResult.rowCount === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Product not found or you do not have permission to update it.' });
+    }
+    
+    const currentProduct = currentProductResult.rows[0];
+    
     // Resolve category if provided
-    let categoryId = null;
-    if (category && category.trim()) {
+    let categoryId = body.product_category_id ?? currentProduct.product_category_id;
+    const rawCategoryName = category ?? body.category_name ?? body.product_category_name;
+    const categoryName = typeof rawCategoryName === 'string' ? rawCategoryName.trim() : '';
+    if (!categoryId && categoryName) {
       const existing = await client.query(
         'SELECT product_category_id FROM product_categories WHERE LOWER(product_category_name) = LOWER($1) LIMIT 1', 
-        [category.trim()]
+        [categoryName]
       );
       if (existing.rowCount > 0) {
         categoryId = existing.rows[0].product_category_id;
       } else {
         const insCat = await client.query(
           'INSERT INTO product_categories (product_category_name) VALUES ($1) RETURNING product_category_id', 
-          [category.trim()]
+          [categoryName]
         );
         categoryId = insCat.rows[0].product_category_id;
       }
     }
     
-    // Get current product to check low_stock_alert
-    const currentProductResult = await client.query(
-      'SELECT low_stock_alert FROM products WHERE product_id = $1 AND business_id = $2',
-      [product_id, req.user?.businessId || null]
-    );
-    const currentLowStockAlert = currentProductResult.rows[0]?.low_stock_alert ?? 10;
-    const newLowStockAlert = low_stock_level !== undefined ? Number(low_stock_level) : (low_stock_alert !== undefined ? Number(low_stock_alert) : currentLowStockAlert);
+    const rawName = product_name ?? body.name ?? body.productName ?? body.ProductName;
+    const finalProductName = typeof rawName === 'string' ? rawName.trim() : currentProduct.product_name;
+    const finalCostPrice = cost_price !== undefined ? Number(cost_price) : currentProduct.cost_price;
+    const finalSellingPrice = selling_price !== undefined ? Number(selling_price) : currentProduct.selling_price;
+    const finalSku = sku !== undefined ? (sku || `SKU-${Date.now()}`).toString() : currentProduct.sku;
+    const finalDescription = description !== undefined ? description : currentProduct.description;
+    const finalLowStockAlert = low_stock_level !== undefined ? Number(low_stock_level) : (low_stock_alert !== undefined ? Number(low_stock_alert) : currentProduct.low_stock_alert ?? 10);
     
-    // Update product
-    const result = await client.query(
-      `UPDATE products 
-       SET product_name = $1, cost_price = $2, selling_price = $3, sku = $4, 
-           product_category_id = $5, description = $6, low_stock_alert = $7, updated_at = NOW()
-       WHERE product_id = $8 AND business_id = $9
-       RETURNING *`,
-      [product_name, cost_price, selling_price, sku, categoryId, description, newLowStockAlert, product_id, req.user?.businessId || null]
-    );
+    // Validation: Selling price >= cost price
+    if (finalSellingPrice < finalCostPrice) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'Selling price must be greater than or equal to cost price' });
+    }
+    
+    // Handle unit-related fields if product_sold_by is provided
+    let product_type = currentProduct.product_type;
+    let base_unit = currentProduct.base_unit;
+    let quantity_per_unit = currentProduct.quantity_per_unit;
+    let display_unit = currentProduct.display_unit;
+    
+    if (product_sold_by !== undefined || body.sold_by !== undefined) {
+      const productSoldBy = (product_sold_by ?? body.sold_by ?? 'Per Piece').toString().trim();
+      
+      if (productSoldBy === 'Per Piece' || productSoldBy === 'per_piece' || productSoldBy === 'count') {
+        product_type = 'count';
+        base_unit = 'pc';
+        quantity_per_unit = 1;
+        display_unit = null;
+      } else if (productSoldBy === 'By Weight' || productSoldBy === 'by_weight' || productSoldBy === 'weight') {
+        product_type = 'weight';
+        const unitSize = Number(unit_size ?? body.size ?? currentProduct.quantity_per_unit ?? 0);
+        const unitValue = (unit ?? currentProduct.base_unit ?? 'g').toString().trim().toLowerCase();
+        
+        if (!Number.isFinite(unitSize) || unitSize <= 0) {
+          await client.query('ROLLBACK');
+          return res.status(400).json({ error: 'Unit size must be greater than 0 for weight-based products' });
+        }
+        
+        if (unitValue === 'kg' || unitValue === 'kilogram' || unitValue === 'kilograms') {
+          base_unit = 'kg';
+        } else if (unitValue === 'g' || unitValue === 'gram' || unitValue === 'grams') {
+          base_unit = 'g';
+        } else {
+          await client.query('ROLLBACK');
+          return res.status(400).json({ error: 'Invalid unit for weight. Use "kg" or "g"' });
+        }
+        
+        quantity_per_unit = unitSize;
+        display_unit = `${unitSize} ${base_unit}${unitSize === 1 ? '' : ' sachet'}`;
+      } else if (productSoldBy === 'By Volume' || productSoldBy === 'by_volume' || productSoldBy === 'volume') {
+        product_type = 'volume';
+        const unitSize = Number(unit_size ?? body.size ?? currentProduct.quantity_per_unit ?? 0);
+        const unitValue = (unit ?? currentProduct.base_unit ?? 'mL').toString().trim().toLowerCase();
+        
+        if (!Number.isFinite(unitSize) || unitSize <= 0) {
+          await client.query('ROLLBACK');
+          return res.status(400).json({ error: 'Unit size must be greater than 0 for volume-based products' });
+        }
+        
+        if (unitValue === 'l' || unitValue === 'liter' || unitValue === 'liters' || unitValue === 'litre' || unitValue === 'litres') {
+          base_unit = 'L';
+        } else if (unitValue === 'ml' || unitValue === 'milliliter' || unitValue === 'milliliters' || unitValue === 'millilitre' || unitValue === 'millilitres') {
+          base_unit = 'mL';
+        } else {
+          await client.query('ROLLBACK');
+          return res.status(400).json({ error: 'Invalid unit for volume. Use "L" or "mL"' });
+        }
+        
+        quantity_per_unit = unitSize;
+        display_unit = `${unitSize} ${base_unit} bottle`;
+      } else {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ error: 'Invalid product_sold_by. Use "Per Piece", "By Weight", or "By Volume"' });
+      }
+    }
+    
+    // Build dynamic update query
+    const updateFields = [];
+    const updateValues = [];
+    let paramCount = 1;
+    
+    if (categoryId !== currentProduct.product_category_id) {
+      updateFields.push(`product_category_id = $${paramCount++}`);
+      updateValues.push(categoryId);
+    }
+    if (finalProductName !== currentProduct.product_name) {
+      updateFields.push(`product_name = $${paramCount++}`);
+      updateValues.push(finalProductName);
+    }
+    if (finalDescription !== currentProduct.description) {
+      updateFields.push(`description = $${paramCount++}`);
+      updateValues.push(finalDescription);
+    }
+    if (finalCostPrice !== currentProduct.cost_price) {
+      updateFields.push(`cost_price = $${paramCount++}`);
+      updateValues.push(finalCostPrice);
+    }
+    if (finalSellingPrice !== currentProduct.selling_price) {
+      updateFields.push(`selling_price = $${paramCount++}`);
+      updateValues.push(finalSellingPrice);
+    }
+    if (finalSku !== currentProduct.sku) {
+      updateFields.push(`sku = $${paramCount++}`);
+      updateValues.push(finalSku);
+    }
+    if (finalLowStockAlert !== (currentProduct.low_stock_alert ?? 10)) {
+      updateFields.push(`low_stock_alert = $${paramCount++}`);
+      updateValues.push(finalLowStockAlert);
+    }
+    if (product_type !== currentProduct.product_type) {
+      updateFields.push(`product_type = $${paramCount++}`);
+      updateValues.push(product_type);
+    }
+    if (base_unit !== currentProduct.base_unit) {
+      updateFields.push(`base_unit = $${paramCount++}`);
+      updateValues.push(base_unit);
+    }
+    if (quantity_per_unit !== currentProduct.quantity_per_unit) {
+      updateFields.push(`quantity_per_unit = $${paramCount++}`);
+      updateValues.push(quantity_per_unit);
+    }
+    if (display_unit !== currentProduct.display_unit) {
+      updateFields.push(`display_unit = $${paramCount++}`);
+      updateValues.push(display_unit);
+    }
+    
+    if (updateFields.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(200).json({ message: 'No changes detected for product', product: currentProduct });
+    }
+    
+    updateFields.push(`updated_at = NOW()`);
+    updateValues.push(product_id);
+    updateValues.push(req.user?.businessId || null);
+    
+    const query = `UPDATE products SET ${updateFields.join(', ')} WHERE product_id = $${paramCount} AND business_id = $${paramCount + 1} RETURNING *`;
+    
+    const result = await client.query(query, updateValues);
     
     if (result.rowCount === 0) {
       await client.query('ROLLBACK');
-      return res.status(404).json({ error: 'Product not found' });
+      return res.status(404).json({ error: 'Product not found or you do not have permission to update it.' });
     }
     
     await client.query('COMMIT');
-
+    
     const updatedProduct = result.rows[0];
     logAction({
       userId: req.user?.userId || null,
       businessId: req.user?.businessId || null,
       action: `Updated product: ${updatedProduct.product_name} (SKU: ${updatedProduct.sku})`,
     });
-
+    
     res.json(updatedProduct);
   } catch (err) {
     await client.query('ROLLBACK');
