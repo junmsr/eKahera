@@ -17,7 +17,18 @@ function StatsCard({
   ...props
 }) {
   const formatDisplayValue = () => {
-    if (formatValue) return formatValue(value);
+    // Debug logging for inventory value
+    if (label === "INVENTORY VALUE") {
+      console.log(`[StatsCard] Received value for ${label}:`, value, `Type:`, typeof value);
+    }
+    
+    if (formatValue) {
+      const formatted = formatValue(value);
+      if (label === "INVENTORY VALUE") {
+        console.log(`[StatsCard] Formatted value:`, formatted);
+      }
+      return formatted;
+    }
     if (label === "Growth Rate") return `${value}%`;
     if (label === "Total Revenue")
       return `₱${value.toLocaleString(undefined, {

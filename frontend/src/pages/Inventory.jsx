@@ -293,11 +293,18 @@ export default function InventoryPage() {
       return quantityInBaseUnits;
     }
     // For volume products with base_unit "L", inventory is stored in mL
-    // Convert mL to L first, then divide by quantity_per_unit (which is in L)
+    // Convert mL to L first, then divide by quantity_per_unit (which is in L per display unit)
+    // Example: 50,000 mL stored → 50 L → 50 L / 1 L per bottle = 50 bottles
     if (productType === 'volume' && baseUnit === 'L') {
       const quantityInLiters = quantityInBaseUnits / 1000; // Convert mL to L
       if (quantityPerUnit && quantityPerUnit > 0) {
-        return quantityInLiters / quantityPerUnit; // Divide by quantity_per_unit (in L)
+        const displayQty = quantityInLiters / quantityPerUnit;
+        // Safety check: if the calculated display quantity is unreasonably large (> 100,000), 
+        // it's likely a data entry error - log a warning
+        if (displayQty > 100000) {
+          console.error(`[Inventory Conversion Error] Unusually large display quantity calculated: ${displayQty.toFixed(2)}. quantityInBaseUnits: ${quantityInBaseUnits}, quantityPerUnit: ${quantityPerUnit}, baseUnit: ${baseUnit}. This suggests incorrect data storage.`);
+        }
+        return displayQty;
       }
       return quantityInLiters;
     }
@@ -307,11 +314,82 @@ export default function InventoryPage() {
     return quantityInBaseUnits;
   };
 
+  // Check for duplicate products (by ID) - this could cause calculation errors
+  const productIds = products.map(p => p.id);
+  const duplicateIds = productIds.filter((id, index) => productIds.indexOf(id) !== index);
+  if (duplicateIds.length > 0) {
+    console.warn(`⚠️ Found duplicate products in array:`, duplicateIds);
+  }
+
   // Stats - use display units for calculations
+  // Inventory value should be based on cost_price (what you paid), not selling_price (what you sell it for)
   const totalInventoryValue = products.reduce((sum, p) => {
     const displayQty = convertToDisplayUnits(p.quantity, p.product_type, p.quantity_per_unit, p.base_unit);
-    return sum + Number(p.selling_price || 0) * displayQty;
+    const costPrice = Number(p.cost_price || 0);
+    const itemValue = costPrice * displayQty;
+    
+    // Debug logging for volume products with base_unit "L" to catch conversion issues
+    if (p.product_type === 'volume' && p.base_unit === 'L') {
+      console.log(`[Inventory Value Debug] Product: ${p.name} (ID: ${p.id})`, {
+        quantity_in_stock_base_units: p.quantity,
+        quantity_per_unit: p.quantity_per_unit,
+        base_unit: p.base_unit,
+        display_qty_calculated: displayQty,
+        cost_price: costPrice,
+        item_value: itemValue
+      });
+    }
+    
+    // Add validation to catch unrealistic values (likely data entry errors)
+    // If a single item's value exceeds 1 million, log a detailed warning
+    if (itemValue > 1000000) {
+      console.error(`❌ CRITICAL: Unusually high inventory value for product "${p.name}" (ID: ${p.id}): ₱${itemValue.toLocaleString()}`);
+      console.error(`   Details: quantity=${p.quantity}, cost_price=${costPrice}, displayQty=${displayQty.toFixed(2)}, quantity_per_unit=${p.quantity_per_unit}, base_unit=${p.base_unit}`);
+      console.error(`   This suggests incorrect data. Please check the product's quantity_in_stock in the database.`);
+    }
+    
+    return sum + itemValue;
   }, 0);
+  
+  // Always log the total and breakdown for debugging (remove the condition temporarily)
+  console.log(`[Inventory Total Debug] Total inventory value: ₱${totalInventoryValue.toLocaleString()}`);
+  console.log(`[Inventory Total Debug] Number of products: ${products.length}`);
+  
+  const productBreakdown = products.map(p => {
+    const dq = convertToDisplayUnits(p.quantity, p.product_type, p.quantity_per_unit, p.base_unit);
+    const val = dq * (p.cost_price || 0);
+    return {
+      id: p.id,
+      name: p.name,
+      quantity: p.quantity,
+      displayQty: parseFloat(dq.toFixed(2)),
+      costPrice: p.cost_price,
+      value: val,
+      product_type: p.product_type,
+      base_unit: p.base_unit,
+      quantity_per_unit: p.quantity_per_unit
+    };
+  }).sort((a, b) => b.value - a.value); // Sort by value descending
+  
+  console.log(`[Inventory Total Debug] Breakdown by product (sorted by value):`, productBreakdown);
+  
+  const sumVerification = products.reduce((sum, p) => {
+    const dq = convertToDisplayUnits(p.quantity, p.product_type, p.quantity_per_unit, p.base_unit);
+    return sum + (dq * (p.cost_price || 0));
+  }, 0);
+  
+  console.log(`[Inventory Total Debug] Sum verification: ₱${sumVerification.toLocaleString()}`);
+  
+  // Check if there's a discrepancy
+  if (Math.abs(totalInventoryValue - sumVerification) > 0.01) {
+    console.error(`❌ DISCREPANCY DETECTED: Calculated total (${totalInventoryValue}) doesn't match sum verification (${sumVerification})`);
+  }
+  
+  // Final validation: if total is unreasonably high, log a warning
+  if (totalInventoryValue > 1000000) {
+    console.warn(`⚠️ WARNING: Total inventory value is unusually high: ₱${totalInventoryValue.toLocaleString()}`);
+    console.warn(`   Top 3 products by value:`, productBreakdown.slice(0, 3));
+  }
   
   const lowStockItems = products.filter((p) => {
     const displayQty = convertToDisplayUnits(p.quantity, p.product_type, p.quantity_per_unit, p.base_unit);
@@ -354,8 +432,10 @@ export default function InventoryPage() {
         </svg>
       ),
       color: "text-green-700",
-      formatValue: (val) =>
-        `₱${val.toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+      formatValue: (val) => {
+        console.log(`[Format Value] Formatting inventory value: ${val} -> ₱${val.toLocaleString(undefined, { minimumFractionDigits: 2 })}`);
+        return `₱${val.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+      },
       sub: "Total value of all stock",
     },
     {

@@ -43,15 +43,32 @@ exports.getOverview = async (req, res) => {
     const endDateForQuery = formatDate(end);
 
     // Get sales data for the period
+    // Use direct transaction query to avoid double-counting from sales_summary_view
+    // Calculate transaction totals separately from item quantities to avoid duplication
     const salesQuery = `
       SELECT 
-        COALESCE(SUM(ssv.total_sales_amount), 0) AS total_sales,
-        COALESCE(SUM(ssv.total_transactions), 0) AS total_transactions,
-        COALESCE(SUM(ssv.total_items_sold), 0) AS total_items_sold,
-        COALESCE(SUM(ssv.total_sales_amount) / NULLIF(SUM(ssv.total_transactions), 0), 0) AS avg_transaction_value
-       FROM sales_summary_view ssv
-       WHERE ssv.business_id = $1 
-         AND ssv.sale_date BETWEEN $2::date AND $3::date`;
+        COALESCE(transaction_totals.total_sales, 0) AS total_sales,
+        COALESCE(transaction_totals.total_transactions, 0) AS total_transactions,
+        COALESCE(item_totals.total_items_sold, 0) AS total_items_sold,
+        COALESCE(transaction_totals.total_sales / NULLIF(transaction_totals.total_transactions, 0), 0) AS avg_transaction_value
+       FROM (
+         SELECT 
+           SUM(t.total_amount) AS total_sales,
+           COUNT(*) AS total_transactions
+         FROM transactions t
+         WHERE t.business_id = $1 
+           AND t.status = 'completed'
+           AND DATE(t.created_at) BETWEEN $2::date AND $3::date
+       ) AS transaction_totals
+       CROSS JOIN (
+         SELECT 
+           COALESCE(SUM(ti.product_quantity), 0) AS total_items_sold
+         FROM transactions t
+         JOIN transaction_items ti ON ti.transaction_id = t.transaction_id
+         WHERE t.business_id = $1 
+           AND t.status = 'completed'
+           AND DATE(t.created_at) BETWEEN $2::date AND $3::date
+       ) AS item_totals`;
     
     const salesRes = await pool.query(salesQuery, [businessId, startDateForQuery, endDateForQuery]);
 
@@ -264,7 +281,20 @@ exports.getSalesData = async (req, res) => {
     // Query to get sales data grouped by product
     // product_quantity is stored in base units, we need to convert to display units
     // For volume products with base_unit "L", product_quantity is in mL
+    // We calculate proportional subtotal based on transaction total_amount to account for discounts
     const salesQuery = `
+      WITH transaction_totals AS (
+        SELECT 
+          t.transaction_id,
+          t.total_amount,
+          COALESCE(SUM(ti.subtotal), 0) AS items_subtotal
+        FROM transactions t
+        LEFT JOIN transaction_items ti ON ti.transaction_id = t.transaction_id
+        WHERE t.business_id = $1
+          AND t.status = 'completed'
+          AND DATE(t.created_at) BETWEEN $2::date AND $3::date
+        GROUP BY t.transaction_id, t.total_amount
+      )
       SELECT 
         p.product_id,
         p.product_name,
@@ -280,10 +310,19 @@ exports.getSalesData = async (req, res) => {
               ti.product_quantity / COALESCE(NULLIF(p.quantity_per_unit, 0), 1)
           END
         ) AS number_of_sold_items,
-        SUM(ti.subtotal) AS subtotal
+        -- Calculate proportional subtotal: distribute transaction_total proportionally
+        SUM(
+          CASE 
+            WHEN tt.items_subtotal > 0 THEN
+              (ti.subtotal / tt.items_subtotal) * tt.total_amount
+            ELSE
+              ti.subtotal
+          END
+        ) AS subtotal
       FROM transaction_items ti
       JOIN transactions t ON ti.transaction_id = t.transaction_id
       JOIN products p ON ti.product_id = p.product_id
+      JOIN transaction_totals tt ON tt.transaction_id = t.transaction_id
       WHERE t.business_id = $1
         AND t.status = 'completed'
         AND DATE(t.created_at) BETWEEN $2::date AND $3::date

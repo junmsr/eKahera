@@ -906,10 +906,18 @@ function Inventory({
   onSort,
   className = "",
 }) {
-  const totalValue = allProducts.reduce(
-    (sum, p) => sum + Number(p.selling_price || 0) * Number(p.quantity || 0),
-    0
-  );
+  // Calculate total inventory value using cost_price and display units
+  // This matches the calculation in pages/Inventory.jsx
+  const totalValue = allProducts.reduce((sum, p) => {
+    const displayQty = convertToDisplayUnits(
+      p.quantity,
+      p.product_type,
+      p.quantity_per_unit,
+      p.base_unit
+    );
+    const costPrice = Number(p.cost_price || 0);
+    return sum + costPrice * displayQty;
+  }, 0);
   const lowStockCount = allProducts.filter((p) => {
     const threshold = Number(p.low_stock_level ?? DEFAULT_LOW_STOCK_LEVEL);
     return Number(p.quantity || 0) < threshold;
