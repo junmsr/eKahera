@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from "react";
+import React, { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import PageLayout from "../components/layout/PageLayout";
 import NavAdmin from "../components/layout/Nav-Admin";
 import Inventory from "../components/inventory/Inventory";
@@ -154,6 +154,395 @@ function getCategoriesByBusinessType(businessType) {
   return categoryMap[businessType] || categoryMap["Others"];
 }
 
+/**
+ * Import Success Modal Component
+ */
+function ImportSuccessModal({ isOpen, onClose, successCount, errors }) {
+  if (!isOpen) return null;
+
+  const hasErrors = errors && errors.length > 0;
+
+  return (
+    <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
+        onClick={onClose}
+        aria-hidden="true"
+      ></div>
+      
+      {/* Modal content */}
+      <div
+        className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-hidden flex flex-col z-10"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className={`bg-gradient-to-r ${hasErrors ? 'from-yellow-50 via-yellow-50/80 to-orange-50/50 border-b border-yellow-100' : 'from-green-50 via-green-50/80 to-emerald-50/50 border-b border-green-100'} px-6 py-5 rounded-t-2xl flex items-center justify-between`}>
+          <div className="flex items-center gap-4">
+            <div className={`w-12 h-12 bg-gradient-to-br ${hasErrors ? 'from-yellow-500 to-orange-600' : 'from-green-500 to-emerald-600'} rounded-xl flex items-center justify-center shadow-lg`}>
+              {hasErrors ? (
+                <svg
+                  className="w-6 h-6 text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                  />
+                </svg>
+              ) : (
+                <svg
+                  className="w-6 h-6 text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
+              )}
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">
+                {hasErrors ? 'Import Completed with Warnings' : 'Import Successful'}
+              </h2>
+              <p className="text-sm text-gray-600">
+                {hasErrors ? 'Some products were imported with errors' : 'All products imported successfully'}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all duration-200 p-2 rounded-xl"
+            type="button"
+            aria-label="Close modal"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="overflow-y-auto flex-1 px-6 py-6">
+          <div className="space-y-4">
+            {/* Success message */}
+            <div className={`bg-gradient-to-r ${hasErrors ? 'from-yellow-50 to-orange-50' : 'from-green-50 to-emerald-50'} border-l-4 ${hasErrors ? 'border-yellow-500' : 'border-green-500'} rounded-lg p-4`}>
+              <div className="flex items-center gap-3">
+                <div className={`flex-shrink-0 w-10 h-10 ${hasErrors ? 'bg-yellow-100' : 'bg-green-100'} rounded-full flex items-center justify-center`}>
+                  <span className={`text-lg font-bold ${hasErrors ? 'text-yellow-700' : 'text-green-700'}`}>
+                    {successCount}
+                  </span>
+                </div>
+                <div>
+                  <p className={`text-sm font-semibold ${hasErrors ? 'text-yellow-800' : 'text-green-800'}`}>
+                    {successCount} {successCount === 1 ? 'product' : 'products'} imported successfully
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Errors section */}
+            {hasErrors && (
+              <div className="bg-red-50 border-l-4 border-red-500 rounded-lg p-4">
+                <h3 className="text-sm font-semibold text-red-800 mb-2">
+                  {errors.length} {errors.length === 1 ? 'error' : 'errors'} encountered:
+                </h3>
+                <div className="max-h-64 overflow-y-auto space-y-1">
+                  {errors.slice(0, 10).map((error, index) => (
+                    <p key={index} className="text-xs text-red-700 font-mono bg-red-100 px-2 py-1 rounded">
+                      {error}
+                    </p>
+                  ))}
+                  {errors.length > 10 && (
+                    <p className="text-xs text-red-600 italic mt-2">
+                      ... and {errors.length - 10} more error{errors.length - 10 > 1 ? 's' : ''}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="sticky bottom-0 px-6 py-4 bg-gradient-to-t from-slate-50 via-white to-transparent border-t border-slate-200/10 flex justify-end gap-3 backdrop-blur-sm">
+          <Button
+            onClick={onClose}
+            variant="primary"
+          >
+            OK
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * CSV Import Modal Component
+ */
+function CSVImportModal({ isOpen, onClose, onImport, loading, error }) {
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [showWarning, setShowWarning] = useState(false);
+  const [csvContent, setCsvContent] = useState(null);
+  const fileInputRef = useRef(null);
+
+  const handleFileSelect = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Check if file is CSV
+    if (!file.name.toLowerCase().endsWith('.csv') && file.type !== 'text/csv') {
+      alert('Please select a CSV file');
+      return;
+    }
+
+    setSelectedFile(file);
+    setShowWarning(false);
+    setCsvContent(null);
+
+    // Read file content
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setCsvContent(event.target.result);
+    };
+    reader.onerror = () => {
+      alert('Failed to read file');
+      setSelectedFile(null);
+    };
+    reader.readAsText(file);
+  };
+
+  const handleImportClick = () => {
+    if (!selectedFile || !csvContent) {
+      alert('Please select a CSV file first');
+      return;
+    }
+    setShowWarning(true);
+  };
+
+  const handleProceed = () => {
+    if (csvContent) {
+      onImport(csvContent);
+      setShowWarning(false);
+      setSelectedFile(null);
+      setCsvContent(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleCancel = () => {
+    setShowWarning(false);
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
+        onClick={onClose}
+        aria-hidden="true"
+      ></div>
+      
+      {/* Modal content */}
+      <div
+        className="relative bg-white rounded-2xl shadow-2xl w-full max-w-xl max-h-[90vh] overflow-hidden flex flex-col z-10"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="bg-gradient-to-r from-blue-50 via-blue-50/80 to-indigo-50/50 border-b border-blue-100 px-6 py-5 rounded-t-2xl flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+              <svg
+                className="w-6 h-6 text-white"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                />
+              </svg>
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">Import Products from CSV</h2>
+              <p className="text-sm text-gray-600">Upload a CSV file to import products</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all duration-200 p-2 rounded-xl"
+            type="button"
+            disabled={loading}
+            aria-label="Close modal"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="overflow-y-auto flex-1 px-6 py-6">
+          {!showWarning ? (
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Select CSV File
+                </label>
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".csv,text/csv"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                    id="csv-file-input"
+                    disabled={loading}
+                  />
+                  <label
+                    htmlFor="csv-file-input"
+                    className="cursor-pointer flex flex-col items-center gap-2"
+                  >
+                    <svg
+                      className="w-12 h-12 text-gray-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                      />
+                    </svg>
+                    <span className="text-sm text-gray-600">
+                      {selectedFile ? selectedFile.name : 'Click to browse or drag and drop'}
+                    </span>
+                    <span className="text-xs text-gray-500">Only CSV files are accepted</span>
+                  </label>
+                </div>
+              </div>
+
+              <div className="bg-blue-50 border-l-4 border-blue-500 rounded-lg p-4">
+                <h3 className="text-sm font-semibold text-blue-800 mb-2">Required CSV Columns:</h3>
+                <ul className="text-xs text-blue-700 space-y-1">
+                  <li>• sku</li>
+                  <li>• name</li>
+                  <li>• category</li>
+                  <li>• description</li>
+                  <li>• product sold by</li>
+                  <li>• unit size</li>
+                  <li>• unit</li>
+                  <li>• quantity</li>
+                  <li>• cost price</li>
+                  <li>• selling price</li>
+                  <li>• low stock alert</li>
+                </ul>
+              </div>
+
+              {error && (
+                <div className="bg-red-50 border-l-4 border-red-500 rounded-lg p-4">
+                  <p className="text-sm text-red-700">{error}</p>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="bg-gradient-to-r from-red-50 via-red-50/80 to-orange-50/50 border-l-4 border-red-500 rounded-lg p-6">
+                <div className="flex items-start gap-4">
+                  <div className="w-10 h-10 bg-gradient-to-br from-red-500 to-red-600 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0">
+                    <svg
+                      className="w-6 h-6 text-white"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
+                      />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-lg font-bold text-gray-900 mb-2">Warning</h3>
+                    <p className="text-sm text-gray-700 mb-2">
+                      This action cannot be undone. Importing products will add them to your inventory.
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      Are you sure you want to proceed with importing <strong>{selectedFile?.name}</strong>?
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="sticky bottom-0 px-6 py-4 bg-gradient-to-t from-slate-50 via-white to-transparent border-t border-slate-200/10 flex justify-end gap-3 backdrop-blur-sm">
+          {!showWarning ? (
+            <>
+              <Button
+                onClick={onClose}
+                variant="secondary"
+                disabled={loading}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleImportClick}
+                variant="primary"
+                disabled={!selectedFile || loading}
+                loading={loading}
+              >
+                Import
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button
+                onClick={handleCancel}
+                variant="secondary"
+                disabled={loading}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleProceed}
+                variant="danger"
+                disabled={loading}
+                loading={loading}
+              >
+                Proceed
+              </Button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function InventoryPage() {
   // State
   const [products, setProducts] = useState(initialProducts);
@@ -222,6 +611,10 @@ export default function InventoryPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [productToDelete, setProductToDelete] = useState(null);
   const [exportingInventory, setExportingInventory] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importingProducts, setImportingProducts] = useState(false);
+  const [showImportSuccessModal, setShowImportSuccessModal] = useState(false);
+  const [importResults, setImportResults] = useState({ successCount: 0, errors: [] });
   // Load inventory and business type from API
   useEffect(() => {
     const fetchInventory = async () => {
@@ -878,6 +1271,262 @@ export default function InventoryPage() {
     setPage(1);
   }, []);
 
+  // CSV Import handler
+  const handleCSVImport = useCallback(async (csvData) => {
+    try {
+      setImportingProducts(true);
+      setApiError("");
+      const token = sessionStorage.getItem("auth_token");
+
+      // Parse CSV data - filter out completely empty lines
+      const lines = csvData.split('\n').filter(line => line.trim().length > 0);
+      if (lines.length < 2) {
+        throw new Error('CSV file must contain at least a header row and one data row');
+      }
+
+      // Parse header row
+      const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+      const requiredColumns = ['sku', 'name', 'category', 'description', 'product sold by', 'unit size', 'unit', 'quantity', 'cost price', 'selling price', 'low stock alert'];
+      
+      // Check if all required columns are present
+      const missingColumns = requiredColumns.filter(col => !headers.includes(col));
+      if (missingColumns.length > 0) {
+        throw new Error(`Missing required columns: ${missingColumns.join(', ')}`);
+      }
+
+      // Parse data rows
+      const products = [];
+      const errors = [];
+      
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i].trim();
+        // Skip completely empty lines
+        if (!line) continue;
+
+        try {
+          // Simple CSV parsing (handles quoted values)
+          const values = [];
+          let current = '';
+          let inQuotes = false;
+          
+          for (let j = 0; j < line.length; j++) {
+            const char = line[j];
+            if (char === '"') {
+              inQuotes = !inQuotes;
+            } else if (char === ',' && !inQuotes) {
+              values.push(current.trim());
+              current = '';
+            } else {
+              current += char;
+            }
+          }
+          values.push(current.trim());
+
+          if (values.length !== headers.length) {
+            errors.push(`Row ${i + 1}: Column count mismatch`);
+            continue;
+          }
+
+          // Check if row is empty (all values are empty or just commas)
+          const hasData = values.some(val => val && val.trim().length > 0);
+          if (!hasData) {
+            // Skip completely empty rows
+            continue;
+          }
+
+          // Map values to object
+          const product = {};
+          headers.forEach((header, index) => {
+            product[header] = values[index] || '';
+          });
+
+          // Validate and transform product data
+          const sku = product['sku']?.trim() || `SKU-${Date.now()}-${i}`;
+          const name = product['name']?.trim();
+          if (!name) {
+            errors.push(`Row ${i + 1}: Name is required`);
+            continue;
+          }
+
+          const category = product['category']?.trim() || '';
+          const description = product['description']?.trim() || '';
+          
+          // Normalize "product sold by" value (case-insensitive, handle variations)
+          let productSoldByRaw = product['product sold by']?.trim() || 'Per Piece';
+          let productSoldBy = 'Per Piece'; // default
+          
+          // Normalize to match backend expectations
+          const soldByLower = productSoldByRaw.toLowerCase();
+          if (soldByLower === 'per piece' || soldByLower === 'per_piece' || soldByLower === 'count' || soldByLower === 'piece') {
+            productSoldBy = 'Per Piece';
+          } else if (soldByLower === 'by weight' || soldByLower === 'by_weight' || soldByLower === 'weight' || soldByLower === 'per weight') {
+            productSoldBy = 'By Weight';
+          } else if (soldByLower === 'by volume' || soldByLower === 'by_volume' || soldByLower === 'volume' || soldByLower === 'per volume') {
+            productSoldBy = 'By Volume';
+          } else {
+            // Try to match with common variations
+            productSoldBy = productSoldByRaw; // Pass through, backend will validate
+          }
+          
+          // Parse unit size - handle cases where it contains both number and unit (e.g., "1 L")
+          let unitSizeRaw = product['unit size']?.trim() || '';
+          let unitFromColumn = product['unit']?.trim() || '';
+          let unitSize = '';
+          let unit = '';
+          
+          if (unitSizeRaw) {
+            // Check if unit size contains both number and unit (e.g., "1 L", "250 mL", "500 g")
+            const unitSizeMatch = unitSizeRaw.match(/^([\d.]+)\s*(kg|g|L|mL|liter|liters|litre|litres|kilogram|kilograms)$/i);
+            if (unitSizeMatch) {
+              // Extract number and unit from unit size field
+              unitSize = unitSizeMatch[1];
+              const extractedUnit = unitSizeMatch[2].toLowerCase();
+              
+              // Normalize unit from unit size field
+              if (extractedUnit === 'kg' || extractedUnit === 'kilogram' || extractedUnit === 'kilograms') {
+                unit = 'kg';
+              } else if (extractedUnit === 'g' || extractedUnit === 'gram' || extractedUnit === 'grams') {
+                unit = 'g';
+              } else if (extractedUnit === 'l' || extractedUnit === 'liter' || extractedUnit === 'liters' || extractedUnit === 'litre' || extractedUnit === 'litres') {
+                unit = 'L';
+              } else if (extractedUnit === 'ml' || extractedUnit === 'milliliter' || extractedUnit === 'milliliters' || extractedUnit === 'millilitre' || extractedUnit === 'millilitres') {
+                unit = 'mL';
+              }
+            } else {
+              // Just a number, use it as-is
+              unitSize = unitSizeRaw;
+              // Use unit from separate unit column if provided
+              if (unitFromColumn) {
+                const unitLower = unitFromColumn.toLowerCase();
+                if (unitLower === 'kg' || unitLower === 'kilogram' || unitLower === 'kilograms') {
+                  unit = 'kg';
+                } else if (unitLower === 'g' || unitLower === 'gram' || unitLower === 'grams') {
+                  unit = 'g';
+                } else if (unitLower === 'l' || unitLower === 'liter' || unitLower === 'liters' || unitLower === 'litre' || unitLower === 'litres') {
+                  unit = 'L';
+                } else if (unitLower === 'ml' || unitLower === 'milliliter' || unitLower === 'milliliters' || unitLower === 'millilitre' || unitLower === 'millilitres') {
+                  unit = 'mL';
+                } else {
+                  unit = unitFromColumn; // Pass through
+                }
+              }
+            }
+          } else if (unitFromColumn) {
+            // Unit size is empty but unit is provided
+            const unitLower = unitFromColumn.toLowerCase();
+            if (unitLower === 'kg' || unitLower === 'kilogram' || unitLower === 'kilograms') {
+              unit = 'kg';
+            } else if (unitLower === 'g' || unitLower === 'gram' || unitLower === 'grams') {
+              unit = 'g';
+            } else if (unitLower === 'l' || unitLower === 'liter' || unitLower === 'liters' || unitLower === 'litre' || unitLower === 'litres') {
+              unit = 'L';
+            } else if (unitLower === 'ml' || unitLower === 'milliliter' || unitLower === 'milliliters' || unitLower === 'millilitre' || unitLower === 'millilitres') {
+              unit = 'mL';
+            } else {
+              unit = unitFromColumn; // Pass through
+            }
+          }
+          
+          // For "Per Piece" products, unit size and unit should be empty/undefined
+          if (productSoldBy === 'Per Piece') {
+            unitSize = '';
+            unit = '';
+          }
+          
+          const quantity = Number(product['quantity']?.trim() || 0);
+          const costPrice = Number(product['cost price']?.trim() || 0);
+          const sellingPrice = Number(product['selling price']?.trim() || 0);
+          const lowStockAlert = Number(product['low stock alert']?.trim() || DEFAULT_LOW_STOCK_LEVEL);
+
+          if (quantity <= 0) {
+            errors.push(`Row ${i + 1}: Quantity must be greater than 0`);
+            continue;
+          }
+
+          if (sellingPrice < costPrice) {
+            errors.push(`Row ${i + 1}: Selling price must be greater than or equal to cost price`);
+            continue;
+          }
+
+          products.push({
+            sku,
+            name,
+            category,
+            description,
+            product_sold_by: productSoldBy,
+            unit_size: unitSize ? Number(unitSize) : undefined,
+            unit: unit || undefined,
+            quantity,
+            cost_price: costPrice,
+            selling_price: sellingPrice,
+            low_stock_level: lowStockAlert,
+          });
+        } catch (err) {
+          errors.push(`Row ${i + 1}: ${err.message || 'Invalid data'}`);
+        }
+      }
+
+      if (errors.length > 0 && products.length === 0) {
+        throw new Error(`Import failed:\n${errors.join('\n')}`);
+      }
+
+      if (products.length === 0) {
+        throw new Error('No valid products found in CSV file');
+      }
+
+      // Call bulk import endpoint
+      const response = await api("/api/products/bulk-import", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...authHeaders(token),
+        },
+        body: JSON.stringify({ products }),
+      });
+
+      // Refresh inventory list
+      const data = await api("/api/inventory", {
+        headers: authHeaders(token),
+        params: { limit: 1000, offset: 0 }
+      });
+      const productsData = data?.products || data || [];
+      const mapped = (productsData || []).map((row) => ({
+        id: String(row.id || ""),
+        name: row.name || "-",
+        category: row.category || "-",
+        quantity: Number(row.quantity || 0),
+        cost_price: Number(row.cost_price || 0),
+        selling_price: Number(row.selling_price || 0),
+        sku: row.sku || "",
+        description: row.description || "",
+        low_stock_level: Number(row.low_stock_level ?? DEFAULT_LOW_STOCK_LEVEL),
+        product_type: row.product_type || "count",
+        quantity_per_unit: Number(row.quantity_per_unit || 1),
+        base_unit: row.base_unit || "pc",
+        display_unit: row.display_unit || null,
+      }));
+      setProducts(mapped);
+      setShowImportModal(false);
+
+      // Prepare success modal data
+      const apiErrors = response?.errors || [];
+      const allErrors = [...errors, ...(apiErrors.map(e => `Row ${e.index + 1}: ${e.error}`))];
+      const successCount = response?.success?.length || products.length;
+      
+      setImportResults({
+        successCount,
+        errors: allErrors
+      });
+      setShowImportSuccessModal(true);
+    } catch (err) {
+      const errorMessage = err.response?.data?.error || err.message || "Failed to import products";
+      setApiError(errorMessage);
+      console.error("CSV import error:", err);
+    } finally {
+      setImportingProducts(false);
+    }
+  }, []);
+
   const handleExport = useCallback(async () => {
     setExportingInventory(true);
     try {
@@ -1106,6 +1755,56 @@ export default function InventoryPage() {
           {/* Full text is hidden on mobile, short text shown on mobile */}
           <span className="hidden sm:block">Add Product</span>
           <span className="sm:inline"></span>
+        </Button>
+        
+        {/* IMPORT Button: ICON ONLY on Mobile, ICON + TEXT on Desktop */}
+        <Button
+          onClick={() => setShowImportModal(true)}
+          variant="secondary"
+          disabled={importingProducts || loading}
+          className="text-sm flex items-center justify-center sm:justify-start gap-1 sm:gap-2 shrink-0 !py-2 !px-2 sm:!px-2 min-w-[40px] sm:min-w-[40px] lg:min-w-0"
+        >
+          {importingProducts ? (
+            <>
+              <svg
+                className="animate-spin w-5 h-5"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                />
+              </svg>
+              <span className="hidden sm:inline">Importing...</span>
+            </>
+          ) : (
+            <>
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                />
+              </svg>
+              <span className="hidden sm:inline">Import</span>
+            </>
+          )}
         </Button>
         
         {/* EXPORT Button: ICON ONLY on Mobile, ICON + TEXT on Desktop */}
@@ -1346,6 +2045,24 @@ export default function InventoryPage() {
           </div>
         </div>
       </Modal>
+      {/* CSV Import Modal */}
+      <CSVImportModal
+        isOpen={showImportModal}
+        onClose={() => {
+          setShowImportModal(false);
+          setApiError("");
+        }}
+        onImport={handleCSVImport}
+        loading={importingProducts}
+        error={apiError}
+      />
+      {/* Import Success Modal */}
+      <ImportSuccessModal
+        isOpen={showImportSuccessModal}
+        onClose={() => setShowImportSuccessModal(false)}
+        successCount={importResults.successCount}
+        errors={importResults.errors}
+      />
     </PageLayout>
   );
 }

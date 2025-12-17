@@ -85,7 +85,20 @@ const createProduct = async (req, res) => {
     }
 
     // Handle unit-related fields based on "Product Sold By" selection
-    const productSoldBy = (body.product_sold_by ?? body.sold_by ?? 'Per Piece').toString().trim();
+    const productSoldByRaw = (body.product_sold_by ?? body.sold_by ?? 'Per Piece').toString().trim();
+    const productSoldByLower = productSoldByRaw.toLowerCase();
+    // Normalize to standard format
+    let productSoldBy = 'Per Piece';
+    if (productSoldByLower === 'per piece' || productSoldByLower === 'per_piece' || productSoldByLower === 'count' || productSoldByLower === 'piece') {
+      productSoldBy = 'Per Piece';
+    } else if (productSoldByLower === 'by weight' || productSoldByLower === 'by_weight' || productSoldByLower === 'weight' || productSoldByLower === 'per weight') {
+      productSoldBy = 'By Weight';
+    } else if (productSoldByLower === 'by volume' || productSoldByLower === 'by_volume' || productSoldByLower === 'volume' || productSoldByLower === 'per volume') {
+      productSoldBy = 'By Volume';
+    } else {
+      productSoldBy = productSoldByRaw; // Pass through for validation
+    }
+    
     let product_type, base_unit, quantity_per_unit, display_unit;
 
     if (productSoldBy === 'Per Piece' || productSoldBy === 'per_piece' || productSoldBy === 'count') {
@@ -726,6 +739,224 @@ const updateProduct = async (req, res) => {
   }
 };
 
+const bulkImportProducts = async (req, res) => {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const { products } = req.body || {};
+    
+    if (!Array.isArray(products) || products.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'Products array is required and must not be empty' });
+    }
+
+    const businessId = req.user?.businessId || null;
+    const createdBy = req.user?.userId || null;
+
+    if (!businessId) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'Business ID is required' });
+    }
+
+    const results = {
+      success: [],
+      errors: [],
+    };
+
+    for (let i = 0; i < products.length; i++) {
+      const body = products[i];
+      try {
+        const rawName = body.product_name ?? body.name ?? body.productName ?? body.ProductName;
+        const product_name = typeof rawName === 'string' ? rawName.trim() : '';
+        if (!product_name) {
+          results.errors.push({ index: i, error: 'product_name is required' });
+          continue;
+        }
+
+        const cost_price = Number(body.cost_price ?? 0);
+        const selling_price = Number(body.selling_price ?? body.price ?? 0);
+        const sku = (body.sku || `SKU-${Date.now()}-${i}`).toString().trim();
+        const initialQuantity = Number(body.quantity ?? 0);
+        const description = body.description || '';
+        const low_stock_alert = body.low_stock_level !== undefined ? Number(body.low_stock_level) : (body.low_stock_alert !== undefined ? Number(body.low_stock_alert) : 10);
+
+        // Validation: Quantity > 0
+        if (!Number.isFinite(initialQuantity) || initialQuantity <= 0) {
+          results.errors.push({ index: i, product_name, error: 'Quantity must be greater than 0' });
+          continue;
+        }
+
+        // Validation: Selling price >= cost price
+        if (selling_price < cost_price) {
+          results.errors.push({ index: i, product_name, error: 'Selling price must be greater than or equal to cost price' });
+          continue;
+        }
+
+        // Handle unit-related fields based on "Product Sold By" selection
+        const productSoldByRaw = (body.product_sold_by ?? body.sold_by ?? 'Per Piece').toString().trim();
+        const productSoldByLower = productSoldByRaw.toLowerCase();
+        // Normalize to standard format
+        let productSoldBy = 'Per Piece';
+        if (productSoldByLower === 'per piece' || productSoldByLower === 'per_piece' || productSoldByLower === 'count' || productSoldByLower === 'piece') {
+          productSoldBy = 'Per Piece';
+        } else if (productSoldByLower === 'by weight' || productSoldByLower === 'by_weight' || productSoldByLower === 'weight' || productSoldByLower === 'per weight') {
+          productSoldBy = 'By Weight';
+        } else if (productSoldByLower === 'by volume' || productSoldByLower === 'by_volume' || productSoldByLower === 'volume' || productSoldByLower === 'per volume') {
+          productSoldBy = 'By Volume';
+        } else {
+          productSoldBy = productSoldByRaw; // Pass through for validation
+        }
+        
+        let product_type, base_unit, quantity_per_unit, display_unit;
+
+        if (productSoldBy === 'Per Piece' || productSoldBy === 'per_piece' || productSoldBy === 'count') {
+          product_type = 'count';
+          base_unit = 'pc';
+          quantity_per_unit = 1;
+          display_unit = null;
+        } else if (productSoldBy === 'By Weight' || productSoldBy === 'by_weight' || productSoldBy === 'weight') {
+          product_type = 'weight';
+          const unitSize = Number(body.unit_size ?? body.size ?? 0);
+          const unit = (body.unit ?? 'g').toString().trim().toLowerCase();
+          
+          if (!Number.isFinite(unitSize) || unitSize <= 0) {
+            results.errors.push({ index: i, product_name, error: 'Unit size must be greater than 0 for weight-based products' });
+            continue;
+          }
+
+          if (unit === 'kg' || unit === 'kilogram' || unit === 'kilograms') {
+            base_unit = 'kg';
+          } else if (unit === 'g' || unit === 'gram' || unit === 'grams') {
+            base_unit = 'g';
+          } else {
+            results.errors.push({ index: i, product_name, error: 'Invalid unit for weight. Use "kg" or "g"' });
+            continue;
+          }
+
+          quantity_per_unit = unitSize;
+          display_unit = `${unitSize} ${base_unit}${unitSize === 1 ? '' : ' sachet'}`;
+        } else if (productSoldBy === 'By Volume' || productSoldBy === 'by_volume' || productSoldBy === 'volume') {
+          product_type = 'volume';
+          const unitSize = Number(body.unit_size ?? body.size ?? 0);
+          const unit = (body.unit ?? 'mL').toString().trim().toLowerCase();
+          
+          if (!Number.isFinite(unitSize) || unitSize <= 0) {
+            results.errors.push({ index: i, product_name, error: 'Unit size must be greater than 0 for volume-based products' });
+            continue;
+          }
+
+          if (unit === 'l' || unit === 'liter' || unit === 'liters' || unit === 'litre' || unit === 'litres') {
+            base_unit = 'L';
+          } else if (unit === 'ml' || unit === 'milliliter' || unit === 'milliliters' || unit === 'millilitre' || unit === 'millilitres') {
+            base_unit = 'mL';
+          } else {
+            results.errors.push({ index: i, product_name, error: 'Invalid unit for volume. Use "L" or "mL"' });
+            continue;
+          }
+
+          quantity_per_unit = unitSize;
+          display_unit = `${unitSize} ${base_unit} bottle`;
+        } else {
+          results.errors.push({ index: i, product_name, error: 'Invalid product_sold_by. Use "Per Piece", "By Weight", or "By Volume"' });
+          continue;
+        }
+
+        // Check if SKU already exists for this business
+        const existingSkuCheck = await client.query(
+          'SELECT product_id, product_name, sku FROM products WHERE sku = $1 AND business_id = $2 LIMIT 1',
+          [sku, businessId]
+        );
+        
+        if (existingSkuCheck.rowCount > 0) {
+          results.errors.push({ index: i, product_name, sku, error: `SKU "${sku}" already exists` });
+          continue;
+        }
+
+        // Resolve category
+        let categoryId = body.product_category_id ?? null;
+        const rawCategoryName = body.category ?? body.category_name ?? body.product_category_name;
+        const categoryName = typeof rawCategoryName === 'string' ? rawCategoryName.trim() : '';
+        if (!categoryId && categoryName) {
+          const existing = await client.query('SELECT product_category_id FROM product_categories WHERE LOWER(product_category_name) = LOWER($1) LIMIT 1', [categoryName]);
+          if (existing.rowCount > 0) {
+            categoryId = existing.rows[0].product_category_id;
+          } else {
+            const insCat = await client.query('INSERT INTO product_categories (product_category_name) VALUES ($1) RETURNING product_category_id', [categoryName]);
+            categoryId = insCat.rows[0].product_category_id;
+          }
+        }
+
+        // Insert product
+        const prodRes = await client.query(
+          'INSERT INTO products (product_category_id, product_name, description, cost_price, selling_price, sku, created_by_user_id, business_id, low_stock_alert, product_type, base_unit, quantity_per_unit, display_unit) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING *',
+          [categoryId, product_name, description, cost_price, selling_price, sku, createdBy, businessId, low_stock_alert, product_type, base_unit, quantity_per_unit, display_unit]
+        );
+        const product = prodRes.rows[0];
+
+        // Seed inventory
+        let stockInBaseUnits = initialQuantity;
+        if (product_type !== 'count' && quantity_per_unit > 0) {
+          const qty = Number(initialQuantity);
+          const qpu = Number(quantity_per_unit);
+          if (product_type === 'volume' && base_unit === 'L') {
+            stockInBaseUnits = Math.round(qty * qpu * 1000);
+          } else {
+            stockInBaseUnits = Math.round(qty * qpu);
+          }
+        }
+
+        const invSelect = await client.query(
+          'SELECT inventory_id FROM inventory WHERE product_id = $1 AND business_id = $2 LIMIT 1',
+          [product.product_id, businessId]
+        );
+        if (invSelect.rowCount > 0) {
+          await client.query(
+            'UPDATE inventory SET quantity_in_stock = quantity_in_stock + $1, updated_at = NOW() WHERE inventory_id = $2',
+            [stockInBaseUnits, invSelect.rows[0].inventory_id]
+          );
+        } else {
+          await client.query(
+            'INSERT INTO inventory (product_id, quantity_in_stock, business_id) VALUES ($1, $2, $3)',
+            [product.product_id, stockInBaseUnits, businessId]
+          );
+        }
+
+        results.success.push({ index: i, product_name, sku, product_id: product.product_id });
+      } catch (err) {
+        results.errors.push({ index: i, product_name: body.name || body.product_name || 'Unknown', error: err.message || 'Unknown error' });
+      }
+    }
+
+    if (results.success.length === 0 && results.errors.length > 0) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ 
+        error: 'All products failed to import',
+        errors: results.errors 
+      });
+    }
+
+    await client.query('COMMIT');
+    
+    // Log bulk import
+    logAction({
+      userId: createdBy,
+      businessId: businessId,
+      action: `Bulk imported ${results.success.length} products${results.errors.length > 0 ? ` (${results.errors.length} failed)` : ''}`,
+    });
+
+    res.status(201).json({
+      message: `Successfully imported ${results.success.length} products`,
+      success: results.success,
+      errors: results.errors.length > 0 ? results.errors : undefined,
+    });
+  } catch (err) {
+    try { await client.query('ROLLBACK'); } catch (_) {}
+    res.status(500).json({ error: err.message });
+  } finally {
+    client.release();
+  }
+};
+
 const deleteProduct = async (req, res) => {
     const client = await pool.connect();
     try {
@@ -792,5 +1023,6 @@ module.exports = {
     getLowStockProducts,
     sendLowStockAlert,
     updateProduct,
-    deleteProduct
+    deleteProduct,
+    bulkImportProducts
 };

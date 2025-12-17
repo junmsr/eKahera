@@ -13,6 +13,7 @@ router.get('/sku/:sku', authenticate, requireDocuments, productController.getPro
 router.get('/public/sku/:sku', productController.getProductBySkuPublic); // Public route, no document requirement
 router.get('/:id', authenticate, requireDocuments, productController.getProductById);
 router.post('/', authenticate, requireDocuments, productController.createProduct);
+router.post('/bulk-import', authenticate, requireDocuments, productController.bulkImportProducts);
 router.put('/:id', authenticate, requireDocuments, productController.updateProduct);
 router.delete('/:id', authenticate, requireDocuments, productController.deleteProduct);
 router.post('/add-stock-by-sku', authenticate, requireDocuments, productController.addStockBySku);
