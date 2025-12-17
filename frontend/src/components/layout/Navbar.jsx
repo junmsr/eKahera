@@ -38,7 +38,7 @@ function Navbar({ className = "" }) {
   return (
     <nav
       id="main-navbar"
-      className={`site-navbar-base flex items-center justify-between px-5 py-3 bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/70 border border-blue-100 shadow-lg rounded-full fixed top-0 left-1/2 transform -translate-x-1/2 w-[95vw] max-w-4xl z-50 ${className}`}
+      className={`site-navbar-base flex items-center justify-between px-4 sm:px-5 py-2.5 sm:py-3 bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/70 border border-blue-100 shadow-lg rounded-full fixed top-0 left-1/2 transform -translate-x-1/2 w-[95vw] max-w-5xl z-50 ${className}`}
       style={{ fontFamily: "Inter, sans-serif", fontWeight: 600 }}
       role="navigation"
       aria-label="Primary"
@@ -59,14 +59,14 @@ function Navbar({ className = "" }) {
 
       {/* Desktop Navigation Menu */}
       <div
-        className="hidden md:flex flex-1 items-center justify-center space-x-7"
+        className="hidden lg:flex flex-1 items-center justify-center space-x-6 xl:space-x-8"
         role="menubar"
       >
         {navItems.map((item) => (
           <a
             key={item.label}
             href={item.path}
-            className={`group relative text-slate-800 hover:text-blue-700 transition-colors text-base px-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400`}
+            className={`group relative text-slate-800 hover:text-blue-700 transition-colors text-sm xl:text-base px-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 whitespace-nowrap`}
             style={{ fontFamily: "Inter, sans-serif" }}
             role="menuitem"
           >
@@ -77,48 +77,48 @@ function Navbar({ className = "" }) {
       </div>
 
       {/* Desktop Get Started Button */}
-      <div className="hidden md:flex items-center gap-3">
+      <div className="hidden lg:flex items-center gap-2 xl:gap-3">
         <Link
           to="/demo/dashboard"
-          className="text-blue-600 font-semibold px-5 py-2 rounded-full hover:bg-blue-50 transition-all text-base border border-blue-200"
+          className="text-blue-600 font-semibold px-4 xl:px-5 py-2 rounded-full hover:bg-blue-50 transition-all text-sm xl:text-base border border-blue-200 whitespace-nowrap"
           style={{ fontFamily: "Inter, sans-serif" }}
         >
           Demo
         </Link>
         <Link
           to="/get-started"
-          className="text-white font-semibold px-6 py-2 rounded-full shadow-md bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 focus:from-blue-700 focus:to-blue-600 transition-all text-base"
+          className="text-white font-semibold px-5 xl:px-6 py-2 rounded-full shadow-md bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 focus:from-blue-700 focus:to-blue-600 transition-all text-sm xl:text-base whitespace-nowrap"
           style={{ fontFamily: "Inter, sans-serif" }}
         >
           Get Started
         </Link>
       </div>
 
-      {/* Mobile Menu Button */}
-      <div className="md:hidden">
+      {/* Tablet/Mobile Menu Button */}
+      <div className="lg:hidden">
         <Button
           aria-expanded={isMenuOpen}
           aria-controls="mobile-menu"
           onClick={toggleMenu}
-          className="md:hidden bg-white hover:bg-blue-50 text-gray-800 px-2 py-2 font-medium transition-colors cursor-pointer border-opacity-20 rounded-xl border-2 border-blue-600 flex items-center"
+          className="lg:hidden bg-white hover:bg-blue-50 text-gray-800 px-2 py-2 font-medium transition-colors cursor-pointer border-opacity-20 rounded-xl border-2 border-blue-600 flex items-center"
           aria-label="Open menu"
         >
           <img src={menuBar} alt="menu" className="w-5 h-5" />
         </Button>
       </div>
 
-      {/* Mobile Menu Dropdown */}
+      {/* Mobile/Tablet Menu Dropdown */}
       {isMenuOpen && (
         <div
           id="mobile-menu"
-          className="md:hidden absolute top-full left-1/2 transform -translate-x-1/2 w-[90vw] max-w-sm bg-white/95 backdrop-blur shadow-lg z-50 flex flex-col items-start px-6 py-5 space-y-5 rounded-xl border border-blue-100 mt-2"
+          className="lg:hidden absolute top-full left-1/2 transform -translate-x-1/2 w-[90vw] max-w-sm bg-white/95 backdrop-blur shadow-lg z-50 flex flex-col items-start px-6 py-5 space-y-4 rounded-xl border border-blue-100 mt-2"
           role="menu"
         >
           {navItems.map((item) => (
             <a
               key={item.label}
               href={item.path}
-              className="text-gray-800 hover:text-blue-700 font-medium text-base w-full transition-colors"
+              className="text-gray-800 hover:text-blue-700 font-medium text-base w-full transition-colors py-1"
               style={{ fontFamily: "Inter, sans-serif" }}
               onClick={() => setIsMenuOpen(false)}
               role="menuitem"
@@ -126,24 +126,26 @@ function Navbar({ className = "" }) {
               {item.label}
             </a>
           ))}
-          <Link
-            to="/demo/dashboard"
-            className="text-blue-600 font-semibold text-base w-full transition-colors"
-            style={{ fontFamily: "Inter, sans-serif" }}
-            onClick={() => setIsMenuOpen(false)}
-            role="menuitem"
-          >
-            Try Demo
-          </Link>
-          <Link
-            to="/get-started"
-            className="text-white px-7 py-3 rounded-full font-semibold text-base cursor-pointer w-full text-center transition-colors bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600"
-            style={{ fontFamily: "Inter, sans-serif" }}
-            onClick={() => setIsMenuOpen(false)}
-            role="menuitem"
-          >
-            Get Started
-          </Link>
+          <div className="w-full pt-2 border-t border-gray-200 space-y-3">
+            <Link
+              to="/demo/dashboard"
+              className="text-blue-600 font-semibold text-base w-full transition-colors block py-2"
+              style={{ fontFamily: "Inter, sans-serif" }}
+              onClick={() => setIsMenuOpen(false)}
+              role="menuitem"
+            >
+              Demo
+            </Link>
+            <Link
+              to="/get-started"
+              className="text-white px-7 py-3 rounded-full font-semibold text-base cursor-pointer w-full text-center transition-colors bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600"
+              style={{ fontFamily: "Inter, sans-serif" }}
+              onClick={() => setIsMenuOpen(false)}
+              role="menuitem"
+            >
+              Get Started
+            </Link>
+          </div>
         </div>
       )}
     </nav>
