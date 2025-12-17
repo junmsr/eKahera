@@ -35,25 +35,24 @@ export default function ScanCustomerCartModal({ isOpen, onClose, onImport }) {
           throw new Error("This QR code is not valid for this store.");
         }
 
-        // Complete the existing transaction instead of creating a new one
+        // Load pending transaction items into cart instead of completing immediately
         try {
-          const response = await api(`/api/sales/${transaction_id}/complete`, {
-            method: 'POST',
+          const response = await api(`/api/sales/${transaction_id}/pending-items`, {
+            method: 'GET',
             headers: { Authorization: `Bearer ${token}` },
           });
           
-          if (response.transaction_id) {
-            // Transaction completed successfully - navigate to receipt
+          if (response.transaction_id && response.items) {
+            // Pass items and transaction info to onImport callback
+            onImport(response.items, response.transaction_id, null, response.transaction_number);
             onClose();
-            // Navigate to receipt page for cashier
-            window.location.href = `/receipt?tn=${response.transaction_number}`;
             return;
           } else {
-            throw new Error("Failed to complete transaction");
+            throw new Error("Failed to load transaction items");
           }
         } catch (err) {
-          console.error('Error completing transaction:', err);
-          throw new Error(err.message || "Failed to complete customer transaction");
+          console.error('Error loading transaction items:', err);
+          throw new Error(err.message || "Failed to load customer transaction items");
         }
       }
       // Existing cart import logic for backward compatibility

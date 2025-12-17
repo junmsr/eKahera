@@ -73,6 +73,26 @@ exports.checkout = async (req, res) => {
       
       transaction_number = tRes.rows[0].transaction_number;
       
+      // If updating a pending transaction, revert inventory for old items before deleting them
+      if (tRes.rows[0].status === 'pending') {
+        const oldItemsRes = await client.query(
+          `SELECT product_id, product_quantity 
+           FROM transaction_items 
+           WHERE transaction_id = $1`,
+          [transaction_id]
+        );
+        
+        // Revert inventory for old items (add back to inventory)
+        for (const oldItem of oldItemsRes.rows) {
+          await client.query(
+            `UPDATE inventory 
+             SET quantity_in_stock = quantity_in_stock + $1, updated_at = NOW() 
+             WHERE product_id = $2 AND business_id = $3`,
+            [oldItem.product_quantity, oldItem.product_id, req.user?.businessId || null]
+          );
+        }
+      }
+      
       // Update transaction with cashier_user_id and status (no discount_id)
       await client.query(
         'UPDATE transactions SET cashier_user_id = $1, status = $2, updated_at = NOW() WHERE transaction_id = $3',
@@ -723,6 +743,115 @@ exports.completeTransaction = async (req, res) => {
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('Error completing transaction:', err);
+    res.status(500).json({ error: err.message });
+  } finally {
+    client.release();
+  }
+};
+
+// Get pending transaction items for cashier to load into cart
+exports.getPendingTransactionItems = async (req, res) => {
+  const transactionId = req.params.id;
+  if (!transactionId) return res.status(400).json({ error: 'transaction id is required' });
+
+  const client = await pool.connect();
+  try {
+    // Get transaction details and verify it's pending
+    const tRes = await client.query(
+      `SELECT transaction_id, status, business_id, transaction_number 
+       FROM transactions 
+       WHERE transaction_id = $1`,
+      [transactionId]
+    );
+
+    if (tRes.rowCount === 0) {
+      return res.status(404).json({ error: 'Transaction not found' });
+    }
+
+    const transaction = tRes.rows[0];
+
+    // Verify business ID matches cashier's business
+    if (transaction.business_id && req.user?.businessId) {
+      if (Number(transaction.business_id) !== Number(req.user.businessId)) {
+        return res.status(403).json({ error: 'Transaction does not belong to your business' });
+      }
+    }
+
+    // Only allow loading pending transactions
+    if (transaction.status !== 'pending') {
+      return res.status(400).json({ error: 'Transaction is not pending. Only pending transactions can be loaded into cart.' });
+    }
+
+    // Get transaction items with product details
+    // Note: We need to convert quantities back to display units for the POS
+    const itemsRes = await client.query(
+      `SELECT 
+        ti.product_id,
+        p.sku,
+        p.product_name,
+        p.selling_price,
+        p.product_type,
+        p.quantity_per_unit,
+        p.base_unit,
+        p.display_unit,
+        ti.product_quantity as quantity_in_base_units,
+        ti.price_at_sale as price_per_base_unit,
+        ti.subtotal
+       FROM transaction_items ti
+       JOIN products p ON ti.product_id = p.product_id
+       WHERE ti.transaction_id = $1
+       ORDER BY ti.transaction_item_id`,
+      [transactionId]
+    );
+
+    const items = itemsRes.rows.map(item => {
+      // Convert quantity from base units to display units
+      let quantity_in_display_units;
+      const quantityPerUnit = Number(item.quantity_per_unit) || 1;
+      
+      if (item.product_type && item.product_type !== 'count' && quantityPerUnit > 0) {
+        // Weight/volume product: convert base units to display units
+        // For volume products with base_unit "L", convert from mL to L
+        if (item.product_type === 'volume' && item.base_unit === 'L') {
+          // quantity_in_base_units is in mL, convert to L
+          quantity_in_display_units = Number(item.quantity_in_base_units) / (quantityPerUnit * 1000);
+        } else {
+          // Standard conversion: base units / quantity_per_unit
+          quantity_in_display_units = Number(item.quantity_in_base_units) / quantityPerUnit;
+        }
+      } else {
+        // Count product: quantity is already in display units (base units = display units)
+        quantity_in_display_units = Number(item.quantity_in_base_units);
+      }
+
+      // Use selling_price for display (per display unit)
+      // If we stored price_per_base_unit, we need to convert back
+      let price_per_display_unit = Number(item.selling_price);
+      if (item.product_type && item.product_type !== 'count' && quantityPerUnit > 0) {
+        if (item.product_type === 'volume' && item.base_unit === 'L') {
+          price_per_display_unit = Number(item.price_per_base_unit) * (quantityPerUnit * 1000);
+        } else {
+          price_per_display_unit = Number(item.price_per_base_unit) * quantityPerUnit;
+        }
+      }
+
+      return {
+        product_id: item.product_id,
+        sku: item.sku,
+        name: item.product_name,
+        quantity: Math.round(quantity_in_display_units * 100) / 100, // Round to 2 decimal places
+        price: price_per_display_unit
+      };
+    });
+
+    res.json({
+      transaction_id: Number(transactionId),
+      transaction_number: transaction.transaction_number,
+      business_id: transaction.business_id,
+      items: items
+    });
+  } catch (err) {
+    console.error('Error getting pending transaction items:', err);
     res.status(500).json({ error: err.message });
   } finally {
     client.release();
