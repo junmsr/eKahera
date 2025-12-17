@@ -15,8 +15,7 @@
     "deploy": "npm run build && git add docs && git commit -m \"Deploy\" && git push origin main",
     "screenshot": "node scripts/capture-screenshot.js",
     "screenshot:all": "node scripts/capture-all-screenshots.js",
-    "screenshot:registration": "node scripts/capture-registration-steps-verified.js",
-    "screenshot:all": "node scripts/capture-all-screenshots.js"
+    "screenshot:registration": "node scripts/capture-registration-steps-verified.js"
   },
   "dependencies": {
     "@ericblade/quagga2": "^1.10.2",
