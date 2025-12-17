@@ -4,6 +4,7 @@ import NavAdmin from "../components/layout/Nav-Admin";
 import Inventory from "../components/inventory/Inventory";
 import Modal from "../components/modals/Modal";
 import Button from "../components/common/Button";
+import jsPDF from "jspdf";
 
 import ProductFormModal from "../components/modals/ProductFormModal";
 import { api, authHeaders } from "../lib/api";
@@ -13,54 +14,59 @@ const initialProducts = [];
 const initialCategories = [];
 const DEFAULT_LOW_STOCK_LEVEL = 10;
 
-// Utility function to convert array of objects to CSV
-const convertToCSV = (data) => {
-  if (!data || data.length === 0) return "";
-
-  const headers = [
-    "Name",
-    "SKU",
-    "Category",
-    "Description",
-    "Cost Price",
-    "Selling Price",
-    "Stock",
-  ];
-  const csvRows = [];
-
-  // Add headers
-  csvRows.push(headers.join(","));
-
-  // Add data rows
-  data.forEach((item) => {
-    const row = [
-      `"${item.name || ""}"`,
-      `"${item.sku || ""}"`,
-      `"${item.category || ""}"`,
-      `"${item.description || ""}"`,
-      item.cost_price || 0,
-      item.selling_price || 0,
-      item.quantity || 0,
-    ];
-    csvRows.push(row.join(","));
-  });
-
-  return csvRows.join("\n");
+// Helper function to get unit display string
+const getUnitDisplay = (product) => {
+  if (product.display_unit) {
+    return product.display_unit;
+  }
+  if (product.product_type === 'count') {
+    return 'pc';
+  }
+  if (product.product_type === 'weight' || product.product_type === 'volume') {
+    if (product.quantity_per_unit && product.base_unit) {
+      return `${product.quantity_per_unit} ${product.base_unit}`;
+    }
+    return product.base_unit || 'pc';
+  }
+  return 'pc';
 };
 
-// Utility function to download CSV
-const downloadCSV = (csv, filename) => {
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-  const link = document.createElement("a");
-  if (link.download !== undefined) {
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute("download", filename);
-    link.style.visibility = "hidden";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+
+// Helper function to format stock for PDF display (returns just the number with unit)
+const formatStockForPDF = (quantityInBaseUnits, productType, quantityPerUnit, baseUnit) => {
+  if (!quantityInBaseUnits || quantityInBaseUnits === 0) return '0';
+  
+  // For count products, show number of pieces
+  if (productType === 'count' || !productType) {
+    return `${Math.round(quantityInBaseUnits)}`;
   }
+  
+  // For volume products with base_unit "L", inventory is stored in mL
+  // Convert to L for display
+  if (productType === 'volume' && baseUnit === 'L') {
+    const displayValue = quantityInBaseUnits / 1000; // Convert mL to L
+    return displayValue % 1 === 0 ? displayValue.toFixed(0) : displayValue.toFixed(2);
+  }
+  
+  // For weight/volume products, convert to appropriate unit for display
+  let displayValue = quantityInBaseUnits;
+  let displayUnit = baseUnit || 'g';
+  
+  // Convert to larger units for better readability
+  if (baseUnit === 'g' && quantityInBaseUnits >= 1000) {
+    displayValue = quantityInBaseUnits / 1000;
+    displayUnit = 'kg';
+  } else if (baseUnit === 'mL' && quantityInBaseUnits >= 1000) {
+    displayValue = quantityInBaseUnits / 1000;
+    displayUnit = 'L';
+  }
+  
+  // Format the number (no decimals if whole number, 2 decimals otherwise)
+  const formattedValue = displayValue % 1 === 0 
+    ? displayValue.toFixed(0) 
+    : displayValue.toFixed(2);
+  
+  return `${formattedValue} ${displayUnit}`;
 };
 
 // Function to get predefined categories based on business type
@@ -215,6 +221,7 @@ export default function InventoryPage() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [productToDelete, setProductToDelete] = useState(null);
+  const [exportingInventory, setExportingInventory] = useState(false);
   // Load inventory and business type from API
   useEffect(() => {
     const fetchInventory = async () => {
@@ -871,11 +878,205 @@ export default function InventoryPage() {
     setPage(1);
   }, []);
 
-  const handleExport = useCallback(() => {
-    const csv = convertToCSV(filteredProducts);
-    const timestamp = new Date().toISOString().split("T")[0];
-    const filename = `inventory_export_${timestamp}.csv`;
-    downloadCSV(csv, filename);
+  const handleExport = useCallback(async () => {
+    setExportingInventory(true);
+    try {
+      const token = sessionStorage.getItem("auth_token");
+
+      // Fetch store information
+      const profileData = await api("/auth/profile", {
+        headers: authHeaders(token),
+      });
+
+      const business = profileData?.business || {};
+      const storeName = business.business_name || "Store";
+      const addressParts = [
+        business.house_number,
+        business.barangay,
+        business.city,
+        business.province,
+      ].filter(Boolean);
+      const address = addressParts.join(", ") || "N/A";
+      const contact = business.mobile || business.email || "N/A";
+
+      // Check if there's any inventory data
+      if (!filteredProducts || filteredProducts.length === 0) {
+        alert("No inventory data found to export.");
+        return;
+      }
+
+      // Calculate totals
+      const totalInventoryValue = filteredProducts.reduce((sum, p) => {
+        const displayQty = convertToDisplayUnits(
+          p.quantity,
+          p.product_type,
+          p.quantity_per_unit,
+          p.base_unit
+        );
+        const costPrice = Number(p.cost_price || 0);
+        return sum + costPrice * displayQty;
+      }, 0);
+
+      // Create PDF
+      const pdf = new jsPDF("p", "mm", "a4");
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const margin = 20;
+      const contentWidth = pageWidth - 2 * margin;
+      let yPos = margin;
+
+      // Helper function to add a new page if needed
+      const checkPageBreak = (requiredHeight) => {
+        if (yPos + requiredHeight > pdf.internal.pageSize.getHeight() - margin) {
+          pdf.addPage();
+          yPos = margin;
+          return true;
+        }
+        return false;
+      };
+
+      // Store name (centered, top middle)
+      pdf.setFontSize(20);
+      pdf.setFont("helvetica", "bold");
+      const storeNameWidth = pdf.getTextWidth(storeName);
+      pdf.text(storeName, (pageWidth - storeNameWidth) / 2, yPos);
+      yPos += 10;
+
+      // Address (centered, under store name)
+      pdf.setFontSize(12);
+      pdf.setFont("helvetica", "normal");
+      const addressWidth = pdf.getTextWidth(address);
+      pdf.text(address, (pageWidth - addressWidth) / 2, yPos);
+      yPos += 7;
+
+      // Contact information (centered, under address)
+      const contactWidth = pdf.getTextWidth(contact);
+      pdf.text(contact, (pageWidth - contactWidth) / 2, yPos);
+      yPos += 15;
+
+      // Inventory Report heading
+      pdf.setFontSize(16);
+      pdf.setFont("helvetica", "bold");
+      pdf.text("Inventory Report", margin, yPos);
+      yPos += 8;
+
+      // Export date
+      pdf.setFontSize(12);
+      pdf.setFont("helvetica", "normal");
+      const exportDate = new Date().toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      });
+      pdf.text(`Date: ${exportDate}`, margin, yPos);
+      yPos += 10;
+
+      // Table header - adjusted widths to prevent overlap
+      const colWidths = [
+        contentWidth * 0.24, // Product
+        contentWidth * 0.14, // Category
+        contentWidth * 0.16, // Cost Price
+        contentWidth * 0.16, // Selling Price
+        contentWidth * 0.15, // Unit
+        contentWidth * 0.15, // Stock
+      ];
+      const colX = [margin];
+      for (let i = 1; i < colWidths.length; i++) {
+        colX.push(colX[i - 1] + colWidths[i - 1]);
+      }
+
+      pdf.setFontSize(10);
+      pdf.setFont("helvetica", "bold");
+      const headerY = yPos;
+      pdf.text("Product", colX[0], headerY);
+      pdf.text("Category", colX[1], headerY);
+      pdf.text("Cost Price", colX[2], headerY);
+      pdf.text("Selling Price", colX[3], headerY);
+      pdf.text("Unit", colX[4], headerY);
+      pdf.text("Stock", colX[5], headerY);
+      yPos += 8;
+
+      // Draw header line
+      pdf.setLineWidth(0.5);
+      pdf.line(margin, yPos - 2, pageWidth - margin, yPos - 2);
+      yPos += 3;
+
+      // Table rows
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(9);
+
+      filteredProducts.forEach((item) => {
+        checkPageBreak(10);
+
+        const productName = item.name || "";
+        const category = item.category || "";
+        const costPrice = `PHP ${Number(item.cost_price || 0).toFixed(2)}`;
+        const sellingPrice = `PHP ${Number(item.selling_price || 0).toFixed(2)}`;
+        const unitDisplay = getUnitDisplay(item);
+        const stockDisplay = formatStockForPDF(
+          item.quantity,
+          item.product_type,
+          item.quantity_per_unit,
+          item.base_unit
+        );
+
+        // Truncate product name if too long
+        const maxNameWidth = colWidths[0] - 5;
+        let displayName = productName;
+        if (pdf.getTextWidth(displayName) > maxNameWidth) {
+          while (
+            pdf.getTextWidth(displayName + "...") > maxNameWidth &&
+            displayName.length > 0
+          ) {
+            displayName = displayName.slice(0, -1);
+          }
+          displayName += "...";
+        }
+
+        // Truncate category if too long
+        const maxCategoryWidth = colWidths[1] - 5;
+        let displayCategory = category;
+        if (pdf.getTextWidth(displayCategory) > maxCategoryWidth) {
+          while (
+            pdf.getTextWidth(displayCategory + "...") > maxCategoryWidth &&
+            displayCategory.length > 0
+          ) {
+            displayCategory = displayCategory.slice(0, -1);
+          }
+          displayCategory += "...";
+        }
+
+        pdf.text(displayName, colX[0], yPos);
+        pdf.text(displayCategory, colX[1], yPos);
+        pdf.text(costPrice, colX[2], yPos);
+        pdf.text(sellingPrice, colX[3], yPos);
+        pdf.text(unitDisplay, colX[4], yPos);
+        pdf.text(stockDisplay, colX[5], yPos);
+        yPos += 7;
+      });
+
+      // Total row
+      checkPageBreak(10);
+      yPos += 3;
+      pdf.setLineWidth(0.5);
+      pdf.line(margin, yPos, pageWidth - margin, yPos);
+      yPos += 5;
+
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(10);
+      // Place total in the last two columns to avoid overlap
+      pdf.text("Total Value:", colX[4], yPos);
+      pdf.text(`PHP ${totalInventoryValue.toFixed(2)}`, colX[5], yPos);
+
+      // Save PDF
+      const timestamp = new Date().toISOString().split("T")[0];
+      const fileName = `Inventory-Report-${timestamp}.pdf`;
+      pdf.save(fileName);
+    } catch (error) {
+      console.error("Error exporting inventory PDF:", error);
+      alert("Failed to generate inventory report. Please try again or contact support.");
+    } finally {
+      setExportingInventory(false);
+    }
   }, [filteredProducts]);
 
   const headerActions = (
@@ -911,24 +1112,52 @@ export default function InventoryPage() {
         <Button
           onClick={handleExport}
           variant="secondary"
+          disabled={exportingInventory || loading}
           // Ensure fixed width on mobile for icon, then auto width on desktop
           className="text-sm flex items-center justify-center sm:justify-start gap-1 sm:gap-2 shrink-0 !py-2 !px-2 sm:!px-2 min-w-[40px] sm:min-w-[40px] lg:min-w-0"
         >
-          <svg
-            className="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-            />
-          </svg>
-          {/* Text is hidden on mobile (default) and shown from 'sm' breakpoint up */}
-          <span className="hidden sm:inline">Export</span> 
+          {exportingInventory ? (
+            <>
+              <svg
+                className="animate-spin w-5 h-5"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                />
+              </svg>
+              <span className="hidden sm:inline">Exporting...</span>
+            </>
+          ) : (
+            <>
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                />
+              </svg>
+              {/* Text is hidden on mobile (default) and shown from 'sm' breakpoint up */}
+              <span className="hidden sm:inline">Export</span>
+            </>
+          )}
         </Button>
       </div>
     </div>
