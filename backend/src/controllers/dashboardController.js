@@ -223,3 +223,94 @@ exports.getSalesTimeseriesFromView = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+// Get sales data for export (transaction items grouped by product)
+exports.getSalesData = async (req, res) => {
+  try {
+    const businessId = resolveBusinessId(req);
+    
+    if (!businessId) {
+      return res.status(200).json([]);
+    }
+
+    // Get date range from query params
+    let { startDate, endDate } = req.query;
+    
+    // Parse dates if they exist, otherwise use defaults
+    const now = new Date();
+    let start, end;
+    
+    if (startDate && endDate) {
+      start = new Date(startDate);
+      end = new Date(endDate);
+    } else {
+      // Default to current month if no dates provided
+      start = new Date(now.getFullYear(), now.getMonth(), 1);
+      end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    }
+    
+    // Format dates to YYYY-MM-DD for the query
+    const formatDate = (date) => {
+      const d = new Date(date);
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+    
+    const startDateForQuery = formatDate(start);
+    const endDateForQuery = formatDate(end);
+
+    // Query to get sales data grouped by product
+    // product_quantity is stored in base units, we need to convert to display units
+    // For volume products with base_unit "L", product_quantity is in mL
+    const salesQuery = `
+      SELECT 
+        p.product_id,
+        p.product_name,
+        p.display_unit,
+        p.quantity_per_unit,
+        p.base_unit,
+        p.product_type,
+        SUM(
+          CASE 
+            WHEN p.product_type = 'volume' AND p.base_unit = 'L' THEN
+              ti.product_quantity / COALESCE(NULLIF(p.quantity_per_unit * 1000, 0), 1000)
+            ELSE
+              ti.product_quantity / COALESCE(NULLIF(p.quantity_per_unit, 0), 1)
+          END
+        ) AS number_of_sold_items,
+        SUM(ti.subtotal) AS subtotal
+      FROM transaction_items ti
+      JOIN transactions t ON ti.transaction_id = t.transaction_id
+      JOIN products p ON ti.product_id = p.product_id
+      WHERE t.business_id = $1
+        AND t.status = 'completed'
+        AND DATE(t.created_at) BETWEEN $2::date AND $3::date
+      GROUP BY p.product_id, p.product_name, p.display_unit, p.quantity_per_unit, p.base_unit, p.product_type
+      ORDER BY p.product_name`;
+
+    const salesRes = await pool.query(salesQuery, [businessId, startDateForQuery, endDateForQuery]);
+
+    // Format the response
+    const salesData = salesRes.rows.map(row => {
+      const soldItems = Number(row.number_of_sold_items) || 0;
+      const subtotal = Number(row.subtotal) || 0;
+      // Calculate price per unit from subtotal and quantity
+      const price = soldItems > 0 ? subtotal / soldItems : 0;
+      
+      return {
+        product_id: row.product_id,
+        product_name: row.product_name,
+        number_of_sold_items: soldItems,
+        unit: row.display_unit || row.base_unit || 'pc',
+        price: price,
+        subtotal: subtotal
+      };
+    });
+
+    res.json(salesData);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
