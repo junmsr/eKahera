@@ -252,7 +252,8 @@ export default function Receipt() {
 
 		details.items.forEach(item => {
 			r += item.name + '\n';
-			r += `  ${item.quantity} x P${item.price} \t  P${item.subtotal}\n`;
+			const unit = item.unit || 'pc';
+			r += `  ${item.quantity} ${unit} \t  P${item.subtotal}\n`;
 		});
 
 		r += '--------------------------------\n';
@@ -354,15 +355,18 @@ export default function Receipt() {
 								</div>
 								<div className="border-b border-dashed my-2"></div>
 								<div className="space-y-2">
-									{details.items.map((item, index) => (
-										<div key={index} className="text-sm">
-											<div>{item.name}</div>
-											<div className="flex justify-between">
-												<span className="pl-4">{item.quantity} x ₱{item.price}</span>
-												<span>₱{item.subtotal}</span>
+									{details.items.map((item, index) => {
+										const unit = item.unit || 'pc';
+										return (
+											<div key={index} className="text-sm">
+												<div>{item.name}</div>
+												<div className="flex justify-between">
+													<span className="pl-4">{item.quantity} {unit}</span>
+													<span>₱{item.subtotal}</span>
+												</div>
 											</div>
-										</div>
-									))}
+										);
+									})}
 								</div>
 							</div>
 

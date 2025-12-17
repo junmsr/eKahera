@@ -68,8 +68,83 @@ const createProduct = async (req, res) => {
     const selling_price = Number(body.selling_price ?? body.price ?? 0);
     const sku = (body.sku || `SKU-${Date.now()}`).toString().trim();
     const initialQuantity = Number(body.quantity ?? 0);
+    console.log('[DEBUG createProduct] Initial quantity:', initialQuantity, 'Type:', typeof initialQuantity);
     const description = body.description || '';
     const low_stock_alert = body.low_stock_level !== undefined ? Number(body.low_stock_level) : (body.low_stock_alert !== undefined ? Number(body.low_stock_alert) : 10);
+
+    // Validation: Quantity > 0
+    if (!Number.isFinite(initialQuantity) || initialQuantity <= 0) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'Quantity must be greater than 0' });
+    }
+
+    // Validation: Selling price >= cost price
+    if (selling_price < cost_price) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'Selling price must be greater than or equal to cost price' });
+    }
+
+    // Handle unit-related fields based on "Product Sold By" selection
+    const productSoldBy = (body.product_sold_by ?? body.sold_by ?? 'Per Piece').toString().trim();
+    let product_type, base_unit, quantity_per_unit, display_unit;
+
+    if (productSoldBy === 'Per Piece' || productSoldBy === 'per_piece' || productSoldBy === 'count') {
+      product_type = 'count';
+      base_unit = 'pc';
+      quantity_per_unit = 1;
+      display_unit = null;
+    } else if (productSoldBy === 'By Weight' || productSoldBy === 'by_weight' || productSoldBy === 'weight') {
+      product_type = 'weight';
+      const unitSize = Number(body.unit_size ?? body.size ?? 0);
+      const unit = (body.unit ?? 'g').toString().trim().toLowerCase();
+      
+      // Validation: quantity_per_unit > 0
+      if (!Number.isFinite(unitSize) || unitSize <= 0) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ error: 'Unit size must be greater than 0 for weight-based products' });
+      }
+
+      // Validate and set base_unit (kg or g)
+      if (unit === 'kg' || unit === 'kilogram' || unit === 'kilograms') {
+        base_unit = 'kg';
+      } else if (unit === 'g' || unit === 'gram' || unit === 'grams') {
+        base_unit = 'g';
+      } else {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ error: 'Invalid unit for weight. Use "kg" or "g"' });
+      }
+
+      quantity_per_unit = unitSize;
+      display_unit = `${unitSize} ${base_unit}${unitSize === 1 ? '' : ' sachet'}`;
+      console.log('[DEBUG createProduct] Weight product - unitSize:', unitSize, 'quantity_per_unit:', quantity_per_unit);
+    } else if (productSoldBy === 'By Volume' || productSoldBy === 'by_volume' || productSoldBy === 'volume') {
+      product_type = 'volume';
+      const unitSize = Number(body.unit_size ?? body.size ?? 0);
+      const unit = (body.unit ?? 'mL').toString().trim().toLowerCase();
+      
+      // Validation: quantity_per_unit > 0
+      if (!Number.isFinite(unitSize) || unitSize <= 0) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ error: 'Unit size must be greater than 0 for volume-based products' });
+      }
+
+      // Validate and set base_unit (L or mL)
+      if (unit === 'l' || unit === 'liter' || unit === 'liters' || unit === 'litre' || unit === 'litres') {
+        base_unit = 'L';
+      } else if (unit === 'ml' || unit === 'milliliter' || unit === 'milliliters' || unit === 'millilitre' || unit === 'millilitres') {
+        base_unit = 'mL';
+      } else {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ error: 'Invalid unit for volume. Use "L" or "mL"' });
+      }
+
+      quantity_per_unit = unitSize;
+      display_unit = `${unitSize} ${base_unit} bottle`;
+      console.log('[DEBUG createProduct] Volume product - unitSize:', unitSize, 'base_unit:', base_unit, 'quantity_per_unit:', quantity_per_unit, 'display_unit:', display_unit);
+    } else {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'Invalid product_sold_by. Use "Per Piece", "By Weight", or "By Volume"' });
+    }
 
     // Check if SKU already exists for this business
     const existingSkuCheck = await client.query(
@@ -105,15 +180,40 @@ const createProduct = async (req, res) => {
       }
     }
 
-    // Insert product
+    // Insert product with unit-related fields
     const prodRes = await client.query(
-      'INSERT INTO products (product_category_id, product_name, description, cost_price, selling_price, sku, created_by_user_id, business_id, low_stock_alert) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *',
-      [categoryId, product_name, description, cost_price, selling_price, sku, createdBy, businessId, low_stock_alert]
+      'INSERT INTO products (product_category_id, product_name, description, cost_price, selling_price, sku, created_by_user_id, business_id, low_stock_alert, product_type, base_unit, quantity_per_unit, display_unit) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING *',
+      [categoryId, product_name, description, cost_price, selling_price, sku, createdBy, businessId, low_stock_alert, product_type, base_unit, quantity_per_unit, display_unit]
     );
     const product = prodRes.rows[0];
 
     // Seed inventory if quantity provided
+    // Convert quantity to base units: for weight/volume products, multiply by quantity_per_unit
+    // For volume products with base_unit "L", store in mL for precision (consistent with transaction items)
     if (initialQuantity && Number.isFinite(initialQuantity) && initialQuantity > 0) {
+      // Calculate stock in base units
+      // For count products: quantity stays as-is (pieces)
+      // For weight/volume products: quantity * quantity_per_unit (e.g., 100 units * 20g = 2000g)
+      // For volume products with base_unit "L": convert to mL (50 L = 50000 mL)
+      let stockInBaseUnits = initialQuantity;
+      console.log('[DEBUG createProduct] Before conversion - product_type:', product_type, 'quantity_per_unit:', quantity_per_unit, 'base_unit:', base_unit, 'initialQuantity:', initialQuantity);
+      if (product_type !== 'count' && quantity_per_unit > 0) {
+        // Ensure both values are numbers for accurate calculation
+        const qty = Number(initialQuantity);
+        const qpu = Number(quantity_per_unit);
+        if (product_type === 'volume' && base_unit === 'L') {
+          // Convert liters to milliliters for storage: 50 L = 50000 mL
+          stockInBaseUnits = Math.round(qty * qpu * 1000);
+          console.log(`[DEBUG createProduct] Volume (L) stock conversion: ${qty} units × ${qpu}L × 1000 = ${stockInBaseUnits}mL`);
+        } else {
+          stockInBaseUnits = Math.round(qty * qpu); // Round to avoid floating point issues
+          console.log(`[DEBUG createProduct] Stock conversion: ${qty} units × ${qpu}${base_unit} = ${stockInBaseUnits}${base_unit}`);
+        }
+      } else {
+        console.log('[DEBUG createProduct] No conversion needed - product_type:', product_type, 'quantity_per_unit:', quantity_per_unit);
+      }
+      console.log('[DEBUG createProduct] Final stockInBaseUnits:', stockInBaseUnits);
+
       const invSelect = await client.query(
         'SELECT inventory_id FROM inventory WHERE product_id = $1 AND business_id = $2 LIMIT 1',
         [product.product_id, businessId]
@@ -121,12 +221,12 @@ const createProduct = async (req, res) => {
       if (invSelect.rowCount > 0) {
         await client.query(
           'UPDATE inventory SET quantity_in_stock = quantity_in_stock + $1, updated_at = NOW() WHERE inventory_id = $2',
-          [initialQuantity, invSelect.rows[0].inventory_id]
+          [stockInBaseUnits, invSelect.rows[0].inventory_id]
         );
       } else {
         await client.query(
           'INSERT INTO inventory (product_id, quantity_in_stock, business_id) VALUES ($1, $2, $3)',
-          [product.product_id, initialQuantity, businessId]
+          [product.product_id, stockInBaseUnits, businessId]
         );
       }
     }
@@ -235,12 +335,26 @@ const addStockBySku = async (req, res) => {
       params.push(req.user.businessId);
       where += ' AND business_id = $2';
     }
-    const prod = await client.query(`SELECT product_id FROM products WHERE ${where} LIMIT 1`, params);
+    const prod = await client.query(`SELECT product_id, product_type, quantity_per_unit, base_unit FROM products WHERE ${where} LIMIT 1`, params);
     if (prod.rowCount === 0) {
       await client.query('ROLLBACK');
       return res.status(404).json({ error: 'Product not found for this business' });
     }
-    const productId = prod.rows[0].product_id;
+    const product = prod.rows[0];
+    const productId = product.product_id;
+    
+    // Convert quantity to base units: for weight/volume products, multiply by quantity_per_unit
+    // For volume products with base_unit "L", store in mL for precision (consistent with transaction items)
+    let stockInBaseUnits = qty;
+    if (product.product_type && product.product_type !== 'count' && product.quantity_per_unit > 0) {
+      if (product.product_type === 'volume' && product.base_unit === 'L') {
+        // Convert liters to milliliters for storage: 50 L = 50000 mL
+        stockInBaseUnits = Math.round(qty * Number(product.quantity_per_unit) * 1000);
+      } else {
+        stockInBaseUnits = qty * Number(product.quantity_per_unit);
+      }
+    }
+    
     // Upsert inventory row for this product+business (no unique constraint in schema, so emulate)
     const invSelect = await client.query(
       'SELECT inventory_id, quantity_in_stock FROM inventory WHERE product_id = $1 AND business_id = $2 LIMIT 1',
@@ -249,12 +363,12 @@ const addStockBySku = async (req, res) => {
     if (invSelect.rowCount > 0) {
       await client.query(
         'UPDATE inventory SET quantity_in_stock = quantity_in_stock + $1, updated_at = NOW() WHERE inventory_id = $2',
-        [qty, invSelect.rows[0].inventory_id]
+        [stockInBaseUnits, invSelect.rows[0].inventory_id]
       );
     } else {
       await client.query(
         'INSERT INTO inventory (product_id, quantity_in_stock, business_id) VALUES ($1, $2, $3)',
-        [productId, qty, req.user?.businessId || null]
+        [productId, stockInBaseUnits, req.user?.businessId || null]
       );
     }
     await client.query('COMMIT');
@@ -280,23 +394,45 @@ const addStockBySku = async (req, res) => {
 async function _getLowStockProducts(businessId, threshold = null) {
   // If threshold is provided, use it for backward compatibility
   // Otherwise, use each product's individual low_stock_alert value
+  // For weight/volume products, low_stock_alert is in display units, so we need to convert
+  // quantity_in_stock (base units) to display units before comparing
   let query, params;
   
   if (threshold !== null) {
+    // For backward compatibility with threshold, compare directly (assumes threshold is in base units)
     query = `
-      SELECT p.product_id, p.product_name, i.quantity_in_stock, p.low_stock_alert
-      FROM products p
-      JOIN inventory i ON p.product_id = i.product_id
-      WHERE p.business_id = $1 AND i.quantity_in_stock <= $2
-      ORDER BY i.quantity_in_stock ASC`;
-    params = [businessId, threshold];
-  } else {
-    query = `
-      SELECT p.product_id, p.product_name, i.quantity_in_stock, p.low_stock_alert
+      SELECT p.product_id, p.product_name, i.quantity_in_stock, p.low_stock_alert,
+             p.product_type, p.quantity_per_unit
       FROM products p
       JOIN inventory i ON p.product_id = i.product_id
       WHERE p.business_id = $1 
-        AND i.quantity_in_stock <= COALESCE(p.low_stock_alert, 10)
+        AND (
+          CASE 
+            WHEN p.product_type IN ('weight', 'volume') AND p.quantity_per_unit > 0 THEN
+              (i.quantity_in_stock / p.quantity_per_unit) <= $2
+            ELSE
+              i.quantity_in_stock <= $2
+          END
+        )
+      ORDER BY i.quantity_in_stock ASC`;
+    params = [businessId, threshold];
+  } else {
+    // Use each product's low_stock_alert (in display units)
+    // Convert quantity_in_stock to display units for comparison
+    query = `
+      SELECT p.product_id, p.product_name, i.quantity_in_stock, p.low_stock_alert,
+             p.product_type, p.quantity_per_unit
+      FROM products p
+      JOIN inventory i ON p.product_id = i.product_id
+      WHERE p.business_id = $1 
+        AND (
+          CASE 
+            WHEN p.product_type IN ('weight', 'volume') AND p.quantity_per_unit > 0 THEN
+              (i.quantity_in_stock / p.quantity_per_unit) <= COALESCE(p.low_stock_alert, 10)
+            ELSE
+              i.quantity_in_stock <= COALESCE(p.low_stock_alert, 10)
+          END
+        )
       ORDER BY i.quantity_in_stock ASC`;
     params = [businessId];
   }
@@ -365,7 +501,7 @@ const updateProduct = async (req, res) => {
     const userId = req.user?.userId || null;
 
     // Fetch the current product details for logging purposes
-    const currentProductResult = await client.query('SELECT product_name, sku, description, cost_price, selling_price, product_category_id, low_stock_alert FROM products WHERE product_id = $1 AND business_id = $2', [id, businessId]);
+    const currentProductResult = await client.query('SELECT product_name, sku, description, cost_price, selling_price, product_category_id, low_stock_alert, product_type, base_unit, quantity_per_unit, display_unit FROM products WHERE product_id = $1 AND business_id = $2', [id, businessId]);
     if (currentProductResult.rowCount === 0) {
       await client.query('ROLLBACK');
       return res.status(404).json({ error: 'Product not found or you do not have permission to update it.' });
@@ -381,6 +517,74 @@ const updateProduct = async (req, res) => {
     const description = body.description !== undefined ? body.description : currentProduct.description;
     const low_stock_alert = body.low_stock_level !== undefined ? Number(body.low_stock_level) : (body.low_stock_alert !== undefined ? Number(body.low_stock_alert) : currentProduct.low_stock_alert ?? 10);
     let categoryId = body.product_category_id ?? currentProduct.product_category_id;
+
+    // Validation: Selling price >= cost price
+    if (selling_price < cost_price) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'Selling price must be greater than or equal to cost price' });
+    }
+
+    // Handle unit-related fields if product_sold_by is provided
+    let product_type = currentProduct.product_type;
+    let base_unit = currentProduct.base_unit;
+    let quantity_per_unit = currentProduct.quantity_per_unit;
+    let display_unit = currentProduct.display_unit;
+
+    if (body.product_sold_by !== undefined || body.sold_by !== undefined) {
+      const productSoldBy = (body.product_sold_by ?? body.sold_by ?? 'Per Piece').toString().trim();
+
+      if (productSoldBy === 'Per Piece' || productSoldBy === 'per_piece' || productSoldBy === 'count') {
+        product_type = 'count';
+        base_unit = 'pc';
+        quantity_per_unit = 1;
+        display_unit = null;
+      } else if (productSoldBy === 'By Weight' || productSoldBy === 'by_weight' || productSoldBy === 'weight') {
+        product_type = 'weight';
+        const unitSize = Number(body.unit_size ?? body.size ?? currentProduct.quantity_per_unit ?? 0);
+        const unit = (body.unit ?? currentProduct.base_unit ?? 'g').toString().trim().toLowerCase();
+
+        if (!Number.isFinite(unitSize) || unitSize <= 0) {
+          await client.query('ROLLBACK');
+          return res.status(400).json({ error: 'Unit size must be greater than 0 for weight-based products' });
+        }
+
+        if (unit === 'kg' || unit === 'kilogram' || unit === 'kilograms') {
+          base_unit = 'kg';
+        } else if (unit === 'g' || unit === 'gram' || unit === 'grams') {
+          base_unit = 'g';
+        } else {
+          await client.query('ROLLBACK');
+          return res.status(400).json({ error: 'Invalid unit for weight. Use "kg" or "g"' });
+        }
+
+        quantity_per_unit = unitSize;
+        display_unit = `${unitSize} ${base_unit}${unitSize === 1 ? '' : ' sachet'}`;
+      } else if (productSoldBy === 'By Volume' || productSoldBy === 'by_volume' || productSoldBy === 'volume') {
+        product_type = 'volume';
+        const unitSize = Number(body.unit_size ?? body.size ?? currentProduct.quantity_per_unit ?? 0);
+        const unit = (body.unit ?? currentProduct.base_unit ?? 'mL').toString().trim().toLowerCase();
+
+        if (!Number.isFinite(unitSize) || unitSize <= 0) {
+          await client.query('ROLLBACK');
+          return res.status(400).json({ error: 'Unit size must be greater than 0 for volume-based products' });
+        }
+
+        if (unit === 'l' || unit === 'liter' || unit === 'liters' || unit === 'litre' || unit === 'litres') {
+          base_unit = 'L';
+        } else if (unit === 'ml' || unit === 'milliliter' || unit === 'milliliters' || unit === 'millilitre' || unit === 'millilitres') {
+          base_unit = 'mL';
+        } else {
+          await client.query('ROLLBACK');
+          return res.status(400).json({ error: 'Invalid unit for volume. Use "L" or "mL"' });
+        }
+
+        quantity_per_unit = unitSize;
+        display_unit = `${unitSize} ${base_unit} bottle`;
+      } else {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ error: 'Invalid product_sold_by. Use "Per Piece", "By Weight", or "By Volume"' });
+      }
+    }
 
     const rawCategoryName = body.category ?? body.category_name ?? body.product_category_name;
     const categoryName = typeof rawCategoryName === 'string' ? rawCategoryName.trim() : '';
@@ -425,6 +629,22 @@ const updateProduct = async (req, res) => {
     if (low_stock_alert !== (currentProduct.low_stock_alert ?? 10)) {
       updateFields.push(`low_stock_alert = $${paramCount++}`);
       updateValues.push(low_stock_alert);
+    }
+    if (product_type !== currentProduct.product_type) {
+      updateFields.push(`product_type = $${paramCount++}`);
+      updateValues.push(product_type);
+    }
+    if (base_unit !== currentProduct.base_unit) {
+      updateFields.push(`base_unit = $${paramCount++}`);
+      updateValues.push(base_unit);
+    }
+    if (quantity_per_unit !== currentProduct.quantity_per_unit) {
+      updateFields.push(`quantity_per_unit = $${paramCount++}`);
+      updateValues.push(quantity_per_unit);
+    }
+    if (display_unit !== currentProduct.display_unit) {
+      updateFields.push(`display_unit = $${paramCount++}`);
+      updateValues.push(display_unit);
     }
 
     if (updateFields.length === 0) {

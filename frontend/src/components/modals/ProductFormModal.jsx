@@ -161,6 +161,7 @@ export default function ProductFormModal({
     const quantity = productForm.quantity;
     const costPrice = Number(productForm.cost_price);
     const sellingPrice = Number(productForm.selling_price);
+    const productSoldBy = productForm.product_sold_by || "Per Piece";
 
     // Check if all required text fields have values (description is optional)
     if (!sku || !name || !category) {
@@ -175,16 +176,44 @@ export default function ProductFormModal({
       }
     }
 
-    // For new products, quantity must be provided and >= 0
+    // For weight/volume products, unit_size and unit are required
+    if (productSoldBy === "By Weight" || productSoldBy === "By Volume") {
+      const unitSize = Number(productForm.unit_size);
+      const unit = productForm.unit || "";
+      // If unit_size is empty or invalid, check if we have a default from existing product
+      // (for editing mode, allow if unit_size exists but is empty - user can fill it)
+      if (!unit) {
+        return false; // Unit is always required
+      }
+      // For editing, if unit_size is empty but we're editing, allow it (user might be changing type)
+      // But if unit_size is provided, it must be valid
+      if (productForm.unit_size !== "" && productForm.unit_size !== null && productForm.unit_size !== undefined) {
+        if (isNaN(unitSize) || unitSize <= 0) {
+          return false;
+        }
+      } else if (!editingProduct) {
+        // For new products, unit_size is required
+        return false;
+      }
+      // For editing existing products, if unit_size is empty, it's okay (they might be changing from Per Piece)
+      // The backend will use the current product's quantity_per_unit if not provided
+    }
+
+    // For new products, quantity must be provided and > 0
     if (!editingProduct) {
       const qty = Number(quantity);
-      if (quantity === "" || quantity === null || quantity === undefined || isNaN(qty) || qty < 0) {
+      if (quantity === "" || quantity === null || quantity === undefined || isNaN(qty) || qty <= 0) {
         return false;
       }
     }
 
     // Cost price and selling price must be valid numbers > 0
     if (isNaN(costPrice) || costPrice <= 0 || isNaN(sellingPrice) || sellingPrice <= 0) {
+      return false;
+    }
+
+    // Selling price must be >= cost price
+    if (sellingPrice < costPrice) {
       return false;
     }
 
@@ -405,6 +434,85 @@ export default function ProductFormModal({
               </div>
             )}
           </div>
+        </div>
+
+        {/* Product Unit Configuration */}
+        <div className="bg-gradient-to-br from-amber-50/40 to-orange-50/40 rounded-2xl p-5 border border-amber-100/50 space-y-4">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-8 h-8 bg-gradient-to-br from-amber-500 to-orange-600 rounded-lg flex items-center justify-center">
+              <svg
+                className="w-5 h-5 text-white"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                />
+              </svg>
+            </div>
+            <h3 className="font-semibold text-gray-900">Product Unit</h3>
+          </div>
+          <div>
+            <label className="block mb-2 text-sm font-semibold text-gray-700">
+              Product Sold By <span className="text-red-500">*</span>
+            </label>
+            <select
+              name="product_sold_by"
+              value={productForm.product_sold_by || "Per Piece"}
+              onChange={onChange}
+              className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all text-gray-900 font-medium"
+              required
+            >
+              <option value="Per Piece">Per Piece</option>
+              <option value="By Weight">By Weight</option>
+              <option value="By Volume">By Volume</option>
+            </select>
+          </div>
+          
+          {/* Unit Size and Unit Selector - Only for Weight/Volume */}
+          {(productForm.product_sold_by === "By Weight" || productForm.product_sold_by === "By Volume") && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                label="Unit Size"
+                name="unit_size"
+                type="number"
+                value={productForm.unit_size || ""}
+                onChange={onChange}
+                placeholder={productForm.product_sold_by === "By Weight" ? "e.g., 20" : "e.g., 350"}
+                required
+                min="0.01"
+                step="0.01"
+              />
+              <div>
+                <label className="block mb-2 text-sm font-semibold text-gray-700">
+                  Unit <span className="text-red-500">*</span>
+                </label>
+                <select
+                  name="unit"
+                  value={productForm.unit || (productForm.product_sold_by === "By Weight" ? "g" : "mL")}
+                  onChange={onChange}
+                  className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all text-gray-900 font-medium"
+                  required
+                >
+                  {productForm.product_sold_by === "By Weight" ? (
+                    <>
+                      <option value="g">Grams (g)</option>
+                      <option value="kg">Kilograms (kg)</option>
+                    </>
+                  ) : (
+                    <>
+                      <option value="mL">Milliliters (mL)</option>
+                      <option value="L">Liters (L)</option>
+                    </>
+                  )}
+                </select>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Pricing & Inventory */}

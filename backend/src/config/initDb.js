@@ -156,11 +156,34 @@ async function initializeDatabase() {
         transaction_item_id SERIAL PRIMARY KEY,
         transaction_id INTEGER REFERENCES transactions(transaction_id),
         product_id INTEGER REFERENCES products(product_id),
-        product_quantity INTEGER,
+        product_quantity NUMERIC(12,4),
         price_at_sale NUMERIC(12,2),
         subtotal NUMERIC(12,2) DEFAULT 0
       );
     `);
+    
+    // Migrate existing INTEGER column to NUMERIC if it exists
+    try {
+      const checkResult = await client.query(`
+        SELECT data_type 
+        FROM information_schema.columns 
+        WHERE table_name = 'transaction_items' 
+        AND column_name = 'product_quantity'
+      `);
+      
+      if (checkResult.rows.length > 0 && checkResult.rows[0].data_type === 'integer') {
+        console.log('Migrating product_quantity from INTEGER to NUMERIC(12,4)...');
+        await client.query(`
+          ALTER TABLE transaction_items 
+          ALTER COLUMN product_quantity TYPE NUMERIC(12,4) 
+          USING product_quantity::NUMERIC(12,4)
+        `);
+        console.log('Migration completed.');
+      }
+    } catch (migrationErr) {
+      // If migration fails, log but don't fail initialization
+      console.warn('Warning: Could not migrate product_quantity column:', migrationErr.message);
+    }
 
     // Create discounts table
     await client.query(`

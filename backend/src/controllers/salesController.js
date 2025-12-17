@@ -88,27 +88,97 @@ exports.checkout = async (req, res) => {
       const { product_id, quantity } = item;
       if (!product_id || !quantity) continue;
       
-      // Get current price
+      // Get product details including unit information
       const priceRes = await client.query(
-        'SELECT selling_price FROM products WHERE product_id = $1 AND (business_id = $2 OR $2 IS NULL)', 
+        'SELECT selling_price, product_type, quantity_per_unit, base_unit FROM products WHERE product_id = $1 AND (business_id = $2 OR $2 IS NULL)', 
         [product_id, req.user?.businessId || null]
       );
       
-      const price = priceRes.rows?.[0]?.selling_price || 0;
-      const itemSubtotal = price * quantity;
+      if (priceRes.rowCount === 0) {
+        continue; // Skip if product not found
+      }
+      
+      const product = priceRes.rows[0];
+      
+      // Price handling:
+      // - selling_price in products table is per display unit (e.g., ₱10 per 20g sachet)
+      // - quantity from frontend is in display units (e.g., 5 sachets)
+      // - If price is provided in request, use it (it may be per base unit or per display unit depending on frontend)
+      // - Otherwise, use product's selling_price (per display unit)
+      const { price: itemPrice } = item;
+      let pricePerDisplayUnit = itemPrice;
+      if (!pricePerDisplayUnit || pricePerDisplayUnit === 0) {
+        pricePerDisplayUnit = product.selling_price || 0;
+      }
+      
+      // Calculate subtotal using display units (accurate pricing)
+      // quantity is in display units, pricePerDisplayUnit is price per display unit
+      const itemSubtotal = pricePerDisplayUnit * Number(quantity);
       subtotal += itemSubtotal;
 
+      // Convert quantity and price for database storage
+      // We store everything in base units for consistency:
+      // - For count products: quantity is already in base units (pieces), quantity_per_unit = 1
+      // - For weight/volume products: convert display units to base units using quantity_per_unit
+      // - For volume products with base_unit "L", convert to mL for precision (0.5 L = 500 mL)
+      const quantityInDisplayUnits = Number(quantity);
+      const quantityPerUnit = Number(product.quantity_per_unit) || 1;
+      
+      let quantityInBaseUnits, pricePerBaseUnit;
+      
+      if (product.product_type && product.product_type !== 'count' && quantityPerUnit > 0) {
+        // Weight/volume product: convert display units to base units
+        // Example: 5 sachets × 20g/sachet = 100g
+        // For volume products with base_unit "L", convert to mL for precision
+        if (product.product_type === 'volume' && product.base_unit === 'L') {
+          // Convert liters to milliliters: 0.5 L = 500 mL
+          // quantityInDisplayUnits is in L, quantityPerUnit is in L per unit
+          // Store in mL: (quantityInDisplayUnits * quantityPerUnit) * 1000
+          quantityInBaseUnits = Math.round(quantityInDisplayUnits * quantityPerUnit * 1000);
+          // Price per mL = price per L / 1000
+          pricePerBaseUnit = pricePerDisplayUnit / (quantityPerUnit * 1000);
+        } else {
+          // Weight products or volume products in mL: use standard conversion
+          quantityInBaseUnits = Math.round(quantityInDisplayUnits * quantityPerUnit);
+          // Price per base unit = price per display unit / quantity_per_unit
+          // Example: ₱10 per 20g sachet = ₱0.50 per gram
+          pricePerBaseUnit = pricePerDisplayUnit / quantityPerUnit;
+        }
+      } else {
+        // Count product: quantity is already in base units
+        quantityInBaseUnits = Math.round(quantityInDisplayUnits);
+        pricePerBaseUnit = pricePerDisplayUnit;
+      }
+      
+      // Ensure we have a valid integer (at least 1)
+      if (!Number.isFinite(quantityInBaseUnits) || quantityInBaseUnits < 1) {
+        console.warn(`[Checkout] Invalid quantity conversion for product ${product_id}: ${quantity} -> ${quantityInBaseUnits}, using 1`);
+        quantityInBaseUnits = 1;
+      }
+
       // Add to transaction items
-      // Note: subtotal is a GENERATED column, so we don't insert it - it's calculated automatically
+      // Note: subtotal is a GENERATED column, so it's calculated automatically as quantity * price
+      // We store quantity in base units and price per base unit
+      // This ensures: stored_quantity * stored_price = original_quantity * original_price
       await client.query(
         'INSERT INTO transaction_items (transaction_id, product_id, product_quantity, price_at_sale) VALUES ($1, $2, $3, $4)',
-        [effectiveTransactionId, product_id, quantity, price]
+        [effectiveTransactionId, product_id, quantityInBaseUnits, pricePerBaseUnit]
       );
+
+      // Calculate inventory deduction
+      // For volume products with base_unit "L", both inventory and transaction items are stored in mL
+      // So we can deduct directly without conversion
+      const inventoryDeduction = quantityInBaseUnits;
+      
+      if (!Number.isFinite(inventoryDeduction) || inventoryDeduction < 1) {
+        console.warn(`[Checkout] Invalid inventory deduction for product ${product_id}, skipping`);
+        continue;
+      }
 
       // Update inventory
       await client.query(
         'UPDATE inventory SET quantity_in_stock = quantity_in_stock - $1, updated_at = NOW() WHERE product_id = $2 AND business_id = $3',
-        [quantity, product_id, req.user?.businessId || null]
+        [inventoryDeduction, product_id, req.user?.businessId || null]
       );
     }
 
@@ -287,15 +357,91 @@ exports.publicCheckout = async (req, res) => {
     for (const item of items) {
       const { product_id, quantity } = item;
       if (!product_id || !quantity) continue;
-      const priceRes = await client.query('SELECT selling_price FROM products WHERE product_id = $1 AND (business_id = $2 OR $2 IS NULL)', [product_id, business_id]);
-      const price = priceRes.rows?.[0]?.selling_price || 0;
+      
+      // Get product details including unit information
+      const priceRes = await client.query(
+        'SELECT selling_price, product_type, quantity_per_unit, base_unit FROM products WHERE product_id = $1 AND (business_id = $2 OR $2 IS NULL)', 
+        [product_id, business_id]
+      );
+      
+      if (priceRes.rowCount === 0) {
+        continue; // Skip if product not found
+      }
+      
+      const product = priceRes.rows[0];
+      
+      // Price handling:
+      // - selling_price in products table is per display unit (e.g., ₱10 per 20g sachet)
+      // - quantity from frontend is in display units (e.g., 5 sachets)
+      // - If price is provided in request, use it (it may be per base unit or per display unit depending on frontend)
+      // - Otherwise, use product's selling_price (per display unit)
+      const { price: itemPrice } = item;
+      let pricePerDisplayUnit = itemPrice;
+      if (!pricePerDisplayUnit || pricePerDisplayUnit === 0) {
+        pricePerDisplayUnit = product.selling_price || 0;
+      }
+
+      // Convert quantity and price for database storage
+      // We store everything in base units for consistency:
+      // - For count products: quantity is already in base units (pieces), quantity_per_unit = 1
+      // - For weight/volume products: convert display units to base units using quantity_per_unit
+      // - For volume products with base_unit "L", convert to mL for precision (0.5 L = 500 mL)
+      const quantityInDisplayUnits = Number(quantity);
+      const quantityPerUnit = Number(product.quantity_per_unit) || 1;
+      
+      let quantityInBaseUnits, pricePerBaseUnit;
+      
+      if (product.product_type && product.product_type !== 'count' && quantityPerUnit > 0) {
+        // Weight/volume product: convert display units to base units
+        // Example: 5 sachets × 20g/sachet = 100g
+        // For volume products with base_unit "L", convert to mL for precision
+        if (product.product_type === 'volume' && product.base_unit === 'L') {
+          // Convert liters to milliliters: 0.5 L = 500 mL
+          // quantityInDisplayUnits is in L, quantityPerUnit is in L per unit
+          // Store in mL: (quantityInDisplayUnits * quantityPerUnit) * 1000
+          quantityInBaseUnits = Math.round(quantityInDisplayUnits * quantityPerUnit * 1000);
+          // Price per mL = price per L / 1000
+          pricePerBaseUnit = pricePerDisplayUnit / (quantityPerUnit * 1000);
+        } else {
+          // Weight products or volume products in mL: use standard conversion
+          quantityInBaseUnits = Math.round(quantityInDisplayUnits * quantityPerUnit);
+          // Price per base unit = price per display unit / quantity_per_unit
+          // Example: ₱10 per 20g sachet = ₱0.50 per gram
+          pricePerBaseUnit = pricePerDisplayUnit / quantityPerUnit;
+        }
+      } else {
+        // Count product: quantity is already in base units
+        quantityInBaseUnits = Math.round(quantityInDisplayUnits);
+        pricePerBaseUnit = pricePerDisplayUnit;
+      }
+      
+      // Ensure we have a valid integer (at least 1)
+      if (!Number.isFinite(quantityInBaseUnits) || quantityInBaseUnits < 1) {
+        console.warn(`[PublicCheckout] Invalid quantity conversion for product ${product_id}: ${quantity} -> ${quantityInBaseUnits}, using 1`);
+        quantityInBaseUnits = 1;
+      }
+      
+      // Add to transaction items
+      // Note: subtotal is a GENERATED column, so it's calculated automatically as quantity * price
+      // We store quantity in base units and price per base unit
       await client.query(
         'INSERT INTO transaction_items (transaction_id, product_id, product_quantity, price_at_sale) VALUES ($1, $2, $3, $4)',
-        [transaction_id, product_id, quantity, price]
+        [transaction_id, product_id, quantityInBaseUnits, pricePerBaseUnit]
       );
+      
+      // Calculate inventory deduction
+      // For volume products with base_unit "L", both inventory and transaction items are stored in mL
+      // So we can deduct directly without conversion
+      const inventoryDeduction = quantityInBaseUnits;
+      
+      if (!Number.isFinite(inventoryDeduction) || inventoryDeduction < 1) {
+        console.warn(`[PublicCheckout] Invalid inventory deduction for product ${product_id}, skipping`);
+        continue;
+      }
+      
       await client.query(
         'UPDATE inventory SET quantity_in_stock = quantity_in_stock - $1, updated_at = NOW() WHERE product_id = $2 AND business_id = $3',
-        [quantity, product_id, business_id]
+        [inventoryDeduction, product_id, business_id]
       );
     }
 
@@ -599,7 +745,8 @@ exports.getSaleDetailsByTransactionNumber = async (req, res) => {
 
     // 4. Get transaction items
     const itemsRes = await client.query(
-      `SELECT p.product_name, p.sku, ti.product_quantity, ti.price_at_sale, ti.subtotal
+      `SELECT p.product_name, p.sku, p.base_unit, p.product_type, p.quantity_per_unit, p.display_unit, 
+              ti.product_quantity, ti.price_at_sale, ti.subtotal
        FROM transaction_items ti
        JOIN products p ON ti.product_id = p.product_id
        WHERE ti.transaction_id = $1
@@ -611,7 +758,7 @@ exports.getSaleDetailsByTransactionNumber = async (req, res) => {
     // 5. Calculate subtotal from items
     const subtotal = items.reduce((acc, item) => acc + Number(item.subtotal), 0);
     const discountAmount = subtotal - Number(total_amount); 
-
+    
     // 6. Calculate tax (assuming 12% VAT applied on the total)
     const grandTotal = Number(total_amount);
     const vatableSales = grandTotal / 1.12;
@@ -647,14 +794,76 @@ exports.getSaleDetailsByTransactionNumber = async (req, res) => {
         name: payment.discount_name || 'Discount',
         percentage: payment.discount_percentage ? Number(payment.discount_percentage) : null
       } : null,
-      items: items.map(i => ({
-        name: i.product_name,
-        sku: i.sku,
-        quantity: i.product_quantity,
-        price: Number(i.price_at_sale).toFixed(2),
-        subtotal: Number(i.subtotal).toFixed(2)
-      })),
-      totalQuantity: items.reduce((acc, item) => acc + item.product_quantity, 0)
+      items: items.map(i => {
+        // Convert stored base units back to display units for receipt display
+        // transaction_items stores quantity in base units (g, mL, or pc)
+        // For weight/volume products, we need to convert back to display units for user-friendly display
+        const quantityInBaseUnits = Number(i.product_quantity);
+        const quantityPerUnit = Number(i.quantity_per_unit) || 1;
+        const pricePerBaseUnit = Number(i.price_at_sale);
+        
+        let displayQuantity, displayUnit, displayPrice;
+        
+        if (i.product_type && i.product_type !== 'count' && quantityPerUnit > 0) {
+          // Weight/volume product: convert base units to display units
+          // For volume products with base_unit "L", convert from mL back to L
+          if (i.product_type === 'volume' && i.base_unit === 'L') {
+            // Convert mL back to L: 500 mL = 0.5 L
+            // quantityInBaseUnits is in mL, quantityPerUnit is in L per unit
+            displayQuantity = quantityInBaseUnits / (quantityPerUnit * 1000);
+            // Display price per L = price per mL * 1000 * quantityPerUnit
+            displayPrice = pricePerBaseUnit * quantityPerUnit * 1000;
+            // Extract unit from display_unit (remove quantity prefix) or use base_unit
+            // "1 L bottle" -> "L bottle" or just "L"
+            if (i.display_unit) {
+              // Remove leading number and space from display_unit (e.g., "1 L bottle" -> "L bottle")
+              displayUnit = i.display_unit.replace(/^\d+\s*/, '') || i.base_unit;
+            } else {
+              displayUnit = i.base_unit;
+            }
+          } else {
+            // Weight products or volume products in mL: use standard conversion
+            // Example: 100g stored ÷ 20g/sachet = 5 sachets
+            displayQuantity = quantityInBaseUnits / quantityPerUnit;
+            // Display price per display unit (e.g., per sachet, per bottle)
+            displayPrice = pricePerBaseUnit * quantityPerUnit;
+            // Extract unit from display_unit (remove quantity prefix) or construct from base_unit
+            if (i.display_unit) {
+              // Remove leading number and space from display_unit (e.g., "20 g sachet" -> "g sachet")
+              displayUnit = i.display_unit.replace(/^\d+\s*/, '') || i.base_unit;
+            } else {
+              displayUnit = i.base_unit;
+            }
+          }
+        } else {
+          // Count product: quantity is already in display units
+          displayQuantity = quantityInBaseUnits;
+          displayPrice = pricePerBaseUnit;
+          displayUnit = 'pc';
+        }
+        
+        return {
+          name: i.product_name,
+          sku: i.sku,
+          quantity: displayQuantity,
+          unit: displayUnit,
+          price: displayPrice.toFixed(2),
+          subtotal: Number(i.subtotal).toFixed(2)
+        };
+      }),
+      // Total quantity calculation should also use display units for consistency
+      totalQuantity: items.reduce((acc, item) => {
+        const quantityInBaseUnits = Number(item.product_quantity);
+        const quantityPerUnit = Number(item.quantity_per_unit) || 1;
+        if (item.product_type && item.product_type !== 'count' && quantityPerUnit > 0) {
+          // For volume products with base_unit "L", convert from mL back to L
+          if (item.product_type === 'volume' && item.base_unit === 'L') {
+            return acc + (quantityInBaseUnits / (quantityPerUnit * 1000));
+          }
+          return acc + (quantityInBaseUnits / quantityPerUnit);
+        }
+        return acc + quantityInBaseUnits;
+      }, 0)
     };
 
     res.json(receiptDetails);

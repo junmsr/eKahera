@@ -163,8 +163,18 @@ const getPeriodMetrics = async (businessId, startDate, endDate) => {
   const revenue = Number(revenueRes.rows[0].total) || 0;
 
   // Cost of goods sold
+  // Note: product_quantity is stored in base units, cost_price is per display unit
+  // For weight/volume products: convert base units to display units using quantity_per_unit
+  // For volume products with base_unit "L", product_quantity is stored in mL, so convert to L first
   const costRes = await pool.query(
-    `SELECT COALESCE(SUM(p.cost_price * ti.product_quantity),0) AS total_cost
+    `SELECT COALESCE(SUM(
+      CASE 
+        WHEN p.product_type = 'volume' AND p.base_unit = 'L' THEN
+          (ti.product_quantity / COALESCE(NULLIF(p.quantity_per_unit * 1000, 0), 1000)) * p.cost_price
+        ELSE
+          (ti.product_quantity / COALESCE(NULLIF(p.quantity_per_unit, 0), 1)) * p.cost_price
+      END
+    ),0) AS total_cost
      FROM transactions t
      JOIN transaction_items ti ON ti.transaction_id = t.transaction_id
      JOIN products p ON p.product_id = ti.product_id
@@ -297,7 +307,14 @@ exports.getProfitTrend = async (req, res) => {
         );
         const revenue = Number(revenueRes.rows[0].total) || 0;
         const costRes = await pool.query(
-          `SELECT COALESCE(SUM(p.cost_price * ti.product_quantity),0) AS total_cost
+          `SELECT COALESCE(SUM(
+            CASE 
+              WHEN p.product_type = 'volume' AND p.base_unit = 'L' THEN
+                (ti.product_quantity / COALESCE(NULLIF(p.quantity_per_unit * 1000, 0), 1000)) * p.cost_price
+              ELSE
+                (ti.product_quantity / COALESCE(NULLIF(p.quantity_per_unit, 0), 1)) * p.cost_price
+            END
+          ),0) AS total_cost
            FROM transactions t
            JOIN transaction_items ti ON ti.transaction_id = t.transaction_id
            JOIN products p ON p.product_id = ti.product_id
@@ -327,7 +344,7 @@ exports.getProfitTrend = async (req, res) => {
         );
         const revenue = Number(revenueRes.rows[0].total) || 0;
         const costRes = await pool.query(
-          `SELECT COALESCE(SUM(p.cost_price * ti.product_quantity),0) AS total_cost
+          `SELECT COALESCE(SUM((ti.product_quantity / COALESCE(NULLIF(p.quantity_per_unit, 0), 1)) * p.cost_price),0) AS total_cost
            FROM transactions t
            JOIN transaction_items ti ON ti.transaction_id = t.transaction_id
            JOIN products p ON p.product_id = ti.product_id

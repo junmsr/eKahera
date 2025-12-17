@@ -56,9 +56,21 @@ exports.getOverview = async (req, res) => {
     const salesRes = await pool.query(salesQuery, [businessId, startDateForQuery, endDateForQuery]);
 
     // Calculate expenses (using transaction_items and products cost_price)
+    // Note: product_quantity is stored in base units, cost_price is per display unit
+    // For weight/volume products: convert base units to display units using quantity_per_unit
+    // For volume products with base_unit "L", product_quantity is stored in mL, so convert to L first
+    // Formula: cost_price * (product_quantity / quantity_per_unit) for most products
+    // For volume products with base_unit "L": cost_price * (product_quantity / (quantity_per_unit * 1000))
     const expensesQuery = `
       SELECT 
-        COALESCE(SUM(ti.product_quantity * p.cost_price), 0) AS total_expenses
+        COALESCE(SUM(
+          CASE 
+            WHEN p.product_type = 'volume' AND p.base_unit = 'L' THEN
+              (ti.product_quantity / COALESCE(NULLIF(p.quantity_per_unit * 1000, 0), 1000)) * p.cost_price
+            ELSE
+              (ti.product_quantity / COALESCE(NULLIF(p.quantity_per_unit, 0), 1)) * p.cost_price
+          END
+        ), 0) AS total_expenses
        FROM transactions t
        JOIN transaction_items ti ON t.transaction_id = ti.transaction_id
        JOIN products p ON ti.product_id = p.product_id

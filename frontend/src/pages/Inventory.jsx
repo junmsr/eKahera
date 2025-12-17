@@ -257,11 +257,12 @@ export default function InventoryPage() {
         const productsData = data?.products || data || [];
 
         // Map backend rows to UI shape with correct column mapping
+        // Include product_type and quantity_per_unit for unit conversion
         const mapped = (productsData || []).map((row) => ({
           id: String(row.id || ""),
           name: row.name || "-",
           category: row.category || "-",
-          quantity: Number(row.quantity || 0),
+          quantity: Number(row.quantity || 0), // This is quantity_in_stock (base units)
           cost_price: Number(row.cost_price || 0),
           selling_price: Number(row.selling_price || 0),
           sku: row.sku || "",
@@ -269,6 +270,10 @@ export default function InventoryPage() {
           low_stock_level: Number(
             row.low_stock_level ?? DEFAULT_LOW_STOCK_LEVEL
           ),
+          product_type: row.product_type || "count",
+          quantity_per_unit: Number(row.quantity_per_unit || 1),
+          base_unit: row.base_unit || "pc",
+          display_unit: row.display_unit || null,
         }));
         setProducts(mapped);
       } catch (err) {
@@ -281,14 +286,37 @@ export default function InventoryPage() {
     fetchInventory();
   }, []);
 
-  // Stats
-  const totalInventoryValue = products.reduce(
-    (sum, p) => sum + Number(p.selling_price || 0) * Number(p.quantity || 0),
-    0
-  );
+  // Helper function to convert base units to display units
+  const convertToDisplayUnits = (quantityInBaseUnits, productType, quantityPerUnit, baseUnit) => {
+    if (!quantityInBaseUnits || quantityInBaseUnits === 0) return 0;
+    if (productType === 'count' || !productType) {
+      return quantityInBaseUnits;
+    }
+    // For volume products with base_unit "L", inventory is stored in mL
+    // Convert mL to L first, then divide by quantity_per_unit (which is in L)
+    if (productType === 'volume' && baseUnit === 'L') {
+      const quantityInLiters = quantityInBaseUnits / 1000; // Convert mL to L
+      if (quantityPerUnit && quantityPerUnit > 0) {
+        return quantityInLiters / quantityPerUnit; // Divide by quantity_per_unit (in L)
+      }
+      return quantityInLiters;
+    }
+    if (quantityPerUnit && quantityPerUnit > 0) {
+      return quantityInBaseUnits / quantityPerUnit;
+    }
+    return quantityInBaseUnits;
+  };
+
+  // Stats - use display units for calculations
+  const totalInventoryValue = products.reduce((sum, p) => {
+    const displayQty = convertToDisplayUnits(p.quantity, p.product_type, p.quantity_per_unit, p.base_unit);
+    return sum + Number(p.selling_price || 0) * displayQty;
+  }, 0);
+  
   const lowStockItems = products.filter((p) => {
+    const displayQty = convertToDisplayUnits(p.quantity, p.product_type, p.quantity_per_unit, p.base_unit);
     const threshold = Number(p.low_stock_level ?? DEFAULT_LOW_STOCK_LEVEL);
-    return Number(p.quantity || 0) < threshold;
+    return displayQty < threshold;
   }).length;
 
   const stats = [
@@ -388,24 +416,28 @@ export default function InventoryPage() {
       filtered = filtered.filter((p) => p.category === selectedCategory);
     }
 
-    // Apply stock filter
+    // Apply stock filter - use display units for comparison
     if (stockFilter) {
       if (stockFilter === "out_of_stock") {
-        filtered = filtered.filter((p) => Number(p.quantity || 0) === 0);
+        filtered = filtered.filter((p) => {
+          const displayQty = convertToDisplayUnits(p.quantity, p.product_type, p.quantity_per_unit, p.base_unit);
+          return displayQty === 0;
+        });
       } else if (stockFilter === "low_stock") {
         filtered = filtered.filter((p) => {
-          const qty = Number(p.quantity || 0);
+          const displayQty = convertToDisplayUnits(p.quantity, p.product_type, p.quantity_per_unit, p.base_unit);
           const threshold = Number(
             p.low_stock_level ?? DEFAULT_LOW_STOCK_LEVEL
           );
-          return qty > 0 && qty < threshold;
+          return displayQty > 0 && displayQty < threshold;
         });
       } else if (stockFilter === "in_stock") {
         filtered = filtered.filter((p) => {
+          const displayQty = convertToDisplayUnits(p.quantity, p.product_type, p.quantity_per_unit, p.base_unit);
           const threshold = Number(
             p.low_stock_level ?? DEFAULT_LOW_STOCK_LEVEL
           );
-          return Number(p.quantity || 0) >= threshold;
+          return displayQty >= threshold;
         });
       }
     }
@@ -420,8 +452,9 @@ export default function InventoryPage() {
         aVal = (a.category || "").toLowerCase();
         bVal = (b.category || "").toLowerCase();
       } else if (sortBy === "quantity") {
-        aVal = Number(a.quantity || 0);
-        bVal = Number(b.quantity || 0);
+        // Sort by display units for consistent sorting across product types
+        aVal = convertToDisplayUnits(a.quantity, a.product_type, a.quantity_per_unit, a.base_unit);
+        bVal = convertToDisplayUnits(b.quantity, b.product_type, b.quantity_per_unit, b.base_unit);
       } else if (sortBy === "selling_price") {
         aVal = Number(a.selling_price || 0);
         bVal = Number(b.selling_price || 0);
@@ -456,18 +489,39 @@ export default function InventoryPage() {
       cost_price: "",
       selling_price: "",
       low_stock_level: DEFAULT_LOW_STOCK_LEVEL,
+      product_sold_by: "Per Piece",
+      unit_size: "",
+      unit: "",
     });
     setShowProductModal(true);
   }, []);
 
   const openEditProduct = useCallback((product) => {
     setEditingProduct(product);
+    
+    // Map product_type to product_sold_by for the form
+    let productSoldBy = "Per Piece";
+    if (product.product_type === 'weight') {
+      productSoldBy = "By Weight";
+    } else if (product.product_type === 'volume') {
+      productSoldBy = "By Volume";
+    }
+    
     setProductForm({
       ...product,
+      name: product.name || "",
+      sku: product.sku || "",
+      category: product.category || "",
+      description: product.description || "",
+      cost_price: product.cost_price || "",
+      selling_price: product.selling_price || "",
       low_stock_level:
         typeof product.low_stock_level === "number"
           ? product.low_stock_level
           : DEFAULT_LOW_STOCK_LEVEL,
+      product_sold_by: productSoldBy,
+      unit_size: product.quantity_per_unit ? String(product.quantity_per_unit) : "",
+      unit: product.base_unit && product.base_unit !== 'pc' ? product.base_unit : (product.product_type === 'weight' ? 'g' : product.product_type === 'volume' ? 'mL' : ''),
     });
     setShowProductModal(true);
   }, []);
@@ -487,9 +541,37 @@ export default function InventoryPage() {
       setApiError("");
     }
     if (name !== 'clearError') {
-      setProductForm((prev) => ({ ...prev, [name]: value }));
+      setProductForm((prev) => {
+        const updated = { ...prev, [name]: value };
+        
+        // When product_sold_by changes, set default values for unit_size and unit if empty
+        if (name === 'product_sold_by') {
+          if (value === 'By Weight' || value === 'By Volume') {
+            // Set default unit if empty
+            if (!updated.unit || updated.unit === '') {
+              updated.unit = value === 'By Weight' ? 'g' : 'mL';
+            }
+            // For editing: if unit_size is empty, try to use existing quantity_per_unit, otherwise set a default
+            if (!updated.unit_size || updated.unit_size === '') {
+              // If editing and product has quantity_per_unit, use it; otherwise set default
+              if (editingProduct && editingProduct.quantity_per_unit) {
+                updated.unit_size = String(editingProduct.quantity_per_unit);
+              } else {
+                // Set a default value to pass validation (user can change it)
+                updated.unit_size = value === 'By Weight' ? '100' : '250';
+              }
+            }
+          } else if (value === 'Per Piece') {
+            // Clear unit fields when switching back to Per Piece
+            updated.unit_size = '';
+            updated.unit = '';
+          }
+        }
+        
+        return updated;
+      });
     }
-  }, []);
+  }, [apiError, editingProduct]);
 
   const handleProductSubmit = useCallback(async (e) => {
     e.preventDefault();
@@ -518,6 +600,9 @@ export default function InventoryPage() {
                 ? (productForm.customCategory || "").trim()
                 : (productForm.category || "").trim(),
             description: (productForm.description || "").trim(),
+            product_sold_by: productForm.product_sold_by || "Per Piece",
+            unit_size: productForm.unit_size ? Number(productForm.unit_size) : undefined,
+            unit: productForm.unit || undefined,
           }),
         });
       } else {
@@ -544,6 +629,9 @@ export default function InventoryPage() {
             quantity: Number(productForm.quantity) || 0,
             low_stock_level:
               Number(productForm.low_stock_level) || DEFAULT_LOW_STOCK_LEVEL,
+            product_sold_by: productForm.product_sold_by || "Per Piece",
+            unit_size: productForm.unit_size ? Number(productForm.unit_size) : undefined,
+            unit: productForm.unit || undefined,
           }),
         });
       }
@@ -564,6 +652,10 @@ export default function InventoryPage() {
         sku: row.sku || "",
         description: row.description || "",
         low_stock_level: Number(row.low_stock_level ?? DEFAULT_LOW_STOCK_LEVEL),
+        product_type: row.product_type || "count",
+        quantity_per_unit: Number(row.quantity_per_unit || 1),
+        base_unit: row.base_unit || "pc",
+        display_unit: row.display_unit || null,
       }));
       setProducts(mapped);
       setShowProductModal(false);
@@ -628,6 +720,10 @@ export default function InventoryPage() {
         sku: row.sku || "",
         description: row.description || "",
         low_stock_level: Number(row.low_stock_level ?? DEFAULT_LOW_STOCK_LEVEL),
+        product_type: row.product_type || "count",
+        quantity_per_unit: Number(row.quantity_per_unit || 1),
+        base_unit: row.base_unit || "pc",
+        display_unit: row.display_unit || null,
       }));
       setProducts(mapped);
       setShowStockModal(false);

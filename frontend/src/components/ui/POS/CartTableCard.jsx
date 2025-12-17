@@ -29,18 +29,78 @@ function CartTableCard({
     }
   };
   
+  // Get display quantity for weight/volume products
+  const getDisplayQuantity = (item) => {
+    if (item?.product_type === 'weight' || item?.product_type === 'volume') {
+      const qtyPerUnit = Number(item.quantity_per_unit || 1);
+      const baseQty = Number(item.quantity || 0);
+      if (qtyPerUnit > 0 && baseQty > 0) {
+        const displayQty = baseQty / qtyPerUnit;
+        // If less than one unit, show in base units instead
+        if (displayQty < 1) {
+          return baseQty; // Return base quantity (e.g., 0.25L)
+        }
+        return displayQty; // Return display quantity (e.g., 1, 2, etc.)
+      }
+      return baseQty || 0;
+    }
+    return Number(item.quantity || 0);
+  };
+
+  // Get display unit for weight/volume products
+  const getDisplayUnit = (item) => {
+    if (item?.product_type === 'weight' || item?.product_type === 'volume') {
+      const qtyPerUnit = Number(item.quantity_per_unit || 1);
+      const baseQty = Number(item.quantity || 0);
+      const baseUnit = item.base_unit || '';
+      
+      if (qtyPerUnit > 0 && baseQty > 0) {
+        const displayQty = baseQty / qtyPerUnit;
+        // If less than one unit, show base unit
+        if (displayQty < 1) {
+          return baseUnit;
+        }
+        // Otherwise show unit size
+        return `${qtyPerUnit}${baseUnit}`;
+      }
+      return baseUnit;
+    }
+    return 'pcs';
+  };
+
   // Handle quantity input change
   const handleQtyChange = (e) => {
     const value = e.target.value;
-    // Allow empty string (for backspace/delete) or positive numbers
-    if (value === '' || /^\d+$/.test(value)) {
-      onEditQtyChange?.(value === '' ? '' : parseInt(value, 10));
+    // Allow empty string (for backspace/delete), positive integers, or decimals
+    // For weight/volume products, allow decimals (e.g., 0.25, 1.5)
+    if (value === '' || /^\d*\.?\d*$/.test(value)) {
+      onEditQtyChange?.(value === '' ? '' : (value.includes('.') ? parseFloat(value) : parseInt(value, 10)));
     }
   };
   
   // Handle quantity save
   const handleSaveQuantity = (idx) => {
-    const qty = editQty === '' ? 1 : Math.max(1, editQty);
+    const item = cart[idx];
+    const isWeightOrVolume = item?.product_type === 'weight' || item?.product_type === 'volume';
+    const minQty = isWeightOrVolume ? 0.01 : 1;
+    let qty = editQty === '' ? minQty : Math.max(minQty, Number(editQty) || minQty);
+    
+    // For weight/volume products, convert based on what format we're displaying
+    if (isWeightOrVolume && item.quantity_per_unit) {
+      const qtyPerUnit = Number(item.quantity_per_unit);
+      const currentDisplayQty = getDisplayQuantity(item);
+      
+      // If we're showing in base units (quantity < 1 unit), user entered base units
+      // If we're showing in display units (quantity >= 1 unit), user entered display units
+      if (currentDisplayQty < 1) {
+        // We're displaying in base units, so qty is already in base units
+        qty = qty;
+      } else {
+        // We're displaying in display units, so convert to base units
+        qty = qty * qtyPerUnit;
+      }
+    }
+    
     handleEditQuantity(idx, qty);
     onEditComplete?.();
   };
@@ -141,6 +201,9 @@ function CartTableCard({
                 <th className="py-1.5 px-2 text-center text-[10px] sm:text-xs font-bold text-gray-700 uppercase tracking-wider">
                   Qty
                 </th>
+                <th className="py-1.5 px-2 text-center text-[10px] sm:text-xs font-bold text-gray-700 uppercase tracking-wider hidden sm:table-cell">
+                  Unit
+                </th>
                 <th className="py-1.5 px-2 text-right text-[10px] sm:text-xs font-bold text-gray-700 uppercase tracking-wider">
                   Price
                 </th>
@@ -155,7 +218,7 @@ function CartTableCard({
             <tbody className="divide-y divide-gray-100">
               {cart.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="text-center py-8">
+                  <td colSpan={6} className="text-center py-8">
                     <div className="flex flex-col items-center justify-center">
                       <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-2">
                         <svg
@@ -202,9 +265,10 @@ function CartTableCard({
                       {editingIdx === idx ? (
                         <div className="flex items-center justify-center gap-1">
                           <input
-                            type="text"
-                            inputMode="numeric"
-                            pattern="[0-9]*"
+                            type="number"
+                            inputMode="decimal"
+                            step={cart[idx]?.product_type === 'weight' || cart[idx]?.product_type === 'volume' ? "0.01" : "1"}
+                            min={cart[idx]?.product_type === 'weight' || cart[idx]?.product_type === 'volume' ? "0.01" : "1"}
                             value={editQty}
                             onChange={handleQtyChange}
                             onKeyDown={(e) => {
@@ -215,7 +279,7 @@ function CartTableCard({
                               }
                             }}
                             onBlur={() => handleSaveQuantity(idx)}
-                            className="w-12 h-7 text-center text-xs font-bold border border-blue-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-16 h-7 text-center text-xs font-bold border border-blue-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                             autoFocus
                             onFocus={(e) => e.target.select()}
                           />
@@ -236,17 +300,38 @@ function CartTableCard({
                           </button>
                         </div>
                       ) : (
-                        <div className="flex items-center justify-center gap-1">
-                          <span className="inline-flex items-center justify-center w-7 h-7 rounded-md bg-blue-100 text-blue-700 font-bold text-xs">
-                            {item.quantity}
+                        <div className="flex flex-col items-center justify-center gap-0.5">
+                          <span className="inline-flex items-center justify-center min-w-[2rem] px-1.5 py-0.5 rounded-md bg-blue-100 text-blue-700 font-bold text-xs">
+                            {(() => {
+                              const displayQty = getDisplayQuantity(item);
+                              // Format: whole number if integer, otherwise show appropriate decimals
+                              if (displayQty % 1 === 0) {
+                                return displayQty;
+                              }
+                              // For very small numbers, show more precision
+                              if (displayQty < 0.01) {
+                                return displayQty.toFixed(4);
+                              }
+                              return Number(displayQty).toFixed(2);
+                            })()}
                           </span>
                         </div>
                       )}
+                    </td>
+                    <td className="py-1.5 px-2 text-center hidden sm:table-cell">
+                      <span className="text-[10px] sm:text-xs font-medium text-gray-600">
+                        {getDisplayUnit(item)}
+                      </span>
                     </td>
                     <td className="py-1.5 px-2 text-right">
                       <span className="text-xs sm:text-sm font-medium text-gray-700">
                         ₱{item.price.toFixed(2)}
                       </span>
+                      {item.base_unit && (
+                        <span className="block text-[10px] text-gray-500">
+                          per {item.base_unit}
+                        </span>
+                      )}
                     </td>
                     <td className="py-1.5 px-2 text-right">
                       <span className="text-xs sm:text-sm font-bold text-blue-600">
@@ -263,7 +348,9 @@ function CartTableCard({
                           onClick={(e) => {
                             e.stopPropagation();
                             onSelectRow?.(idx);
-                            onEditQtyChange?.(item.quantity);
+                            // For weight/volume products, initialize with display quantity
+                            const displayQty = getDisplayQuantity(item);
+                            onEditQtyChange?.(displayQty);
                             onStartEdit?.(idx);
                           }}
                           className={`p-1.5 rounded-md transition-all duration-200 ${selectedIdx === idx ? 'bg-blue-100 text-blue-700 border-blue-200' : 'bg-blue-50 text-blue-600 hover:bg-blue-100 border-blue-200'} border`}

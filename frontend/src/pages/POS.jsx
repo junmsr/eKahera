@@ -14,6 +14,7 @@ import CashLedgerModal from "../components/modals/CashLedgerModal";
 import CheckoutModal from "../components/modals/CheckoutModal";
 import CashPaymentModal from "../components/modals/CashPaymentModal";
 import ScanCustomerCartModal from "../components/modals/ScanCustomerCartModal";
+import QuantityInputModal from "../components/modals/QuantityInputModal";
 import { BiReceipt, BiSync } from "react-icons/bi";
 import AdminReceiptsModal from "../components/modals/AdminReceiptsModal";
 import { MdClose } from "react-icons/md";
@@ -77,6 +78,8 @@ function POS() {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [appliedDiscount, setAppliedDiscount] = useState(null);
   const quantityInputRef = useRef(null);
+  const [showQuantityModal, setShowQuantityModal] = useState(false);
+  const [pendingProduct, setPendingProduct] = useState(null);
 
   // Set editing cart item and initialize quantity
   const setSelectedCartItem = (idx) => {
@@ -213,6 +216,15 @@ function POS() {
         );
         return;
       }
+
+      // Check if product is weight or volume based - show modal for quantity input
+      if (product.product_type === 'weight' || product.product_type === 'volume') {
+        setPendingProduct(product);
+        setShowQuantityModal(true);
+        return;
+      }
+
+      // For count-based products, proceed with normal flow
       if (qty > stockQty) {
         setError(
           `Insufficient stock. Available: ${stockQty}, requested: ${qty}.`
@@ -260,6 +272,75 @@ function POS() {
         setScannerPaused(false);
       }, 300);
     }
+  };
+
+  // Handle quantity confirmation from modal
+  const handleQuantityConfirm = (quantityInBaseUnits) => {
+    if (!pendingProduct) return;
+    
+    const product = pendingProduct;
+    const stockQty = Number(product.stock_quantity ?? 0);
+    
+    // Check stock
+    if (quantityInBaseUnits > stockQty) {
+      setError(
+        `Insufficient stock. Available: ${stockQty} ${product.base_unit || ''}, requested: ${quantityInBaseUnits} ${product.base_unit || ''}.`
+      );
+      setShowQuantityModal(false);
+      setPendingProduct(null);
+      return;
+    }
+
+    // Calculate price per base unit for weight/volume products
+    let pricePerUnit = Number(product.selling_price || 0);
+    if (product.product_type !== 'count' && product.quantity_per_unit && product.quantity_per_unit > 0) {
+      // Price per base unit = price per package / quantity per package
+      pricePerUnit = pricePerUnit / Number(product.quantity_per_unit);
+    }
+
+    // For weight/volume products, quantity is stored in base units
+    // Price is stored as price per base unit
+    setCart((prev) => {
+      const existingIdx = prev.findIndex(
+        (i) => i.product_id === product.product_id
+      );
+      if (existingIdx >= 0) {
+        const next = [...prev];
+        const existingQty = next[existingIdx].quantity;
+        const newQty = existingQty + quantityInBaseUnits;
+        if (newQty > stockQty) {
+          setError(
+            `Insufficient stock. Available: ${stockQty} ${product.base_unit || ''}, requested: ${newQty} ${product.base_unit || ''}.`
+          );
+          return prev;
+        }
+        next[existingIdx] = { ...next[existingIdx], quantity: newQty };
+        return next;
+      }
+      return [
+        ...prev,
+        {
+          product_id: product.product_id,
+          sku: product.sku,
+          name: product.product_name,
+          quantity: quantityInBaseUnits,
+          price: pricePerUnit,
+          product_type: product.product_type,
+          base_unit: product.base_unit,
+          quantity_per_unit: product.quantity_per_unit || 1,
+        },
+      ];
+    });
+    
+    setSku("");
+    setQuantity(1);
+    setShowQuantityModal(false);
+    setPendingProduct(null);
+    
+    // Auto-focus SKU input after adding item for next scan
+    setTimeout(() => {
+      skuInputRef.current?.focus();
+    }, 50);
   };
 
   const handleAddToCart = async () => {
@@ -767,7 +848,9 @@ function POS() {
       setTransactionId(null);
     } catch (err) {
       console.error("Checkout error:", err);
-      setError("Checkout failed");
+      // Extract error message from response if available
+      const errorMessage = err?.response?.data?.error || err?.data?.error || err?.message || "Checkout failed";
+      setError(errorMessage);
     }
   };
 
@@ -1365,6 +1448,25 @@ function POS() {
           handleCheckout("cash", amountReceived);
           setShowCashModal(false);
         }}
+      />
+      <QuantityInputModal
+        isOpen={showQuantityModal}
+        onClose={() => {
+          setShowQuantityModal(false);
+          setPendingProduct(null);
+          // Auto-focus SKU input after closing modal
+          setTimeout(() => {
+            skuInputRef.current?.focus();
+          }, 50);
+        }}
+        product={pendingProduct}
+        onConfirm={handleQuantityConfirm}
+        existingQuantity={
+          pendingProduct
+            ? cart.find((item) => item.product_id === pendingProduct.product_id)
+                ?.quantity || 0
+            : 0
+        }
       />
       {showLogoutConfirm && (
         <div className="fixed inset-0 z-90 flex items-center justify-center">
