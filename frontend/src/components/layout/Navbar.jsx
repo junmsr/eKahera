@@ -13,6 +13,7 @@ function Navbar({ className = "" }) {
     { label: "Home", path: "/" },
     { label: "Features", path: "#features" },
     { label: "About", path: "#about" },
+    { label: "Businesses", path: "#businesses" },
     { label: "FAQs", path: "#faqs" },
   ];
 
@@ -82,7 +83,7 @@ function Navbar({ className = "" }) {
           className="text-blue-600 font-semibold px-5 py-2 rounded-full hover:bg-blue-50 transition-all text-base border border-blue-200"
           style={{ fontFamily: "Inter, sans-serif" }}
         >
-          Try Demo
+          Demo
         </Link>
         <Link
           to="/get-started"

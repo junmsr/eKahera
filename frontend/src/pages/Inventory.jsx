@@ -5,6 +5,7 @@ import Inventory from "../components/inventory/Inventory";
 import Modal from "../components/modals/Modal";
 import Button from "../components/common/Button";
 import jsPDF from "jspdf";
+import dayjs from "dayjs";
 
 import ProductFormModal from "../components/modals/ProductFormModal";
 import { api, authHeaders } from "../lib/api";
@@ -1538,7 +1539,8 @@ export default function InventoryPage() {
       });
 
       const business = profileData?.business || {};
-      const storeName = business.business_name || "Store";
+      const businessName = business.business_name || "Store";
+      const branchName = business.branch_name || null; // Store/Branch name if applicable
       const addressParts = [
         business.house_number,
         business.barangay,
@@ -1546,7 +1548,6 @@ export default function InventoryPage() {
         business.province,
       ].filter(Boolean);
       const address = addressParts.join(", ") || "N/A";
-      const contact = business.mobile || business.email || "N/A";
 
       // Check if there's any inventory data
       if (!filteredProducts || filteredProducts.length === 0) {
@@ -1554,156 +1555,414 @@ export default function InventoryPage() {
         return;
       }
 
-      // Calculate totals
-      const totalInventoryValue = filteredProducts.reduce((sum, p) => {
+      // Helper function to determine stock status
+      const getStockStatus = (quantity, reorderLevel) => {
+        if (quantity === 0) return "Out of Stock";
+        if (quantity > 0 && quantity <= reorderLevel) return "Low Stock";
+        return "In Stock";
+      };
+
+      // Calculate summary statistics
+      const totalProducts = filteredProducts.length;
+      let totalQuantityInStock = 0; // Sum of display units (pieces/units)
+      let lowStockCount = 0;
+      let outOfStockCount = 0;
+      const lowStockItems = [];
+      const outOfStockItems = [];
+      let totalInventoryValue = 0;
+
+      filteredProducts.forEach((p) => {
         const displayQty = convertToDisplayUnits(
           p.quantity,
           p.product_type,
           p.quantity_per_unit,
           p.base_unit
         );
+        const quantityInBaseUnits = Number(p.quantity || 0);
+        const reorderLevel = Number(p.low_stock_level || DEFAULT_LOW_STOCK_LEVEL);
         const costPrice = Number(p.cost_price || 0);
-        return sum + costPrice * displayQty;
-      }, 0);
+        
+        // For total quantity, sum display units (pieces/units) not base units
+        totalQuantityInStock += displayQty;
+        
+        // Calculate stock value (using display units for valuation)
+        const stockValue = costPrice * displayQty;
+        totalInventoryValue += stockValue;
+
+        // Count stock status
+        const status = getStockStatus(quantityInBaseUnits, reorderLevel);
+        if (status === "Low Stock") {
+          lowStockCount++;
+          lowStockItems.push({ ...p, displayQty, status });
+        } else if (status === "Out of Stock") {
+          outOfStockCount++;
+          outOfStockItems.push({ ...p, displayQty, status });
+        }
+      });
 
       // Create PDF
       const pdf = new jsPDF("p", "mm", "a4");
       const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
       const margin = 20;
       const contentWidth = pageWidth - 2 * margin;
       let yPos = margin;
+      let pageNumber = 1;
+      const totalPages = []; // Will be updated after all pages are created
 
       // Helper function to add a new page if needed
       const checkPageBreak = (requiredHeight) => {
-        if (yPos + requiredHeight > pdf.internal.pageSize.getHeight() - margin) {
+        if (yPos + requiredHeight > pageHeight - margin) {
           pdf.addPage();
+          pageNumber++;
           yPos = margin;
           return true;
         }
         return false;
       };
 
-      // Store name (centered, top middle)
+      // Helper function to add section title
+      const addSectionTitle = (title, fontSize = 12) => {
+        checkPageBreak(15);
+        pdf.setFontSize(fontSize);
+        pdf.setFont("helvetica", "bold");
+        pdf.setTextColor(0, 0, 0);
+        pdf.text(title, margin, yPos);
+        yPos += 8;
+      };
+
+      // Helper function to format currency
+      const formatCurrency = (amount) => {
+        return `PHP ${Number(amount || 0).toFixed(2)}`;
+      };
+
+      // Helper function to format date
+      const formatDate = (dateString) => {
+        if (!dateString) return "N/A";
+        try {
+          return dayjs(dateString).format("MMM D, YYYY");
+        } catch {
+          return "N/A";
+        }
+      };
+
+      // Helper function to truncate text if too long
+      const truncateText = (text, maxWidth) => {
+        let truncated = String(text || "");
+        if (pdf.getTextWidth(truncated) > maxWidth - 2) {
+          while (pdf.getTextWidth(truncated + "...") > maxWidth - 2 && truncated.length > 0) {
+            truncated = truncated.slice(0, -1);
+          }
+          truncated += "...";
+        }
+        return truncated;
+      };
+
+      // Helper function to add footer to all pages
+      const addFooter = () => {
+        const totalPagesCount = pdf.internal.getNumberOfPages();
+        for (let i = 1; i <= totalPagesCount; i++) {
+          pdf.setPage(i);
+          pdf.setFontSize(8);
+          pdf.setFont("helvetica", "normal");
+          pdf.setTextColor(100, 100, 100);
+          const footerText = `Page ${i} of ${totalPagesCount} | Generated by eKahera POS System | System-generated report`;
+          const footerWidth = pdf.getTextWidth(footerText);
+          pdf.text(footerText, (pageWidth - footerWidth) / 2, pageHeight - 10);
+        }
+      };
+
+      // ============================================
+      // 1. REPORT HEADER
+      // ============================================
       pdf.setFontSize(20);
       pdf.setFont("helvetica", "bold");
-      const storeNameWidth = pdf.getTextWidth(storeName);
-      pdf.text(storeName, (pageWidth - storeNameWidth) / 2, yPos);
-      yPos += 10;
-
-      // Address (centered, under store name)
-      pdf.setFontSize(12);
-      pdf.setFont("helvetica", "normal");
-      const addressWidth = pdf.getTextWidth(address);
-      pdf.text(address, (pageWidth - addressWidth) / 2, yPos);
-      yPos += 7;
-
-      // Contact information (centered, under address)
-      const contactWidth = pdf.getTextWidth(contact);
-      pdf.text(contact, (pageWidth - contactWidth) / 2, yPos);
-      yPos += 15;
-
-      // Inventory Report heading
-      pdf.setFontSize(16);
-      pdf.setFont("helvetica", "bold");
-      pdf.text("Inventory Report", margin, yPos);
+      pdf.setTextColor(0, 0, 0);
+      const businessNameWidth = pdf.getTextWidth(businessName);
+      pdf.text(businessName, (pageWidth - businessNameWidth) / 2, yPos);
       yPos += 8;
 
-      // Export date
-      pdf.setFontSize(12);
+      // Store/Branch name (if applicable)
+      if (branchName) {
+        pdf.setFontSize(14);
+        pdf.setFont("helvetica", "normal");
+        const branchNameWidth = pdf.getTextWidth(branchName);
+        pdf.text(branchName, (pageWidth - branchNameWidth) / 2, yPos);
+        yPos += 7;
+      }
+
+      // Report type
+      pdf.setFontSize(16);
+      pdf.setFont("helvetica", "bold");
+      const reportTypeText = "Inventory Summary";
+      const reportTypeWidth = pdf.getTextWidth(reportTypeText);
+      pdf.text(reportTypeText, (pageWidth - reportTypeWidth) / 2, yPos);
+      yPos += 6;
+
+      // Date & time generated
+      pdf.setFontSize(10);
       pdf.setFont("helvetica", "normal");
-      const exportDate = new Date().toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-      });
-      pdf.text(`Date: ${exportDate}`, margin, yPos);
+      const dateTimeText = `Generated: ${dayjs().format("MMM D, YYYY h:mm A")}`;
+      const dateTimeWidth = pdf.getTextWidth(dateTimeText);
+      pdf.text(dateTimeText, (pageWidth - dateTimeWidth) / 2, yPos);
+      yPos += 5;
+
+      // System name
+      pdf.setFontSize(9);
+      pdf.setTextColor(100, 100, 100);
+      const systemText = "System: eKahera POS";
+      const systemWidth = pdf.getTextWidth(systemText);
+      pdf.text(systemText, (pageWidth - systemWidth) / 2, yPos);
       yPos += 10;
 
-      // Table header - adjusted widths to prevent overlap
+      // Draw separator line
+      pdf.setLineWidth(0.5);
+      pdf.setDrawColor(200, 200, 200);
+      pdf.line(margin, yPos, pageWidth - margin, yPos);
+      yPos += 8;
+
+      // ============================================
+      // 2. INVENTORY SUMMARY (TOP SECTION)
+      // ============================================
+      addSectionTitle("INVENTORY SUMMARY", 14);
+
+      pdf.setFontSize(9);
+      pdf.setFont("helvetica", "normal");
+      pdf.setTextColor(0, 0, 0);
+
+      const summaryData = [
+        ["Total Number of Products", String(totalProducts)],
+        ["Total Quantity in Stock (Units)", String(Math.round(totalQuantityInStock))],
+        ["Low-Stock Items", String(lowStockCount)],
+        ["Out-of-Stock Items", String(outOfStockCount)],
+      ];
+
+      const summaryCol1 = margin;
+      const summaryCol2 = pageWidth - margin - 60;
+
+      summaryData.forEach(([label, value]) => {
+        checkPageBreak(8);
+        pdf.setFont("helvetica", "normal");
+        pdf.text(label + ":", summaryCol1, yPos);
+        pdf.setFont("helvetica", "bold");
+        pdf.text(value, summaryCol2, yPos);
+        yPos += 7;
+      });
+
+      yPos += 5;
+
+      // ============================================
+      // 3. INVENTORY STATUS TABLE (MAIN TABLE)
+      // ============================================
+      addSectionTitle("INVENTORY STATUS", 14);
+
+      // Table header - adjusted column widths (added Unit column)
       const colWidths = [
-        contentWidth * 0.24, // Product
-        contentWidth * 0.14, // Category
-        contentWidth * 0.16, // Cost Price
-        contentWidth * 0.16, // Selling Price
-        contentWidth * 0.15, // Unit
-        contentWidth * 0.15, // Stock
+        contentWidth * 0.20, // Product name
+        contentWidth * 0.11, // SKU/Barcode
+        contentWidth * 0.13, // Category
+        contentWidth * 0.12, // Unit
+        contentWidth * 0.12, // Quantity
+        contentWidth * 0.12, // Reorder level
+        contentWidth * 0.20, // Stock status
       ];
       const colX = [margin];
       for (let i = 1; i < colWidths.length; i++) {
         colX.push(colX[i - 1] + colWidths[i - 1]);
       }
 
-      pdf.setFontSize(10);
+      pdf.setFontSize(8);
       pdf.setFont("helvetica", "bold");
+      pdf.setTextColor(0, 0, 0);
       const headerY = yPos;
-      pdf.text("Product", colX[0], headerY);
-      pdf.text("Category", colX[1], headerY);
-      pdf.text("Cost Price", colX[2], headerY);
-      pdf.text("Selling Price", colX[3], headerY);
-      pdf.text("Unit", colX[4], headerY);
-      pdf.text("Stock", colX[5], headerY);
+      pdf.text("Product Name", colX[0], headerY);
+      pdf.text("SKU", colX[1], headerY);
+      pdf.text("Category", colX[2], headerY);
+      pdf.text("Unit", colX[3], headerY);
+      pdf.text("Quantity", colX[4], headerY);
+      pdf.text("Reorder Level", colX[5], headerY);
+      pdf.text("Status", colX[6], headerY);
       yPos += 8;
 
       // Draw header line
       pdf.setLineWidth(0.5);
+      pdf.setDrawColor(0, 0, 0);
       pdf.line(margin, yPos - 2, pageWidth - margin, yPos - 2);
-      yPos += 3;
+      yPos += 4;
 
       // Table rows
       pdf.setFont("helvetica", "normal");
-      pdf.setFontSize(9);
+      pdf.setFontSize(7);
 
       filteredProducts.forEach((item) => {
         checkPageBreak(10);
 
+        const quantityInBaseUnits = Number(item.quantity || 0);
+        const reorderLevel = Number(item.low_stock_level || DEFAULT_LOW_STOCK_LEVEL);
+        const status = getStockStatus(quantityInBaseUnits, reorderLevel);
+        
+        // Highlight low-stock and out-of-stock items
+        if (status === "Out of Stock") {
+          pdf.setTextColor(200, 0, 0); // Red
+        } else if (status === "Low Stock") {
+          pdf.setTextColor(255, 140, 0); // Orange
+        } else {
+          pdf.setTextColor(0, 0, 0); // Black
+        }
+
         const productName = item.name || "";
-        const category = item.category || "";
-        const costPrice = `PHP ${Number(item.cost_price || 0).toFixed(2)}`;
-        const sellingPrice = `PHP ${Number(item.selling_price || 0).toFixed(2)}`;
+        const sku = item.sku || "N/A";
+        const category = item.category || "Uncategorized";
         const unitDisplay = getUnitDisplay(item);
-        const stockDisplay = formatStockForPDF(
+        const quantityDisplay = formatStockForPDF(
           item.quantity,
           item.product_type,
           item.quantity_per_unit,
           item.base_unit
         );
+        const reorderLevelDisplay = String(reorderLevel);
 
-        // Truncate product name if too long
-        const maxNameWidth = colWidths[0] - 5;
-        let displayName = productName;
-        if (pdf.getTextWidth(displayName) > maxNameWidth) {
-          while (
-            pdf.getTextWidth(displayName + "...") > maxNameWidth &&
-            displayName.length > 0
-          ) {
-            displayName = displayName.slice(0, -1);
-          }
-          displayName += "...";
-        }
-
-        // Truncate category if too long
-        const maxCategoryWidth = colWidths[1] - 5;
-        let displayCategory = category;
-        if (pdf.getTextWidth(displayCategory) > maxCategoryWidth) {
-          while (
-            pdf.getTextWidth(displayCategory + "...") > maxCategoryWidth &&
-            displayCategory.length > 0
-          ) {
-            displayCategory = displayCategory.slice(0, -1);
-          }
-          displayCategory += "...";
-        }
-
-        pdf.text(displayName, colX[0], yPos);
-        pdf.text(displayCategory, colX[1], yPos);
-        pdf.text(costPrice, colX[2], yPos);
-        pdf.text(sellingPrice, colX[3], yPos);
-        pdf.text(unitDisplay, colX[4], yPos);
-        pdf.text(stockDisplay, colX[5], yPos);
+        pdf.text(truncateText(productName, colWidths[0]), colX[0], yPos);
+        pdf.text(truncateText(sku, colWidths[1]), colX[1], yPos);
+        pdf.text(truncateText(category, colWidths[2]), colX[2], yPos);
+        pdf.text(truncateText(unitDisplay, colWidths[3]), colX[3], yPos);
+        pdf.text(truncateText(quantityDisplay, colWidths[4]), colX[4], yPos);
+        pdf.text(truncateText(reorderLevelDisplay, colWidths[5]), colX[5], yPos);
+        pdf.text(truncateText(status, colWidths[6]), colX[6], yPos);
+        
+        pdf.setTextColor(0, 0, 0); // Reset to black
         yPos += 7;
       });
 
-      // Total row
+      yPos += 5;
+
+      // ============================================
+      // 4. LOW-STOCK & OUT-OF-STOCK ITEMS
+      // ============================================
+      if (lowStockItems.length > 0 || outOfStockItems.length > 0) {
+        checkPageBreak(20);
+        addSectionTitle("LOW-STOCK & OUT-OF-STOCK ITEMS", 14);
+
+        // Out of Stock Items
+        if (outOfStockItems.length > 0) {
+          pdf.setFontSize(10);
+          pdf.setFont("helvetica", "bold");
+          pdf.setTextColor(200, 0, 0);
+          pdf.text("OUT OF STOCK ITEMS", margin, yPos);
+          yPos += 7;
+
+          pdf.setFontSize(8);
+          pdf.setFont("helvetica", "bold");
+          pdf.setTextColor(0, 0, 0);
+          pdf.text("Product Name", margin + 5, yPos);
+          pdf.text("Current Quantity", margin + 80, yPos);
+          pdf.text("Reorder Level", margin + 130, yPos);
+          yPos += 5;
+
+          pdf.setLineWidth(0.3);
+          pdf.line(margin, yPos - 2, pageWidth - margin, yPos - 2);
+          yPos += 4;
+
+          pdf.setFont("helvetica", "normal");
+          outOfStockItems.forEach((item) => {
+            checkPageBreak(8);
+            pdf.setTextColor(200, 0, 0);
+            pdf.text(truncateText(item.name || "", 70), margin + 5, yPos);
+            pdf.text(String(Math.round(item.displayQty || 0)), margin + 80, yPos);
+            pdf.text(String(item.low_stock_level || DEFAULT_LOW_STOCK_LEVEL), margin + 130, yPos);
+            yPos += 6;
+          });
+          yPos += 3;
+        }
+
+        // Low Stock Items
+        if (lowStockItems.length > 0) {
+          pdf.setFontSize(10);
+          pdf.setFont("helvetica", "bold");
+          pdf.setTextColor(255, 140, 0);
+          pdf.text("LOW STOCK ITEMS", margin, yPos);
+          yPos += 7;
+
+          pdf.setFontSize(8);
+          pdf.setFont("helvetica", "bold");
+          pdf.setTextColor(0, 0, 0);
+          pdf.text("Product Name", margin + 5, yPos);
+          pdf.text("Current Quantity", margin + 80, yPos);
+          pdf.text("Reorder Level", margin + 130, yPos);
+          yPos += 5;
+
+          pdf.setLineWidth(0.3);
+          pdf.line(margin, yPos - 2, pageWidth - margin, yPos - 2);
+          yPos += 4;
+
+          pdf.setFont("helvetica", "normal");
+          lowStockItems.forEach((item) => {
+            checkPageBreak(8);
+            pdf.setTextColor(255, 140, 0);
+            pdf.text(truncateText(item.name || "", 70), margin + 5, yPos);
+            pdf.text(String(Math.round(item.displayQty || 0)), margin + 80, yPos);
+            pdf.text(String(item.low_stock_level || DEFAULT_LOW_STOCK_LEVEL), margin + 130, yPos);
+            yPos += 6;
+          });
+          yPos += 5;
+        }
+
+        pdf.setTextColor(0, 0, 0); // Reset to black
+      }
+
+      // ============================================
+      // 5. INVENTORY VALUATION
+      // ============================================
+      checkPageBreak(30);
+      addSectionTitle("INVENTORY VALUATION", 14);
+
+      // Valuation table header
+      const valColWidths = [
+        contentWidth * 0.35, // Product name
+        contentWidth * 0.20, // Cost price
+        contentWidth * 0.20, // Quantity
+        contentWidth * 0.25, // Stock value
+      ];
+      const valColX = [margin];
+      for (let i = 1; i < valColWidths.length; i++) {
+        valColX.push(valColX[i - 1] + valColWidths[i - 1]);
+      }
+
+      pdf.setFontSize(9);
+      pdf.setFont("helvetica", "bold");
+      const valHeaderY = yPos;
+      pdf.text("Product Name", valColX[0], valHeaderY);
+      pdf.text("Cost Price", valColX[1], valHeaderY);
+      pdf.text("Quantity", valColX[2], valHeaderY);
+      pdf.text("Stock Value", valColX[3], valHeaderY);
+      yPos += 8;
+
+      pdf.setLineWidth(0.5);
+      pdf.line(margin, yPos - 2, pageWidth - margin, yPos - 2);
+      yPos += 4;
+
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(8);
+
+      filteredProducts.forEach((item) => {
+        checkPageBreak(8);
+        const displayQty = convertToDisplayUnits(
+          item.quantity,
+          item.product_type,
+          item.quantity_per_unit,
+          item.base_unit
+        );
+        const costPrice = Number(item.cost_price || 0);
+        const stockValue = costPrice * displayQty;
+
+        pdf.text(truncateText(item.name || "", valColWidths[0]), valColX[0], yPos);
+        pdf.text(formatCurrency(costPrice), valColX[1], yPos);
+        pdf.text(String(Math.round(displayQty)), valColX[2], yPos);
+        pdf.text(formatCurrency(stockValue), valColX[3], yPos);
+        yPos += 6;
+      });
+
+      // Total inventory value
       checkPageBreak(10);
       yPos += 3;
       pdf.setLineWidth(0.5);
@@ -1712,12 +1971,18 @@ export default function InventoryPage() {
 
       pdf.setFont("helvetica", "bold");
       pdf.setFontSize(10);
-      // Place total in the last two columns to avoid overlap
-      pdf.text("Total Value:", colX[4], yPos);
-      pdf.text(`PHP ${totalInventoryValue.toFixed(2)}`, colX[5], yPos);
+      pdf.text("Total Inventory Value:", margin, yPos);
+      pdf.text(formatCurrency(totalInventoryValue), pageWidth - margin - 60, yPos);
+      yPos += 8;
+
+      // ============================================
+      // 6. FOOTER
+      // ============================================
+      // Footer is added to all pages at the end
+      addFooter();
 
       // Save PDF
-      const timestamp = new Date().toISOString().split("T")[0];
+      const timestamp = dayjs().format("YYYY-MM-DD");
       const fileName = `Inventory-Report-${timestamp}.pdf`;
       pdf.save(fileName);
     } catch (error) {

@@ -5,6 +5,7 @@ import HomeHero from "../components/ui/home/HomeHero";
 import Features from "../components/ui/home/Features";
 import AboutUs from "../components/ui/home/AboutUs";
 import FAQs from "../components/ui/home/FAQs";
+import BusinessLocations from "../components/ui/home/BusinessLocations";
 import SectionWrapper from "../components/ui/home/SectionWrapper";
 // Removed vector image dividers
 import SvgDivider from "../components/ui/home/SvgDivider";
@@ -64,7 +65,15 @@ function Home() {
           <AboutUs />
         </SectionWrapper>
 
-        {/* Divider between About and FAQs */}
+        {/* Divider between About and Business Locations */}
+        <SvgDivider className="my-8" />
+
+        {/* Business Locations Section */}
+        <SectionWrapper id="businesses" title="Our Business Partners">
+          <BusinessLocations />
+        </SectionWrapper>
+
+        {/* Divider between Business Locations and FAQs */}
         <SvgDivider className="my-8" />
 
         <SectionWrapper

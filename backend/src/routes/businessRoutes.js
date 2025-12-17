@@ -12,6 +12,7 @@ const {
   checkDocumentStatus,
   verifyBusinessAccess,
   getBusinessPublic,
+  getAllApprovedBusinesses,
   requestStoreDeletion,
   cancelStoreDeletion,
   getStoreDeletionStatus,
@@ -25,6 +26,8 @@ router.post('/register', registerBusiness);
 // Public route for business registration with documents
 router.post('/register-with-documents', ...registerBusinessWithDocuments);
 
+// IMPORTANT: More specific routes must come before parameterized routes
+router.get('/public/all', getAllApprovedBusinesses);
 router.get('/public/:id', getBusinessPublic);
 
 // Protected routes (require authentication)
