@@ -67,6 +67,10 @@ function DemoPOS() {
   const [cart, setCart] = useState([]);
   const [showCheckout, setShowCheckout] = useState(false);
   const [showCashModal, setShowCashModal] = useState(false);
+  const [showDiscountModal, setShowDiscountModal] = useState(false);
+  const [showPriceCheckModal, setShowPriceCheckModal] = useState(false);
+  const [showCashLedgerModal, setShowCashLedgerModal] = useState(false);
+  const [priceCheckSku, setPriceCheckSku] = useState("");
   const [error, setError] = useState("");
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [selectedCartIdx, setSelectedCartIdx] = useState(0);
@@ -308,7 +312,7 @@ function DemoPOS() {
                       className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
                       variant="secondary"
                       microinteraction
-                      onClick={() => {}}
+                      onClick={() => setShowCashLedgerModal(true)}
                       icon={
                         <svg
                           className="w-4 h-4"
@@ -332,7 +336,7 @@ function DemoPOS() {
                           <ButtonLabel text="ADD DISCOUNT" shortcut="F6" />
                         }
                         variant="secondary"
-                        onClick={() => {}}
+                        onClick={() => setShowDiscountModal(true)}
                         icon={
                           <svg
                             className="w-5 h-5"
@@ -355,7 +359,7 @@ function DemoPOS() {
                       label={<ButtonLabel text="PRICE CHECK" shortcut="F7" />}
                       size="md"
                       className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
-                      onClick={() => {}}
+                      onClick={() => setShowPriceCheckModal(true)}
                       variant="secondary"
                       microinteraction
                       icon={
@@ -381,7 +385,11 @@ function DemoPOS() {
                       }
                       size="md"
                       className="w-full h-10 sm:h-12 text-xs sm:text-sm font-bold"
-                      onClick={() => {}}
+                      onClick={() =>
+                        alert(
+                          "Scan Customer QR functionality not implemented yet."
+                        )
+                      }
                       variant="secondary"
                       microinteraction
                       icon={
@@ -446,17 +454,20 @@ function DemoPOS() {
 
       {/* Modals */}
       <DiscountModal
-        isOpen={false}
-        onClose={() => {}}
+        isOpen={showDiscountModal}
+        onClose={() => setShowDiscountModal(false)}
         onApplyDiscount={() => {}}
       />
       <PriceCheckModal
-        isOpen={false}
-        onClose={() => {}}
-        sku=""
-        setSku={() => {}}
+        isOpen={showPriceCheckModal}
+        onClose={() => setShowPriceCheckModal(false)}
+        sku={priceCheckSku}
+        setSku={setPriceCheckSku}
       />
-      <CashLedgerModal isOpen={false} onClose={() => {}} />
+      <CashLedgerModal
+        isOpen={showCashLedgerModal}
+        onClose={() => setShowCashLedgerModal(false)}
+      />
       <AdminReceiptsModal isOpen={false} onClose={() => {}} />
       <CheckoutModal
         isOpen={showCheckout}
