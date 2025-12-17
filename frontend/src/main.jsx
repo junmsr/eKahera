@@ -65,6 +65,9 @@ const DemoDashboard = lazyWithPreload(() =>
 );
 const DemoPOS = lazyWithPreload(() => import("./pages/DemoPOS.jsx"));
 const DemoCashiers = lazyWithPreload(() => import("./pages/DemoCashiers.jsx"));
+const DemoInventory = lazyWithPreload(() =>
+  import("./pages/DemoInventory.jsx")
+);
 const DemoLogs = lazyWithPreload(() => import("./pages/DemoLogs.jsx"));
 const DemoProfile = lazyWithPreload(() => import("./pages/DemoProfile.jsx"));
 
@@ -344,6 +347,14 @@ const router = createBrowserRouter(
           element: (
             <Suspense fallback={<LoadingFallback />}>
               <DemoCashiers />
+            </Suspense>
+          ),
+        },
+        {
+          path: "demo/inventory",
+          element: (
+            <Suspense fallback={<LoadingFallback />}>
+              <DemoInventory />
             </Suspense>
           ),
         },

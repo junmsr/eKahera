@@ -51,7 +51,10 @@ function ProfitTrendChart({ data, className = "", rangeType = "Custom" }) {
                 borderColor: "#e5e7eb",
                 borderRadius: 8,
               }}
-              formatter={(value) => [`${Number(value).toLocaleString()} sold`, "Volume"]}
+              formatter={(value) => [
+                `${Number(value).toLocaleString()} sold`,
+                "Volume",
+              ]}
             />
             <Bar dataKey="value" fill="#3b82f6" radius={[0, 4, 4, 0]} />
           </BarChart>
@@ -69,87 +72,18 @@ const TrendIcon = ({ trend }) => {
   return <span className="text-gray-400 font-semibold text-xl">→</span>;
 };
 
-export default function DashboardBusinessReport({ dateRange }) {
-  const [chartData, setChartData] = useState([]);
-  const [paymentMethods, setPaymentMethods] = useState([]);
-
-  const blueShades = [
-    "#3b82f6",
-    "#1d4ed8",
-    "#1e40af",
-    "#2563eb",
-    "#60a5fa",
-    "#93c5fd",
-    "#bfdbfe",
-  ];
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // Format dates for API calls using dayjs if available, otherwise Date
-        const formatDate = (date) => {
-          if (!date) return null;
-          // Handle dayjs objects
-          if (date.format) {
-            return date.format("YYYY-MM-DD");
-          }
-          // Handle Date objects
-          const d = new Date(date);
-          const year = d.getFullYear();
-          const month = String(d.getMonth() + 1).padStart(2, "0");
-          const day = String(d.getDate()).padStart(2, "0");
-          return `${year}-${month}-${day}`;
-        };
-
-        const startDate = dateRange?.startDate
-          ? formatDate(dateRange.startDate)
-          : null;
-        const endDate = dateRange?.endDate
-          ? formatDate(dateRange.endDate)
-          : null;
-
-        // Build query string for API calls
-        const buildQueryString = (params) => {
-          const queryParams = new URLSearchParams();
-          if (params.startDate)
-            queryParams.append("startDate", params.startDate);
-          if (params.endDate) queryParams.append("endDate", params.endDate);
-          const queryString = queryParams.toString();
-          return queryString ? `?${queryString}` : "";
-        };
-
-        const queryParams = {};
-        if (startDate && endDate) {
-          queryParams.startDate = startDate;
-          queryParams.endDate = endDate;
-        }
-        const queryString = buildQueryString(queryParams);
-
-        const [
-          overviewRes,
-          paymentMethodsRes,
-        ] = await Promise.all([
-          api(`/api/dashboard/overview${queryString}`),
-          api(`/api/stats/payment-methods${queryString}`),
-        ]);
-
-        setChartData(overviewRes?.topProducts || []);
-        setPaymentMethods(paymentMethodsRes || []);
-      } catch (error) {
-        console.error("Error fetching business report data:", error);
-      }
-    };
-
-    fetchData();
-  }, [dateRange]);
-
+export default function DashboardBusinessReport({
+  dateRange,
+  topProducts,
+  paymentMethods,
+}) {
   // Format the profit trend data to match the expected format
   const formatChartData = (data) => {
     if (!data || !Array.isArray(data)) return [];
-    
-    return data.slice(0, 5).map(item => ({
+
+    return data.slice(0, 5).map((item) => ({
       name: item.product_name || item.name,
-      value: Number(item.total_sold || 0)
+      value: Number(item.total_sold || 0),
     }));
   };
 
@@ -157,9 +91,9 @@ export default function DashboardBusinessReport({ dateRange }) {
     <section className="w-full px-5 md:px-8 py-6 bg-gray-50">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8 w-full min-h-[350px]">
         {/* Profit Trends Chart */}
-        <ProfitTrendChart 
-          data={formatChartData(chartData)} 
-          rangeType={dateRange?.rangeType} 
+        <ProfitTrendChart
+          data={formatChartData(topProducts)}
+          rangeType={dateRange?.rangeType}
         />
 
         {/* Payment Methods */}
@@ -178,11 +112,8 @@ export default function DashboardBusinessReport({ dateRange }) {
                 outerRadius={90}
                 dataKey="value"
               >
-                {paymentMethods.map((entry, index) => (
-                  <Cell
-                    key={`cell-${index}`}
-                    fill={entry.fill}
-                  />
+                {paymentMethods?.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.fill} />
                 ))}
               </Pie>
               <Tooltip
@@ -203,7 +134,13 @@ export default function DashboardBusinessReport({ dateRange }) {
                 height={36}
                 iconType="circle"
                 formatter={(value, entry) => (
-                  <span style={{ color: "#374151", fontSize: "12px", fontWeight: "500" }}>
+                  <span
+                    style={{
+                      color: "#374151",
+                      fontSize: "12px",
+                      fontWeight: "500",
+                    }}
+                  >
                     {value}
                   </span>
                 )}
@@ -212,7 +149,6 @@ export default function DashboardBusinessReport({ dateRange }) {
           </ResponsiveContainer>
         </div>
       </div>
-
     </section>
   );
 }
