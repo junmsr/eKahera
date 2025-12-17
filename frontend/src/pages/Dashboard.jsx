@@ -176,6 +176,8 @@ export default function Dashboard() {
   const [exportingPDF, setExportingPDF] = useState(false);
   const [exportingSales, setExportingSales] = useState(false);
   const [currentTime, setCurrentTime] = useState(dayjs());
+  const [topProducts, setTopProducts] = useState([]);
+  const [paymentMethods, setPaymentMethods] = useState([]);
 
   // Refs for PDF export
   const dashboardRef = useRef(null);
@@ -316,7 +318,7 @@ export default function Dashboard() {
         formattedEnd: endDateStr,
       });
 
-      const [overview, timeseries, pie, oldLowStock] = await Promise.all([
+      const [overview, timeseries, pie, oldLowStock, paymentMethodsData] = await Promise.all([
         api("/api/dashboard/overview", {
           headers: authHeaders(token),
           params: {
@@ -339,6 +341,13 @@ export default function Dashboard() {
           },
         }),
         api("/api/products/low-stock", { headers: authHeaders(token) }),
+        api("/api/stats/payment-methods", {
+          headers: authHeaders(token),
+          params: {
+            startDate: startDateStr,
+            endDate: endDateStr,
+          },
+        }),
       ]);
 
       const derived = (timeseries || []).map((d) => ({
@@ -435,6 +444,12 @@ export default function Dashboard() {
 
       const lowStock = oldLowStock || [];
       setLowStockProducts(lowStock);
+
+      // Set top products and payment methods for business report
+      if (overview && overview.topProducts) {
+        setTopProducts(overview.topProducts || []);
+      }
+      setPaymentMethods(paymentMethodsData || []);
     } catch (err) {
       console.error("Failed to fetch dashboard data", err);
     } finally {
@@ -1454,7 +1469,11 @@ export default function Dashboard() {
 
         {/* Business Report Component - Ensure it uses the full content width */}
         <div ref={businessReportRef} className="w-full px-4 sm:px-6 md:px-8 pb-8">
-          <DashboardBusinessReport dateRange={dateRange} />
+          <DashboardBusinessReport 
+            dateRange={dateRange} 
+            topProducts={topProducts}
+            paymentMethods={paymentMethods}
+          />
         </div>
 
         

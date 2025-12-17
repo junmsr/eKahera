@@ -62,9 +62,17 @@ exports.getOverview = async (req, res) => {
        ) AS transaction_totals
        CROSS JOIN (
          SELECT 
-           COALESCE(SUM(ti.product_quantity), 0) AS total_items_sold
+           COALESCE(SUM(
+             CASE 
+               WHEN p.product_type = 'volume' AND p.base_unit = 'L' THEN
+                 ti.product_quantity / COALESCE(NULLIF(p.quantity_per_unit * 1000, 0), 1000)
+               ELSE
+                 ti.product_quantity / COALESCE(NULLIF(p.quantity_per_unit, 0), 1)
+             END
+           ), 0) AS total_items_sold
          FROM transactions t
          JOIN transaction_items ti ON ti.transaction_id = t.transaction_id
+         JOIN products p ON ti.product_id = p.product_id
          WHERE t.business_id = $1 
            AND t.status = 'completed'
            AND DATE(t.created_at) BETWEEN $2::date AND $3::date
@@ -103,11 +111,19 @@ exports.getOverview = async (req, res) => {
     const grossMargin = totalSales > 0 ? (netProfit / totalSales) * 100 : 0;
 
     // Top products and categories for the period
+    // Convert product_quantity from base units to display units
     const topProductsQuery = `
       SELECT 
         p.product_id, 
         p.product_name, 
-        SUM(ti.product_quantity) AS total_sold, 
+        SUM(
+          CASE 
+            WHEN p.product_type = 'volume' AND p.base_unit = 'L' THEN
+              ti.product_quantity / COALESCE(NULLIF(p.quantity_per_unit * 1000, 0), 1000)
+            ELSE
+              ti.product_quantity / COALESCE(NULLIF(p.quantity_per_unit, 0), 1)
+          END
+        ) AS total_sold, 
         SUM(ti.subtotal) AS total_revenue
        FROM transaction_items ti
        JOIN transactions t ON ti.transaction_id = t.transaction_id
@@ -117,7 +133,7 @@ exports.getOverview = async (req, res) => {
          AND DATE(t.created_at) BETWEEN $2::date AND $3::date
        GROUP BY p.product_id, p.product_name
        ORDER BY total_sold DESC
-       LIMIT 5`;
+       LIMIT 10`;
     
     const topProductsRes = await pool.query(topProductsQuery, [businessId, startDateForQuery, endDateForQuery]);
 
