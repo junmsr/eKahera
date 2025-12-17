@@ -302,7 +302,7 @@ function Footer({ className = "" }) {
             <ul className="space-y-3.5">
               <motion.li>
                 <motion.a
-                  href="#"
+                  href="/documentation"
                   className="group flex items-center gap-2.5 text-sm text-slate-600 hover:text-blue-600 transition-all duration-300"
                   whileHover={{ x: 6 }}
                 >

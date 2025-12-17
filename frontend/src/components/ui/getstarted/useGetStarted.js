@@ -9,7 +9,22 @@ export default function useGetStarted() {
     { label: "Document Upload", icon: "📄" },
   ];
 
-  const [step, setStep] = useState(0);
+  // Allow step to be set via URL parameter for screenshot purposes
+  const getInitialStep = () => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const stepParam = urlParams.get('step');
+      if (stepParam !== null) {
+        const stepNum = parseInt(stepParam, 10);
+        if (stepNum >= 0 && stepNum <= 3) {
+          return stepNum;
+        }
+      }
+    }
+    return 0;
+  };
+  
+  const [step, setStep] = useState(getInitialStep());
   const [form, setForm] = useState({
     email: "",
     firstName: "",
