@@ -29,6 +29,7 @@ export default function CustomerEnter() {
   const [paused, setPaused] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
   const [error, setError] = useState(null);
+  const [cameraPermissionGranted, setCameraPermissionGranted] = useState(false);
   const navigate = useNavigate();
 
   const handleScan = async (result) => {
@@ -308,7 +309,51 @@ export default function CustomerEnter() {
 
                 {/* Scanner Container */}
                 <div className="relative h-full rounded-2xl sm:rounded-3xl overflow-hidden border-3 sm:border-4 border-white/60 shadow-lg sm:shadow-2xl bg-white/10 backdrop-blur-sm">
-                  {isScanning && !error && (
+                  {!cameraPermissionGranted ? (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-900/95 z-40 p-6 text-center backdrop-blur-sm">
+                      <motion.div
+                        initial={{ scale: 0.9, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        className="flex flex-col items-center"
+                      >
+                        <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mb-4 backdrop-blur-sm ring-1 ring-white/20">
+                          <svg
+                            className="w-8 h-8 text-white"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
+                            />
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
+                            />
+                          </svg>
+                        </div>
+                        <h3 className="text-white font-bold text-xl mb-2">
+                          Camera Access
+                        </h3>
+                        <p className="text-gray-300 text-sm mb-6 max-w-[240px]">
+                          Permission to allow camera access to scan the store QR code.
+                        </p>
+                        <Button
+                          label="Allow Camera"
+                          variant="primary"
+                          onClick={() => setCameraPermissionGranted(true)}
+                          className="w-full px-8 shadow-lg shadow-blue-500/25"
+                        />
+                      </motion.div>
+                    </div>
+                  ) : (
+                    <>
+                      {isScanning && !error && (
                     <motion.div
                       className="absolute inset-0 flex items-center justify-center z-30 bg-black/40 backdrop-blur-md"
                       initial={{ opacity: 0 }}
@@ -342,9 +387,9 @@ export default function CustomerEnter() {
                         </div>
                       </motion.div>
                     </motion.div>
-                  )}
+                      )}
 
-                  {error && (
+                      {error && (
                     <motion.div
                       className="absolute inset-0 flex items-center justify-center z-30 bg-black/40 backdrop-blur-md"
                       initial={{ opacity: 0 }}
@@ -393,18 +438,20 @@ export default function CustomerEnter() {
                         </div>
                       </motion.div>
                     </motion.div>
-                  )}
+                      )}
 
-                  <ScannerCard
-                    onScan={handleScan}
-                    paused={paused}
-                    onResume={() => {
-                      setPaused(false);
-                      setIsScanning(false);
-                      setError(null);
-                    }}
-                    className="w-full h-full"
-                  />
+                      <ScannerCard
+                        onScan={handleScan}
+                        paused={paused}
+                        onResume={() => {
+                          setPaused(false);
+                          setIsScanning(false);
+                          setError(null);
+                        }}
+                        className="w-full h-full"
+                      />
+                    </>
+                  )}
                 </div>
 
                 {/* Corner accents */}

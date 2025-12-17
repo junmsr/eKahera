@@ -387,7 +387,9 @@ exports.getPaymentMethods = async (req, res) => {
       `SELECT payment_type, COUNT(*) as count
        FROM transaction_payment tp
        JOIN transactions t ON t.transaction_id = tp.transaction_id
-       WHERE t.business_id = $1 ${dateFilter}
+       WHERE t.business_id = $1 
+         AND t.status = 'completed'
+         ${dateFilter}
        GROUP BY payment_type`,
       queryParams
     );

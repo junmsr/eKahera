@@ -62,9 +62,17 @@ exports.getOverview = async (req, res) => {
        ) AS transaction_totals
        CROSS JOIN (
          SELECT 
-           COALESCE(SUM(ti.product_quantity), 0) AS total_items_sold
+           COALESCE(SUM(
+             CASE 
+               WHEN p.product_type = 'volume' AND p.base_unit = 'L' THEN
+                 ti.product_quantity / COALESCE(NULLIF(p.quantity_per_unit * 1000, 0), 1000)
+               ELSE
+                 ti.product_quantity / COALESCE(NULLIF(p.quantity_per_unit, 0), 1)
+             END
+           ), 0) AS total_items_sold
          FROM transactions t
          JOIN transaction_items ti ON ti.transaction_id = t.transaction_id
+         JOIN products p ON ti.product_id = p.product_id
          WHERE t.business_id = $1 
            AND t.status = 'completed'
            AND DATE(t.created_at) BETWEEN $2::date AND $3::date
@@ -103,11 +111,19 @@ exports.getOverview = async (req, res) => {
     const grossMargin = totalSales > 0 ? (netProfit / totalSales) * 100 : 0;
 
     // Top products and categories for the period
+    // Convert product_quantity from base units to display units
     const topProductsQuery = `
       SELECT 
         p.product_id, 
         p.product_name, 
-        SUM(ti.product_quantity) AS total_sold, 
+        SUM(
+          CASE 
+            WHEN p.product_type = 'volume' AND p.base_unit = 'L' THEN
+              ti.product_quantity / COALESCE(NULLIF(p.quantity_per_unit * 1000, 0), 1000)
+            ELSE
+              ti.product_quantity / COALESCE(NULLIF(p.quantity_per_unit, 0), 1)
+          END
+        ) AS total_sold, 
         SUM(ti.subtotal) AS total_revenue
        FROM transaction_items ti
        JOIN transactions t ON ti.transaction_id = t.transaction_id
@@ -117,7 +133,7 @@ exports.getOverview = async (req, res) => {
          AND DATE(t.created_at) BETWEEN $2::date AND $3::date
        GROUP BY p.product_id, p.product_name
        ORDER BY total_sold DESC
-       LIMIT 5`;
+       LIMIT 10`;
     
     const topProductsRes = await pool.query(topProductsQuery, [businessId, startDateForQuery, endDateForQuery]);
 
@@ -241,13 +257,20 @@ exports.getSalesTimeseriesFromView = async (req, res) => {
   }
 };
 
-// Get sales data for export (transaction items grouped by product)
+// Get comprehensive sales data for export (includes all sections for professional POS report)
 exports.getSalesData = async (req, res) => {
   try {
     const businessId = resolveBusinessId(req);
     
     if (!businessId) {
-      return res.status(200).json([]);
+      return res.status(200).json({
+        salesByProduct: [],
+        summary: {},
+        paymentMethods: [],
+        bestSellingProducts: [],
+        salesByCategory: [],
+        transactions: []
+      });
     }
 
     // Get date range from query params
@@ -278,30 +301,217 @@ exports.getSalesData = async (req, res) => {
     const startDateForQuery = formatDate(start);
     const endDateForQuery = formatDate(end);
 
-    // Query to get sales data grouped by product
-    // product_quantity is stored in base units, we need to convert to display units
-    // For volume products with base_unit "L", product_quantity is in mL
-    // We calculate proportional subtotal based on transaction total_amount to account for discounts
-    const salesQuery = `
-      WITH transaction_totals AS (
+    // 1. SALES SUMMARY: Calculate gross sales, net sales, discounts, total transactions, total items
+    // Gross sales = sum of (price_at_sale * product_quantity) for all items (before discounts)
+    // Net sales = sum of transaction.total_amount (after discounts)
+    const summaryQuery = `
+      WITH transaction_data AS (
         SELECT 
           t.transaction_id,
-          t.total_amount,
-          COALESCE(SUM(ti.subtotal), 0) AS items_subtotal
+          t.total_amount AS net_amount,
+          -- Calculate gross sales as sum of original item prices (price_at_sale * quantity)
+          COALESCE(SUM(ti.price_at_sale * ti.product_quantity), 0) AS gross_subtotal
         FROM transactions t
         LEFT JOIN transaction_items ti ON ti.transaction_id = t.transaction_id
         WHERE t.business_id = $1
           AND t.status = 'completed'
           AND DATE(t.created_at) BETWEEN $2::date AND $3::date
         GROUP BY t.transaction_id, t.total_amount
+      ),
+      item_totals AS (
+        SELECT 
+          COALESCE(SUM(
+            CASE 
+              WHEN p.product_type = 'volume' AND p.base_unit = 'L' THEN
+                ti.product_quantity / COALESCE(NULLIF(p.quantity_per_unit * 1000, 0), 1000)
+              ELSE
+                ti.product_quantity / COALESCE(NULLIF(p.quantity_per_unit, 0), 1)
+            END
+          ), 0) AS total_items_sold
+        FROM transactions t
+        JOIN transaction_items ti ON ti.transaction_id = t.transaction_id
+        JOIN products p ON ti.product_id = p.product_id
+        WHERE t.business_id = $1
+          AND t.status = 'completed'
+          AND DATE(t.created_at) BETWEEN $2::date AND $3::date
       )
+      SELECT 
+        COALESCE((SELECT SUM(gross_subtotal) FROM transaction_data), 0) AS gross_sales,
+        COALESCE((SELECT SUM(net_amount) FROM transaction_data), 0) AS net_sales,
+        COALESCE((SELECT SUM(gross_subtotal - net_amount) FROM transaction_data), 0) AS total_discounts,
+        COALESCE((SELECT COUNT(DISTINCT transaction_id) FROM transaction_data), 0) AS total_transactions,
+        COALESCE((SELECT total_items_sold FROM item_totals), 0) AS total_items_sold`;
+
+    const summaryRes = await pool.query(summaryQuery, [businessId, startDateForQuery, endDateForQuery]);
+    // Ensure we always have a summary object, even if no transactions exist
+    let summary = summaryRes.rows[0];
+    if (!summary || summaryRes.rows.length === 0) {
+      summary = {
+        gross_sales: 0,
+        net_sales: 0,
+        total_discounts: 0,
+        total_transactions: 0,
+        total_items_sold: 0
+      };
+    }
+    const grossSales = Number(summary.gross_sales) || 0;
+    const netSales = Number(summary.net_sales) || 0;
+    const totalDiscounts = Number(summary.total_discounts) || 0;
+    const totalTransactions = Number(summary.total_transactions) || 0;
+    const totalItemsSold = Number(summary.total_items_sold) || 0;
+    const avgTransactionValue = totalTransactions > 0 ? netSales / totalTransactions : 0;
+
+    // 2. SALES BY PRODUCT: Include SKU, category, quantity, price, total
+    // IMPORTANT: Discounts only apply to basic necessities
+    const salesByProductQuery = `
+      WITH transaction_totals AS (
+        SELECT 
+          t.transaction_id,
+          t.total_amount,
+          -- Gross subtotal (all items) - use price_at_sale * quantity for accurate gross
+          COALESCE(SUM(ti.price_at_sale * ti.product_quantity), 0) AS items_subtotal,
+          -- Basic necessity subtotal (only eligible items) - use price_at_sale * quantity
+          COALESCE(SUM(
+            CASE 
+              WHEN COALESCE(pc.is_basic_necessity, false) = true THEN ti.price_at_sale * ti.product_quantity
+              ELSE 0
+            END
+          ), 0) AS basic_necessity_subtotal
+        FROM transactions t
+        LEFT JOIN transaction_items ti ON ti.transaction_id = t.transaction_id
+        LEFT JOIN products p ON ti.product_id = p.product_id
+        LEFT JOIN product_categories pc ON p.product_category_id = pc.product_category_id
+        WHERE t.business_id = $1
+          AND t.status = 'completed'
+          AND DATE(t.created_at) BETWEEN $2::date AND $3::date
+        GROUP BY t.transaction_id, t.total_amount
+      ),
+      product_sales AS (
+        SELECT 
+          p.product_id,
+          p.product_name,
+          COALESCE(p.sku, 'N/A') AS sku,
+          COALESCE(pc.product_category_name, 'Uncategorized') AS category,
+          COALESCE(pc.is_basic_necessity, false) AS is_basic_necessity,
+          p.display_unit,
+          p.quantity_per_unit,
+          p.base_unit,
+          p.product_type,
+          SUM(
+            CASE 
+              WHEN p.product_type = 'volume' AND p.base_unit = 'L' THEN
+                ti.product_quantity / COALESCE(NULLIF(p.quantity_per_unit * 1000, 0), 1000)
+              ELSE
+                ti.product_quantity / COALESCE(NULLIF(p.quantity_per_unit, 0), 1)
+            END
+          ) AS quantity_sold,
+          -- Apply discount ONLY to basic necessities, others get full gross subtotal
+          SUM(
+            CASE 
+              WHEN COALESCE(pc.is_basic_necessity, false) = true AND tt.basic_necessity_subtotal > 0 THEN
+                -- Basic necessity: apply proportional discount
+                -- Calculate item's gross: price_at_sale * quantity
+                -- Then apply discount proportionally: (item_gross / basic_necessity_gross) * (basic_necessity_gross - discount)
+                ((ti.price_at_sale * ti.product_quantity) / tt.basic_necessity_subtotal) * (tt.basic_necessity_subtotal - (tt.items_subtotal - tt.total_amount))
+              WHEN COALESCE(pc.is_basic_necessity, false) = true THEN
+                -- Basic necessity but no basic necessity items in transaction (fallback)
+                ti.price_at_sale * ti.product_quantity
+              ELSE
+                -- Non-basic-necessity: no discount, use full gross subtotal
+                ti.price_at_sale * ti.product_quantity
+            END
+          ) AS total_sales,
+          -- Get price_at_sale values for calculation
+          SUM(ti.product_quantity) AS total_base_quantity,
+          SUM(ti.price_at_sale * ti.product_quantity) AS total_price_weighted
+        FROM transaction_items ti
+        JOIN transactions t ON ti.transaction_id = t.transaction_id
+        JOIN products p ON ti.product_id = p.product_id
+        LEFT JOIN product_categories pc ON p.product_category_id = pc.product_category_id
+        JOIN transaction_totals tt ON tt.transaction_id = t.transaction_id
+        WHERE t.business_id = $1
+          AND t.status = 'completed'
+          AND DATE(t.created_at) BETWEEN $2::date AND $3::date
+        GROUP BY p.product_id, p.product_name, p.sku, pc.product_category_name, pc.is_basic_necessity, p.display_unit, p.quantity_per_unit, p.base_unit, p.product_type
+      )
+      SELECT 
+        product_id,
+        product_name,
+        sku,
+        category,
+        display_unit,
+        quantity_sold,
+        total_sales,
+        -- Calculate average selling price per display unit from price_at_sale
+        CASE 
+          WHEN total_base_quantity > 0 THEN
+            CASE 
+              WHEN product_type = 'volume' AND base_unit = 'L' THEN
+                (total_price_weighted / total_base_quantity) * (quantity_per_unit * 1000)
+              WHEN product_type != 'count' AND quantity_per_unit > 0 THEN
+                (total_price_weighted / total_base_quantity) * quantity_per_unit
+              ELSE
+                total_price_weighted / total_base_quantity
+            END
+          ELSE 0
+        END AS selling_price
+      FROM product_sales
+      ORDER BY product_name`;
+
+    const salesByProductRes = await pool.query(salesByProductQuery, [businessId, startDateForQuery, endDateForQuery]);
+    const salesByProduct = salesByProductRes.rows.map(row => {
+      const quantitySold = Number(row.quantity_sold) || 0;
+      const totalSales = Number(row.total_sales) || 0;
+      // Use the calculated selling_price from the query (based on price_at_sale, not discounted totals)
+      const sellingPrice = Number(row.selling_price) || 0;
+      
+      return {
+        product_id: row.product_id,
+        product_name: row.product_name,
+        sku: row.sku || 'N/A',
+        category: row.category || 'Uncategorized',
+        quantity_sold: quantitySold,
+        unit: row.display_unit || 'pc',
+        selling_price: sellingPrice,
+        total_sales: totalSales
+      };
+    });
+
+    // 3. PAYMENT METHOD BREAKDOWN
+    // Use DISTINCT to ensure each transaction is counted only once per payment method
+    // If a transaction has multiple payment records, use the first one
+    const paymentMethodsQuery = `
+      WITH transaction_payments AS (
+        SELECT DISTINCT ON (t.transaction_id)
+          t.transaction_id,
+          t.total_amount,
+          COALESCE(tp.payment_type, 'Unknown') AS payment_type
+        FROM transactions t
+        LEFT JOIN transaction_payment tp ON tp.transaction_id = t.transaction_id
+        WHERE t.business_id = $1
+          AND t.status = 'completed'
+          AND DATE(t.created_at) BETWEEN $2::date AND $3::date
+        ORDER BY t.transaction_id, tp.transaction_payment_id ASC
+      )
+      SELECT 
+        payment_type,
+        COALESCE(SUM(total_amount), 0) AS total_amount
+      FROM transaction_payments
+      GROUP BY payment_type
+      ORDER BY total_amount DESC`;
+
+    const paymentMethodsRes = await pool.query(paymentMethodsQuery, [businessId, startDateForQuery, endDateForQuery]);
+    const paymentMethods = paymentMethodsRes.rows.map(row => ({
+      payment_type: (row.payment_type || 'Unknown').toString(),
+      total_amount: Number(row.total_amount) || 0
+    }));
+
+    // 4. BEST-SELLING PRODUCTS (Top 5 by quantity sold)
+    const bestSellingQuery = `
       SELECT 
         p.product_id,
         p.product_name,
-        p.display_unit,
-        p.quantity_per_unit,
-        p.base_unit,
-        p.product_type,
+        COALESCE(p.sku, 'N/A') AS sku,
         SUM(
           CASE 
             WHEN p.product_type = 'volume' AND p.base_unit = 'L' THEN
@@ -309,47 +519,218 @@ exports.getSalesData = async (req, res) => {
             ELSE
               ti.product_quantity / COALESCE(NULLIF(p.quantity_per_unit, 0), 1)
           END
-        ) AS number_of_sold_items,
-        -- Calculate proportional subtotal: distribute transaction_total proportionally
-        SUM(
-          CASE 
-            WHEN tt.items_subtotal > 0 THEN
-              (ti.subtotal / tt.items_subtotal) * tt.total_amount
-            ELSE
-              ti.subtotal
-          END
-        ) AS subtotal
+        ) AS quantity_sold
       FROM transaction_items ti
       JOIN transactions t ON ti.transaction_id = t.transaction_id
       JOIN products p ON ti.product_id = p.product_id
+      WHERE t.business_id = $1
+        AND t.status = 'completed'
+        AND DATE(t.created_at) BETWEEN $2::date AND $3::date
+      GROUP BY p.product_id, p.product_name, p.sku
+      ORDER BY quantity_sold DESC
+      LIMIT 5`;
+
+    const bestSellingRes = await pool.query(bestSellingQuery, [businessId, startDateForQuery, endDateForQuery]);
+    const bestSellingProducts = bestSellingRes.rows.map(row => ({
+      product_id: row.product_id,
+      product_name: row.product_name,
+      sku: row.sku || 'N/A',
+      quantity_sold: Number(row.quantity_sold) || 0
+    }));
+
+    // 5. SALES BY CATEGORY
+    // IMPORTANT: Discounts only apply to basic necessities
+    const salesByCategoryQuery = `
+      WITH transaction_totals AS (
+        SELECT 
+          t.transaction_id,
+          t.total_amount,
+          -- Gross subtotal (all items) - use price_at_sale * quantity for accurate gross
+          COALESCE(SUM(ti.price_at_sale * ti.product_quantity), 0) AS items_subtotal,
+          -- Basic necessity subtotal (only eligible items) - use price_at_sale * quantity
+          COALESCE(SUM(
+            CASE 
+              WHEN COALESCE(pc.is_basic_necessity, false) = true THEN ti.price_at_sale * ti.product_quantity
+              ELSE 0
+            END
+          ), 0) AS basic_necessity_subtotal
+        FROM transactions t
+        LEFT JOIN transaction_items ti ON ti.transaction_id = t.transaction_id
+        LEFT JOIN products p ON ti.product_id = p.product_id
+        LEFT JOIN product_categories pc ON p.product_category_id = pc.product_category_id
+        WHERE t.business_id = $1
+          AND t.status = 'completed'
+          AND DATE(t.created_at) BETWEEN $2::date AND $3::date
+        GROUP BY t.transaction_id, t.total_amount
+      )
+      SELECT 
+        COALESCE(pc.product_category_name, 'Uncategorized') AS category_name,
+        SUM(
+          CASE 
+            WHEN p.product_type = 'volume' AND p.base_unit = 'L' THEN
+              ti.product_quantity / COALESCE(NULLIF(p.quantity_per_unit * 1000, 0), 1000)
+            ELSE
+              ti.product_quantity / COALESCE(NULLIF(p.quantity_per_unit, 0), 1)
+          END
+        ) AS total_items_sold,
+        -- Apply discount ONLY to basic necessities, others get full gross subtotal
+        SUM(
+          CASE 
+            WHEN COALESCE(pc.is_basic_necessity, false) = true AND tt.basic_necessity_subtotal > 0 THEN
+              -- Basic necessity: apply proportional discount
+              -- Calculate item's gross: price_at_sale * quantity
+              -- Then apply discount proportionally: (item_gross / basic_necessity_gross) * (basic_necessity_gross - discount)
+              ((ti.price_at_sale * ti.product_quantity) / tt.basic_necessity_subtotal) * (tt.basic_necessity_subtotal - (tt.items_subtotal - tt.total_amount))
+            WHEN COALESCE(pc.is_basic_necessity, false) = true THEN
+              -- Basic necessity but no basic necessity items in transaction (fallback)
+              ti.price_at_sale * ti.product_quantity
+            ELSE
+              -- Non-basic-necessity: no discount, use full gross subtotal
+              ti.price_at_sale * ti.product_quantity
+          END
+        ) AS total_sales_amount
+      FROM transaction_items ti
+      JOIN transactions t ON ti.transaction_id = t.transaction_id
+      JOIN products p ON ti.product_id = p.product_id
+      LEFT JOIN product_categories pc ON p.product_category_id = pc.product_category_id
       JOIN transaction_totals tt ON tt.transaction_id = t.transaction_id
       WHERE t.business_id = $1
         AND t.status = 'completed'
         AND DATE(t.created_at) BETWEEN $2::date AND $3::date
-      GROUP BY p.product_id, p.product_name, p.display_unit, p.quantity_per_unit, p.base_unit, p.product_type
-      ORDER BY p.product_name`;
+      GROUP BY pc.product_category_name
+      ORDER BY total_sales_amount DESC`;
 
-    const salesRes = await pool.query(salesQuery, [businessId, startDateForQuery, endDateForQuery]);
+    const salesByCategoryRes = await pool.query(salesByCategoryQuery, [businessId, startDateForQuery, endDateForQuery]);
+    const salesByCategory = salesByCategoryRes.rows.map(row => ({
+      category_name: row.category_name || 'Uncategorized',
+      total_items_sold: Number(row.total_items_sold) || 0,
+      total_sales_amount: Number(row.total_sales_amount) || 0
+    }));
 
-    // Format the response
-    const salesData = salesRes.rows.map(row => {
-      const soldItems = Number(row.number_of_sold_items) || 0;
-      const subtotal = Number(row.subtotal) || 0;
-      // Calculate price per unit from subtotal and quantity
-      const price = soldItems > 0 ? subtotal / soldItems : 0;
-      
+    // 6. TRANSACTION DETAILS WITH ITEMS
+    // Return one row per transaction item, with transaction details repeated
+    // IMPORTANT: Discounts only apply to basic necessities
+    const transactionsQuery = `
+      WITH transaction_totals AS (
+        SELECT 
+          t.transaction_id,
+          COALESCE(SUM(ti.price_at_sale * ti.product_quantity), 0) AS gross_subtotal,
+          -- Calculate total for basic necessities only (eligible for discount)
+          COALESCE(SUM(
+            CASE 
+              WHEN COALESCE(pc.is_basic_necessity, false) = true THEN ti.price_at_sale * ti.product_quantity
+              ELSE 0
+            END
+          ), 0) AS basic_necessity_subtotal
+        FROM transactions t
+        LEFT JOIN transaction_items ti ON ti.transaction_id = t.transaction_id
+        LEFT JOIN products p ON ti.product_id = p.product_id
+        LEFT JOIN product_categories pc ON p.product_category_id = pc.product_category_id
+        WHERE t.business_id = $1
+          AND t.status = 'completed'
+          AND DATE(t.created_at) BETWEEN $2::date AND $3::date
+        GROUP BY t.transaction_id
+      )
+      SELECT 
+        t.transaction_id,
+        t.transaction_number,
+        t.created_at,
+        t.total_amount AS transaction_total,
+        COALESCE(u.username, 'N/A') AS cashier_name,
+        COALESCE(
+          (SELECT tp.payment_type 
+           FROM transaction_payment tp 
+           WHERE tp.transaction_id = t.transaction_id 
+           ORDER BY tp.transaction_payment_id ASC 
+           LIMIT 1),
+          'Unknown'
+        ) AS payment_method,
+        -- Product details
+        p.product_name,
+        p.display_unit,
+        p.quantity_per_unit,
+        p.base_unit,
+        p.product_type,
+        COALESCE(pc.is_basic_necessity, false) AS is_basic_necessity,
+        ti.product_quantity,
+        ti.price_at_sale,
+        ti.subtotal AS item_subtotal,
+        -- Transaction totals for discount calculation
+        tt.gross_subtotal,
+        (tt.gross_subtotal - t.total_amount) AS transaction_discount,
+        tt.basic_necessity_subtotal,
+        -- Calculate discount ONLY for basic necessities, proportionally distributed
+        CASE 
+          WHEN COALESCE(pc.is_basic_necessity, false) = true AND tt.basic_necessity_subtotal > 0 THEN
+            (ti.subtotal / tt.basic_necessity_subtotal) * (tt.gross_subtotal - t.total_amount)
+          ELSE 0
+        END AS item_discount
+      FROM transaction_items ti
+      JOIN transactions t ON ti.transaction_id = t.transaction_id
+      JOIN products p ON ti.product_id = p.product_id
+      LEFT JOIN product_categories pc ON p.product_category_id = pc.product_category_id
+      LEFT JOIN users u ON t.cashier_user_id = u.user_id
+      JOIN transaction_totals tt ON tt.transaction_id = t.transaction_id
+      WHERE t.business_id = $1
+        AND t.status = 'completed'
+        AND DATE(t.created_at) BETWEEN $2::date AND $3::date
+      ORDER BY t.created_at DESC, ti.transaction_item_id ASC`;
+
+    const transactionsRes = await pool.query(transactionsQuery, [businessId, startDateForQuery, endDateForQuery]);
+    const transactions = transactionsRes.rows.map(row => {
+      // Convert quantity to display units
+      let quantityInDisplayUnits = Number(row.product_quantity) || 0;
+      if (row.product_type && row.product_type !== 'count' && row.quantity_per_unit > 0) {
+        if (row.product_type === 'volume' && row.base_unit === 'L') {
+          quantityInDisplayUnits = quantityInDisplayUnits / (row.quantity_per_unit * 1000);
+        } else {
+          quantityInDisplayUnits = quantityInDisplayUnits / row.quantity_per_unit;
+        }
+      }
+
+      // Calculate price per display unit
+      // Use item_subtotal and quantity_in_display_units for accurate calculation
+      // This avoids conversion issues with price_at_sale
+      const itemSubtotal = Number(row.item_subtotal) || 0;
+      const pricePerDisplayUnit = quantityInDisplayUnits > 0 
+        ? itemSubtotal / quantityInDisplayUnits 
+        : 0;
+
       return {
-        product_id: row.product_id,
-        product_name: row.product_name,
-        number_of_sold_items: soldItems,
+        transaction_id: row.transaction_id,
+        transaction_number: row.transaction_number || `TXN-${row.transaction_id}`,
+        date_time: row.created_at,
+        cashier_name: row.cashier_name || 'N/A',
+        payment_method: (row.payment_method || 'Unknown').toString(),
+        product_name: row.product_name || 'Unknown Product',
+        price: pricePerDisplayUnit,
+        quantity: quantityInDisplayUnits,
         unit: row.display_unit || row.base_unit || 'pc',
-        price: price,
-        subtotal: subtotal
+        item_subtotal: Number(row.item_subtotal) || 0,
+        item_discount: Number(row.item_discount) || 0,
+        item_amount: Number(row.item_subtotal) - Number(row.item_discount) || 0
       };
     });
 
-    res.json(salesData);
+    // Return comprehensive data structure
+    res.json({
+      salesByProduct,
+      summary: {
+        net_sales: netSales,
+        gross_sales: grossSales,
+        total_transactions: totalTransactions,
+        total_items_sold: totalItemsSold,
+        total_discounts: totalDiscounts,
+        average_transaction_value: avgTransactionValue
+      },
+      paymentMethods,
+      bestSellingProducts,
+      salesByCategory,
+      transactions
+    });
   } catch (err) {
+    console.error('Error in getSalesData:', err);
+    console.error('Error stack:', err.stack);
     res.status(500).json({ error: err.message });
   }
 };

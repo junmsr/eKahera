@@ -61,7 +61,8 @@ exports.getStock = async (req, res) => {
         p.product_type,
         p.quantity_per_unit,
         p.base_unit,
-        p.display_unit
+        p.display_unit,
+        i.updated_at as inventory_updated_at
        FROM products p
        LEFT JOIN product_categories pc ON pc.product_category_id = p.product_category_id
        LEFT JOIN inventory i ON i.product_id = p.product_id AND i.business_id = p.business_id

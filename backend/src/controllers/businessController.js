@@ -1487,6 +1487,206 @@ exports.getBusinessPublic = async (req, res) => {
   }
 };
 
+// Helper function to clean and format address for geocoding
+const cleanAddressForGeocoding = (address) => {
+  if (!address || address === 'Address not available') {
+    return null;
+  }
+
+  // Remove only numeric house numbers at the start, but keep descriptive parts like "purok 4", "sitio", etc.
+  let cleaned = address.trim();
+  
+  // Remove leading numeric-only patterns (like "12345, ") but keep descriptive ones (like "purok 4, ")
+  cleaned = cleaned.replace(/^(\d+),\s*/i, ''); // Remove "12345, " but not "purok 4, "
+  
+  // Remove house number patterns that are clearly just numbers
+  cleaned = cleaned.replace(/^house\s*#?\d+[,\s]*/i, ''); // Remove "House #123, "
+  cleaned = cleaned.replace(/^#\d+[,\s]*/i, ''); // Remove "#123, " (but not "#4" in "purok #4")
+  
+  cleaned = cleaned.trim();
+
+  // If address is empty after cleaning, return null
+  if (!cleaned) {
+    return null;
+  }
+
+  // Always append Philippines if not already present
+  const lowerAddress = cleaned.toLowerCase();
+  if (!lowerAddress.includes('philippines')) {
+    cleaned = `${cleaned}, Philippines`;
+  }
+
+  return cleaned;
+};
+
+// Helper function to geocode an address to coordinates with fallback strategies
+const geocodeAddress = async (address) => {
+  try {
+    // Clean and format the address
+    let cleanedAddress = cleanAddressForGeocoding(address);
+    
+    if (!cleanedAddress) {
+      console.log(`Skipping geocoding for invalid address: "${address}"`);
+      return null;
+    }
+
+    // Try multiple geocoding strategies
+    const strategies = [
+      cleanedAddress, // Try full address first
+    ];
+
+    // If address has multiple parts, try without the first part (e.g., "secret, Tuliw..." -> "Tuliw...")
+    const parts = cleanedAddress.split(',').map(p => p.trim()).filter(Boolean);
+    if (parts.length > 2) {
+      // Remove first part if it's a single word or looks like a house/purok identifier
+      const firstPart = parts[0].toLowerCase();
+      if (firstPart.length < 10 || /^(purok|sitio|barangay|bgy|brgy|secret|house|#)/i.test(firstPart)) {
+        strategies.push(parts.slice(1).join(', '));
+      }
+    }
+
+    // Try with just city/municipality and province (last 2 parts)
+    if (parts.length >= 2) {
+      strategies.push(parts.slice(-2).join(', '));
+    }
+
+    // Try each strategy
+    for (let i = 0; i < strategies.length; i++) {
+      const strategy = strategies[i];
+      if (!strategy) continue;
+
+      try {
+        const encodedAddress = encodeURIComponent(strategy);
+        const response = await axios.get(
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodedAddress}&limit=1&countrycodes=ph`,
+          {
+            headers: {
+              'User-Agent': 'eKahera-POS-System' // Required by Nominatim
+            }
+          }
+        );
+
+        if (response.data && response.data.length > 0) {
+          const result = response.data[0];
+          const lat = parseFloat(result.lat);
+          const lng = parseFloat(result.lon);
+          
+          // Validate coordinates are in Philippines (rough bounds)
+          if (lat >= 4.0 && lat <= 21.0 && lng >= 116.0 && lng <= 127.0) {
+            console.log(`✅ Geocoded successfully using strategy ${i + 1}: "${strategy}" -> ${lat}, ${lng}`);
+            return { lat, lng };
+          } else {
+            console.log(`⚠️ Geocoded coordinates out of Philippines bounds: ${lat}, ${lng} for "${strategy}"`);
+          }
+        }
+      } catch (error) {
+        console.error(`Error in geocoding strategy ${i + 1} for "${strategy}":`, error.message);
+        // Continue to next strategy
+      }
+
+      // Add delay between attempts to respect rate limits
+      if (i < strategies.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    }
+    
+    console.log(`❌ No geocoding results for any strategy. Original address: "${address}"`);
+    return null;
+  } catch (error) {
+    console.error(`Geocoding error for address "${address}":`, error.message);
+    return null;
+  }
+};
+
+// Get all approved businesses with locations (public endpoint)
+exports.getAllApprovedBusinesses = async (req, res) => {
+  try {
+    // Get all approved businesses with their location information
+    const result = await pool.query(
+      `SELECT 
+        business_id,
+        business_name,
+        business_type,
+        business_address,
+        house_number,
+        region,
+        mobile,
+        email,
+        created_at
+      FROM business 
+      WHERE verification_status = 'approved'
+      ORDER BY business_name ASC`
+    );
+
+    // Decode PSGC addresses and geocode for each business
+    const businessesWithDecodedAddresses = await Promise.all(
+      result.rows.map(async (business) => {
+        let decodedAddress = business.business_address;
+        
+        // Try to decode PSGC address if it exists
+        if (business.business_address) {
+          try {
+            decodedAddress = await decodePSGCAddress(business.business_address);
+          } catch (error) {
+            console.error(`Error decoding address for business ${business.business_id}:`, error);
+            // Keep original address if decoding fails
+          }
+        }
+
+        // Build full address string
+        // Check if decodedAddress already starts with house number or a number
+        let fullAddress = decodedAddress;
+        
+        // Only add house_number if it's not already in the address
+        if (business.house_number && decodedAddress) {
+          const houseNumStr = business.house_number.toString().trim();
+          // Check if address already starts with this house number
+          if (!decodedAddress.trim().startsWith(houseNumStr)) {
+            fullAddress = `${business.house_number}, ${decodedAddress}`;
+          }
+        } else if (business.house_number && !decodedAddress) {
+          fullAddress = business.house_number;
+        } else if (!decodedAddress) {
+          fullAddress = business.business_address || 'Address not available';
+        }
+
+        // Geocode the address to get coordinates
+        let coordinates = null;
+        if (fullAddress && fullAddress !== 'Address not available') {
+          try {
+            coordinates = await geocodeAddress(fullAddress);
+            // Add a small delay to respect Nominatim's rate limit (1 request per second)
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          } catch (error) {
+            console.error(`Error geocoding address for business ${business.business_id}:`, error);
+          }
+        }
+
+        return {
+          business_id: business.business_id,
+          business_name: business.business_name,
+          business_type: business.business_type,
+          address: fullAddress,
+          region: business.region,
+          mobile: business.mobile,
+          email: business.email,
+          created_at: business.created_at,
+          lat: coordinates?.lat || null,
+          lng: coordinates?.lng || null
+        };
+      })
+    );
+
+    res.json({
+      businesses: businessesWithDecodedAddresses,
+      count: businessesWithDecodedAddresses.length
+    });
+  } catch (error) {
+    console.error("Get all approved businesses error:", error);
+    res.status(500).json({ error: "Failed to get businesses information" });
+  }
+};
+
 // --- Store deletion lifecycle (admin-side) ---
 const toDeletionDto = (request) => {
   if (!request) {

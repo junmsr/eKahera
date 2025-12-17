@@ -1030,19 +1030,9 @@ exports.getSaleDetailsByTransactionNumber = async (req, res) => {
           subtotal: Number(i.subtotal).toFixed(2)
         };
       }),
-      // Total quantity calculation should also use display units for consistency
-      totalQuantity: items.reduce((acc, item) => {
-        const quantityInBaseUnits = Number(item.product_quantity);
-        const quantityPerUnit = Number(item.quantity_per_unit) || 1;
-        if (item.product_type && item.product_type !== 'count' && quantityPerUnit > 0) {
-          // For volume products with base_unit "L", convert from mL back to L
-          if (item.product_type === 'volume' && item.base_unit === 'L') {
-            return acc + (quantityInBaseUnits / (quantityPerUnit * 1000));
-          }
-          return acc + (quantityInBaseUnits / quantityPerUnit);
-        }
-        return acc + quantityInBaseUnits;
-      }, 0)
+      // Total quantity: count the number of distinct items/products, not sum of quantities
+      // This avoids showing "0.5 items" for volume/weight products (e.g., 0.5 L should show as "1 item")
+      totalQuantity: items.length
     };
 
     res.json(receiptDetails);

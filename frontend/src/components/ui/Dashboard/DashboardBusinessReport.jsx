@@ -18,7 +18,7 @@ import ChartCard from "./ChartCard";
 // ProfitTrendChart component that matches VisitorsChart structure
 function ProfitTrendChart({ data, className = "", rangeType = "Custom" }) {
   const getChartTitle = (rangeType) => {
-    return "Top 5 Products by Sales Volume";
+    return "Top 10 Products by Sales Volume";
   };
 
   return (
@@ -81,11 +81,14 @@ export default function DashboardBusinessReport({
   const formatChartData = (data) => {
     if (!data || !Array.isArray(data)) return [];
 
-    return data.slice(0, 5).map((item) => ({
+    return data.slice(0, 10).map((item) => ({
       name: item.product_name || item.name,
       value: Number(item.total_sold || 0),
     }));
   };
+
+  // Ensure paymentMethods is always an array
+  const safePaymentMethods = Array.isArray(paymentMethods) ? paymentMethods : [];
 
   return (
     <section className="w-full px-5 md:px-8 py-6 bg-gray-50">
@@ -104,7 +107,7 @@ export default function DashboardBusinessReport({
           <ResponsiveContainer width="100%" height={280}>
             <PieChart margin={{ top: 20, right: 20, left: 20, bottom: 20 }}>
               <Pie
-                data={paymentMethods}
+                data={safePaymentMethods}
                 cx="50%"
                 cy="50%"
                 labelLine={false}
@@ -112,8 +115,8 @@ export default function DashboardBusinessReport({
                 outerRadius={90}
                 dataKey="value"
               >
-                {paymentMethods?.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.fill} />
+                {safePaymentMethods.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.fill || '#f59e0b'} />
                 ))}
               </Pie>
               <Tooltip

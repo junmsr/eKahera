@@ -372,7 +372,10 @@ export default function Receipt() {
 
 							{/* Totals */}
 							<div className="space-y-2 border-t pt-4">
-								<ReceiptRow label={`Subtotal (${details.totalQuantity} items)`} value={`₱${details.subtotal.toFixed(2)}`} />
+								<ReceiptRow 
+								label={`Subtotal (${details.totalQuantity} ${details.totalQuantity === 1 ? 'item' : 'items'})`} 
+								value={`₱${details.subtotal.toFixed(2)}`} 
+							/>
 								{(details.discountTotal > 0 || details.discount) && (
 									<ReceiptRow 
 										label={details.discount?.name ? `Discount (${details.discount.name})` : "Discount"} 
