@@ -256,9 +256,11 @@ const getProductBySku = async (req, res) => {
       where += ' AND p.business_id = $2';
     }
     const result = await pool.query(
-      `SELECT p.*, COALESCE(i.quantity_in_stock, 0) as stock_quantity
+      `SELECT p.*, COALESCE(i.quantity_in_stock, 0) as stock_quantity,
+              COALESCE(pc.is_basic_necessity, false) as is_basic_necessity
        FROM products p
        LEFT JOIN inventory i ON i.product_id = p.product_id AND i.business_id = p.business_id
+       LEFT JOIN product_categories pc ON p.product_category_id = pc.product_category_id
        WHERE ${where}`,
       params
     );
@@ -286,9 +288,11 @@ const getProductBySkuPublic = async (req, res) => {
     // If business_id is provided, constrain lookup to that business and include inventory quantity
     if (business_id) {
       const byBusiness = await pool.query(
-        `SELECT p.*, COALESCE(i.quantity_in_stock, 0) as stock_quantity
+        `SELECT p.*, COALESCE(i.quantity_in_stock, 0) as stock_quantity,
+                COALESCE(pc.is_basic_necessity, false) as is_basic_necessity
          FROM products p
          LEFT JOIN inventory i ON i.product_id = p.product_id AND i.business_id = p.business_id
+         LEFT JOIN product_categories pc ON p.product_category_id = pc.product_category_id
          WHERE p.sku = $1 AND p.business_id = $2
          LIMIT 1`,
         [sku, business_id]
@@ -301,8 +305,9 @@ const getProductBySkuPublic = async (req, res) => {
 
     // Fallback: allow public lookup by SKU without business constraint (most recent match)
     const anyBusiness = await pool.query(
-      `SELECT p.*
+      `SELECT p.*, COALESCE(pc.is_basic_necessity, false) as is_basic_necessity
        FROM products p
+       LEFT JOIN product_categories pc ON p.product_category_id = pc.product_category_id
        WHERE p.sku = $1
        ORDER BY p.updated_at DESC NULLS LAST, p.product_id DESC
        LIMIT 1`,

@@ -266,6 +266,7 @@ function CashierPOS() {
             name: product.product_name,
             quantity: qty,
             price,
+            is_basic_necessity: product.is_basic_necessity || false,
           },
         ];
       });
@@ -328,19 +329,20 @@ function CashierPOS() {
         next[existingIdx] = { ...next[existingIdx], quantity: newQty };
         return next;
       }
-      return [
-        ...prev,
-        {
-          product_id: product.product_id,
-          sku: product.sku,
-          name: product.product_name,
-          quantity: quantityInBaseUnits,
-          price: pricePerUnit,
-          product_type: product.product_type,
-          base_unit: product.base_unit,
-          quantity_per_unit: product.quantity_per_unit || 1,
-        },
-      ];
+        return [
+          ...prev,
+          {
+            product_id: product.product_id,
+            sku: product.sku,
+            name: product.product_name,
+            quantity: quantityInBaseUnits,
+            price: pricePerUnit,
+            product_type: product.product_type,
+            base_unit: product.base_unit,
+            quantity_per_unit: product.quantity_per_unit || 1,
+            is_basic_necessity: product.is_basic_necessity || false,
+          },
+        ];
     });
     
     setSku("");
@@ -555,20 +557,30 @@ function CashierPOS() {
   );
   
   // Calculate total with discount
+  // IMPORTANT: In the Philippines, PWD/Senior Citizen discounts only apply to basic necessities
+  // Calculate subtotals separately for basic necessities and other items
+  const basicNecessitySubtotal = cart
+    .filter(item => item.is_basic_necessity === true)
+    .reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const otherItemsSubtotal = subtotal - basicNecessitySubtotal;
+  
   let total = subtotal;
   if (appliedDiscount) {
     if (appliedDiscount.type === "percentage") {
       const discountValue = Number(appliedDiscount.value);
       if (!isNaN(discountValue) && discountValue > 0) {
-        const discountAmount = subtotal * (discountValue / 100);
-        total = Math.max(0, subtotal - discountAmount);
+        // Apply discount only to basic necessity items
+        const discountAmount = basicNecessitySubtotal * (discountValue / 100);
+        total = Math.max(0, basicNecessitySubtotal - discountAmount + otherItemsSubtotal);
       } else {
         console.warn("Invalid discount value:", appliedDiscount.value, "for discount:", appliedDiscount);
       }
     } else if (appliedDiscount.type === "amount") {
       const discountValue = Number(appliedDiscount.value);
       if (!isNaN(discountValue) && discountValue > 0) {
-        total = Math.max(0, subtotal - discountValue);
+        // Apply discount only to basic necessity items (capped at basic necessity subtotal)
+        const discountAmount = Math.min(discountValue, basicNecessitySubtotal);
+        total = Math.max(0, basicNecessitySubtotal - discountAmount + otherItemsSubtotal);
       } else {
         console.warn("Invalid discount value:", appliedDiscount.value, "for discount:", appliedDiscount);
       }

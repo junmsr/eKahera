@@ -84,13 +84,21 @@ exports.checkout = async (req, res) => {
     }
 
     // Insert transaction items and update inventory
+    // Track subtotals separately for basic necessities (eligible for discount) and other items
+    let basicNecessitySubtotal = 0;
+    let otherItemsSubtotal = 0;
+    
     for (const item of items) {
       const { product_id, quantity } = item;
       if (!product_id || !quantity) continue;
       
-      // Get product details including unit information
+      // Get product details including unit information and category
       const priceRes = await client.query(
-        'SELECT selling_price, product_type, quantity_per_unit, base_unit FROM products WHERE product_id = $1 AND (business_id = $2 OR $2 IS NULL)', 
+        `SELECT p.selling_price, p.product_type, p.quantity_per_unit, p.base_unit, 
+                COALESCE(pc.is_basic_necessity, false) as is_basic_necessity
+         FROM products p
+         LEFT JOIN product_categories pc ON p.product_category_id = pc.product_category_id
+         WHERE p.product_id = $1 AND (p.business_id = $2 OR $2 IS NULL)`, 
         [product_id, req.user?.businessId || null]
       );
       
@@ -99,6 +107,7 @@ exports.checkout = async (req, res) => {
       }
       
       const product = priceRes.rows[0];
+      const isBasicNecessity = product.is_basic_necessity === true;
       
       // Price handling:
       // - selling_price in products table is per display unit (e.g., ₱10 per 20g sachet)
@@ -115,6 +124,13 @@ exports.checkout = async (req, res) => {
       // quantity is in display units, pricePerDisplayUnit is price per display unit
       const itemSubtotal = pricePerDisplayUnit * Number(quantity);
       subtotal += itemSubtotal;
+      
+      // Track subtotals separately for discount calculation
+      if (isBasicNecessity) {
+        basicNecessitySubtotal += itemSubtotal;
+      } else {
+        otherItemsSubtotal += itemSubtotal;
+      }
 
       // Convert quantity and price for database storage
       // We store everything in base units for consistency:
@@ -183,6 +199,8 @@ exports.checkout = async (req, res) => {
     }
 
     // Calculate total with discount
+    // IMPORTANT: In the Philippines, PWD/Senior Citizen discounts only apply to basic necessities
+    // Discount is calculated only on basic necessity items, not on the entire subtotal
     let total = subtotal;
     let appliedDiscountPct = null;
     let appliedDiscountAmount = 0;
@@ -200,21 +218,25 @@ exports.checkout = async (req, res) => {
     }
 
     // Apply discount if explicitly provided via percentage or amount, or if we got it from discount_id
+    // Discount only applies to basic necessity items (PWD/Senior Citizen discount rule)
     if (Number.isFinite(Number(discount_percentage))) {
       appliedDiscountPct = Number(discount_percentage);
-      appliedDiscountAmount = subtotal * (appliedDiscountPct / 100);
-      total = subtotal - appliedDiscountAmount;
-      console.log(`[Checkout] Applied discount_percentage: ${appliedDiscountPct}%, subtotal: ${subtotal}, discount: ${appliedDiscountAmount}, total: ${total}`);
+      // Apply discount only to basic necessity subtotal
+      appliedDiscountAmount = basicNecessitySubtotal * (appliedDiscountPct / 100);
+      total = basicNecessitySubtotal - appliedDiscountAmount + otherItemsSubtotal;
+      console.log(`[Checkout] Applied discount_percentage: ${appliedDiscountPct}% on basic necessities only. Basic necessity subtotal: ${basicNecessitySubtotal}, discount: ${appliedDiscountAmount}, other items: ${otherItemsSubtotal}, total: ${total}`);
     } else if (appliedDiscountPct != null && appliedDiscountPct > 0) {
       // Use discount_percentage from discount_id lookup
-      appliedDiscountAmount = subtotal * (appliedDiscountPct / 100);
-      total = subtotal - appliedDiscountAmount;
-      console.log(`[Checkout] Applied discount from discount_id: ${appliedDiscountPct}%, subtotal: ${subtotal}, discount: ${appliedDiscountAmount}, total: ${total}`);
+      // Apply discount only to basic necessity subtotal
+      appliedDiscountAmount = basicNecessitySubtotal * (appliedDiscountPct / 100);
+      total = basicNecessitySubtotal - appliedDiscountAmount + otherItemsSubtotal;
+      console.log(`[Checkout] Applied discount from discount_id: ${appliedDiscountPct}% on basic necessities only. Basic necessity subtotal: ${basicNecessitySubtotal}, discount: ${appliedDiscountAmount}, other items: ${otherItemsSubtotal}, total: ${total}`);
     } else if (Number.isFinite(Number(discount_amount)) && Number(discount_amount) > 0) {
-      appliedDiscountAmount = Math.min(Number(discount_amount), subtotal);
-      total = subtotal - appliedDiscountAmount;
-      appliedDiscountPct = (appliedDiscountAmount / subtotal) * 100;
-      console.log(`[Checkout] Applied discount_amount: ${appliedDiscountAmount}, subtotal: ${subtotal}, total: ${total}`);
+      // For fixed discount amount, apply only up to the basic necessity subtotal
+      appliedDiscountAmount = Math.min(Number(discount_amount), basicNecessitySubtotal);
+      total = basicNecessitySubtotal - appliedDiscountAmount + otherItemsSubtotal;
+      appliedDiscountPct = basicNecessitySubtotal > 0 ? (appliedDiscountAmount / basicNecessitySubtotal) * 100 : 0;
+      console.log(`[Checkout] Applied discount_amount: ${appliedDiscountAmount} on basic necessities only. Basic necessity subtotal: ${basicNecessitySubtotal}, other items: ${otherItemsSubtotal}, total: ${total}`);
     } else {
       console.log(`[Checkout] No discount applied. subtotal: ${subtotal}, total: ${total}`);
     }
@@ -354,13 +376,21 @@ exports.publicCheckout = async (req, res) => {
     );
     const transaction_id = transRes.rows[0].transaction_id;
 
+    // Track subtotals separately for basic necessities (eligible for discount) and other items
+    let basicNecessitySubtotal = 0;
+    let otherItemsSubtotal = 0;
+    
     for (const item of items) {
       const { product_id, quantity } = item;
       if (!product_id || !quantity) continue;
       
-      // Get product details including unit information
+      // Get product details including unit information and category
       const priceRes = await client.query(
-        'SELECT selling_price, product_type, quantity_per_unit, base_unit FROM products WHERE product_id = $1 AND (business_id = $2 OR $2 IS NULL)', 
+        `SELECT p.selling_price, p.product_type, p.quantity_per_unit, p.base_unit, 
+                COALESCE(pc.is_basic_necessity, false) as is_basic_necessity
+         FROM products p
+         LEFT JOIN product_categories pc ON p.product_category_id = pc.product_category_id
+         WHERE p.product_id = $1 AND (p.business_id = $2 OR $2 IS NULL)`, 
         [product_id, business_id]
       );
       
@@ -369,6 +399,7 @@ exports.publicCheckout = async (req, res) => {
       }
       
       const product = priceRes.rows[0];
+      const isBasicNecessity = product.is_basic_necessity === true;
       
       // Price handling:
       // - selling_price in products table is per display unit (e.g., ₱10 per 20g sachet)
@@ -379,6 +410,14 @@ exports.publicCheckout = async (req, res) => {
       let pricePerDisplayUnit = itemPrice;
       if (!pricePerDisplayUnit || pricePerDisplayUnit === 0) {
         pricePerDisplayUnit = product.selling_price || 0;
+      }
+      
+      // Track subtotals separately for discount calculation
+      const itemSubtotal = pricePerDisplayUnit * Number(quantity);
+      if (isBasicNecessity) {
+        basicNecessitySubtotal += itemSubtotal;
+      } else {
+        otherItemsSubtotal += itemSubtotal;
       }
 
       // Convert quantity and price for database storage
@@ -452,7 +491,11 @@ exports.publicCheckout = async (req, res) => {
     let total = Number(totalRes.rows[0].total) || 0;
 
     // Discount resolution
+    // IMPORTANT: In the Philippines, PWD/Senior Citizen discounts only apply to basic necessities
+    // Discount is calculated only on basic necessity items, not on the entire subtotal
     let appliedDiscountPct = null;
+    let appliedDiscountAmount = 0;
+    
     if (discount_id) {
       const discRes = await client.query('SELECT discount_percentage FROM discounts WHERE discount_id = $1', [discount_id]);
       if (discRes.rowCount > 0) {
@@ -462,10 +505,17 @@ exports.publicCheckout = async (req, res) => {
     if (appliedDiscountPct == null && Number.isFinite(Number(discount_percentage))) {
       appliedDiscountPct = Number(discount_percentage);
     }
+    
+    // Apply discount only to basic necessity subtotal
     if (appliedDiscountPct != null && appliedDiscountPct > 0) {
-      total = total - (total * (appliedDiscountPct / 100));
+      appliedDiscountAmount = basicNecessitySubtotal * (appliedDiscountPct / 100);
+      total = basicNecessitySubtotal - appliedDiscountAmount + otherItemsSubtotal;
+      console.log(`[PublicCheckout] Applied discount_percentage: ${appliedDiscountPct}% on basic necessities only. Basic necessity subtotal: ${basicNecessitySubtotal}, discount: ${appliedDiscountAmount}, other items: ${otherItemsSubtotal}, total: ${total}`);
     } else if (Number.isFinite(Number(discount_amount)) && Number(discount_amount) > 0) {
-      total = Math.max(0, total - Number(discount_amount));
+      // For fixed discount amount, apply only up to the basic necessity subtotal
+      appliedDiscountAmount = Math.min(Number(discount_amount), basicNecessitySubtotal);
+      total = basicNecessitySubtotal - appliedDiscountAmount + otherItemsSubtotal;
+      console.log(`[PublicCheckout] Applied discount_amount: ${appliedDiscountAmount} on basic necessities only. Basic necessity subtotal: ${basicNecessitySubtotal}, other items: ${otherItemsSubtotal}, total: ${total}`);
     }
 
     const money_change = money_received ? Number(money_received) - total : null;
