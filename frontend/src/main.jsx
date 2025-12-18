@@ -70,6 +70,9 @@ const DemoInventory = lazyWithPreload(() =>
 );
 const DemoLogs = lazyWithPreload(() => import("./pages/DemoLogs.jsx"));
 const DemoProfile = lazyWithPreload(() => import("./pages/DemoProfile.jsx"));
+const FutureFeatures = lazyWithPreload(() =>
+  import("./pages/futurefeatures.jsx")
+);
 const Documentation = lazyWithPreload(() => import("./pages/Documentation.jsx"));
 
 // Enhanced Loading component for Suspense fallback
@@ -380,6 +383,14 @@ const router = createBrowserRouter(
           element: (
             <Suspense fallback={<LoadingFallback />}>
               <DemoProfile />
+            </Suspense>
+          ),
+        },
+        {
+          path: "futurefeatures",
+          element: (
+            <Suspense fallback={<LoadingFallback />}>
+              <FutureFeatures />
             </Suspense>
           ),
         },
