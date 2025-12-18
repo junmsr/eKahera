@@ -155,7 +155,7 @@ const AboutUs = () => (
                 </span>
               </div>
 
-              <ul className="space-y-5 text-slate-700">
+              <ul className="space-y-5 text-slate-700 mb-4">
                 {[
                   {
                     text: "Sales and inventory monitoring",
@@ -200,15 +200,6 @@ const AboutUs = () => (
                   </motion.li>
                 ))}
               </ul>
-
-              {/* Optional CTA */}
-              {/*<motion.div
-                initial={{ opacity: 0, y: 10 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.4, delay: 0.9 }}
-                className="mt-4 pt-6 border-t border-slate-200"
-              ></motion.div>*/}
             </div>
           </div>
         </motion.div>
